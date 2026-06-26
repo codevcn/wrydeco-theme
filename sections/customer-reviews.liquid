@@ -1,0 +1,448 @@
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js" defer="defer"></script>
+
+<div class="customer-reviews-section page-width">
+  <div class="cr-header">
+    <h2 class="cr-heading">{{ section.settings.heading | escape }}</h2>
+    {% if section.settings.subtitle != blank %}
+      <p class="cr-subtitle">{{ section.settings.subtitle | escape }}</p>
+    {% endif %}
+  </div>
+
+  <div class="cr-slider-container">
+    <!-- Image Swiper -->
+    <div class="swiper cr-image-swiper" id="cr-image-swiper-{{ section.id }}">
+      <div class="swiper-wrapper">
+        {%- for block in section.blocks -%}
+          <div class="swiper-slide cr-image-slide" data-index="{{ forloop.index0 }}" {{ block.shopify_attributes }}>
+            <div class="cr-image-wrapper">
+              {%- if block.settings.image != blank -%}
+                {{ block.settings.image | image_url: width: 800 | image_tag: class: 'cr-img', loading: 'lazy' }}
+              {%- else -%}
+                {{ 'product-1' | placeholder_svg_tag: 'cr-img placeholder-svg' }}
+              {%- endif -%}
+            </div>
+          </div>
+        {%- endfor -%}
+      </div>
+    </div>
+
+    <!-- Text Swiper (Overlapping) -->
+    <div class="swiper cr-text-swiper" id="cr-text-swiper-{{ section.id }}">
+      <div class="swiper-wrapper">
+        {%- for block in section.blocks -%}
+          <div class="swiper-slide cr-text-slide">
+            <div class="cr-review-card">
+              <div class="cr-stars">
+                {%- for i in (1..5) -%}
+                  {%- if i <= block.settings.rating -%}
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="#ff8d00" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    </svg>
+                  {%- else -%}
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="#e0e0e0" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    </svg>
+                  {%- endif -%}
+                {%- endfor -%}
+              </div>
+              
+              <p class="cr-review-text">{{ block.settings.review_text | escape }}</p>
+              
+              <div class="cr-author">
+                {%- if block.settings.verified -%}
+                  <span class="cr-verified-badge">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="#6b5d52" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="currentColor"/>
+                    </svg>
+                  </span>
+                {%- endif -%}
+                <span class="cr-author-name">{{ block.settings.author_name | escape }}</span>
+              </div>
+              
+              <!-- Quote icon -->
+              <div class="cr-quote-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="#ae8868" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M11 9H7V7H11V9ZM19 9H15V7H19V9ZM11 11H7C7 13.76 8.79 15 11 15V13C9.9 13 9 12.33 9 11H11V11ZM19 11H15C15 13.76 16.79 15 19 15V13C17.9 13 17 12.33 17 11H19V11Z" fill="currentColor"/>
+                  <path d="M10.875 16.5C8.389 16.5 5.5 14.611 5.5 11V5.5H12.5V11.5H8.5C8.5 13 9.4 14.5 10.875 14.5V16.5ZM18.875 16.5C16.389 16.5 13.5 14.611 13.5 11V5.5H20.5V11.5H16.5C16.5 13 17.4 14.5 18.875 14.5V16.5Z" fill="currentColor"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+        {%- endfor -%}
+      </div>
+      <!-- Pagination -->
+      <div class="cr-pagination"></div>
+    </div>
+  </div>
+</div>
+
+{% stylesheet %}
+  .customer-reviews-section {
+    padding-block: var(--space-16, 80px);
+    overflow: hidden;
+  }
+  
+  .cr-header {
+    text-align: center;
+    margin-bottom: var(--space-12, 48px);
+  }
+  
+  .cr-heading {
+    font-family: var(--font-display);
+    font-size: var(--text-3xl, 48px);
+    font-weight: var(--font-weight-500, 500);
+    color: var(--color-ebony, #1a1815);
+    margin: 0 0 16px 0;
+  }
+  
+  .cr-subtitle {
+    font-family: var(--font-body);
+    font-size: var(--text-lg, 18px);
+    color: var(--color-bark, #6b5d52);
+    margin: 0;
+  }
+
+  .cr-slider-container {
+    position: relative;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  /* Image Swiper */
+  .cr-image-swiper {
+    width: 100%;
+    /* Extra bottom padding so images don't hide behind the pagination or text card */
+    padding-bottom: 250px !important;
+    overflow: visible !important; /* Allow slides to overflow if needed, or use clipping with space */
+  }
+
+  .cr-image-slide {
+    /* Set a fixed height or aspect ratio */
+    height: 450px;
+    border-radius: 24px;
+    overflow: hidden;
+    /* This transition is handled by Swiper, but we can set property */
+    transition-property: transform;
+    background-color: var(--color-stone, #e8e4df);
+  }
+
+  .cr-image-wrapper {
+    width: 100%;
+    height: 100%;
+    border-radius: 24px;
+    overflow: hidden;
+  }
+
+  .cr-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .cr-img.placeholder-svg {
+    padding: 40px;
+    background: #f4f4f4;
+  }
+
+  /* Text Swiper */
+  .cr-text-swiper {
+    position: absolute !important;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none; /* Allows swiping on the images beneath */
+    z-index: 10;
+  }
+
+  .cr-text-slide {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    padding-bottom: 60px; /* Space for pagination */
+  }
+
+  .cr-review-card {
+    pointer-events: auto; /* Re-enable clicks on the card itself */
+    background: var(--color-floral, #fcfaf8);
+    border-radius: 24px;
+    padding: 32px 24px;
+    width: 90%;
+    max-width: 380px;
+    text-align: center;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+    position: relative;
+    /* Slight shift to overlap the bottom of the image */
+    margin-bottom: 50px; 
+  }
+
+  .cr-stars {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    margin-bottom: 16px;
+  }
+
+  .cr-review-text {
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--color-bark, #6b5d52);
+    margin: 0 0 20px 0;
+  }
+
+  .cr-author {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .cr-verified-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .cr-author-name {
+    font-family: var(--font-body);
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--color-ebony, #1a1815);
+  }
+
+  .cr-quote-icon {
+    margin-top: 16px;
+    color: var(--color-tan, #ae8868);
+  }
+
+  /* Pagination */
+  .cr-pagination {
+    position: absolute;
+    bottom: 20px !important;
+    left: 0;
+    width: 100%;
+    text-align: center;
+    z-index: 20;
+    pointer-events: auto;
+  }
+
+  .cr-pagination .swiper-pagination-bullet {
+    background: var(--color-tan, #ae8868);
+    opacity: 0.3;
+    transition: all 0.3s ease;
+    width: 6px;
+    height: 6px;
+    margin: 0 6px !important;
+  }
+  
+  .cr-pagination .swiper-pagination-bullet-active {
+    opacity: 1;
+    width: 24px;
+    border-radius: 4px;
+  }
+
+  @media screen and (min-width: 750px) {
+    .cr-image-slide {
+      height: 600px;
+    }
+    .cr-image-swiper {
+      padding-bottom: 180px !important;
+    }
+  }
+
+  @media screen and (max-width: 749px) {
+    .cr-heading {
+      font-size: var(--text-2xl, 32px);
+    }
+    .cr-review-card {
+      padding: 24px 20px;
+      margin-bottom: 20px;
+    }
+    .cr-image-swiper {
+      padding-bottom: 200px !important;
+    }
+  }
+{% endstylesheet %}
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const initCustomerReviewsSlider = () => {
+      if (typeof Swiper === 'undefined') {
+        setTimeout(initCustomerReviewsSlider, 100);
+        return;
+      }
+      
+      const imageContainer = document.querySelector('#cr-image-swiper-{{ section.id }}');
+      const textContainer = document.querySelector('#cr-text-swiper-{{ section.id }}');
+      
+      if (!imageContainer || !textContainer) return;
+
+      // Text Swiper (Fade effect)
+      const textSwiper = new Swiper(textContainer, {
+        effect: 'fade',
+        fadeEffect: {
+          crossFade: true
+        },
+        allowTouchMove: false, // We only drag the images
+        pagination: {
+          el: textContainer.querySelector('.cr-pagination'),
+          clickable: true
+        }
+      });
+
+      // Image Swiper (Deep drag / Parallax effect)
+      const imageSwiper = new Swiper(imageContainer, {
+        slidesPerView: 1.5,
+        centeredSlides: true,
+        spaceBetween: 16,
+        loop: false,
+        watchSlidesProgress: true,
+        speed: 400,
+        breakpoints: {
+          750: {
+            slidesPerView: 2.5,
+            spaceBetween: 24,
+          },
+          1024: {
+            slidesPerView: 3.5,
+            spaceBetween: 32,
+          }
+        },
+        on: {
+          progress: function (swiper) {
+            for (let i = 0; i < swiper.slides.length; i++) {
+              const slide = swiper.slides[i];
+              const progress = slide.progress;
+              // Active slide is 0, adjacent are 1 or -1
+              // The further away, the smaller it gets (up to a limit)
+              const scale = 1 - Math.min(Math.abs(progress * 0.15), 0.15);
+              
+              slide.style.transform = `scale(${scale})`;
+              // slide.style.opacity = 1 - Math.min(Math.abs(progress * 0.3), 0.3); // optional opacity fade
+            }
+          },
+          setTransition: function (swiper, transition) {
+            for (let i = 0; i < swiper.slides.length; i++) {
+              swiper.slides[i].style.transitionDuration = transition + 'ms';
+            }
+          },
+          // Manually sync text swiper because controller can be buggy with different slidesPerView
+          slideChange: function (swiper) {
+            if (textSwiper) {
+              textSwiper.slideTo(swiper.activeIndex);
+            }
+          }
+        }
+      });
+      
+      // Also link text swiper pagination clicks back to image swiper
+      textSwiper.on('slideChange', function(swiper) {
+        if (imageSwiper && imageSwiper.activeIndex !== swiper.activeIndex) {
+          imageSwiper.slideTo(swiper.activeIndex);
+        }
+      });
+    };
+    
+    initCustomerReviewsSlider();
+  });
+</script>
+
+{% schema %}
+{
+  "name": "Customer Reviews Slider",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Loved by over 100,000 customers"
+    },
+    {
+      "type": "text",
+      "id": "subtitle",
+      "label": "Subtitle",
+      "default": "See why people love their handcrafted pieces."
+    }
+  ],
+  "blocks": [
+    {
+      "type": "review",
+      "name": "Review",
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Review Image"
+        },
+        {
+          "type": "range",
+          "id": "rating",
+          "min": 1,
+          "max": 5,
+          "step": 1,
+          "label": "Star Rating",
+          "default": 5
+        },
+        {
+          "type": "textarea",
+          "id": "review_text",
+          "label": "Review Text",
+          "default": "I was a little nervous ordering because the product looked almost too good to be real in the photos. It's actually better in person..."
+        },
+        {
+          "type": "text",
+          "id": "author_name",
+          "label": "Author Name",
+          "default": "Melissa O."
+        },
+        {
+          "type": "checkbox",
+          "id": "verified",
+          "label": "Show Verified Buyer Badge",
+          "default": true
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Customer Reviews Slider",
+      "blocks": [
+        {
+          "type": "review",
+          "settings": {
+            "review_text": "Ashdeco is responsive and offered care and attention that is so rare. They went above and beyond.",
+            "author_name": "Nicole B."
+          }
+        },
+        {
+          "type": "review",
+          "settings": {
+            "review_text": "Absolutely stunning craftsmanship. It transformed our living room completely.",
+            "author_name": "Michael S."
+          }
+        },
+        {
+          "type": "review",
+          "settings": {
+            "review_text": "The photos don't do it justice. The wood grain is beautiful and it feels so sturdy.",
+            "author_name": "Sarah J."
+          }
+        },
+        {
+          "type": "review",
+          "settings": {
+            "review_text": "Incredible quality and fast shipping. Highly recommend their floating shelves!",
+            "author_name": "David L."
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,397 @@
+<div class="faq-section page-width">
+  <div class="faq-section__header">
+    <h2 class="faq-section__heading">{{ section.settings.heading }}</h2>
+    <p class="faq-section__subtitle">{{ section.settings.subtitle | escape }}</p>
+  </div>
+
+  {%- assign categories = '' -%}
+  {%- for block in section.blocks -%}
+    {%- assign cat = block.settings.category | strip -%}
+    {%- if cat != blank -%}
+      {%- assign categories = categories | append: cat | append: ',' -%}
+    {%- endif -%}
+  {%- endfor -%}
+  {%- assign categories_array = categories | split: ',' | uniq -%}
+
+  {%- if categories_array.size > 0 -%}
+    <div class="faq-section__filters">
+      <button class="faq-section__filter-btn is-active" data-filter="all">All</button>
+      {%- for category in categories_array -%}
+        <button class="faq-section__filter-btn" data-filter="{{ category | handleize }}">{{ category }}</button>
+      {%- endfor -%}
+    </div>
+  {%- endif -%}
+
+  <div class="faq-section__accordion">
+    {%- for block in section.blocks -%}
+      <details class="faq-section__item" data-category="{{ block.settings.category | handleize }}" {{ block.shopify_attributes }}>
+        <summary class="faq-section__question">
+          {{ block.settings.question | escape }}
+          <span class="faq-section__icon">
+            <svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+        </summary>
+        <div class="faq-section__answer">
+          <div class="faq-section__answer-content">
+            {{ block.settings.answer }}
+          </div>
+        </div>
+      </details>
+    {%- endfor -%}
+  </div>
+
+  {%- if section.settings.link_text != blank and section.settings.link_url != blank -%}
+    <div class="faq-section__footer">
+      <span class="faq-section__footer-text">{{ section.settings.footer_text | escape }}</span>
+      <a href="{{ section.settings.link_url }}" class="faq-section__link">
+        {{ section.settings.link_text | escape }}
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M2.91666 7H11.0833" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M7 2.91669L11.0833 7.00002L7 11.0834" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </a>
+    </div>
+  {%- endif -%}
+</div>
+
+{% stylesheet %}
+  .faq-section {
+    padding-block: var(--space-16, 80px);
+    max-width: 800px;
+    margin-inline: auto;
+  }
+  
+  .faq-section__header {
+    text-align: center;
+    margin-bottom: var(--space-10, 40px);
+  }
+  
+  .faq-section__heading {
+    font-family: var(--font-display);
+    font-size: var(--text-3xl, 48px);
+    font-weight: var(--font-weight-500, 500);
+    color: var(--color-ebony, #1a1815);
+    margin: 0 0 16px 0;
+  }
+  
+  .faq-section__heading em {
+    color: var(--color-2, #e60023);
+    font-style: italic;
+  }
+  
+  .faq-section__subtitle {
+    font-family: var(--font-body);
+    font-size: var(--text-base, 16px);
+    color: var(--color-bark, #6b5d52);
+    margin: 0;
+  }
+  
+  .faq-section__filters {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: var(--space-12, 48px);
+  }
+  
+  .faq-section__filter-btn {
+    background: transparent;
+    border: 1px solid var(--border-light, #e8e4df);
+    color: var(--color-bark, #6b5d52);
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  
+  .faq-section__filter-btn:hover {
+    background: var(--surface-tertiary, #e8e4df);
+  }
+  
+  .faq-section__filter-btn.is-active {
+    background: var(--color-ebony, #1a1815);
+    border-color: var(--color-ebony, #1a1815);
+    color: #ffffff;
+  }
+  
+  .faq-section__accordion {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: var(--space-12, 48px);
+  }
+  
+  .faq-section__item {
+    border: 1px solid var(--border-light, #e8e4df);
+    border-radius: 12px;
+    background: #ffffff;
+    overflow: hidden;
+  }
+  
+  .faq-section__question {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    font-family: var(--font-body);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-ebony, #1a1815);
+    cursor: pointer;
+    list-style: none; /* Hide default marker */
+  }
+  
+  .faq-section__question::-webkit-details-marker {
+    display: none; /* Hide default marker in Safari */
+  }
+  
+  .faq-section__icon {
+    color: var(--color-bark, #6b5d52);
+    transition: transform 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .faq-section__item[open] .faq-section__icon {
+    transform: rotate(180deg);
+  }
+  
+  .faq-section__answer {
+    padding: 0 24px 20px 24px;
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--color-bark, #6b5d52);
+  }
+  
+  .faq-section__answer-content p:first-child {
+    margin-top: 0;
+  }
+  
+  .faq-section__answer-content p:last-child {
+    margin-bottom: 0;
+  }
+
+  /* Utility for filtering */
+  .faq-section__item.is-hidden {
+    display: none;
+  }
+
+  .faq-section__footer {
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background-color: var(--color-cream, #f5f1ed);
+    padding: 24px;
+    border-radius: 12px;
+  }
+  
+  .faq-section__footer-text {
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: var(--color-bark, #6b5d52);
+  }
+  
+  .faq-section__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--color-2, #e60023);
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  @media screen and (max-width: 749px) {
+    .faq-section__heading {
+      font-size: var(--text-2xl, 32px);
+    }
+    .faq-section__footer {
+      flex-direction: column;
+      gap: 12px;
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  document.addEventListener('DOMContentLoaded', function () {
+    const section = document.querySelector('.faq-section');
+    if (!section) return;
+    
+    const filterBtns = section.querySelectorAll('.faq-section__filter-btn');
+    const faqItems = section.querySelectorAll('.faq-section__item');
+    
+    filterBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        // Update active button state
+        filterBtns.forEach(b => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        
+        const filterValue = btn.getAttribute('data-filter');
+        
+        // Filter items
+        faqItems.forEach(item => {
+          if (filterValue === 'all') {
+            item.classList.remove('is-hidden');
+          } else {
+            const itemCategory = item.getAttribute('data-category');
+            if (itemCategory === filterValue) {
+              item.classList.remove('is-hidden');
+            } else {
+              item.classList.add('is-hidden');
+              item.removeAttribute('open'); // Close it if it's hidden
+            }
+          }
+        });
+      });
+    });
+    
+    // Smooth accordion (Optional, native details/summary works fine without JS)
+    // If smooth animation is strictly needed, it requires a bit more JS logic 
+    // to animate height from 0 to scrollHeight. For simplicity and robustness,
+    // relying on native <details> behavior is preferred here as it's accessible.
+  });
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "FAQ",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    {
+      "type": "html",
+      "id": "heading",
+      "label": "Heading (HTML allowed)",
+      "default": "Frequently asked <em>questions</em>"
+    },
+    {
+      "type": "text",
+      "id": "subtitle",
+      "label": "Subtitle",
+      "default": "Everything you need to know about our pieces, commissions, and care."
+    },
+    {
+      "type": "text",
+      "id": "footer_text",
+      "label": "Footer Text",
+      "default": "Can't find your answer?"
+    },
+    {
+      "type": "text",
+      "id": "link_text",
+      "label": "Link Text",
+      "default": "Get in touch"
+    },
+    {
+      "type": "url",
+      "id": "link_url",
+      "label": "Link URL"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "question",
+      "name": "Question",
+      "settings": [
+        {
+          "type": "text",
+          "id": "category",
+          "label": "Category (for filter pill)"
+        },
+        {
+          "type": "text",
+          "id": "question",
+          "label": "Question",
+          "default": "Do you offer free shipping?"
+        },
+        {
+          "type": "richtext",
+          "id": "answer",
+          "label": "Answer",
+          "default": "<p>Yes, we offer free shipping on all orders over $500.</p>"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "FAQ",
+      "blocks": [
+        {
+          "type": "question",
+          "settings": {
+            "category": "Shipping",
+            "question": "Do you offer free shipping?"
+          }
+        },
+        {
+          "type": "question",
+          "settings": {
+            "category": "Shipping",
+            "question": "How long does shipping take?"
+          }
+        },
+        {
+          "type": "question",
+          "settings": {
+            "category": "Commissions",
+            "question": "How long does a commission take?"
+          }
+        },
+        {
+          "type": "question",
+          "settings": {
+            "category": "Payment",
+            "question": "Do I need to pay a deposit?"
+          }
+        },
+        {
+          "type": "question",
+          "settings": {
+            "category": "Care",
+            "question": "Are your furniture pieces treated for termite protection?"
+          }
+        },
+        {
+          "type": "question",
+          "settings": {
+            "category": "Care",
+            "question": "How should I care for and maintain my furniture?"
+          }
+        },
+        {
+          "type": "question",
+          "settings": {
+            "category": "Returns",
+            "question": "What if my piece develops cracks?"
+          }
+        },
+        {
+          "type": "question",
+          "settings": {
+            "category": "Returns",
+            "question": "Can I return a piece?"
+          }
+        },
+        {
+          "type": "question",
+          "settings": {
+            "category": "Payment",
+            "question": "What payment methods do you accept?"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

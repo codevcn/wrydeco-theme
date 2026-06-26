@@ -1,0 +1,158 @@
+<header class="header page-width">
+  <div class="header__left">
+    <a href="{{ routes.search_url }}" class="header__icon header__icon--search" aria-label="{{ 'general.search.search' | t | default: 'Search' }}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-search" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+    </a>
+  </div>
+
+  <h1 class="header__heading">
+    <a href="{{ routes.root_url }}" class="header__heading-link">
+      {%- if section.settings.logo != blank -%}
+        {{ section.settings.logo | image_url: width: 400 | image_tag:
+          class: 'header__heading-logo',
+          widths: '100, 200, 300, 400',
+          height: section.settings.logo.height,
+          width: section.settings.logo.width,
+          alt: section.settings.logo.alt | default: shop.name | escape
+        }}
+      {%- elsif section.settings.logo_asset != blank -%}
+        <img src="{{ section.settings.logo_asset | asset_url }}" class="header__heading-logo" alt="{{ shop.name | escape }}" width="150" height="auto">
+      {%- else -%}
+        <span class="h2">{{ shop.name }}</span>
+      {%- endif -%}
+    </a>
+  </h1>
+
+  <div class="header__right">
+    <a href="{{ routes.cart_url }}" class="header__icon header__icon--cart" aria-label="{{ 'templates.cart.cart' | t | default: 'Cart' }}">
+      {{ 'icon-cart.svg' | inline_asset_content }}
+      {%- if cart.item_count > 0 -%}
+        <div class="cart-count-bubble">
+          <span>{{ cart.item_count }}</span>
+        </div>
+      {%- endif -%}
+    </a>
+    
+    <button class="header__icon header__icon--menu" aria-haspopup="dialog" aria-label="Menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-hamburger" aria-hidden="true"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+    </button>
+  </div>
+</header>
+
+{% stylesheet %}
+  .header {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    padding-block: var(--space-4, 10px);
+    padding-inline: var(--space-4, 10px);
+    background-color: var(--color-background, #fff);
+  }
+
+  .header__left {
+    display: flex;
+    justify-content: flex-start;
+  }
+
+  .header__right {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-4, 10px);
+  }
+
+  .header__heading {
+    margin: 0;
+    display: flex;
+    justify-content: center;
+  }
+
+  .header__heading-link {
+    text-decoration: none;
+    color: var(--color-1, #000);
+    display: block;
+    line-height: 1;
+  }
+
+  .header__heading-logo {
+    max-width: 100%;
+    height: auto;
+    width: 150px;
+  }
+
+  .header__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    color: var(--color-1, #000);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    position: relative;
+  }
+
+  /* Gray circle background for icons like in the screenshot */
+  .header__icon--search,
+  .header__icon--menu {
+    border-radius: var(--radius-full, 50%);
+  }
+  
+  .header__icon--search {
+    background-color: var(--bg-card, #f4f4f4);
+  }
+
+  .header__icon svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .cart-count-bubble {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background-color: var(--color-2, #E60023);
+    color: var(--color-10, #FFF);
+    font-size: var(--text-xs, 12px);
+    font-weight: bold;
+    border-radius: var(--radius-full, 50%);
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: translate(25%, -25%);
+  }
+
+  @media screen and (min-width: 750px) {
+    .header {
+      padding-inline: var(--space-8, 16px);
+      padding-block: var(--space-6, 12px);
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.header",
+  "settings": [
+    {
+      "type": "image_picker",
+      "id": "logo",
+      "label": "Logo Image"
+    },
+    {
+      "type": "text",
+      "id": "logo_asset",
+      "label": "Local Asset Logo",
+      "info": "Filename of an image in the assets folder e.g. logo.png"
+    },
+    {
+      "type": "link_list",
+      "id": "menu",
+      "label": "Menu"
+    }
+  ]
+}
+{% endschema %}

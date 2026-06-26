@@ -1,0 +1,2 @@
+- local url của web là http://127.0.0.1:9292
+- web có tên là Wrydeco

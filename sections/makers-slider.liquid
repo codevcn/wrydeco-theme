@@ -1,0 +1,559 @@
+<div class="makers-slider page-width">
+  <div class="makers-slider__header">
+    <div class="makers-slider__header-content">
+      {%- if section.settings.badge != blank -%}
+        <div class="makers-slider__badge">
+          <span class="makers-slider__badge-dot"></span>
+          {{ section.settings.badge | escape }}
+        </div>
+      {%- endif -%}
+      <h2 class="makers-slider__heading">{{ section.settings.heading }}</h2>
+      <p class="makers-slider__subtext">{{ section.settings.subtext | escape }}</p>
+    </div>
+    
+    <div class="makers-slider__nav">
+      <button class="makers-slider__nav-btn makers-slider__nav-btn--prev" aria-label="Previous">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M10 12L6 8L10 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <button class="makers-slider__nav-btn makers-slider__nav-btn--next" aria-label="Next">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M6 4L10 8L6 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="makers-slider__track-container">
+    <div class="makers-slider__track" id="MakersSliderTrack-{{ section.id }}">
+      {%- for block in section.blocks -%}
+        <div class="makers-slider__card" {{ block.shopify_attributes }}>
+          <div class="makers-slider__card-image" {% if block.settings.image != blank %}style="background-image: url('{{ block.settings.image | asset_url }}');"{% endif %}>
+          </div>
+          <div class="makers-slider__card-info">
+            <p class="makers-slider__card-tag">{{ block.settings.tag | escape }}</p>
+            <h3 class="makers-slider__card-name">{{ block.settings.name | escape }}</h3>
+            <p class="makers-slider__card-studio">{{ block.settings.studio | escape }}</p>
+            
+            <div class="makers-slider__stats">
+              <div class="makers-slider__stat">
+                <span class="makers-slider__stat-val">{{ block.settings.stat_1_val | escape }}</span>
+                <span class="makers-slider__stat-label">{{ block.settings.stat_1_label | escape }}</span>
+              </div>
+              <div class="makers-slider__stat">
+                <span class="makers-slider__stat-val">{{ block.settings.stat_2_val | escape }}</span>
+                <span class="makers-slider__stat-label">{{ block.settings.stat_2_label | escape }}</span>
+              </div>
+              <div class="makers-slider__stat">
+                <span class="makers-slider__stat-val">{{ block.settings.stat_3_val | escape }}</span>
+                <span class="makers-slider__stat-label">{{ block.settings.stat_3_label | escape }}</span>
+              </div>
+            </div>
+            
+            <a href="{{ block.settings.profile_link | default: '#' }}" class="makers-slider__card-link">
+              {{ block.settings.link_text | escape }}
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2.91666 7H11.0833" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M7 2.91669L11.0833 7.00002L7 11.0834" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </a>
+          </div>
+        </div>
+      {%- endfor -%}
+    </div>
+  </div>
+  
+  <div class="makers-slider__progress">
+    <div class="makers-slider__progress-bar" id="MakersSliderProgress-{{ section.id }}"></div>
+  </div>
+</div>
+
+{% stylesheet %}
+  .makers-slider {
+    padding-block: var(--space-12, 60px);
+    overflow: hidden;
+  }
+  
+  .makers-slider__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: var(--space-8, 32px);
+    gap: 16px;
+  }
+  
+  .makers-slider__header-content {
+    max-width: 600px;
+  }
+  
+  .makers-slider__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background-color: #fce8e8;
+    color: var(--color-2, #e60023);
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 16px;
+  }
+  
+  .makers-slider__badge-dot {
+    width: 6px;
+    height: 6px;
+    background-color: currentColor;
+    border-radius: 50%;
+  }
+
+  .makers-slider__heading {
+    font-family: var(--font-display);
+    font-size: var(--text-2xl, 32px);
+    font-weight: var(--font-weight-500, 500);
+    margin: 0 0 12px 0;
+    line-height: 1.1;
+  }
+  
+  .makers-slider__heading em {
+    color: var(--color-2, #e60023);
+    font-style: italic;
+  }
+  
+  .makers-slider__subtext {
+    font-family: var(--font-body);
+    font-size: var(--text-base, 15px);
+    color: var(--color-bark, #6b5d52);
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  .makers-slider__nav {
+    display: none;
+    gap: 8px;
+  }
+
+  .makers-slider__nav-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid var(--border-light, #e8e4df);
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--color-ebony, #1a1815);
+    transition: all 0.2s ease;
+  }
+  
+  .makers-slider__nav-btn:hover {
+    background: var(--surface-tertiary, #e8e4df);
+  }
+
+  /* Slider Track */
+  .makers-slider__track-container {
+    margin-right: -15px; /* Bleed to right edge */
+    padding-right: 15px;
+  }
+
+  .makers-slider__track {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 24px;
+    padding-bottom: 24px; /* Space for shadow/scrollbar */
+    scrollbar-width: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  
+  .makers-slider__track::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .makers-slider__track.is-dragging {
+    scroll-snap-type: none;
+    cursor: grabbing;
+  }
+  .makers-slider__track:not(.is-dragging) {
+    cursor: grab;
+  }
+
+  /* Card */
+  .makers-slider__card {
+    flex: 0 0 85%;
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    border-radius: 20px;
+    overflow: hidden;
+    background-color: var(--color-cream, #f4ebd9);
+  }
+  
+  .makers-slider__card-image {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    background-color: var(--color-stone, #e8e4df);
+    background-size: cover;
+    background-position: center;
+    pointer-events: none;
+  }
+  
+  .makers-slider__card-info {
+    padding: 32px 24px;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .makers-slider__card-tag {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-2, #e60023);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin: 0 0 12px 0;
+  }
+  
+  .makers-slider__card-name {
+    font-family: var(--font-display);
+    font-size: var(--text-xl, 28px);
+    font-weight: 500;
+    margin: 0 0 4px 0;
+    color: var(--color-ebony, #1a1815);
+  }
+  
+  .makers-slider__card-studio {
+    font-size: 14px;
+    color: var(--color-bark, #6b5d52);
+    margin: 0 0 32px 0;
+  }
+  
+  .makers-slider__stats {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 32px;
+    border-top: 1px solid rgba(0,0,0,0.05);
+    padding-top: 24px;
+  }
+  
+  .makers-slider__stat {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  
+  .makers-slider__stat-val {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--color-ebony, #1a1815);
+  }
+  
+  .makers-slider__stat-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-bark, #6b5d52);
+    font-weight: 500;
+  }
+  
+  .makers-slider__card-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--color-2, #e60023);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    margin-top: auto;
+  }
+  
+  /* Progress Bar */
+  .makers-slider__progress {
+    width: 100%;
+    max-width: 150px;
+    height: 2px;
+    background-color: var(--border-light, #e8e4df);
+    margin-top: 16px;
+    position: relative;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  
+  .makers-slider__progress-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 33%;
+    background-color: var(--color-2, #e60023);
+    border-radius: 2px;
+    transition: left 0.3s ease;
+  }
+
+  /* Tablet and Desktop Layout */
+  @media screen and (min-width: 750px) {
+    .makers-slider {
+      padding-block: var(--space-16, 80px);
+    }
+    
+    .makers-slider__heading {
+      font-size: var(--text-3xl, 48px);
+    }
+    
+    .makers-slider__nav {
+      display: flex;
+    }
+    
+    .makers-slider__track-container {
+      margin-right: 0;
+      padding-right: 0;
+    }
+    
+    .makers-slider__card {
+      flex: 0 0 90%;
+      flex-direction: row;
+      max-width: 800px;
+    }
+    
+    .makers-slider__card-image {
+      flex: 1 1 50%;
+      aspect-ratio: auto;
+      height: auto;
+    }
+    
+    .makers-slider__card-info {
+      flex: 1 1 50%;
+      padding: 60px 48px;
+      justify-content: center;
+    }
+    
+    .makers-slider__card-name {
+      font-size: var(--text-4xl, 40px);
+    }
+    
+    .makers-slider__card-studio {
+      margin-bottom: 48px;
+    }
+    
+    .makers-slider__stats {
+      margin-bottom: 48px;
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  document.addEventListener('DOMContentLoaded', function () {
+    const section = document.querySelector('.makers-slider');
+    if (!section) return;
+    
+    const track = section.querySelector('.makers-slider__track');
+    const prevBtn = section.querySelector('.makers-slider__nav-btn--prev');
+    const nextBtn = section.querySelector('.makers-slider__nav-btn--next');
+    const progressBar = section.querySelector('.makers-slider__progress-bar');
+    
+    if (!track) return;
+    
+    // Drag to scroll logic
+    let isDown = false;
+    let startX;
+    let scrollLeft;
+
+    track.addEventListener('mousedown', (e) => {
+      isDown = true;
+      track.classList.add('is-dragging');
+      startX = e.pageX - track.offsetLeft;
+      scrollLeft = track.scrollLeft;
+    });
+
+    track.addEventListener('mouseleave', () => {
+      isDown = false;
+      track.classList.remove('is-dragging');
+    });
+
+    track.addEventListener('mouseup', () => {
+      isDown = false;
+      track.classList.remove('is-dragging');
+    });
+
+    track.addEventListener('mousemove', (e) => {
+      if (!isDown) return;
+      e.preventDefault();
+      const x = e.pageX - track.offsetLeft;
+      const walk = (x - startX) * 1.5;
+      track.scrollLeft = scrollLeft - walk;
+    });
+    
+    // Button navigation
+    const updateButtons = () => {
+      const cardWidth = track.querySelector('.makers-slider__card').offsetWidth;
+      const scrollPos = track.scrollLeft;
+      const trackWidth = track.scrollWidth - track.clientWidth;
+      
+      // Update progress bar
+      if (progressBar && trackWidth > 0) {
+        const progress = (scrollPos / trackWidth) * 100;
+        // Make the width relative to items. Let's make it fixed 1/3 width, moving left-to-right
+        const progressWidth = 100 / track.querySelectorAll('.makers-slider__card').length;
+        progressBar.style.width = `${progressWidth}%`;
+        progressBar.style.left = `calc(${progress} * (100% - ${progressWidth}%) / 100)`;
+      }
+    };
+    
+    if (prevBtn && nextBtn) {
+      prevBtn.addEventListener('click', () => {
+        const cardWidth = track.querySelector('.makers-slider__card').offsetWidth + 24; // gap
+        track.scrollBy({ left: -cardWidth, behavior: 'smooth' });
+      });
+      
+      nextBtn.addEventListener('click', () => {
+        const cardWidth = track.querySelector('.makers-slider__card').offsetWidth + 24; // gap
+        track.scrollBy({ left: cardWidth, behavior: 'smooth' });
+      });
+    }
+    
+    track.addEventListener('scroll', updateButtons, { passive: true });
+    
+    // Initial call
+    setTimeout(updateButtons, 100);
+    window.addEventListener('resize', updateButtons);
+  });
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "Meet the Makers Slider",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "badge",
+      "label": "Badge text",
+      "default": "Featured This Week"
+    },
+    {
+      "type": "html",
+      "id": "heading",
+      "label": "Heading (HTML allowed)",
+      "default": "Meet the <em>makers</em> behind every piece"
+    },
+    {
+      "type": "text",
+      "id": "subtext",
+      "label": "Subtext",
+      "default": "Somewhere in Vietnam, a craftsman signed his name to the piece you're looking at. Meet the hands that made it."
+    }
+  ],
+  "blocks": [
+    {
+      "type": "maker",
+      "name": "Maker Card",
+      "settings": [
+        {
+          "type": "text",
+          "id": "image",
+          "label": "Image Filename (from assets)"
+        },
+        {
+          "type": "text",
+          "id": "tag",
+          "label": "Tag",
+          "default": "FEATURED ARTISAN"
+        },
+        {
+          "type": "text",
+          "id": "name",
+          "label": "Name",
+          "default": "Huan Ngo"
+        },
+        {
+          "type": "text",
+          "id": "studio",
+          "label": "Studio/Subtitle",
+          "default": "Forest Heart & Hands"
+        },
+        {
+          "type": "text",
+          "id": "stat_1_val",
+          "label": "Stat 1 Value",
+          "default": "5.4k"
+        },
+        {
+          "type": "text",
+          "id": "stat_1_label",
+          "label": "Stat 1 Label",
+          "default": "PIECES MADE"
+        },
+        {
+          "type": "text",
+          "id": "stat_2_val",
+          "label": "Stat 2 Value",
+          "default": "1.1k"
+        },
+        {
+          "type": "text",
+          "id": "stat_2_label",
+          "label": "Stat 2 Label",
+          "default": "FOLLOWERS"
+        },
+        {
+          "type": "text",
+          "id": "stat_3_val",
+          "label": "Stat 3 Value",
+          "default": "52"
+        },
+        {
+          "type": "text",
+          "id": "stat_3_label",
+          "label": "Stat 3 Label",
+          "default": "YEARS"
+        },
+        {
+          "type": "text",
+          "id": "link_text",
+          "label": "Link Text",
+          "default": "View profile"
+        },
+        {
+          "type": "url",
+          "id": "profile_link",
+          "label": "Profile Link"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Meet the Makers Slider",
+      "blocks": [
+        {
+          "type": "maker",
+          "settings": {
+            "image": "Huan_Ngo.webp",
+            "name": "Huan Ngo"
+          }
+        },
+        {
+          "type": "maker",
+          "settings": {
+            "image": "Trung_Le.webp",
+            "name": "Trung Le"
+          }
+        },
+        {
+          "type": "maker",
+          "settings": {
+            "image": "Dien_Luc.webp",
+            "name": "Dien Luc"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}
