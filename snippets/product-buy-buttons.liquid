@@ -1,0 +1,124 @@
+{% comment %}
+  Renders buy buttons, quantity input, and product form.
+  @param {product} product
+  @param {variant} current_variant
+  @param {string} product_form_id
+{% endcomment %}
+
+{% style %}
+  .product-buy-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .quantity-input {
+    display: flex;
+    align-items: center;
+    border: 1px solid #ccc;
+    border-radius: 30px;
+    height: 54px;
+    width: 120px;
+  }
+  .quantity-input__btn {
+    background: none;
+    border: none;
+    width: 40px;
+    height: 100%;
+    font-size: 20px;
+    cursor: pointer;
+    color: #111;
+  }
+  .quantity-input__input {
+    width: 40px;
+    text-align: center;
+    border: none;
+    background: none;
+    font-size: 16px;
+    font-weight: 500;
+    color: #111;
+  }
+  .product-form__buttons {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .btn--add-to-cart {
+    background-color: #e51a3d;
+    color: #fff;
+    border: none;
+    border-radius: 30px;
+    height: 54px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    transition: background-color 0.2s;
+  }
+  .btn--add-to-cart:hover {
+    background-color: #cc1736;
+  }
+  .btn--add-to-cart:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+  }
+  
+  /* Additional overrides for dynamic checkout buttons */
+  .shopify-payment-button__button {
+    border-radius: 30px !important;
+    height: 54px !important;
+  }
+{% endstyle %}
+
+{%- form 'product', product, id: product_form_id, class: 'form', novalidate: 'novalidate', data-type: 'add-to-cart-form' -%}
+  <input type="hidden" name="id" value="{{ current_variant.id }}" data-variant-id>
+  
+  <div class="product-buy-buttons">
+    <div class="quantity-input" data-quantity-selector>
+      <button type="button" class="quantity-input__btn" aria-label="Decrease quantity" data-action="decrease">-</button>
+      <input type="number" 
+             name="quantity" 
+             class="quantity-input__input" 
+             value="1" 
+             min="1" 
+             aria-label="Quantity">
+      <button type="button" class="quantity-input__btn" aria-label="Increase quantity" data-action="increase">+</button>
+    </div>
+    
+    <div class="product-form__buttons">
+      <button
+        type="submit"
+        name="add"
+        class="btn btn--add-to-cart"
+        {% if current_variant.available == false %}
+          disabled
+        {% endif %}
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+        <span data-add-to-cart-text>
+          {%- if current_variant.available -%}
+            Add to cart
+          {%- else -%}
+            Sold out
+          {%- endif -%}
+        </span>
+      </button>
+      
+      {{ form | payment_button }}
+    </div>
+  </div>
+  
+  <div class="product-form__error-message-wrapper" role="alert" hidden data-error-message-wrapper>
+    <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 16 16" fill="none" style="margin-right: 8px;">
+      <circle cx="8" cy="8" r="7.5" fill="none" stroke="#e51a3d" stroke-width="1.5"></circle>
+      <path d="M8 4V8.5" stroke="#e51a3d" stroke-width="1.5" stroke-linecap="round"></path>
+      <circle cx="8" cy="11.5" r="1" fill="#e51a3d"></circle>
+    </svg>
+    <span class="product-form__error-message" data-error-message></span>
+  </div>
+{%- endform -%}

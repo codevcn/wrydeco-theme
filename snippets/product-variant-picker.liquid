@@ -1,0 +1,95 @@
+{% comment %}
+  Renders product variant picker (options and values).
+  @param {product} product
+  @param {variant} current_variant
+  @param {string} section_id
+{% endcomment %}
+
+{% unless product.has_only_default_variant %}
+  {% style %}
+    .product-variant-picker {
+      margin-bottom: 24px;
+      padding: 0 14px;
+    }
+    .variant-option {
+      margin-bottom: 20px;
+    }
+    .variant-option__name {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: #111;
+    }
+    .variant-option__selected-value {
+      font-weight: 400;
+      color: #666;
+      font-size: 15px;
+    }
+    .variant-option__values {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .variant-swatch {
+      display: inline-block;
+    }
+    .variant-swatch input[type="radio"] {
+      display: none;
+    }
+    .variant-swatch label {
+      display: inline-block;
+      padding: 12px 20px;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 15px;
+      color: #111;
+      cursor: pointer;
+      background: #fff;
+      transition: all 0.2s ease;
+    }
+    .variant-swatch input[type="radio"]:checked + label {
+      background: #111;
+      color: #fff;
+      border-color: #111;
+    }
+    .variant-swatch input[type="radio"]:disabled + label {
+      opacity: 0.5;
+      text-decoration: line-through;
+      cursor: not-allowed;
+    }
+  {% endstyle %}
+
+  <div class="product-variant-picker">
+    {% for option in product.options_with_values %}
+      <div class="variant-option">
+        <div class="variant-option__name">
+          <span>{{ option.name }}</span>
+          <span class="variant-option__selected-value" id="OptionLabel-{{ section_id }}-{{ forloop.index0 }}">
+            {{ option.selected_value }}
+          </span>
+        </div>
+        
+        <div class="variant-option__values">
+          {% for value in option.values %}
+            <div class="variant-swatch">
+              <input type="radio" 
+                     id="Option-{{ section_id }}-{{ option.position }}-{{ forloop.index0 }}"
+                     name="options[{{ option.name | escape }}]"
+                     value="{{ value | escape }}"
+                     data-index="option{{ option.position }}"
+                     {% if option.selected_value == value %}checked="checked"{% endif %}
+                     {% unless value.available %}disabled{% endunless %}
+              >
+              <label for="Option-{{ section_id }}-{{ option.position }}-{{ forloop.index0 }}">
+                {{ value }}
+              </label>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% endunless %}

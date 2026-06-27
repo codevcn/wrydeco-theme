@@ -1,0 +1,44 @@
+{% comment %}
+  Renders product price.
+  @param {product} product
+  @param {variant} current_variant
+{% endcomment %}
+
+{% style %}
+  .product-price {
+    margin-bottom: 8px;
+    padding: 0 14px;
+    margin-top: 14px;
+    margin-bottom: 16px;
+  }
+  .product-price__regular {
+    font-size: 20px;
+    font-weight: 700;
+    color: #111;
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+  .product-price__compare {
+    font-size: 18px;
+    color: #999;
+    text-decoration: line-through;
+    margin-left: 12px;
+  }
+{% endstyle %}
+
+<div
+  class="product-price {% if current_variant.compare_at_price > current_variant.price %}product-price--has-sale{% endif %}"
+  data-price-container
+>
+  {% if product.price_varies %}
+    <span class="product-price__regular" data-regular-price>From {{ product.price_min | money }}</span>
+  {% else %}
+    <span class="product-price__regular" data-regular-price>{{ current_variant.price | money }}</span>
+  {% endif %}
+
+  {% if current_variant.compare_at_price > current_variant.price %}
+    <span class="product-price__compare" data-compare-price>{{ current_variant.compare_at_price | money }}</span>
+  {% else %}
+    <span class="product-price__compare" data-compare-price style="display: none;"></span>
+  {% endif %}
+</div>

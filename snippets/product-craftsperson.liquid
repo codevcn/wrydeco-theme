@@ -1,0 +1,83 @@
+{% comment %}
+  Renders product craftsperson (author) info based on metafield.
+  @param {product} product - The product object
+{% endcomment %}
+
+{% liquid
+  assign author_name = product.metafields.custom.author_name.value
+  assign author_image_url = product.metafields.custom.author_image_url.value
+%}
+
+{% if author_name != blank %}
+  {% style %}
+    .product-craftsperson {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 38px;
+      margin-top: 38px;
+    }
+    .product-craftsperson__image-wrap {
+      position: relative;
+      overflow: hidden;
+      width: 100%;
+      background: #f4f4f4;
+    }
+    .product-craftsperson__image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .product-craftsperson__info {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      padding: 12px;
+      padding-top: 18px;
+      background-image: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+    }
+    .product-craftsperson__label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #666;
+      font-weight: 500;
+      line-height: 1;
+      margin-bottom: 4px;
+      color: white;
+      font-family: var(--font-display);
+    }
+    .product-craftsperson__name {
+      font-size: 22px;
+      font-weight: 700;
+      color: #fff;
+      margin: 0;
+      line-height: 1.2;
+      font-family: var(--font-display);
+    }
+  {% endstyle %}
+
+  <div class="product-craftsperson">
+    {% if author_image_url != blank %}
+      <div class="product-craftsperson__image-wrap">
+        <img
+          class="product-craftsperson__image"
+          src="{{ author_image_url | escape }}"
+          alt="{{ author_name | escape }}"
+          width="48"
+          height="48"
+          loading="lazy"
+        >
+        <div class="product-craftsperson__info">
+          <span class="product-craftsperson__label">CRAFTED BY</span>
+          <span class="product-craftsperson__name">{{ author_name | escape }}</span>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+{% endif %}

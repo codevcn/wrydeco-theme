@@ -1,0 +1,135 @@
+{% comment %}
+  Main Product Section
+{% endcomment %}
+
+<script src="{{ 'product-info.js' | asset_url }}" defer="defer"></script>
+<script src="{{ 'product-gallery.js' | asset_url }}" defer="defer"></script>
+<script src="{{ 'product-form.js' | asset_url }}" defer="defer"></script>
+<script src="{{ 'sale-event.js' | asset_url }}" defer="defer"></script>
+
+{% style %}
+  .main-product {
+    padding: 24px 0px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .main-product__info {
+    display: flex;
+    flex-direction: column;
+  }
+  .main-product__title {
+    font-size: 26px;
+    font-weight: 500;
+    line-height: 1.2;
+    margin: 0;
+    padding: 0 14px;
+  }
+  .main-product__details {
+    padding: 18px 0px;
+    margin: 0 12px;
+    background-color: #fff;
+    border-radius: 8px;
+  }
+  @media screen and (min-width: 768px) {
+    .main-product {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+    }
+  }
+{% endstyle %}
+
+{% liquid
+  assign current_variant = product.selected_or_first_available_variant
+  if current_variant == blank
+    assign current_variant = product.first_available_variant
+  endif
+  if current_variant == blank
+    assign current_variant = product.variants.first
+  endif
+  assign product_form_id = 'ProductForm-' | append: section.id
+%}
+
+<section
+  id="MainProduct-{{ section.id }}"
+  class="main-product"
+  data-product-id="{{ product.id }}"
+  data-product-url="{{ product.url }}"
+>
+  <div class="main-product__info">
+    <h1 class="main-product__title">{{ product.title | escape }}</h1>
+
+    {% render 'product-price', product: product, current_variant: current_variant %}
+
+    {% render 'product-annualized-cost', product: product, current_variant: current_variant %}
+
+    {% render 'product-media-gallery', product: product, current_variant: current_variant %}
+
+    <div class="main-product__details">
+      {% render 'product-rating-summary', product: product %}
+
+      {% render 'product-sale-notice', product: product, current_variant: current_variant %}
+
+      {% render 'product-variant-picker', product: product, current_variant: current_variant, section_id: section.id %}
+
+      {% render 'product-craftsperson', product: product %}
+
+      {% render 'product-consultation', product: product %}
+
+      {% render 'product-benefits', product: product, section: section %}
+
+      {% render 'product-buy-buttons',
+        product: product,
+        current_variant: current_variant,
+        product_form_id: product_form_id
+      %}
+    </div>
+  </div>
+</section>
+
+<script type="application/json" data-product-state>
+  {
+    "id": {{ product.id | json }},
+    "url": {{ product.url | json }},
+    "selectedVariantId": {{ current_variant.id | json }},
+    "hasOnlyDefaultVariant": {{ product.has_only_default_variant | json }}
+  }
+</script>
+<script type="application/ld+json">
+  {{ product | structured_data }}
+</script>
+
+{% schema %}
+{
+  "name": "Main Product",
+  "tag": "section",
+  "class": "section",
+  "blocks": [
+    {
+      "type": "benefit",
+      "name": "Benefit",
+      "settings": [
+        {
+          "type": "text",
+          "id": "title",
+          "label": "Title",
+          "default": "Benefit Title"
+        },
+        {
+          "type": "richtext",
+          "id": "content",
+          "label": "Content",
+          "default": "<p>Benefit description goes here.</p>"
+        },
+        {
+          "type": "text",
+          "id": "icon",
+          "label": "Icon (SVG string)",
+          "info": "Optional"
+        }
+      ]
+    }
+  ],
+  "settings": []
+}
+{% endschema %}

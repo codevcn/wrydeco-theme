@@ -1,0 +1,95 @@
+{% comment %}
+  Renders product media gallery.
+  @param {product} product
+  @param {variant} current_variant
+{% endcomment %}
+
+{% style %}
+  .product-gallery {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .product-gallery__slider {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+  }
+  .product-gallery__slider::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
+  }
+  .product-gallery__item {
+    flex: 0 0 100%;
+    scroll-snap-align: start;
+    position: relative;
+    padding: 0 14px;
+  }
+  .product-gallery__media {
+    width: 100%;
+    height: auto;
+    display: block;
+    object-fit: contain;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .product-gallery__dots {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 16px;
+  }
+  .product-gallery__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #ccc;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+  }
+  .product-gallery__dot.is-active {
+    background-color: #e51a3d;
+    width: 24px;
+    border-radius: 4px;
+  }
+{% endstyle %}
+
+<div class="product-gallery" data-product-gallery>
+  <div class="product-gallery__slider" data-gallery-slider>
+    {% for media in product.media %}
+      <div class="product-gallery__item" data-media-id="{{ media.id }}" {% if current_variant.featured_media.id == media.id %}data-is-featured{% endif %}>
+        {% case media.media_type %}
+          {% when 'image' %}
+            {% assign loading = 'lazy' %}
+            {% if forloop.first %}
+              {% assign loading = 'eager' %}
+            {% endif %}
+            {{ media | image_url: width: 1200 | image_tag: class: 'product-gallery__media', loading: loading }}
+          {% when 'external_video' %}
+            <div class="product-gallery__media">
+              {{ media | external_video_tag }}
+            </div>
+          {% when 'video' %}
+            <div class="product-gallery__media">
+              {{ media | video_tag: controls: true, autoplay: true }}
+            </div>
+          {% else %}
+            <div class="product-gallery__media">
+              {{ media | media_tag }}
+            </div>
+        {% endcase %}
+      </div>
+    {% endfor %}
+  </div>
+  
+  {% if product.media.size > 1 %}
+    <div class="product-gallery__dots" data-gallery-dots>
+      {% for media in product.media %}
+        <button class="product-gallery__dot {% if forloop.first %}is-active{% endif %}" data-index="{{ forloop.index0 }}" aria-label="Go to slide {{ forloop.index }}"></button>
+      {% endfor %}
+    </div>
+  {% endif %}
+</div>
