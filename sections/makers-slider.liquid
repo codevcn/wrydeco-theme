@@ -10,7 +10,7 @@
       <h2 class="makers-slider__heading">{{ section.settings.heading }}</h2>
       <p class="makers-slider__subtext">{{ section.settings.subtext | escape }}</p>
     </div>
-    
+
     <div class="makers-slider__nav">
       <button class="makers-slider__nav-btn makers-slider__nav-btn--prev" aria-label="Previous">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -29,13 +29,17 @@
     <div class="makers-slider__track" id="MakersSliderTrack-{{ section.id }}">
       {%- for block in section.blocks -%}
         <div class="makers-slider__card" {{ block.shopify_attributes }}>
-          <div class="makers-slider__card-image" {% if block.settings.image != blank %}style="background-image: url('{{ block.settings.image | asset_url }}');"{% endif %}>
-          </div>
+          <div
+            class="makers-slider__card-image"
+            {% if block.settings.image != blank %}
+              style="background-image: url('{{ block.settings.image | asset_url }}');"
+            {% endif %}
+          ></div>
           <div class="makers-slider__card-info">
             <p class="makers-slider__card-tag">{{ block.settings.tag | escape }}</p>
             <h3 class="makers-slider__card-name">{{ block.settings.name | escape }}</h3>
             <p class="makers-slider__card-studio">{{ block.settings.studio | escape }}</p>
-            
+
             <div class="makers-slider__stats">
               <div class="makers-slider__stat">
                 <span class="makers-slider__stat-val">{{ block.settings.stat_1_val | escape }}</span>
@@ -50,7 +54,7 @@
                 <span class="makers-slider__stat-label">{{ block.settings.stat_3_label | escape }}</span>
               </div>
             </div>
-            
+
             <a href="{{ block.settings.profile_link | default: '#' }}" class="makers-slider__card-link">
               {{ block.settings.link_text | escape }}
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -63,7 +67,7 @@
       {%- endfor -%}
     </div>
   </div>
-  
+
   <div class="makers-slider__progress">
     <div class="makers-slider__progress-bar" id="MakersSliderProgress-{{ section.id }}"></div>
   </div>
@@ -71,10 +75,11 @@
 
 {% stylesheet %}
   .makers-slider {
-    padding-block: var(--space-12, 60px);
+    padding: 60px 0 60px;
     overflow: hidden;
+    background-color: var(--color-background);
   }
-  
+
   .makers-slider__header {
     display: flex;
     justify-content: space-between;
@@ -82,16 +87,17 @@
     margin-bottom: var(--space-8, 32px);
     gap: 16px;
   }
-  
+
   .makers-slider__header-content {
     max-width: 600px;
+    padding: 0 12px;
   }
-  
+
   .makers-slider__badge {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    background-color: #fce8e8;
+    background-color: var(--color-cream, #f4ebd9);
     color: var(--color-2, #e60023);
     padding: 6px 12px;
     border-radius: 999px;
@@ -101,7 +107,7 @@
     letter-spacing: 0.05em;
     margin-bottom: 16px;
   }
-  
+
   .makers-slider__badge-dot {
     width: 6px;
     height: 6px;
@@ -110,18 +116,16 @@
   }
 
   .makers-slider__heading {
-    font-family: var(--font-display);
-    font-size: var(--text-2xl, 32px);
     font-weight: var(--font-weight-500, 500);
     margin: 0 0 12px 0;
     line-height: 1.1;
   }
-  
+
   .makers-slider__heading em {
     color: var(--color-2, #e60023);
     font-style: italic;
   }
-  
+
   .makers-slider__subtext {
     font-family: var(--font-body);
     font-size: var(--text-base, 15px);
@@ -148,7 +152,7 @@
     color: var(--color-ebony, #1a1815);
     transition: all 0.2s ease;
   }
-  
+
   .makers-slider__nav-btn:hover {
     background: var(--surface-tertiary, #e8e4df);
   }
@@ -164,16 +168,15 @@
     overflow-x: auto;
     scroll-snap-type: x mandatory;
     gap: 24px;
-    padding-bottom: 24px; /* Space for shadow/scrollbar */
     scrollbar-width: none;
     user-select: none;
     -webkit-user-select: none;
   }
-  
+
   .makers-slider__track::-webkit-scrollbar {
     display: none;
   }
-  
+
   .makers-slider__track.is-dragging {
     scroll-snap-type: none;
     cursor: grabbing;
@@ -192,7 +195,7 @@
     overflow: hidden;
     background-color: var(--color-cream, #f4ebd9);
   }
-  
+
   .makers-slider__card-image {
     width: 100%;
     aspect-ratio: 1 / 1;
@@ -201,22 +204,22 @@
     background-position: center;
     pointer-events: none;
   }
-  
+
   .makers-slider__card-info {
-    padding: 32px 24px;
+    padding: 28px 20px;
     display: flex;
     flex-direction: column;
   }
-  
+
   .makers-slider__card-tag {
     font-size: 11px;
     font-weight: 600;
     color: var(--color-2, #e60023);
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    margin: 0 0 12px 0;
+    margin: 0 0 8px 0;
   }
-  
+
   .makers-slider__card-name {
     font-family: var(--font-display);
     font-size: var(--text-xl, 28px);
@@ -224,35 +227,35 @@
     margin: 0 0 4px 0;
     color: var(--color-ebony, #1a1815);
   }
-  
+
   .makers-slider__card-studio {
     font-size: 14px;
     color: var(--color-bark, #6b5d52);
-    margin: 0 0 32px 0;
+    margin: 0 0 12px 0;
   }
-  
+
   .makers-slider__stats {
     display: flex;
     justify-content: space-between;
     gap: 12px;
-    margin-bottom: 32px;
-    border-top: 1px solid rgba(0,0,0,0.05);
-    padding-top: 24px;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    padding: 12px 0;
   }
-  
+
   .makers-slider__stat {
     display: flex;
     flex-direction: column;
     gap: 4px;
   }
-  
+
   .makers-slider__stat-val {
     font-family: var(--font-display);
     font-size: 20px;
     font-weight: 500;
     color: var(--color-ebony, #1a1815);
   }
-  
+
   .makers-slider__stat-label {
     font-size: 10px;
     text-transform: uppercase;
@@ -260,7 +263,7 @@
     color: var(--color-bark, #6b5d52);
     font-weight: 500;
   }
-  
+
   .makers-slider__card-link {
     display: inline-flex;
     align-items: center;
@@ -269,21 +272,21 @@
     font-size: 14px;
     font-weight: 600;
     text-decoration: none;
-    margin-top: auto;
+    margin-top: 12px;
   }
-  
+
   /* Progress Bar */
   .makers-slider__progress {
     width: 100%;
     max-width: 150px;
     height: 2px;
-    background-color: var(--border-light, #e8e4df);
-    margin-top: 16px;
+    background-color: #fff;
+    margin: 16px auto 0;
     position: relative;
     border-radius: 2px;
     overflow: hidden;
   }
-  
+
   .makers-slider__progress-bar {
     position: absolute;
     top: 0;
@@ -300,46 +303,45 @@
     .makers-slider {
       padding-block: var(--space-16, 80px);
     }
-    
+
     .makers-slider__heading {
-      font-size: var(--text-3xl, 48px);
     }
-    
+
     .makers-slider__nav {
       display: flex;
     }
-    
+
     .makers-slider__track-container {
       margin-right: 0;
       padding-right: 0;
     }
-    
+
     .makers-slider__card {
       flex: 0 0 90%;
       flex-direction: row;
       max-width: 800px;
     }
-    
+
     .makers-slider__card-image {
       flex: 1 1 50%;
       aspect-ratio: auto;
       height: auto;
     }
-    
+
     .makers-slider__card-info {
       flex: 1 1 50%;
       padding: 60px 48px;
       justify-content: center;
     }
-    
+
     .makers-slider__card-name {
       font-size: var(--text-4xl, 40px);
     }
-    
+
     .makers-slider__card-studio {
       margin-bottom: 48px;
     }
-    
+
     .makers-slider__stats {
       margin-bottom: 48px;
     }
@@ -350,14 +352,14 @@
   document.addEventListener('DOMContentLoaded', function () {
     const section = document.querySelector('.makers-slider');
     if (!section) return;
-    
+
     const track = section.querySelector('.makers-slider__track');
     const prevBtn = section.querySelector('.makers-slider__nav-btn--prev');
     const nextBtn = section.querySelector('.makers-slider__nav-btn--next');
     const progressBar = section.querySelector('.makers-slider__progress-bar');
-    
+
     if (!track) return;
-    
+
     // Drag to scroll logic
     let isDown = false;
     let startX;
@@ -387,13 +389,13 @@
       const walk = (x - startX) * 1.5;
       track.scrollLeft = scrollLeft - walk;
     });
-    
+
     // Button navigation
     const updateButtons = () => {
       const cardWidth = track.querySelector('.makers-slider__card').offsetWidth;
       const scrollPos = track.scrollLeft;
       const trackWidth = track.scrollWidth - track.clientWidth;
-      
+
       // Update progress bar
       if (progressBar && trackWidth > 0) {
         const progress = (scrollPos / trackWidth) * 100;
@@ -403,21 +405,21 @@
         progressBar.style.left = `calc(${progress} * (100% - ${progressWidth}%) / 100)`;
       }
     };
-    
+
     if (prevBtn && nextBtn) {
       prevBtn.addEventListener('click', () => {
         const cardWidth = track.querySelector('.makers-slider__card').offsetWidth + 24; // gap
         track.scrollBy({ left: -cardWidth, behavior: 'smooth' });
       });
-      
+
       nextBtn.addEventListener('click', () => {
         const cardWidth = track.querySelector('.makers-slider__card').offsetWidth + 24; // gap
         track.scrollBy({ left: cardWidth, behavior: 'smooth' });
       });
     }
-    
+
     track.addEventListener('scroll', updateButtons, { passive: true });
-    
+
     // Initial call
     setTimeout(updateButtons, 100);
     window.addEventListener('resize', updateButtons);

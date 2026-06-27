@@ -1,2 +1,2 @@
-- website có tên là Wrydeco
+- website có tên là Ashdeco
 - website có link là https://ashdeco.com

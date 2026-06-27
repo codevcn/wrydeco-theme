@@ -1,4 +1,10 @@
-<div class="for-you-masonry page-width">
+{% style %}
+  /* .section-container--{{ section.id }} {
+    background-color: #f3f3f3;
+  } */
+{% endstyle %}
+
+<div class="for-you-masonry page-width section-container--{{ section.id }}">
   <div class="for-you-masonry__header">
     <h2 class="for-you-masonry__heading">{{ section.settings.heading }}</h2>
     <div class="for-you-masonry__filters">
@@ -11,7 +17,10 @@
   <div class="for-you-masonry__grid">
     {%- for block in section.blocks -%}
       {%- assign product = block.settings.product -%}
-      <div class="pin-card pin-card--{{ block.settings.image_ratio | default: 'portrait' }}" {{ block.shopify_attributes }}>
+      <div
+        class="pin-card pin-card--{{ block.settings.image_ratio | default: 'portrait' }}"
+        {{ block.shopify_attributes }}
+      >
         <div class="pin-card__image-wrapper">
           {%- if block.settings.image_filename != blank -%}
             <img src="{{ block.settings.image_filename | asset_url }}" alt="" class="pin-card__image" loading="lazy">
@@ -21,37 +30,92 @@
             {{ 'product-1' | placeholder_svg_tag: 'pin-card__image placeholder-svg' }}
           {%- endif -%}
 
+          <button class="pin-card__save-btn btn-pill btn-pill--red">Save</button>
+
           <div class="pin-card__hover">
             <div class="pin-card__hover-top">
               <button class="btn-pill btn-pill--white">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  style="margin-right: 4px;"
+                >
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline>
+                </svg>
                 tree bookshelf
               </button>
-              <button class="btn-pill btn-pill--red">Save</button>
             </div>
             <div class="pin-card__hover-bottom">
               <div class="pin-card__hover-actions">
                 <button class="btn-icon">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                  </svg>
                 </button>
                 <button class="btn-icon">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle>
+                  </svg>
                 </button>
               </div>
               <a href="{{ product.url | default: '#' }}" class="btn-pill btn-pill--red btn-pill--shop">
                 Shop now
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 4px;"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  style="margin-left: 4px;"
+                >
+                  <line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
               </a>
             </div>
           </div>
         </div>
 
         <div class="pin-card__info">
-          <h3 class="pin-card__title">{{ block.settings.title | default: product.title | default: 'Rustic Driftwood Tree Branch Floating Shelf – Handcrafted Solid Wood Wall Shelf' }}</h3>
+          <h3 class="pin-card__title">
+            {{
+              block.settings.title
+              | default: product.title
+              | default: 'Rustic Driftwood Tree Branch Floating Shelf – Handcrafted Solid Wood Wall Shelf'
+            }}
+          </h3>
           <div class="pin-card__meta">
             <div class="pin-card__author">
               <div class="pin-card__avatar">
-                <svg viewBox="0 0 24 24" fill="#333" width="100%" height="100%"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
+                <svg viewBox="0 0 24 24" fill="#333" width="100%" height="100%">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
+                </svg>
               </div>
               <span class="pin-card__author-name">Ngoc Vo</span>
             </div>
@@ -67,16 +131,28 @@
   <div class="for-you-masonry__footer">
     <a href="#" class="btn-pill btn-pill--black btn-pill--large">
       View all products
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 8px;"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        style="margin-left: 8px;"
+      >
+        <line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline>
+      </svg>
     </a>
   </div>
 </div>
 
 {% stylesheet %}
   .for-you-masonry {
-    padding-block: var(--space-10, 40px);
+    padding: 40px 8px 40px;
   }
-  
+
   .for-you-masonry__header {
     display: flex;
     justify-content: space-between;
@@ -85,27 +161,26 @@
     gap: 16px;
     margin-bottom: 24px;
   }
-  
+
   .for-you-masonry__heading {
-    font-size: var(--text-2xl, 48px);
     font-weight: 500;
     margin: 0;
   }
   .for-you-masonry__heading em {
-    color: var(--color-2, #E60023);
+    color: var(--color-2, #e60023);
     font-style: italic;
   }
-  
+
   .for-you-masonry__filters {
     display: flex;
     gap: 12px;
   }
-  
+
   .filter-btn {
-    border: 1px solid #e1e1e1;
+    border: 1px solid #c8c8c8;
     background: transparent;
     border-radius: 99px;
-    padding: 10px 20px;
+    padding: 6px 20px;
     font-size: 15px;
     font-weight: 600;
     cursor: pointer;
@@ -116,11 +191,11 @@
     color: #fff;
     border-color: #111;
   }
-  
+
   /* Masonry Grid */
   .for-you-masonry__grid {
     column-count: 2;
-    column-gap: 16px;
+    column-gap: 10px;
   }
   @media screen and (min-width: 768px) {
     .for-you-masonry__grid {
@@ -132,28 +207,40 @@
       column-count: 5;
     }
   }
-  
+
   .pin-card {
     display: block;
     break-inside: avoid;
     page-break-inside: avoid;
-    margin-bottom: 24px;
+    margin-bottom: 18px;
+    border-radius: 12px;
+    overflow: hidden;
+    background-color: #fff;
   }
-  
-  .pin-card--tall .pin-card__image-wrapper { aspect-ratio: 3 / 5; }
-  .pin-card--portrait .pin-card__image-wrapper { aspect-ratio: 4 / 5; }
-  .pin-card--square .pin-card__image-wrapper { aspect-ratio: 1 / 1; }
-  .pin-card--landscape .pin-card__image-wrapper { aspect-ratio: 4 / 3; }
-  .pin-card--wide .pin-card__image-wrapper { aspect-ratio: 16 / 9; }
-  
+
+  .pin-card--tall .pin-card__image-wrapper {
+    aspect-ratio: 3 / 5;
+  }
+  .pin-card--portrait .pin-card__image-wrapper {
+    aspect-ratio: 4 / 5;
+  }
+  .pin-card--square .pin-card__image-wrapper {
+    aspect-ratio: 1 / 1;
+  }
+  .pin-card--landscape .pin-card__image-wrapper {
+    aspect-ratio: 4 / 3;
+  }
+  .pin-card--wide .pin-card__image-wrapper {
+    aspect-ratio: 16 / 9;
+  }
+
   .pin-card__image-wrapper {
     position: relative;
-    border-radius: 16px;
     overflow: hidden;
     margin-bottom: 12px;
     width: 100%;
   }
-  
+
   .pin-card__image {
     width: 100%;
     height: 100%;
@@ -163,7 +250,19 @@
     top: 0;
     left: 0;
   }
-  
+
+  .pin-card__save-btn {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 5;
+    font-size: 15px;
+    padding: 8px 18px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    font-weight: 700;
+    color: #fff;
+  }
+
   /* Hover overlay */
   .pin-card__hover {
     position: absolute;
@@ -184,30 +283,30 @@
     opacity: 1;
     pointer-events: auto;
   }
-  
+
   .pin-card__hover-top {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-end;
     align-items: flex-start;
   }
-  
+
   .pin-card__hover-bottom {
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
   }
-  
+
   .pin-card__hover-actions {
     display: flex;
     gap: 8px;
   }
-  
+
   .btn-pill {
     display: inline-flex;
     align-items: center;
-    padding: 10px 16px;
+    padding: 8px 16px;
     border-radius: 99px;
-    font-weight: 600;
+    font-weight: 700;
     font-size: 14px;
     border: none;
     cursor: pointer;
@@ -221,7 +320,7 @@
     background: #fff;
   }
   .btn-pill--red {
-    background: var(--color-2, #E60023);
+    background: var(--color-2, #e60023);
     color: #fff;
   }
   .btn-pill--red:hover {
@@ -241,7 +340,7 @@
     padding: 16px 32px;
     font-size: 16px;
   }
-  
+
   .btn-icon {
     display: flex;
     align-items: center;
@@ -249,7 +348,7 @@
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    background: rgba(255,255,255,0.95);
+    background: rgba(255, 255, 255, 0.95);
     border: none;
     cursor: pointer;
     color: #111;
@@ -257,7 +356,11 @@
   .btn-icon:hover {
     background: #fff;
   }
-  
+
+  .pin-card__info {
+    padding: 0 8px 8px 8px;
+  }
+
   /* Info part */
   .pin-card__title {
     font-size: 14px;
@@ -269,18 +372,18 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
-  
+
   .pin-card__meta {
     display: flex;
     justify-content: space-between;
     align-items: center;
     font-size: 14px;
   }
-  
+
   .pin-card__author {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
   }
   .pin-card__avatar {
     width: 24px;
@@ -299,7 +402,7 @@
   .pin-card__price {
     font-weight: 600;
   }
-  
+
   .for-you-masonry__footer {
     display: flex;
     justify-content: center;
@@ -364,13 +467,7 @@
   "presets": [
     {
       "name": "For You Masonry",
-      "blocks": [
-        { "type": "pin" },
-        { "type": "pin" },
-        { "type": "pin" },
-        { "type": "pin" },
-        { "type": "pin" }
-      ]
+      "blocks": [{ "type": "pin" }, { "type": "pin" }, { "type": "pin" }, { "type": "pin" }, { "type": "pin" }]
     }
   ]
 }

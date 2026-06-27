@@ -1,10 +1,4 @@
 <header class="header page-width">
-  <div class="header__left">
-    <a href="{{ routes.search_url }}" class="header__icon header__icon--search" aria-label="{{ 'general.search.search' | t | default: 'Search' }}">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-search" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-    </a>
-  </div>
-
   <h1 class="header__heading">
     <a href="{{ routes.root_url }}" class="header__heading-link">
       {%- if section.settings.logo != blank -%}
@@ -24,6 +18,10 @@
   </h1>
 
   <div class="header__right">
+    <a href="{{ routes.search_url }}" class="header__icon header__icon--search" aria-label="{{ 'general.search.search' | t | default: 'Search' }}" onclick="window.openSearchPopup(event)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-search" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+    </a>
+    
     <a href="{{ routes.cart_url }}" class="header__icon header__icon--cart" aria-label="{{ 'templates.cart.cart' | t | default: 'Cart' }}">
       {{ 'icon-cart.svg' | inline_asset_content }}
       {%- if cart.item_count > 0 -%}
@@ -39,19 +37,16 @@
   </div>
 </header>
 
+{% render 'search-popup' %}
+
 {% stylesheet %}
   .header {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
+    display: flex;
+    justify-content: space-between;
     align-items: center;
     padding-block: var(--space-4, 10px);
     padding-inline: var(--space-4, 10px);
     background-color: var(--color-background, #fff);
-  }
-
-  .header__left {
-    display: flex;
-    justify-content: flex-start;
   }
 
   .header__right {
@@ -63,7 +58,7 @@
   .header__heading {
     margin: 0;
     display: flex;
-    justify-content: center;
+    align-items: center;
   }
 
   .header__heading-link {
@@ -100,7 +95,6 @@
   }
   
   .header__icon--search {
-    background-color: var(--bg-card, #f4f4f4);
   }
 
   .header__icon svg {

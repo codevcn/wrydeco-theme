@@ -1,0 +1,408 @@
+<search-popup class="search-popup-wrapper">
+  <div class="search-popup__overlay">
+    <div class="search-popup__content" role="dialog" aria-modal="true" aria-label="Search">
+      <div class="search-popup__header">
+        <form
+          action="{{ routes.search_url }}"
+          method="get"
+          role="search"
+          class="search-popup__form"
+          onsubmit="event.preventDefault();"
+        >
+          <input type="hidden" name="type" value="product">
+          <div class="search-popup__input-group">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="search-popup__icon"
+            >
+              <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input
+              type="search"
+              name="q"
+              value=""
+              placeholder="Search for products..."
+              class="search-popup__input"
+              aria-label="Search"
+              autocomplete="off"
+            >
+          </div>
+        </form>
+        <button class="search-popup__close" type="button" aria-label="Close search">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="search-popup__body">
+        <div class="search-popup__initial" style="display: none;">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="48"
+            height="48"
+            fill="currentColor"
+            class="bi bi-search search-popup__initial-icon"
+            viewBox="0 0 16 16"
+          >
+            <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/>
+          </svg>
+          <p>Search product name...</p>
+        </div>
+
+        <div class="search-popup__recent" style="display: none;">
+          <h3 class="search-popup__title">Recently Searches</h3>
+          <div class="search-popup__recent-list search-popup__grid"></div>
+        </div>
+
+        <div class="search-popup__predictive-list search-popup__grid" style="display: none;"></div>
+
+        <div class="search-popup__view-all" style="display: none;">
+          <a href="{{ routes.search_url }}" class="search-popup__view-all-btn">
+            <span>View All Results</span>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20px"
+              height="20px"
+              fill="currentColor"
+              class="bi bi-box-arrow-right"
+              viewBox="0 0 16 16"
+            >
+              <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0z"/>
+              <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708z"/>
+            </svg>
+          </a>
+        </div>
+
+        <div class="search-popup__loading" style="display: none;">
+          <div class="search-popup__spinner"></div>
+        </div>
+
+        <div class="search-popup__empty" style="display: none;">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="search-popup__empty-icon"
+          >
+            <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <p>No products found.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</search-popup>
+
+<script src="{{ 'search-popup.js' | asset_url }}" defer></script>
+
+{% stylesheet %}
+  search-popup {
+    display: block; /* keep in DOM for transitions */
+  }
+
+  .search-popup__overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: var(--sp-4, 16px);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+  }
+
+  search-popup[open] .search-popup__overlay {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .search-popup__content {
+    background-color: var(--bg-primary, #fff);
+    width: 100%;
+    max-width: 800px;
+    margin-top: 4vh;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
+    transform: translateY(-20px);
+    opacity: 0;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+  }
+
+  search-popup[open] .search-popup__content {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  .search-popup__header {
+    display: flex;
+    align-items: center;
+    padding: var(--sp-2, 8px);
+    padding-right: var(--sp-2, 8px);
+    border-bottom: 1px solid var(--border-default, #eee);
+  }
+
+  .search-popup__form {
+    flex: 1;
+  }
+
+  .search-popup__input-group {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .search-popup__icon {
+    position: absolute;
+    left: 12px;
+    width: 20px;
+    height: 20px;
+    color: var(--text-primary, #000);
+  }
+
+  .search-popup__input {
+    width: 100%;
+    padding: 12px 12px 12px 40px;
+    border: none;
+    background: transparent;
+    font-size: 16px;
+    outline: none;
+    color: #565656;
+  }
+
+  .search-popup__input::-webkit-search-decoration,
+  .search-popup__input::-webkit-search-cancel-button,
+  .search-popup__input::-webkit-search-results-button,
+  .search-popup__input::-webkit-search-results-decoration {
+    -webkit-appearance: none;
+  }
+
+  .search-popup__input::placeholder {
+    color: var(--text-tertiary, #999);
+  }
+
+  .search-popup__close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    color: var(--text-primary, #000);
+    border-radius: var(--radius-full, 50%);
+  }
+
+  .search-popup__close svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .search-popup__close:hover {
+    background-color: var(--bg-secondary, #f5f5f5);
+  }
+
+  .search-popup__body {
+    padding: var(--sp-4, 16px);
+    overflow-y: auto;
+    flex: 1;
+    height: fit-content;
+  }
+
+  .search-popup__title {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: var(--sp-4, 16px);
+    color: var(--text-secondary, #666);
+  }
+
+  .search-popup__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px;
+  }
+
+  @keyframes fadeUp {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .search-product-card {
+    display: flex;
+    flex-direction: column;
+    text-decoration: none;
+    color: var(--text-primary, #000);
+    transition: opacity 0.2s;
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    opacity: 0;
+    animation: fadeUp 0.4s ease forwards;
+  }
+
+  .search-product-card:hover {
+    opacity: 0.8;
+  }
+
+  .search-product-card__image {
+    aspect-ratio: 1;
+    background-color: var(--bg-secondary, #f5f5f5);
+    width: 100%;
+    height: 100%;
+  }
+
+  .search-product-card__image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .search-product-card__placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-tertiary, #999);
+    font-size: 12px;
+  }
+
+  .search-product-card__info {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    padding: 8px;
+    padding-top: 24px;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0) 100%);
+    pointer-events: none;
+    display: flex;
+    align-items: flex-end;
+  }
+
+  .search-product-card__title {
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    color: var(--color-cream, #fdfcf0);
+  }
+
+  .search-product-card__title mark {
+    display: inline-block;
+    background: yellow;
+    color: #000;
+    font-weight: 700;
+    border-radius: 4px;
+  }
+
+  .search-popup__loading {
+    display: flex;
+    justify-content: center;
+    padding: 40px 0;
+  }
+
+  .search-popup__spinner {
+    width: 24px;
+    height: 24px;
+    border: 2px solid var(--border-default, #eee);
+    border-top-color: var(--text-primary, #000);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .search-popup__empty {
+    text-align: center;
+    padding: 40px 0;
+    color: var(--text-secondary, #666);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .search-popup__empty-icon {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 16px;
+    color: var(--text-tertiary, #999);
+    opacity: 0.5;
+  }
+
+  .search-popup__initial {
+    text-align: center;
+    padding: 40px 0;
+    color: #858585;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .search-popup__initial-icon {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+  }
+
+  .search-popup__view-all {
+    text-align: center;
+    margin-top: var(--sp-4, 18px);
+    padding-top: var(--sp-3, 16px);
+  }
+
+  .search-popup__view-all-btn {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 0px 24px;
+    color: #000;
+    border-radius: var(--radius-sm, 8px);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 16px;
+    transition: opacity 0.2s;
+    width: 100%;
+  }
+
+  .search-popup__view-all-btn:hover {
+    opacity: 0.8;
+  }
+{% endstylesheet %}
