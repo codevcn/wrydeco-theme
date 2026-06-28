@@ -1,216 +1,237 @@
 {% comment %}
-  Renders product benefits accordion or list from section blocks.
+  Renders product benefits as a refined, gallery-style accordion.
+
+  Each benefit is a native <details>/<summary> element so the content is
+  server-rendered, accessible and works without JavaScript. Benefits with
+  richtext content become expandable; benefits without content render as a
+  static, non-interactive row.
+
   @param {product} product
   @param {section} section
 {% endcomment %}
 
-{% style %}
-  .product-benefits {
-    margin-bottom: 24px;
-    border-top: 1px solid #f0f0f0;
-    border-bottom: 1px solid #f0f0f0;
-    padding: 16px 0;
-    background-color: #fff; /* Light red/pinkish from design */
-    border-radius: 8px;
-    margin: 0 12px; /* Adjusted margin to match design */
-    margin-top: 20px;
-  }
-  .product-benefits__item {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 12px 0;
-  }
-  .product-benefits__icon-wrap {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background-color: #fff4f4; /* Light red/pinkish from design */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #e51a3d;
-    flex-shrink: 0;
-  }
-  .product-benefits__text {
-    flex: 1;
-    font-size: 15px;
-    color: #333;
-  }
-  .product-benefits__arrow {
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #f4f4f4;
-    border-radius: 50%;
-    color: #666;
-  }
-  .product-benefits__arrow svg {
-    width: 12px;
-    height: 12px;
-  }
-{% endstyle %}
+{%- capture icon_seal -%}
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 5v6c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V5l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg>
+{%- endcapture -%}
+{%- capture icon_chevron -%}
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+{%- endcapture -%}
+{%- capture icon_delivery -%}
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 16V6a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h1"/><path d="M14 8h4l4 4v4a1 1 0 0 1-1 1h-1"/><path d="M10 17H8"/><circle cx="6" cy="17" r="2"/><circle cx="18" cy="17" r="2"/></svg>
+{%- endcapture -%}
+{%- capture icon_return -%}
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 3-7.7L3 8"/></svg>
+{%- endcapture -%}
+{%- capture icon_shield -%}
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 5v6c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V5l-8-3Z"/></svg>
+{%- endcapture -%}
 
-<div class="product-benefits">
+<aside class="product-benefits" aria-label="Product assurances">
   {% if section.blocks.size > 0 %}
     {% for block in section.blocks %}
       {% if block.type == 'benefit' %}
-        <div class="product-benefits__item" {{ block.shopify_attributes }}>
-          <div class="product-benefits__icon-wrap">
-            {% if block.settings.icon != blank %}
-              {{ block.settings.icon }}
-            {% else %}
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline>
-              </svg>
-            {% endif %}
+        {% assign has_content = false %}
+        {% if block.settings.content != blank %}
+          {% assign plain = block.settings.content | strip_html | strip %}
+          {% if plain != blank %}
+            {% assign has_content = true %}
+          {% endif %}
+        {% endif %}
+
+        {% if has_content %}
+          <details class="product-benefits__item" name="product-benefits" {{ block.shopify_attributes }}>
+            <summary class="product-benefits__summary">
+              <span class="product-benefits__icon" aria-hidden="true">
+                {% if block.settings.icon != blank %}
+                  {{ block.settings.icon }}
+                {% else %}
+                  {{ icon_seal }}
+                {% endif %}
+              </span>
+              <span class="product-benefits__title">{{ block.settings.title | escape }}</span>
+              <span class="product-benefits__chevron" aria-hidden="true">{{ icon_chevron }}</span>
+            </summary>
+            <div class="product-benefits__content">
+              {{ block.settings.content }}
+            </div>
+          </details>
+        {% else %}
+          <div class="product-benefits__item product-benefits__item--static" {{ block.shopify_attributes }}>
+            <div class="product-benefits__summary">
+              <span class="product-benefits__icon" aria-hidden="true">
+                {% if block.settings.icon != blank %}
+                  {{ block.settings.icon }}
+                {% else %}
+                  {{ icon_seal }}
+                {% endif %}
+              </span>
+              <span class="product-benefits__title">{{ block.settings.title | escape }}</span>
+            </div>
           </div>
-          <div class="product-benefits__text">
-            {{ block.settings.title }}
-          </div>
-          <div class="product-benefits__arrow">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <polygon points="5 3 19 12 5 21 5 3"></polygon>
-            </svg>
-          </div>
-        </div>
+        {% endif %}
       {% endif %}
     {% endfor %}
   {% else %}
-    {% comment %} Default hardcoded benefits based on design if no blocks added yet {% endcomment %}
-    <div class="product-benefits__item">
-      <div class="product-benefits__icon-wrap">
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle>
-        </svg>
-      </div>
-      <div class="product-benefits__text">Express Delivery & Easy Setup</div>
-      <div class="product-benefits__arrow">
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <polygon points="5 3 19 12 5 21 5 3"></polygon>
-        </svg>
+    {% comment %} Default assurances reflecting WRYDECO's premium positioning {% endcomment %}
+    <div class="product-benefits__item product-benefits__item--static">
+      <div class="product-benefits__summary">
+        <span class="product-benefits__icon" aria-hidden="true">{{ icon_delivery }}</span>
+        <span class="product-benefits__title">White-glove delivery &amp; setup</span>
       </div>
     </div>
-    <div class="product-benefits__item">
-      <div class="product-benefits__icon-wrap">
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline>
-        </svg>
-      </div>
-      <div class="product-benefits__text">30-Day Returns</div>
-      <div class="product-benefits__arrow">
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <polygon points="5 3 19 12 5 21 5 3"></polygon>
-        </svg>
+    <div class="product-benefits__item product-benefits__item--static">
+      <div class="product-benefits__summary">
+        <span class="product-benefits__icon" aria-hidden="true">{{ icon_return }}</span>
+        <span class="product-benefits__title">30-day considered returns</span>
       </div>
     </div>
-    <div class="product-benefits__item">
-      <div class="product-benefits__icon-wrap">
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-        </svg>
-      </div>
-      <div class="product-benefits__text">1-Year Warranty</div>
-      <div class="product-benefits__arrow">
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <polygon points="5 3 19 12 5 21 5 3"></polygon>
-        </svg>
+    <div class="product-benefits__item product-benefits__item--static">
+      <div class="product-benefits__summary">
+        <span class="product-benefits__icon" aria-hidden="true">{{ icon_shield }}</span>
+        <span class="product-benefits__title">1-year craftsmanship warranty</span>
       </div>
     </div>
-    <div class="product-benefits__item">
-      <div class="product-benefits__icon-wrap">
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <polyline points="20 6 9 17 4 12"></polyline>
-        </svg>
-      </div>
-      <div class="product-benefits__text">Shipping Insurance</div>
-      <div class="product-benefits__arrow">
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <polygon points="5 3 19 12 5 21 5 3"></polygon>
-        </svg>
+    <div class="product-benefits__item product-benefits__item--static">
+      <div class="product-benefits__summary">
+        <span class="product-benefits__icon" aria-hidden="true">{{ icon_seal }}</span>
+        <span class="product-benefits__title">Fully insured shipping</span>
       </div>
     </div>
   {% endif %}
-</div>
+</aside>
+
+{% stylesheet %}
+  .product-benefits {
+    margin-top: var(--sp-5);
+    border-top: 1px solid var(--border-light);
+  }
+
+  .product-benefits__item {
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  .product-benefits__summary {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-4);
+    min-height: 44px;
+    padding: var(--sp-4) var(--sp-1);
+    list-style: none;
+    cursor: pointer;
+    transition: var(--transition-fast);
+  }
+
+  /* Remove native disclosure marker */
+  .product-benefits__summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .product-benefits__item--static .product-benefits__summary {
+    cursor: default;
+  }
+
+  details.product-benefits__item:hover .product-benefits__summary {
+    padding-left: var(--sp-2);
+  }
+
+  .product-benefits__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-full);
+    background-color: var(--color-cream);
+    border: 1px solid var(--border-light);
+    color: var(--color-clay);
+    transition: var(--transition-fast);
+  }
+
+  .product-benefits__icon svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  details.product-benefits__item:hover .product-benefits__icon,
+  details.product-benefits__item[open] .product-benefits__icon {
+    background-color: var(--color-ebony);
+    border-color: var(--color-ebony);
+    color: var(--color-cream);
+  }
+
+  .product-benefits__title {
+    flex: 1;
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-md);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-wide);
+    color: var(--text-primary);
+    line-height: var(--line-height-normal);
+  }
+
+  .product-benefits__chevron {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    color: var(--text-secondary);
+    transition: transform var(--timing-base) var(--ease-standard), color var(--timing-base) var(--ease-standard);
+  }
+
+  .product-benefits__chevron svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  details.product-benefits__item[open] .product-benefits__chevron {
+    transform: rotate(180deg);
+    color: var(--color-ebony);
+  }
+
+  .product-benefits__content {
+    padding: 0 var(--sp-1) var(--sp-4) calc(40px + var(--sp-4) + var(--sp-1));
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-generous);
+    color: var(--text-secondary);
+  }
+
+  .product-benefits__content > :first-child {
+    margin-top: 0;
+  }
+
+  .product-benefits__content > :last-child {
+    margin-bottom: 0;
+  }
+
+  /* Gentle reveal for the disclosure content */
+  details.product-benefits__item[open] .product-benefits__content {
+    animation: product-benefits-reveal var(--timing-base) var(--ease-out);
+  }
+
+  @keyframes product-benefits-reveal {
+    from {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    details.product-benefits__item[open] .product-benefits__content {
+      animation: none;
+    }
+  }
+
+  @media (min-width: 750px) {
+    .product-benefits__title {
+      font-size: var(--font-size-body-lg);
+    }
+  }
+{% endstylesheet %}

@@ -9,28 +9,33 @@
 
 {% style %}
   .main-product {
-    padding: 24px 0px;
+    padding: 0px 0px 24px;
     max-width: 1200px;
     margin: 0 auto;
-    display: none;
   }
   .main-product__info {
     display: flex;
     flex-direction: column;
   }
   .main-product__title {
-    font-size: 26px;
-    font-weight: 500;
+    font-size: 20px;
+    font-weight: 700;
     line-height: 1.2;
     margin: 0;
     padding: 0 14px;
     letter-spacing: 0rem;
   }
   .main-product__details {
-    padding: 18px 0px;
+    padding: 18px 0px 10px;
     margin: 0 12px;
     background-color: #fff;
     border-radius: 8px;
+  }
+  .main-product__price_inventory {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
   }
   @media screen and (min-width: 768px) {
     .main-product {
@@ -59,13 +64,17 @@
   data-product-url="{{ product.url }}"
 >
   <div class="main-product__info">
-    {% comment %} <h1 class="main-product__title">{{ product.title | escape }}</h1>
+    {% render 'product-media-gallery', product: product, current_variant: current_variant %}
 
-    {% render 'product-price', product: product, current_variant: current_variant %}
+    <h1 class="main-product__title">{{ product.title | escape }}</h1>
+
+    <div class="main-product__price_inventory">
+      {% render 'product-price', product: product, current_variant: current_variant %}
+
+      {% render 'product-inventory-status', current_variant: current_variant %}
+    </div>
 
     {% render 'product-annualized-cost', product: product, current_variant: current_variant %}
-
-    {% render 'product-media-gallery', product: product, current_variant: current_variant %}
 
     <div class="main-product__details">
       {% render 'product-sale-notice', product: product, current_variant: current_variant %}
@@ -81,11 +90,9 @@
       {% render 'product-consultation', product: product %}
 
       {% render 'product-rating-summary', product: product %}
-
-      {% render 'product-craftsperson', product: product %}
     </div>
 
-    {% render 'product-benefits', product: product, section: section %} {% endcomment %}
+    {% render 'product-benefits', product: product, section: section %}
   </div>
 </section>
 

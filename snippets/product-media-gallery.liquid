@@ -10,6 +10,7 @@
     width: 100%;
     overflow: hidden;
     margin-bottom: 16px;
+    position: relative;
   }
   .product-gallery__slider {
     display: flex;
@@ -25,14 +26,12 @@
     flex: 0 0 100%;
     scroll-snap-align: start;
     position: relative;
-    padding: 0 12px;
   }
   .product-gallery__media {
     width: 100%;
     height: auto;
     display: block;
     object-fit: contain;
-    border-radius: 8px;
     overflow: hidden;
   }
   .product-gallery__dots {
@@ -40,6 +39,10 @@
     justify-content: center;
     gap: 6px;
     margin-top: 16px;
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
   }
   .product-gallery__dot {
     width: 8px;
@@ -51,7 +54,7 @@
     cursor: pointer;
   }
   .product-gallery__dot.is-active {
-    background-color: #000;
+    background-color: var(--color-human-skin);
     width: 24px;
     border-radius: 4px;
   }
@@ -60,7 +63,13 @@
 <div class="product-gallery" data-product-gallery>
   <div class="product-gallery__slider" data-gallery-slider>
     {% for media in product.media %}
-      <div class="product-gallery__item" data-media-id="{{ media.id }}" {% if current_variant.featured_media.id == media.id %}data-is-featured{% endif %}>
+      <div
+        class="product-gallery__item"
+        data-media-id="{{ media.id }}"
+        {% if current_variant.featured_media.id == media.id %}
+          data-is-featured
+        {% endif %}
+      >
         {% case media.media_type %}
           {% when 'image' %}
             {% assign loading = 'lazy' %}
@@ -84,11 +93,15 @@
       </div>
     {% endfor %}
   </div>
-  
+
   {% if product.media.size > 1 %}
     <div class="product-gallery__dots" data-gallery-dots>
       {% for media in product.media %}
-        <button class="product-gallery__dot {% if forloop.first %}is-active{% endif %}" data-index="{{ forloop.index0 }}" aria-label="Go to slide {{ forloop.index }}"></button>
+        <button
+          class="product-gallery__dot {% if forloop.first %}is-active{% endif %}"
+          data-index="{{ forloop.index0 }}"
+          aria-label="Go to slide {{ forloop.index }}"
+        ></button>
       {% endfor %}
     </div>
   {% endif %}

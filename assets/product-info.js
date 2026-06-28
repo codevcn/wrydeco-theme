@@ -60,7 +60,8 @@ document.addEventListener('DOMContentLoaded', () => {
           '[data-sku]',
           '[data-price-container]',
           '[data-sale-notice]',
-          '[data-add-to-cart-text]'
+          '[data-add-to-cart-text]',
+          '[data-inventory-status]'
         ];
 
         updateElements.forEach(selector => {

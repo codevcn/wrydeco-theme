@@ -50,29 +50,22 @@
     font-weight: 500;
     color: #111;
   }
-  .btn--add-to-cart {
+  .custom-add-to-cart-btn {
     flex: 1;
-    background-color: #000;
-    color: #fff;
-    border: none;
-    border-radius: 30px;
-    height: 54px;
-    font-size: 16px;
-    font-weight: 600;
-    cursor: pointer;
+    min-width: 0;
+    padding: 6px 16px;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    width: 100%;
-    transition: background-color 0.2s;
+    font-size: 14px;
+    height: 48px;
   }
-  .btn--add-to-cart:hover {
-    background-color: #cc1736;
-  }
-  .btn--add-to-cart:disabled {
-    background-color: #ccc;
+  .custom-add-to-cart-btn[disabled] {
+    filter: grayscale(1);
+    opacity: 0.6;
     cursor: not-allowed;
+    pointer-events: none;
   }
   
   /* Additional overrides for dynamic checkout buttons */
@@ -98,14 +91,7 @@
         <button type="button" class="quantity-input__btn" aria-label="Increase quantity" data-action="increase">+</button>
       </div>
       
-      <button
-        type="submit"
-        name="add"
-        class="btn btn--add-to-cart"
-        {% if current_variant.available == false %}
-          disabled
-        {% endif %}
-      >
+      {% capture add_to_cart_content %}
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
         <span data-add-to-cart-text>
           {%- if current_variant.available -%}
@@ -114,7 +100,14 @@
             Sold out
           {%- endif -%}
         </span>
-      </button>
+      {% endcapture %}
+
+      {% capture add_to_cart_attrs %}
+        name="add"
+        {% if current_variant.available == false %}disabled{% endif %}
+      {% endcapture %}
+
+      {% render 'wooden-button', content: add_to_cart_content, class: 'custom-add-to-cart-btn', type: 'submit', attributes: add_to_cart_attrs %}
     </div>
     
     <div class="product-buy-buttons__secondary">
