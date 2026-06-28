@@ -1,20 +1,40 @@
 #!/usr/bin/env python3
 """
-Gắn ngẫu nhiên thông tin tác giả từ file JSON vào từng sản phẩm
-trong file CSV sản phẩm Shopify.
+Gắn ngẫu nhiên một Product Author metaobject entry cho từng sản phẩm
+trong file CSV Shopify.
 
 Quy tắc:
 - Mỗi sản phẩm được xác định bằng cột "Handle".
-- Một tác giả có thể được dùng cho nhiều sản phẩm.
-- Nếu một sản phẩm có nhiều dòng CSV do variant hoặc ảnh bổ sung,
-  tác giả chỉ được ghi ở dòng đầu tiên của sản phẩm đó.
-- File CSV đầu vào không bị sửa trực tiếp; kết quả được ghi sang file mới.
+- Mỗi sản phẩm nhận đúng một author reference ngẫu nhiên.
+- Reference được ghi vào product metafield:
+  "Author Info (product.metafields.custom.author_info)".
+- Vì metafield trên Shopify được cấu hình là danh sách metaobject references,
+  CSV vẫn có thể chứa một handle duy nhất, ví dụ: ngoc-vo.
+- Dữ liệu chỉ được ghi ở dòng đầu tiên của mỗi Handle.
+- Toàn bộ các cột author cũ custom.author_name, custom.author_bio và
+  custom.author_image_url bị xóa khỏi file kết quả.
+- File CSV đầu vào không bị sửa; kết quả được ghi sang file mới.
+
+File JSON hiện tại vẫn có thể dùng nguyên cấu trúc cũ. Mỗi author có thể:
+1. Khai báo "metaobject_handle" rõ ràng — khuyến nghị; hoặc
+2. Chỉ có "author_name" — script tự tạo handle dạng ngoc-vo.
+
+Ví dụ JSON khuyến nghị:
+{
+  "authors": [
+    {"author_name": "Ngoc Vo", "metaobject_handle": "ngoc-vo"},
+    {"author_name": "Kiet Phac", "metaobject_handle": "kiet-phac"},
+    {"author_name": "Alex Nguyen", "metaobject_handle": "alex-nguyen"}
+  ]
+}
 """
 
 import csv
 import json
 import random
+import re
 import sys
+import unicodedata
 from pathlib import Path
 from typing import Any
 
@@ -25,23 +45,22 @@ from typing import Any
 
 JSON_PATH = Path(r"./authors_sample.json")
 CSV_PATH = Path(r"./products_export_1.csv")
-OUTPUT_CSV_PATH = Path(r"./products_with_authors.csv")
+OUTPUT_CSV_PATH = Path(r"./products_with_author_metaobjects.csv")
 
 
 # ============================================================
 # CẤU HÌNH XỬ LÝ
 # ============================================================
 
-# Đặt một số nguyên, ví dụ 2026, nếu muốn kết quả random giống nhau
-# trong mọi lần chạy. Đặt None để mỗi lần chạy có thể cho kết quả khác.
+# Đặt một số nguyên, ví dụ 2026, để mỗi lần chạy cho cùng kết quả random.
+# Đặt None để mỗi lần chạy có thể phân bổ author khác nhau.
 RANDOM_SEED: int | None = None
 
-# True: ghi đè dữ liệu author hiện có ở dòng đầu tiên của sản phẩm.
-# False: chỉ điền khi cả 3 cột author đang trống.
-OVERWRITE_EXISTING_AUTHOR = True
+# True: luôn thay giá trị Author Info hiện có bằng một author ngẫu nhiên mới.
+# False: giữ reference hiện có ở dòng đầu tiên; chỉ điền khi đang trống.
+OVERWRITE_EXISTING_AUTHOR_REFERENCE = True
 
-# Shopify thường chỉ cần product metafields ở dòng đầu tiên của mỗi Handle.
-# Nên giữ True để tránh lặp dữ liệu trên các dòng variant/ảnh bổ sung.
+# Product metafield chỉ nên nằm ở dòng đầu tiên của mỗi Handle.
 AUTHOR_ONLY_ON_FIRST_PRODUCT_ROW = True
 
 
@@ -51,31 +70,32 @@ AUTHOR_ONLY_ON_FIRST_PRODUCT_ROW = True
 
 HANDLE_COLUMN = "Handle"
 
-AUTHOR_NAME_COLUMN = (
-    "Author name (product.metafields.custom.author_name)"
-)
-AUTHOR_BIO_COLUMN = (
-    "Author bio (product.metafields.custom.author_bio)"
-)
-AUTHOR_IMAGE_URL_COLUMN = (
-    "Author image URL (product.metafields.custom.author_image_url)"
+AUTHOR_REFERENCE_COLUMN = (
+    "Author Info (product.metafields.custom.author_info)"
 )
 
-AUTHOR_COLUMNS = [
-    AUTHOR_NAME_COLUMN,
-    AUTHOR_BIO_COLUMN,
-    AUTHOR_IMAGE_URL_COLUMN,
-]
-
-REQUIRED_AUTHOR_KEYS = [
-    "author_name",
-    "author_bio",
-    "author_image_url",
-]
+# Các namespace/key author cũ cần xóa hoàn toàn khỏi header và mọi dòng.
+OLD_AUTHOR_METAFIELD_KEYS = {
+    "product.metafields.custom.author_name",
+    "product.metafields.custom.author_bio",
+    "product.metafields.custom.author_image_url",
+}
 
 
-def load_authors(json_path: Path) -> list[dict[str, str]]:
-    """Đọc và kiểm tra danh sách tác giả từ file JSON."""
+def shopify_handleize(value: str) -> str:
+    """Tạo handle cơ bản từ tên, phù hợp với các tên như 'Ngoc Vo'."""
+    normalized = unicodedata.normalize("NFKD", value)
+    ascii_value = normalized.encode("ascii", "ignore").decode("ascii")
+    handle = re.sub(r"[^a-zA-Z0-9]+", "-", ascii_value.lower()).strip("-")
+
+    if not handle:
+        raise ValueError(f"Không thể tạo metaobject handle từ tên: {value!r}")
+
+    return handle
+
+
+def load_author_references(json_path: Path) -> list[dict[str, str]]:
+    """Đọc danh sách author và trả về tên cùng metaobject handle/GID."""
     if not json_path.is_file():
         raise FileNotFoundError(f"Không tìm thấy file JSON: {json_path}")
 
@@ -86,59 +106,75 @@ def load_authors(json_path: Path) -> list[dict[str, str]]:
         raise ValueError("JSON phải là một object ở cấp cao nhất.")
 
     authors = data.get("authors")
-
     if not isinstance(authors, list) or not authors:
         raise ValueError(
-            'JSON phải chứa key "authors" và giá trị phải là một '
-            "danh sách không rỗng."
+            'JSON phải chứa key "authors" với một danh sách không rỗng.'
         )
 
-    validated_authors: list[dict[str, str]] = []
+    validated: list[dict[str, str]] = []
+    seen_references: set[str] = set()
 
     for index, author in enumerate(authors, start=1):
         if not isinstance(author, dict):
+            raise ValueError(f"Author thứ {index} phải là một object JSON.")
+
+        author_name = author.get("author_name")
+        if not isinstance(author_name, str) or not author_name.strip():
             raise ValueError(
-                f"Author thứ {index} phải là một object JSON."
+                f'Author thứ {index} phải có field "author_name" không trống.'
             )
+        author_name = author_name.strip()
 
-        missing_keys = [
-            key for key in REQUIRED_AUTHOR_KEYS if key not in author
-        ]
-        if missing_keys:
-            raise ValueError(
-                f"Author thứ {index} thiếu field: "
-                f"{', '.join(missing_keys)}"
-            )
+        explicit_handle = author.get("metaobject_handle")
+        explicit_gid = author.get("metaobject_gid")
 
-        normalized_author: dict[str, str] = {}
-
-        for key in REQUIRED_AUTHOR_KEYS:
-            value = author[key]
-
-            if value is None:
-                value = ""
-
-            if not isinstance(value, str):
+        if explicit_gid is not None:
+            if not isinstance(explicit_gid, str) or not explicit_gid.strip():
                 raise ValueError(
-                    f'Field "{key}" của author thứ {index} phải là chuỗi.'
+                    f'Field "metaobject_gid" của author thứ {index} '
+                    "phải là chuỗi không trống."
                 )
-
-            normalized_author[key] = value.strip()
-
-        if not normalized_author["author_name"]:
-            raise ValueError(
-                f'Field "author_name" của author thứ {index} không được trống.'
+            reference = explicit_gid.strip()
+            if not reference.startswith("gid://shopify/Metaobject/"):
+                raise ValueError(
+                    f'Metaobject GID không hợp lệ cho "{author_name}": '
+                    f"{reference}"
+                )
+        elif explicit_handle is not None:
+            if not isinstance(explicit_handle, str) or not explicit_handle.strip():
+                raise ValueError(
+                    f'Field "metaobject_handle" của author thứ {index} '
+                    "phải là chuỗi không trống."
+                )
+            reference = explicit_handle.strip()
+        else:
+            reference = shopify_handleize(author_name)
+            print(
+                f'Cảnh báo: "{author_name}" chưa có metaobject_handle; '
+                f'script tạm suy ra handle là "{reference}".',
+                file=sys.stderr,
             )
 
-        validated_authors.append(normalized_author)
+        if reference in seen_references:
+            raise ValueError(
+                f'Metaobject reference bị trùng trong JSON: "{reference}".'
+            )
 
-    return validated_authors
+        seen_references.add(reference)
+        validated.append(
+            {
+                "author_name": author_name,
+                "reference": reference,
+            }
+        )
+
+    return validated
 
 
 def read_shopify_csv(
     csv_path: Path,
 ) -> tuple[list[dict[str, str]], list[str]]:
-    """Đọc toàn bộ CSV Shopify và trả về rows cùng danh sách cột."""
+    """Đọc CSV Shopify và trả về dữ liệu cùng danh sách header."""
     if not csv_path.is_file():
         raise FileNotFoundError(f"Không tìm thấy file CSV: {csv_path}")
 
@@ -163,41 +199,39 @@ def read_shopify_csv(
     return rows, fieldnames
 
 
-def author_fields_are_empty(row: dict[str, str]) -> bool:
-    """Kiểm tra cả ba cột author trên một dòng có đang trống không."""
-    return all(not (row.get(column) or "").strip() for column in AUTHOR_COLUMNS)
+def is_old_author_column(column_name: str) -> bool:
+    """Nhận diện cột author cũ dù phần tên hiển thị có thể khác."""
+    normalized = column_name.strip().lower()
+    return any(key in normalized for key in OLD_AUTHOR_METAFIELD_KEYS)
 
 
-def set_author_fields(
-    row: dict[str, str],
-    author: dict[str, str],
-) -> None:
-    """Gắn dữ liệu một tác giả vào một dòng CSV."""
-    row[AUTHOR_NAME_COLUMN] = author["author_name"]
-    row[AUTHOR_BIO_COLUMN] = author["author_bio"]
-    row[AUTHOR_IMAGE_URL_COLUMN] = author["author_image_url"]
+def remove_old_author_columns(
+    rows: list[dict[str, str]],
+    fieldnames: list[str],
+) -> tuple[list[str], list[str]]:
+    """Xóa hoàn toàn các cột custom.author_* cũ khỏi CSV kết quả."""
+    removed_columns = [
+        column for column in fieldnames if is_old_author_column(column)
+    ]
+
+    output_fieldnames = [
+        column for column in fieldnames if column not in removed_columns
+    ]
+
+    for row in rows:
+        for column in removed_columns:
+            row.pop(column, None)
+
+    return output_fieldnames, removed_columns
 
 
-def clear_author_fields(row: dict[str, str]) -> None:
-    """Làm trống author metafields trên dòng variant/ảnh phụ."""
-    for column in AUTHOR_COLUMNS:
-        row[column] = ""
-
-
-def assign_authors_to_products(
+def assign_author_references(
     rows: list[dict[str, str]],
     authors: list[dict[str, str]],
 ) -> tuple[int, int, int]:
-    """
-    Chọn ngẫu nhiên tác giả cho từng Handle.
-
-    Trả về:
-    - số sản phẩm đã gặp;
-    - số sản phẩm đã được gắn/cập nhật author;
-    - số dòng bị bỏ qua vì thiếu Handle.
-    """
-    assigned_by_handle: dict[str, dict[str, str]] = {}
+    """Gắn ngẫu nhiên đúng một metaobject author reference cho mỗi Handle."""
     first_row_seen: set[str] = set()
+    assigned_by_handle: dict[str, str] = {}
 
     product_count = 0
     updated_product_count = 0
@@ -221,26 +255,27 @@ def assign_authors_to_products(
             first_row_seen.add(handle)
             product_count += 1
 
-            selected_author = random.choice(authors)
-            assigned_by_handle[handle] = selected_author
+            current_reference = (
+                row.get(AUTHOR_REFERENCE_COLUMN) or ""
+            ).strip()
 
-            should_write = (
-                OVERWRITE_EXISTING_AUTHOR
-                or author_fields_are_empty(row)
-            )
-
-            if should_write:
-                set_author_fields(row, selected_author)
+            if (
+                not OVERWRITE_EXISTING_AUTHOR_REFERENCE
+                and current_reference
+            ):
+                selected_reference = current_reference
+            else:
+                selected_reference = random.choice(authors)["reference"]
+                row[AUTHOR_REFERENCE_COLUMN] = selected_reference
                 updated_product_count += 1
 
+            assigned_by_handle[handle] = selected_reference
+
         elif AUTHOR_ONLY_ON_FIRST_PRODUCT_ROW:
-            # Không lặp lại product metafields ở các dòng variant/ảnh phụ.
-            # Chỉ xóa khi chế độ ghi đè đang bật, tránh xóa dữ liệu ngoài ý muốn.
-            if OVERWRITE_EXISTING_AUTHOR:
-                clear_author_fields(row)
+            # Không lặp product metafield trên dòng variant/ảnh phụ.
+            row[AUTHOR_REFERENCE_COLUMN] = ""
         else:
-            selected_author = assigned_by_handle[handle]
-            set_author_fields(row, selected_author)
+            row[AUTHOR_REFERENCE_COLUMN] = assigned_by_handle[handle]
 
     return product_count, updated_product_count, skipped_rows
 
@@ -250,14 +285,12 @@ def write_shopify_csv(
     rows: list[dict[str, str]],
     fieldnames: list[str],
 ) -> None:
-    """Ghi CSV kết quả với UTF-8 BOM để Excel đọc tiếng Việt tốt hơn."""
+    """Ghi CSV UTF-8 BOM để Shopify/Excel đọc ổn định."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     output_fieldnames = list(fieldnames)
-
-    for column in AUTHOR_COLUMNS:
-        if column not in output_fieldnames:
-            output_fieldnames.append(column)
+    if AUTHOR_REFERENCE_COLUMN not in output_fieldnames:
+        output_fieldnames.append(AUTHOR_REFERENCE_COLUMN)
 
     with output_path.open(
         "w",
@@ -279,10 +312,15 @@ def main() -> None:
     if RANDOM_SEED is not None:
         random.seed(RANDOM_SEED)
 
-    authors = load_authors(JSON_PATH)
+    authors = load_author_references(JSON_PATH)
     rows, fieldnames = read_shopify_csv(CSV_PATH)
 
-    product_count, updated_count, skipped_rows = assign_authors_to_products(
+    fieldnames, removed_columns = remove_old_author_columns(
+        rows,
+        fieldnames,
+    )
+
+    product_count, updated_count, skipped_rows = assign_author_references(
         rows,
         authors,
     )
@@ -297,10 +335,21 @@ def main() -> None:
     print(f"- File JSON: {JSON_PATH.resolve()}")
     print(f"- File CSV đầu vào: {CSV_PATH.resolve()}")
     print(f"- File CSV kết quả: {OUTPUT_CSV_PATH.resolve()}")
-    print(f"- Số author trong JSON: {len(authors)}")
+    print(f"- Số metaobject author entries: {len(authors)}")
     print(f"- Số sản phẩm theo Handle: {product_count}")
-    print(f"- Số sản phẩm đã gắn/cập nhật author: {updated_count}")
+    print(f"- Số sản phẩm đã gắn/cập nhật Author Info: {updated_count}")
     print(f"- Số dòng bị bỏ qua do thiếu Handle: {skipped_rows}")
+
+    if removed_columns:
+        print("- Các cột author cũ đã bị xóa:")
+        for column in removed_columns:
+            print(f"  + {column}")
+    else:
+        print("- Không tìm thấy cột author cũ cần xóa.")
+
+    print("- Các reference được sử dụng:")
+    for author in authors:
+        print(f'  + {author["author_name"]}: {author["reference"]}')
 
 
 if __name__ == "__main__":

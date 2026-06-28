@@ -1,83 +1,162 @@
 {% comment %}
-  Renders product craftsperson (author) info based on metafield.
+  Renders product craftsperson information from the new
+  Product Author metaobject reference only.
+
+  Required metafield:
+  product.metafields.custom.author_info
+
+  Legacy product author metafields must not be used.
+
   @param {product} product - The product object
 {% endcomment %}
 
 {% liquid
-  assign author_name = product.metafields.custom.author_name.value
-  assign author_image_url = product.metafields.custom.author_image_url.value
+  assign author_reference = blank
+  assign author = blank
+
+  assign author_name = blank
+  assign author_bio = blank
+  assign author_image_url = blank
+
+  assign has_author_info = false
+
+  if product != blank
+    assign author_reference = product.metafields.custom.author_info
+    assign author = author_reference.value | first
+  endif
+
+  if author != blank
+    assign author_name = author.author_name.value
+    assign author_bio = author.author_bio.value
+    assign author_image_url = author.author_image_url.value
+
+    if author_name != blank or author_bio != blank or author_image_url != blank
+      assign has_author_info = true
+    endif
+  endif
 %}
 
-{% if author_name != blank %}
-  {% style %}
-    .product-craftsperson {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 38px;
-      margin-top: 38px;
-    }
-    .product-craftsperson__image-wrap {
-      position: relative;
-      overflow: hidden;
-      width: 100%;
-      background: #f4f4f4;
-    }
-    .product-craftsperson__image {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-    .product-craftsperson__info {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      padding: 12px;
-      padding-top: 18px;
-      background-image: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
-    }
-    .product-craftsperson__label {
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: #666;
-      font-weight: 500;
-      line-height: 1;
-      margin-bottom: 4px;
-      color: white;
-      font-family: var(--font-display);
-    }
-    .product-craftsperson__name {
-      font-size: 22px;
-      font-weight: 700;
-      color: #fff;
-      margin: 0;
-      line-height: 1.2;
-      font-family: var(--font-display);
-    }
-  {% endstyle %}
+{% style %}
+  .product-craftsperson {
+    display: flex;
+    align-items: center;
+    margin-top: 38px;
+    margin-bottom: 38px;
+    padding: 0 14px;
+  }
 
-  <div class="product-craftsperson">
+  .product-craftsperson__image-wrap {
+    position: relative;
+    display: flex;
+    flex: 0 0 128px;
+    align-items: center;
+    width: 128px;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    border-radius: 50%;
+    background: #f4f4f4;
+  }
+
+  .product-craftsperson__image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .product-craftsperson__info-container {
+    flex: 1;
+    min-width: 0;
+    padding-left: 16px;
+  }
+
+  .product-craftsperson__info {
+    flex-grow: 1;
+  }
+
+  .product-craftsperson__label {
+    display: inline-block;
+    margin-bottom: 4px;
+    color: #000;
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .product-craftsperson__name {
+    display: inline-block;
+    margin: 0;
+    color: #000;
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.2;
+    margin-left: 4px;
+  }
+
+  .product-craftsperson__bio {
+    max-height: 90px;
+    margin: 4px 0 0;
+    padding-top: 8px;
+    overflow-y: auto;
+    border-top: 1px solid #d1d1d1;
+    color: #000;
+    font-family: var(--font-display);
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
+  .product-craftsperson__empty {
+    margin: 38px 0;
+    padding: 0 14px;
+    color: #666;
+    font-family: var(--font-display);
+  }
+{% endstyle %}
+
+{% if has_author_info %}
+  <div class="product-craftsperson" data-product-author>
     {% if author_image_url != blank %}
       <div class="product-craftsperson__image-wrap">
         <img
           class="product-craftsperson__image"
           src="{{ author_image_url | escape }}"
-          alt="{{ author_name | escape }}"
-          width="48"
-          height="48"
+          alt="{{ author_name | default: 'Product author' | escape }}"
+          width="256"
+          height="256"
           loading="lazy"
         >
-        <div class="product-craftsperson__info">
-          <span class="product-craftsperson__label">CRAFTED BY</span>
-          <span class="product-craftsperson__name">{{ author_name | escape }}</span>
-        </div>
+      </div>
+    {% endif %}
+
+    {% if author_name != blank or author_bio != blank %}
+      <div class="product-craftsperson__info-container">
+        {% if author_name != blank %}
+          <div class="product-craftsperson__info">
+            <span class="product-craftsperson__label"> CRAFTED BY </span>
+
+            <span class="product-craftsperson__name">
+              {{ author_name | escape }}
+            </span>
+          </div>
+        {% endif %}
+
+        {% if author_bio != blank %}
+          <div class="product-craftsperson__bio">
+            {{ author_bio | escape | newline_to_br }}
+          </div>
+        {% endif %}
       </div>
     {% endif %}
   </div>
+{% else %}
+  <p
+    class="product-craftsperson__empty"
+    data-product-author-empty
+  >
+    Chưa có thông tin tác giả cho sản phẩm này
+  </p>
 {% endif %}
