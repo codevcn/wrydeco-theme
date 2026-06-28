@@ -1,0 +1,108 @@
+{% doc %}
+  Renders a stylized wooden button.
+
+  @param {string} text - The text to display on the button
+  @param {string} [url] - An optional URL. If provided, renders an <a> tag instead of a <button>
+  @param {string} [class] - Optional extra CSS classes
+  @param {string} [type] - Optional button type (defaults to 'button')
+
+  @example
+  {% render 'wooden-button', text: 'Continue', url: '/checkout' %}
+{% enddoc %}
+
+{% stylesheet %}
+  .wooden-btn {
+    position: relative;
+    isolation: isolate;
+    min-width: 260px;
+    padding: 16px 42px;
+    overflow: hidden;
+    border: 1px solid #3b1d0d;
+    border-radius: 10px;
+    color: #fff;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 14px;
+    line-height: 1;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.8), 0 2px 5px rgba(0, 0, 0, 0.55);
+    background: repeating-linear-gradient(88deg, rgba(255, 255, 255, 0.025) 0 1px, rgba(34, 13, 4, 0.08) 1px 3px, transparent 3px 8px),
+                repeating-linear-gradient(96deg, transparent 0 14px, rgba(39, 14, 5, 0.18) 14px 18px, rgba(255, 202, 132, 0.06) 18px 21px, transparent 21px 36px),
+                linear-gradient(180deg, #d38b4d 0%, #ba6a31 16%, #9c5026 48%, #783b19 73%, #5e2811 100%);
+    box-shadow: inset 0 2px 0 rgba(255, 220, 170, 0.25),
+                inset 0 -5px 0 rgba(37, 14, 5, 0.42),
+                inset 0 0 0 2px rgba(255, 181, 103, 0.08),
+                0 8px 0 #241006,
+                0 12px 22px rgba(0, 0, 0, 0.45);
+    cursor: pointer;
+    transform: translateY(0);
+    transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
+    text-align: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+  }
+
+  .wooden-btn::before {
+    content: "";
+    position: absolute;
+    inset: 4px;
+    z-index: -1;
+    border: 1px solid rgba(255, 216, 158, 0.22);
+    border-radius: 7px;
+    background: radial-gradient(ellipse at 18% 45%, transparent 0 10%, rgba(45, 17, 5, 0.28) 11% 13%, transparent 14% 21%, rgba(255, 205, 137, 0.07) 22% 24%, transparent 25%),
+                radial-gradient(ellipse at 76% 60%, transparent 0 8%, rgba(39, 14, 4, 0.25) 9% 11%, transparent 12% 19%, rgba(255, 205, 137, 0.06) 20% 22%, transparent 23%);
+    opacity: 0.85;
+    pointer-events: none;
+  }
+
+  .wooden-btn::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(105deg, transparent 0 38%, rgba(255, 255, 255, 0.12) 46%, transparent 54%);
+    transform: translateX(-130%);
+    transition: transform 500ms ease;
+    pointer-events: none;
+  }
+
+  .wooden-btn:hover {
+    filter: saturate(1.08) brightness(1.06);
+    transform: translateY(-2px);
+    box-shadow: inset 0 2px 0 rgba(255, 220, 170, 0.28),
+                inset 0 -5px 0 rgba(37, 14, 5, 0.42),
+                inset 0 0 0 2px rgba(255, 181, 103, 0.1),
+                0 10px 0 #241006,
+                0 16px 26px rgba(0, 0, 0, 0.5);
+  }
+
+  .wooden-btn:hover::after {
+    transform: translateX(130%);
+  }
+
+  .wooden-btn:active {
+    transform: translateY(6px);
+    box-shadow: inset 0 2px 0 rgba(255, 220, 170, 0.18),
+                inset 0 -3px 0 rgba(37, 14, 5, 0.45),
+                0 2px 0 #241006,
+                0 6px 12px rgba(0, 0, 0, 0.4);
+  }
+
+  .wooden-btn:focus-visible {
+    outline: 3px solid rgba(235, 178, 106, 0.72);
+    outline-offset: 5px;
+  }
+{% endstylesheet %}
+
+{%- if url -%}
+  <a href="{{ url }}" class="wooden-btn {{ class }}">
+    {{ text }}
+  </a>
+{%- else -%}
+  <button type="{{ type | default: 'button' }}" class="wooden-btn {{ class }}">
+    {{ text }}
+  </button>
+{%- endif -%}

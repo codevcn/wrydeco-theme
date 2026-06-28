@@ -12,6 +12,7 @@
     padding: 24px 0px;
     max-width: 1200px;
     margin: 0 auto;
+    display: none;
   }
   .main-product__info {
     display: flex;
@@ -23,6 +24,7 @@
     line-height: 1.2;
     margin: 0;
     padding: 0 14px;
+    letter-spacing: 0rem;
   }
   .main-product__details {
     padding: 18px 0px;
@@ -57,7 +59,7 @@
   data-product-url="{{ product.url }}"
 >
   <div class="main-product__info">
-    <h1 class="main-product__title">{{ product.title | escape }}</h1>
+    {% comment %} <h1 class="main-product__title">{{ product.title | escape }}</h1>
 
     {% render 'product-price', product: product, current_variant: current_variant %}
 
@@ -66,26 +68,28 @@
     {% render 'product-media-gallery', product: product, current_variant: current_variant %}
 
     <div class="main-product__details">
-      {% render 'product-rating-summary', product: product %}
-
       {% render 'product-sale-notice', product: product, current_variant: current_variant %}
 
       {% render 'product-variant-picker', product: product, current_variant: current_variant, section_id: section.id %}
-
-      {% render 'product-craftsperson', product: product %}
-
-      {% render 'product-consultation', product: product %}
-
-      {% render 'product-benefits', product: product, section: section %}
 
       {% render 'product-buy-buttons',
         product: product,
         current_variant: current_variant,
         product_form_id: product_form_id
       %}
+
+      {% render 'product-consultation', product: product %}
+
+      {% render 'product-rating-summary', product: product %}
+
+      {% render 'product-craftsperson', product: product %}
     </div>
+
+    {% render 'product-benefits', product: product, section: section %} {% endcomment %}
   </div>
 </section>
+
+{% render 'product-consultation-popup' %}
 
 <script type="application/json" data-product-state>
   {

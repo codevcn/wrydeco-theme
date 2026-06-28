@@ -8,9 +8,21 @@
 {% style %}
   .product-buy-buttons {
     display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
-    margin-bottom: 24px;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 32px;
+    padding: 0 14px;
+  }
+  .product-buy-buttons__primary {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+  }
+  .product-buy-buttons__secondary {
+    width: 100%;
+  }
+  .custom-buy-it-now-btn {
+    width: 100%;
   }
   .quantity-input {
     display: flex;
@@ -38,14 +50,9 @@
     font-weight: 500;
     color: #111;
   }
-  .product-form__buttons {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
   .btn--add-to-cart {
-    background-color: #e51a3d;
+    flex: 1;
+    background-color: #000;
     color: #fff;
     border: none;
     border-radius: 30px;
@@ -79,18 +86,18 @@
   <input type="hidden" name="id" value="{{ current_variant.id }}" data-variant-id>
   
   <div class="product-buy-buttons">
-    <div class="quantity-input" data-quantity-selector>
-      <button type="button" class="quantity-input__btn" aria-label="Decrease quantity" data-action="decrease">-</button>
-      <input type="number" 
-             name="quantity" 
-             class="quantity-input__input" 
-             value="1" 
-             min="1" 
-             aria-label="Quantity">
-      <button type="button" class="quantity-input__btn" aria-label="Increase quantity" data-action="increase">+</button>
-    </div>
-    
-    <div class="product-form__buttons">
+    <div class="product-buy-buttons__primary">
+      <div class="quantity-input" data-quantity-selector>
+        <button type="button" class="quantity-input__btn" aria-label="Decrease quantity" data-action="decrease">-</button>
+        <input type="number" 
+               name="quantity" 
+               class="quantity-input__input" 
+               value="1" 
+               min="1" 
+               aria-label="Quantity">
+        <button type="button" class="quantity-input__btn" aria-label="Increase quantity" data-action="increase">+</button>
+      </div>
+      
       <button
         type="submit"
         name="add"
@@ -108,8 +115,15 @@
           {%- endif -%}
         </span>
       </button>
-      
-      {{ form | payment_button }}
+    </div>
+    
+    <div class="product-buy-buttons__secondary">
+      <div class="custom-buy-it-now-wrapper">
+        {% render 'wooden-button', text: 'Buy it now', class: 'custom-buy-it-now-btn', type: 'button' %}
+      </div>
+      <div class="original-payment-button-wrapper" style="display: none;">
+        {{ form | payment_button }}
+      </div>
     </div>
   </div>
   
@@ -122,3 +136,33 @@
     <span class="product-form__error-message" data-error-message></span>
   </div>
 {%- endform -%}
+
+<script>
+  if (!window.customBuyNowInitialized) {
+    window.customBuyNowInitialized = true;
+    document.addEventListener('click', (e) => {
+      const customBtn = e.target.closest('.custom-buy-it-now-btn');
+      if (customBtn) {
+        e.preventDefault();
+        const wrapper = customBtn.closest('.product-buy-buttons__secondary');
+        const dynamicButton = wrapper.querySelector('.shopify-payment-button__button');
+        if (dynamicButton) {
+          dynamicButton.click();
+        } else {
+          const form = customBtn.closest('form');
+          if (form) {
+            let returnInput = form.querySelector('input[name="return_to"]');
+            if (!returnInput) {
+              returnInput = document.createElement('input');
+              returnInput.type = 'hidden';
+              returnInput.name = 'return_to';
+              form.appendChild(returnInput);
+            }
+            returnInput.value = '/checkout';
+            form.submit();
+          }
+        }
+      }
+    });
+  }
+</script>

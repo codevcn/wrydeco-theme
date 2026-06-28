@@ -12,48 +12,44 @@
       padding: 0 var(--sp-4, 14px);
       font-family: var(--font-body, inherit);
     }
-    .variant-picker__color-header {
-      display: flex;
-      align-items: baseline;
-      gap: 6px;
-      margin-bottom: 16px;
-    }
-    .variant-picker__color-label {
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: #666;
-    }
     .variant-picker__color-value {
-      font-size: 16px;
+      font-size: 14px;
       font-weight: 700;
       color: #000;
     }
     .variant-picker__option-name {
+      display: flex;
+      gap: 6px;
+      align-items: center;
       font-size: 14px;
       font-weight: 700;
       color: #000;
       margin-bottom: 12px;
     }
+    .variant-picker__option-label {
+      font-size: 14px;
+      border-bottom: 1px solid #000;
+      text-transform: uppercase;
+    }
     .variant-picker__swatch-list {
       display: flex;
       flex-wrap: wrap;
       gap: 12px;
-      margin-bottom: 32px;
+      margin-bottom: 16px;
     }
-    .variant-swatch--color input[type="radio"] {
+    .variant-swatch--color input[type='radio'] {
       display: none;
     }
     .variant-swatch--color label {
       display: block;
-      width: 32px;
-      height: 32px;
+      width: 36px;
+      height: 36px;
       border-radius: 50%;
       border: 1px solid #e0e0e0;
       cursor: pointer;
       position: relative;
     }
-    .variant-swatch--color input[type="radio"]:checked + label::after {
+    .variant-swatch--color input[type='radio']:checked + label::after {
       content: '';
       position: absolute;
       top: -4px;
@@ -68,7 +64,6 @@
       font-weight: 700;
       color: #000;
       letter-spacing: 0.1em;
-      text-transform: uppercase;
       margin-bottom: 16px;
       display: inline-block;
       border-bottom: 1px solid #000;
@@ -80,7 +75,7 @@
       gap: 8px;
       margin-bottom: 24px;
     }
-    .variant-swatch--size input[type="radio"] {
+    .variant-swatch--size input[type='radio'] {
       display: none;
     }
     .variant-swatch--size label {
@@ -93,27 +88,34 @@
       font-weight: 700;
       color: #000;
       cursor: pointer;
-      background: #fff;
+      background-color: #fff;
       transition: all 0.2s ease;
       position: relative;
       overflow: hidden;
+      width: max-content;
+      padding: 0 6px;
     }
-    .variant-swatch--size input[type="radio"]:checked + label {
+    .variant-swatch--size input[type='radio']:checked + label {
       border-color: #000;
       border-width: 2px;
     }
-    .variant-swatch--size input[type="radio"]:disabled + label {
+    .variant-swatch--size input[type='radio']:disabled + label {
       color: #a0a0a0;
       cursor: not-allowed;
     }
-    .variant-swatch--size input[type="radio"]:disabled + label::before {
+    .variant-swatch--size input[type='radio']:disabled + label::before {
       content: '';
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background: linear-gradient(to top right, transparent calc(50% - 1px), #d1d1d1 calc(50%), transparent calc(50% + 1px));
+      background: linear-gradient(
+        to top right,
+        transparent calc(50% - 1px),
+        #d1d1d1 calc(50%),
+        transparent calc(50% + 1px)
+      );
       pointer-events: none;
     }
     .visually-hidden {
@@ -126,7 +128,7 @@
       padding: 0;
       border: 0;
     }
-    
+
     @media (max-width: 768px) {
       .variant-picker__size-grid {
         grid-template-columns: repeat(4, 1fr);
@@ -138,34 +140,48 @@
     {% for option in product.options_with_values %}
       {% assign downcased_option = option.name | downcase %}
       {% assign is_color = false %}
-      {% if downcased_option contains 'color' or downcased_option contains 'màu' or downcased_option contains 'canvas' %}
+      {% if downcased_option contains 'color'
+        or downcased_option contains 'màu'
+        or downcased_option contains 'canvas'
+      %}
         {% assign is_color = true %}
       {% endif %}
 
       {% if is_color %}
         <div class="variant-option variant-option--color">
-          <div class="variant-picker__color-header">
-            <span class="variant-picker__color-label">COLOR</span>
-            <span class="variant-picker__color-value variant-option__selected-value" id="OptionLabel-{{ section_id }}-{{ forloop.index0 }}">
-              {{ option.selected_value }}
+          <div class="variant-picker__option-name">
+            <span class="variant-picker__option-label">{{ option.name -}}</span>
+            <span
+              class="variant-picker__color-value variant-option__selected-value"
+              id="OptionLabel-{{ section_id }}-{{ forloop.index0 }}"
+            >
+              ({{ option.selected_value }})
             </span>
           </div>
-          <div class="variant-picker__option-name">{{ option.name }}</div>
-          
+
           <div class="variant-picker__swatch-list">
             {% for value in option.values %}
               <div class="variant-swatch variant-swatch--color">
-                <input type="radio" 
-                       id="Option-{{ section_id }}-{{ option.position }}-{{ forloop.index0 }}"
-                       name="options[{{ option.name | escape }}]"
-                       value="{{ value | escape }}"
-                       data-index="option{{ option.position }}"
-                       {% if option.selected_value == value %}checked="checked" aria-pressed="true"{% else %}aria-pressed="false"{% endif %}
-                       {% unless value.available %}disabled aria-disabled="true"{% endunless %}
+                <input
+                  type="radio"
+                  id="Option-{{ section_id }}-{{ option.position }}-{{ forloop.index0 }}"
+                  name="options[{{ option.name | escape }}]"
+                  value="{{ value | escape }}"
+                  data-index="option{{ option.position }}"
+                  {% if option.selected_value == value %}
+                    checked="checked" aria-pressed="true"
+                  {% else %}
+                    aria-pressed="false"
+                  {% endif %}
+                  {% unless value.available %}
+                    disabled aria-disabled="true"
+                  {% endunless %}
                 >
-                <label for="Option-{{ section_id }}-{{ option.position }}-{{ forloop.index0 }}"
-                       style="background-color: {{ value | downcase | remove: ' ' }};"
-                       aria-label="{{ value | escape }}">
+                <label
+                  for="Option-{{ section_id }}-{{ option.position }}-{{ forloop.index0 }}"
+                  style="background-color: {{ value | downcase | remove: ' ' }};"
+                  aria-label="{{ value | escape }}"
+                >
                   <span class="visually-hidden">{{ value }}</span>
                 </label>
               </div>
@@ -177,17 +193,24 @@
           <div class="variant-picker__size-header">
             <span>SIZES</span>
           </div>
-          
+
           <div class="variant-picker__size-grid">
             {% for value in option.values %}
               <div class="variant-swatch variant-swatch--size">
-                <input type="radio" 
-                       id="Option-{{ section_id }}-{{ option.position }}-{{ forloop.index0 }}"
-                       name="options[{{ option.name | escape }}]"
-                       value="{{ value | escape }}"
-                       data-index="option{{ option.position }}"
-                       {% if option.selected_value == value %}checked="checked" aria-pressed="true"{% else %}aria-pressed="false"{% endif %}
-                       {% unless value.available %}disabled aria-disabled="true"{% endunless %}
+                <input
+                  type="radio"
+                  id="Option-{{ section_id }}-{{ option.position }}-{{ forloop.index0 }}"
+                  name="options[{{ option.name | escape }}]"
+                  value="{{ value | escape }}"
+                  data-index="option{{ option.position }}"
+                  {% if option.selected_value == value %}
+                    checked="checked" aria-pressed="true"
+                  {% else %}
+                    aria-pressed="false"
+                  {% endif %}
+                  {% unless value.available %}
+                    disabled aria-disabled="true"
+                  {% endunless %}
                 >
                 <label for="Option-{{ section_id }}-{{ option.position }}-{{ forloop.index0 }}">
                   {{ value }}

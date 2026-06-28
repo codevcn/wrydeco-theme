@@ -1,0 +1,1063 @@
+<link
+  rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css"
+>
+
+{% style %}
+  .consultation-popup-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background-color: var(--bg-overlay);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity var(--timing-base) var(--ease-out), visibility var(--timing-base);
+  }
+
+  .consultation-popup-overlay.is-active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  .consultation-popup-card {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    max-width: 680px;
+    background-color: var(--bg-secondary); /* Outer Shell */
+    border: 1px solid var(--border-light);
+    box-shadow: 0 40px 80px -20px rgba(0, 0, 0, 0.15);
+    transform: translateY(20px) scale(0.98);
+    transition: transform var(--timing-extra-long) var(--ease-out);
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .consultation-popup-overlay.is-active .consultation-popup-card {
+    transform: translateY(0) scale(1);
+  }
+
+  .consultation-popup-card svg {
+    height: 20px;
+    width: 20px;
+    margin-right: 6px;
+  }
+  .consultation-popup-card svg.bi-moon-fill {
+    width: 16px;
+    height: 16px;
+  }
+
+  .consultation-popup-close {
+    position: absolute;
+    top: var(--sp-4);
+    right: var(--sp-4);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--text-secondary);
+    z-index: 10;
+    padding: var(--sp-2);
+    border-radius: 50%;
+    transition: background-color var(--timing-short) var(--ease-standard), color var(--timing-short);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .consultation-popup-close:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: var(--text-primary);
+  }
+
+  .consultation-popup-inner {
+    background-color: var(--surface-elevated); /* Inner Core */
+    border: 1px solid var(--border-light);
+    padding: var(--sp-6) var(--sp-4);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  }
+
+  @media screen and (min-width: 768px) {
+    .consultation-popup-inner {
+      padding: var(--sp-4) var(--sp-4);
+    }
+  }
+
+  .consultation-eyebrow {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    font-weight: var(--font-weight-medium);
+    color: var(--text-secondary);
+    display: block;
+    margin-bottom: var(--sp-3);
+  }
+
+  .consultation-title {
+    font-size: var(--font-size-display-sm);
+    font-family: var(--font-display);
+    font-weight: var(--font-weight-regular);
+    color: var(--text-primary);
+    line-height: var(--line-height-tight);
+    margin: 0 0 var(--sp-2) 0;
+  }
+
+  .consultation-subtitle {
+    font-size: var(--font-size-body-md);
+    color: var(--text-secondary);
+    margin: 0 0 var(--sp-6) 0;
+  }
+
+  .consultation-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .consultation-list li {
+    font-size: var(--font-size-body-md);
+    color: var(--text-primary);
+    display: flex;
+    align-items: flex-start;
+    gap: var(--sp-2);
+  }
+
+  .consultation-list li span {
+    color: gray;
+    font-family: var(--font-mono);
+    font-size: var(--font-size-body-md);
+    margin-top: 3px;
+  }
+
+  .consultation-divider {
+    height: 1px;
+    background-color: var(--border-light);
+    margin: var(--sp-4) 0;
+  }
+
+  .consultation-section {
+    margin-bottom: var(--sp-4);
+  }
+
+  .consultation-dates,
+  .consultation-times {
+    display: grid;
+    gap: 0;
+    border: 1px solid var(--border-default);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .consultation-dates {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(76px, 1fr);
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: thin;
+  }
+
+  .consultation-times {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .date-btn,
+  .time-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-right: 1px solid var(--border-default);
+    padding: var(--sp-3) var(--sp-1);
+    cursor: pointer;
+    transition: background-color var(--timing-short) var(--ease-standard), color var(--timing-short);
+    text-align: center;
+  }
+
+  .date-btn:last-child,
+  .time-btn:last-child {
+    border-right: none;
+  }
+
+  .date-btn.is-selected,
+  .time-btn.is-selected {
+    background-color: var(--color-ebony);
+    color: var(--color-cream);
+  }
+
+  .date-btn:disabled,
+  .time-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+    background-color: var(--bg-primary);
+  }
+
+  .time-btn:disabled .time-val {
+    text-decoration: line-through;
+    opacity: 0.5;
+  }
+
+  .date-day,
+  .time-period {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-secondary);
+    margin-bottom: var(--sp-1);
+  }
+
+  .time-period {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-1);
+  }
+
+  .time-icon {
+    width: 1.2em;
+    height: 1.2em;
+  }
+
+  .is-selected .date-day,
+  .is-selected .time-period {
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .date-num {
+    font-size: 28px;
+    font-family: var(--font-display);
+    line-height: 1;
+    margin-bottom: var(--sp-1);
+    color: var(--text-primary);
+  }
+
+  .is-selected .date-num {
+    color: var(--color-cream);
+  }
+
+  .time-val {
+    font-size: 24px;
+    font-family: var(--font-display);
+    line-height: 1;
+    margin-bottom: var(--sp-1);
+    font-weight: var(--font-weight-medium);
+    color: var(--text-primary);
+  }
+
+  .is-selected .time-val {
+    color: var(--color-cream);
+  }
+
+  .date-month,
+  .time-status {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+  }
+
+  .is-selected .date-month,
+  .is-selected .time-status {
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .date-status.error,
+  .time-status.error {
+    color: var(--color-error);
+    margin-top: var(--sp-1);
+  }
+
+  .consultation-calendar-control {
+    position: relative;
+    margin-top: var(--sp-2);
+  }
+
+  .consultation-calendar-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-3);
+    background-color: transparent;
+    color: var(--text-primary);
+    border: 1px solid var(--border-default);
+    border-radius: 4px;
+    cursor: pointer;
+    text-align: left;
+    transition: background-color var(--timing-short) var(--ease-standard),
+      border-color var(--timing-short) var(--ease-standard), color var(--timing-short) var(--ease-standard);
+  }
+
+  .consultation-calendar-btn:hover {
+    background-color: var(--bg-secondary);
+  }
+
+  .consultation-calendar-btn.is-selected {
+    background-color: var(--color-ebony);
+    border-color: var(--color-ebony);
+    color: var(--color-cream);
+  }
+
+  .consultation-calendar-btn svg {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 auto;
+  }
+
+  .consultation-calendar-copy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .consultation-calendar-label {
+    font-size: 12px;
+    font-weight: var(--font-weight-medium);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .consultation-calendar-value {
+    font-size: var(--font-size-body-sm);
+    color: var(--text-secondary);
+  }
+
+  .consultation-calendar-btn.is-selected .consultation-calendar-value {
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .consultation-date-picker-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .consultation-action {
+    margin-top: var(--sp-4);
+  }
+
+  .consultation-result {
+    margin: 0 0 var(--sp-3) 0;
+    padding: var(--sp-3);
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-default);
+    border-radius: 4px;
+  }
+
+  .consultation-result[hidden] {
+    display: none;
+  }
+
+  .consultation-result-label {
+    display: block;
+    margin-bottom: var(--sp-1);
+    color: var(--text-secondary);
+    font-size: 10px;
+    font-weight: var(--font-weight-medium);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .consultation-result-value {
+    display: block;
+    color: var(--text-primary);
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-md);
+    line-height: var(--line-height-normal);
+  }
+
+  .continue-btn {
+    width: 100%;
+    background-color: var(--color-ebony);
+    color: var(--color-cream);
+    border: none;
+    border-radius: 4px;
+    padding: var(--sp-4);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    transition: transform var(--timing-micro) var(--ease-out), opacity var(--timing-short);
+  }
+
+  .continue-btn:hover:not(:disabled) {
+    transform: scale(0.98);
+  }
+
+  .continue-btn:disabled {
+    background-color: var(--bg-secondary);
+    color: var(--text-tertiary);
+    cursor: not-allowed;
+  }
+
+  .continue-text {
+    font-size: 13px;
+    font-weight: var(--font-weight-medium);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .continue-sub {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.6);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .continue-btn:disabled .continue-sub {
+    color: var(--text-tertiary);
+  }
+
+  .consultation-footer {
+    text-align: center;
+    margin-top: var(--sp-6);
+    font-size: var(--font-size-body-sm);
+    color: gray;
+  }
+
+  .reach-out-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--text-primary);
+    font-weight: var(--font-weight-medium);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    cursor: pointer;
+    transition: opacity var(--timing-short);
+  }
+
+  .reach-out-btn:hover {
+    opacity: 0.7;
+  }
+
+  /* Flatpickr skin aligned with the popup design system. */
+  .consultation-flatpickr.flatpickr-calendar {
+    z-index: 1100;
+    width: 318px;
+    background-color: var(--surface-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: 4px;
+    box-shadow: 0 24px 60px -18px rgba(0, 0, 0, 0.28);
+    font-family: inherit;
+  }
+
+  .consultation-flatpickr.flatpickr-calendar.arrowTop::before,
+  .consultation-flatpickr.flatpickr-calendar.arrowTop::after {
+    border-bottom-color: var(--border-default);
+  }
+
+  .consultation-flatpickr .flatpickr-months {
+    padding: var(--sp-2) 0;
+  }
+
+  .consultation-flatpickr .flatpickr-month,
+  .consultation-flatpickr .flatpickr-current-month,
+  .consultation-flatpickr .flatpickr-current-month .flatpickr-monthDropdown-months,
+  .consultation-flatpickr .flatpickr-current-month input.cur-year {
+    color: var(--text-primary);
+    fill: var(--text-primary);
+    font-family: var(--font-display);
+    font-weight: var(--font-weight-regular);
+  }
+
+  .consultation-flatpickr .flatpickr-current-month .flatpickr-monthDropdown-months {
+    background-color: transparent;
+  }
+
+  .consultation-flatpickr .flatpickr-prev-month,
+  .consultation-flatpickr .flatpickr-next-month {
+    color: var(--text-primary);
+    fill: var(--text-primary);
+  }
+
+  .consultation-flatpickr .flatpickr-prev-month:hover svg,
+  .consultation-flatpickr .flatpickr-next-month:hover svg {
+    fill: var(--text-secondary);
+  }
+
+  .consultation-flatpickr .flatpickr-weekdays {
+    border-top: 1px solid var(--border-light);
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  .consultation-flatpickr span.flatpickr-weekday {
+    color: var(--text-secondary);
+    font-size: 10px;
+    font-weight: var(--font-weight-medium);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .consultation-flatpickr .flatpickr-day {
+    color: var(--text-primary);
+    border-radius: 2px;
+  }
+
+  .consultation-flatpickr .flatpickr-day:hover,
+  .consultation-flatpickr .flatpickr-day:focus {
+    background-color: var(--bg-secondary);
+    border-color: var(--bg-secondary);
+  }
+
+  .consultation-flatpickr .flatpickr-day.today {
+    border-color: var(--border-default);
+  }
+
+  .consultation-flatpickr .flatpickr-day.selected,
+  .consultation-flatpickr .flatpickr-day.startRange,
+  .consultation-flatpickr .flatpickr-day.endRange {
+    background-color: var(--color-ebony);
+    border-color: var(--color-ebony);
+    color: var(--color-cream);
+  }
+
+  .consultation-flatpickr .flatpickr-day.flatpickr-disabled,
+  .consultation-flatpickr .flatpickr-day.prevMonthDay,
+  .consultation-flatpickr .flatpickr-day.nextMonthDay {
+    color: var(--text-tertiary);
+  }
+
+  @media screen and (min-width: 641px) {
+    .consultation-dates {
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      grid-auto-flow: row;
+      grid-auto-columns: auto;
+      overflow-x: visible;
+    }
+  }
+
+  @media screen and (max-width: 640px) {
+    .consultation-times {
+      grid-template-columns: 1fr;
+    }
+
+    .time-btn {
+      border-right: none;
+      border-bottom: 1px solid var(--border-default);
+      flex-direction: row;
+      justify-content: space-between;
+      padding: var(--sp-4);
+    }
+
+    .time-btn:last-child {
+      border-bottom: none;
+    }
+
+    .time-val {
+      margin-bottom: 0;
+    }
+  }
+{% endstyle %}
+
+<div class="consultation-popup-overlay" id="ConsultationPopup" aria-hidden="true">
+  <div class="consultation-popup-card" role="dialog" aria-modal="true" aria-labelledby="ConsultationPopupTitle">
+    <button type="button" class="consultation-popup-close" id="ConsultationPopupClose" aria-label="Close">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+
+    <div class="consultation-popup-inner">
+      <div class="consultation-header">
+        <span class="consultation-eyebrow">STEP 01 &mdash; SCHEDULE</span>
+        <h2 class="consultation-title" id="ConsultationPopupTitle">Private consultation</h2>
+        <p class="consultation-subtitle">Complimentary &middot; 30 minutes &middot; Asia/Saigon</p>
+      </div>
+
+      <ul class="consultation-list">
+        <li><span>01</span> Senior designer assigned to your project</li>
+        <li><span>02</span> Response within 24 hours of order</li>
+        <li><span>03</span> Personalised to your purchase and space</li>
+      </ul>
+
+      <div class="consultation-divider"></div>
+
+      <div class="consultation-section">
+        <span class="consultation-eyebrow">SELECT A DATE</span>
+
+        <div
+          class="consultation-dates"
+          id="ConsultationDateGrid"
+          data-today="{{ 'now' | date: '%Y-%m-%d' }}"
+          aria-label="Next seven days"
+        ></div>
+
+        <div class="consultation-calendar-control">
+          <button
+            type="button"
+            class="consultation-calendar-btn"
+            id="ConsultationCalendarBtn"
+            aria-haspopup="dialog"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+              <rect x="3" y="5" width="18" height="16" rx="1"></rect>
+              <line x1="8" y1="3" x2="8" y2="7"></line>
+              <line x1="16" y1="3" x2="16" y2="7"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+
+            <span class="consultation-calendar-copy">
+              <span class="consultation-calendar-label">OPEN FULL CALENDAR</span>
+              <span class="consultation-calendar-value" id="ConsultationCalendarValue">
+                Choose a date outside the next 7 days
+              </span>
+            </span>
+          </button>
+
+          <input
+            type="text"
+            class="consultation-date-picker-input"
+            id="ConsultationDatePicker"
+            aria-label="Choose consultation date"
+            autocomplete="off"
+            tabindex="-1"
+          >
+        </div>
+      </div>
+
+      <div class="consultation-section">
+        <span class="consultation-eyebrow">AVAILABLE &mdash; <span id="SelectedDateDisplay">...</span></span>
+        <div class="consultation-times" id="ConsultationTimeGrid"></div>
+      </div>
+
+      <div class="consultation-action">
+        <p class="consultation-result" id="ConsultationResult" aria-live="polite" hidden>
+          <span class="consultation-result-label">YOUR CONSULTATION</span>
+          <span class="consultation-result-value" id="ConsultationResultValue"></span>
+        </p>
+
+        <button type="button" class="continue-btn" id="ConsultationContinueBtn" disabled>
+          <span class="continue-text">CONTINUE</span>
+          <span class="continue-sub">SELECT A TIME ABOVE TO CONTINUE</span>
+        </button>
+      </div>
+
+      <div class="consultation-footer">
+        None of these suit you?
+        <button type="button" class="reach-out-btn" id="ConsultationReachOutBtn">
+          We will reach out to schedule &rarr;
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script
+  id="ConsultationFlatpickrScript"
+  src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"
+  defer
+></script>
+
+<script>
+  (() => {
+    const initConsultationPopup = () => {
+      const STORAGE_KEY = 'private-design-appoiment';
+      const DATE_TIME_ZONE = 'Asia/Ho_Chi_Minh';
+      const DATE_TIME_ZONE_LABEL = 'Asia/Saigon';
+      const DAYS_TO_SHOW = 7;
+
+      // Cấu hình các khung giờ tư vấn (có thể tùy chỉnh)
+      const TIME_SLOTS = [
+        {
+          time: '09:00',
+          label: 'MORNING',
+          icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="time-icon" viewBox="0 0 16 16"><path d="M8 3a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 3m8 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5m-13.5.5a.5.5 0 0 0 0-1h-2a.5.5 0 0 0 0 1zm11.157-6.157a.5.5 0 0 1 0 .707l-1.414 1.414a.5.5 0 1 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0m-9.9 2.121a.5.5 0 0 0 .707-.707L3.05 5.343a.5.5 0 1 0-.707.707zM8 7a4 4 0 0 0-4 4 .5.5 0 0 0 .5.5h7a.5.5 0 0 0 .5-.5 4 4 0 0 0-4-4"/></svg>',
+        },
+        {
+          time: '13:00',
+          label: 'AFTERNOON',
+          icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="time-icon" viewBox="0 0 16 16"><path d="M12 8a4 4 0 1 1-8 0 4 4 0 0 1 8 0M8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0m0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13m8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5M3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8m10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0m-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0m9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707M4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708"/></svg>',
+        },
+        {
+          time: '16:00',
+          label: 'EVENING',
+          icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="time-icon bi-moon-fill" viewBox="0 0 16 16"><path d="M6 .278a.77.77 0 0 1 .08.858 7.2 7.2 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277q.792-.001 1.533-.16a.79.79 0 0 1 .81.316.73.73 0 0 1-.031.893A8.35 8.35 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.75.75 0 0 1 6 .278"/></svg>',
+        },
+      ];
+
+      const popup = document.getElementById('ConsultationPopup');
+      if (!popup || popup.dataset.initialized === 'true') return;
+
+      popup.dataset.initialized = 'true';
+
+      const closeBtn = document.getElementById('ConsultationPopupClose');
+      const reachOutBtn = document.getElementById('ConsultationReachOutBtn');
+      const continueBtn = document.getElementById('ConsultationContinueBtn');
+      const continueSub = continueBtn.querySelector('.continue-sub');
+
+      const dateGrid = document.getElementById('ConsultationDateGrid');
+      const timeGrid = document.getElementById('ConsultationTimeGrid');
+      const displayDate = document.getElementById('SelectedDateDisplay');
+
+      const calendarBtn = document.getElementById('ConsultationCalendarBtn');
+      const calendarValue = document.getElementById('ConsultationCalendarValue');
+      const datePickerInput = document.getElementById('ConsultationDatePicker');
+
+      const result = document.getElementById('ConsultationResult');
+      const resultValue = document.getElementById('ConsultationResultValue');
+
+      const triggerCheckboxes = document.querySelectorAll('[data-consultation-trigger]');
+
+      let flatpickrInstance = null;
+      let selectedDateLabel = null;
+      let selectedDateValue = null;
+      let selectedReadableDate = null;
+      let selectedTimeValue = null;
+
+      const padNumber = (value) => String(value).padStart(2, '0');
+
+      const getTodayDateValue = () => {
+        if (dateGrid.dataset.today) return dateGrid.dataset.today;
+
+        const parts = new Intl.DateTimeFormat('en-CA', {
+          timeZone: DATE_TIME_ZONE,
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+        }).formatToParts(new Date());
+
+        const dateParts = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+        return `${dateParts.year}-${dateParts.month}-${dateParts.day}`;
+      };
+
+      const parseDateValue = (dateValue) => {
+        const [year, month, day] = dateValue.split('-').map(Number);
+        return new Date(Date.UTC(year, month - 1, day));
+      };
+
+      const formatDateValue = (date) => {
+        return `${date.getUTCFullYear()}-${padNumber(date.getUTCMonth() + 1)}-${padNumber(date.getUTCDate())}`;
+      };
+
+      const formatShortDate = (date) => {
+        return new Intl.DateTimeFormat('en-US', {
+          timeZone: 'UTC',
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric',
+        })
+          .format(date)
+          .toUpperCase();
+      };
+
+      const formatReadableDate = (date) => {
+        return new Intl.DateTimeFormat('en-US', {
+          timeZone: 'UTC',
+          weekday: 'long',
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric',
+        }).format(date);
+      };
+
+      const renderNextSevenDays = () => {
+        const startDate = parseDateValue(getTodayDateValue());
+        const fragment = document.createDocumentFragment();
+
+        for (let index = 0; index < DAYS_TO_SHOW; index += 1) {
+          const date = new Date(startDate.getTime());
+          date.setUTCDate(startDate.getUTCDate() + index);
+
+          const dateValue = formatDateValue(date);
+          const dateLabel = formatShortDate(date);
+          const weekday = new Intl.DateTimeFormat('en-US', {
+            timeZone: 'UTC',
+            weekday: 'short',
+          })
+            .format(date)
+            .toUpperCase();
+          const month = new Intl.DateTimeFormat('en-US', {
+            timeZone: 'UTC',
+            month: 'short',
+          })
+            .format(date)
+            .toUpperCase();
+
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'date-btn';
+          button.dataset.date = dateLabel;
+          button.dataset.value = dateValue;
+          button.setAttribute('aria-label', formatReadableDate(date));
+          button.innerHTML = `
+            <span class="date-day">${weekday}</span>
+            <span class="date-num">${date.getUTCDate()}</span>
+            <span class="date-month">${month}</span>
+          `;
+
+          fragment.appendChild(button);
+        }
+
+        dateGrid.replaceChildren(fragment);
+      };
+
+      const resetTimeSelection = () => {
+        timeGrid.querySelectorAll('.time-btn').forEach((button) => {
+          button.classList.remove('is-selected');
+        });
+        selectedTimeValue = null;
+      };
+
+      const evaluateTimeSlots = (dateValue) => {
+        if (!dateValue) return;
+        const currentTimeMs = Date.now();
+        const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
+
+        timeGrid.querySelectorAll('.time-btn').forEach((button) => {
+          const timeStr = button.dataset.time;
+          if (!timeStr) return;
+
+          const slotTimeString = `${dateValue}T${timeStr}:00+07:00`;
+          const slotTimeMs = new Date(slotTimeString).getTime();
+
+          if (slotTimeMs - currentTimeMs < THREE_HOURS_MS) {
+            button.disabled = true;
+          } else {
+            button.disabled = false;
+          }
+        });
+      };
+
+      const updateSelectionResult = () => {
+        const isComplete = Boolean(selectedDateValue && selectedTimeValue);
+
+        if (isComplete) {
+          resultValue.textContent = `${selectedReadableDate} at ${selectedTimeValue} (${DATE_TIME_ZONE_LABEL})`;
+          result.hidden = false;
+          continueBtn.removeAttribute('disabled');
+          continueSub.textContent = 'READY TO PROCEED';
+          return;
+        }
+
+        result.hidden = true;
+        resultValue.textContent = '';
+        continueBtn.setAttribute('disabled', 'true');
+        continueSub.textContent = 'SELECT A TIME ABOVE TO CONTINUE';
+      };
+
+      const applyDateSelection = (dateValue, sourceButton = null) => {
+        const date = parseDateValue(dateValue);
+        const visibleButton = sourceButton || dateGrid.querySelector(`[data-value="${dateValue}"]`);
+
+        dateGrid.querySelectorAll('.date-btn').forEach((button) => {
+          button.classList.toggle('is-selected', button === visibleButton);
+        });
+
+        calendarBtn.classList.toggle('is-selected', !visibleButton);
+
+        selectedDateValue = dateValue;
+        selectedDateLabel = formatShortDate(date);
+        selectedReadableDate = formatReadableDate(date);
+        displayDate.textContent = selectedDateLabel;
+
+        calendarValue.textContent = visibleButton
+          ? 'Choose a date outside the next 7 days'
+          : `Selected: ${selectedReadableDate}`;
+
+        if (flatpickrInstance) {
+          flatpickrInstance.setDate(dateValue, false, 'Y-m-d');
+        }
+
+        resetTimeSelection();
+        evaluateTimeSlots(dateValue);
+        updateSelectionResult();
+      };
+
+      const clearSelections = () => {
+        dateGrid.querySelectorAll('.date-btn').forEach((button) => {
+          button.classList.remove('is-selected');
+        });
+        calendarBtn.classList.remove('is-selected');
+        calendarValue.textContent = 'Choose a date outside the next 7 days';
+
+        resetTimeSelection();
+
+        selectedDateLabel = null;
+        selectedDateValue = null;
+        selectedReadableDate = null;
+        displayDate.textContent = '...';
+
+        if (flatpickrInstance) {
+          flatpickrInstance.clear(false);
+        }
+
+        updateSelectionResult();
+      };
+
+      const closePopup = (uncheck = false) => {
+        popup.classList.remove('is-active');
+        popup.setAttribute('aria-hidden', 'true');
+
+        if (flatpickrInstance) {
+          flatpickrInstance.close();
+        }
+
+        if (uncheck) {
+          triggerCheckboxes.forEach((checkbox) => {
+            checkbox.checked = false;
+          });
+        }
+      };
+
+      const openPopup = () => {
+        clearSelections();
+
+        const firstAvailableDate = dateGrid.querySelector('.date-btn:not([disabled])');
+        if (firstAvailableDate) {
+          applyDateSelection(firstAvailableDate.dataset.value, firstAvailableDate);
+        }
+
+        popup.classList.add('is-active');
+        popup.setAttribute('aria-hidden', 'false');
+        closeBtn.focus();
+      };
+
+      const initializeFlatpickr = () => {
+        if (flatpickrInstance || typeof window.flatpickr !== 'function') return;
+
+        flatpickrInstance = window.flatpickr(datePickerInput, {
+          dateFormat: 'Y-m-d',
+          minDate: getTodayDateValue(),
+          disableMobile: true,
+          allowInput: false,
+          clickOpens: false,
+          positionElement: calendarBtn,
+          locale: {
+            firstDayOfWeek: 1,
+          },
+          onReady: (_selectedDates, _dateStr, instance) => {
+            instance.calendarContainer.classList.add('consultation-flatpickr');
+          },
+          onChange: (_selectedDates, dateStr) => {
+            if (!dateStr) return;
+            applyDateSelection(dateStr);
+          },
+        });
+      };
+
+      const renderTimeSlots = () => {
+        const fragment = document.createDocumentFragment();
+        TIME_SLOTS.forEach((slot) => {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'time-btn';
+          button.dataset.time = slot.time;
+          button.innerHTML = `
+            <span class="time-val">${slot.time}</span>
+            <span class="time-period">${slot.icon}${slot.label}</span>
+          `;
+          fragment.appendChild(button);
+        });
+        timeGrid.replaceChildren(fragment);
+      };
+
+      renderTimeSlots();
+      renderNextSevenDays();
+      initializeFlatpickr();
+
+      const flatpickrScript = document.getElementById('ConsultationFlatpickrScript');
+      if (!flatpickrInstance && flatpickrScript) {
+        flatpickrScript.addEventListener('load', initializeFlatpickr, { once: true });
+      }
+
+      triggerCheckboxes.forEach((checkbox) => {
+        checkbox.addEventListener('change', (event) => {
+          if (event.target.checked) {
+            openPopup();
+          } else {
+            localStorage.removeItem(STORAGE_KEY);
+          }
+        });
+      });
+
+      closeBtn.addEventListener('click', () => closePopup(true));
+
+      reachOutBtn.addEventListener('click', () => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ type: 'reach_out' }));
+        closePopup(false);
+      });
+
+      popup.addEventListener('click', (event) => {
+        if (event.target === popup) {
+          closePopup(true);
+        }
+      });
+
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && popup.classList.contains('is-active')) {
+          closePopup(true);
+        }
+      });
+
+      dateGrid.addEventListener('click', (event) => {
+        const button = event.target.closest('.date-btn');
+        if (!button || button.disabled) return;
+
+        applyDateSelection(button.dataset.value, button);
+      });
+
+      calendarBtn.addEventListener('click', () => {
+        initializeFlatpickr();
+        if (flatpickrInstance) {
+          flatpickrInstance.open();
+        }
+      });
+
+      timeGrid.addEventListener('click', (event) => {
+        if (!selectedDateValue) return;
+
+        const button = event.target.closest('.time-btn');
+        if (!button || button.disabled) return;
+
+        timeGrid.querySelectorAll('.time-btn').forEach((timeButton) => {
+          timeButton.classList.remove('is-selected');
+        });
+
+        button.classList.add('is-selected');
+        selectedTimeValue = button.dataset.time;
+        updateSelectionResult();
+      });
+
+      continueBtn.addEventListener('click', () => {
+        if (!selectedDateValue || !selectedTimeValue) return;
+
+        const payload = {
+          date: selectedDateValue,
+          time: selectedTimeValue,
+          label: selectedDateLabel,
+          readableLabel: selectedReadableDate,
+          timezone: DATE_TIME_ZONE_LABEL,
+          timestamp: Date.now(),
+        };
+
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+        closePopup(false);
+      });
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initConsultationPopup, { once: true });
+    } else {
+      initConsultationPopup();
+    }
+  })();
+</script>
