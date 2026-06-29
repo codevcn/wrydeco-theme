@@ -19,7 +19,7 @@
       {%- endif -%}
     </div>
   {%- endif -%}
-  
+
   <div class="customer-carousel__inner">
     {%- if section.blocks.size > 0 -%}
       <div class="customer-carousel__media-viewport">
@@ -168,13 +168,10 @@
 
   .customer-carousel__media {
     overflow: visible;
-    cursor: grab;
     touch-action: pan-y;
     user-select: none;
-  }
-
-  .customer-carousel__media:active {
-    cursor: grabbing;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
   }
 
   .customer-carousel__media-slide {
@@ -186,10 +183,6 @@
     block-size: 100%;
     overflow: hidden;
     border-radius: calc(var(--radius-xl) + var(--radius-xl) + var(--radius-sm) + var(--radius-md));
-    transform: translate3d(0, 0, 0) scaleX(1);
-    transform-origin: center;
-    transition: transform var(--timing-extra-long) var(--ease-out);
-    will-change: transform;
   }
 
   .customer-carousel__image-frame {
@@ -203,10 +196,10 @@
     block-size: 100%;
     object-fit: cover;
     object-position: center;
-    transform: translate3d(0, 0, 0) scale(1);
-    transition: transform var(--timing-extra-long) var(--ease-out);
     user-select: none;
-    will-change: transform;
+    -webkit-user-select: none;
+    -webkit-user-drag: none;
+    pointer-events: none;
   }
 
   .customer-carousel__reviews {
@@ -229,11 +222,16 @@
     display: flex;
     min-block-size: 12.75rem;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-start; /* Changed to left */
     padding: var(--sp-5) var(--sp-4) var(--sp-8);
     background-color: var(--color-cream);
-    text-align: center;
+    text-align: left; /* Changed to left */
+    border-radius: var(--radius-xl, 24px); /* Add rounded corners */
     transition: opacity var(--timing-short) var(--ease-out), transform var(--timing-short) var(--ease-out);
+  }
+
+  .swiper {
+    overflow: visible !important;
   }
 
   .customer-carousel.is-dragging .customer-carousel__review-card {
@@ -243,13 +241,13 @@
 
   .customer-carousel__rating {
     display: flex;
-    justify-content: center;
+    justify-content: flex-start; /* Changed to left */
     gap: var(--sp-1);
     min-block-size: var(--sp-5);
     margin-block-end: var(--sp-3);
     color: var(--color-warning);
     font-family: var(--font-body);
-    font-size: var(--font-size-body-lg);
+    font-size: 28px;
     line-height: 1;
   }
 
@@ -288,6 +286,7 @@
     font-size: var(--font-size-body-md);
     font-weight: var(--font-weight-medium);
     line-height: var(--line-height-normal);
+    margin-top: var(--sp-3);
   }
 
   .customer-carousel__verified {
@@ -311,19 +310,18 @@
 
   .customer-carousel__quote-mark {
     position: absolute;
-    inset-block-end: calc(-1 * var(--sp-5));
-    inset-inline-start: 50%;
+    top: 12px;
+    left: 12px;
     display: grid;
     inline-size: var(--sp-7);
     block-size: var(--sp-7);
     place-items: center;
-    color: var(--color-clay);
+    color: var(--color-bark, #8b5a2b);
     font-family: var(--font-display);
-    font-size: var(--font-size-display-lg);
+    font-size: 80px;
     font-weight: var(--font-weight-semibold);
     line-height: 1;
-    transform: translateX(-50%);
-    bottom: -5px;
+    transform: translate(-30%, -20%);
   }
 
   .customer-carousel__pagination {
@@ -361,25 +359,54 @@
 
   @container customer-carousel (min-width: 48rem) {
     .customer-carousel__inner {
-      inline-size: min(calc(100% - (var(--layout-padding-desktop) * 2)), 48rem);
+      inline-size: 100%;
+      max-width: var(--page-width, 1400px);
+      display: grid;
+      grid-template-columns: 350px minmax(0, 1fr);
+      grid-template-rows: auto auto;
+      gap: 16px 32px;
+      align-items: stretch;
+      padding-inline: var(--sp-8);
     }
 
     .customer-carousel__media-viewport {
-      aspect-ratio: 16 / 7;
+      grid-column: 2;
+      grid-row: 1 / 3;
+      aspect-ratio: auto;
+      height: 100%;
+    }
+
+    .customer-carousel__media {
+      height: 100%;
     }
 
     .customer-carousel__reviews {
-      max-inline-size: 34rem;
-      margin-inline: auto;
+      grid-column: 1;
+      grid-row: 1;
+      max-inline-size: 100%;
+      margin: 0;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
     }
 
     .customer-carousel__review-card {
       min-block-size: 12rem;
-      padding-inline: var(--sp-6);
+      padding: var(--sp-8) var(--sp-6);
+      height: 100%;
+      justify-content: center;
+    }
+
+    .customer-carousel__pagination {
+      grid-column: 1;
+      grid-row: 2;
+      justify-content: center;
+      margin-block-start: 0;
     }
 
     .customer-carousel__quote {
-      max-inline-size: 38ch;
+      max-inline-size: 100%;
     }
   }
 
@@ -398,37 +425,6 @@
   (() => {
     const sectionSelector = '[data-customer-carousel]';
     const instances = new WeakMap();
-
-    const setMaterialProgress = (swiper, reduceMotion) => {
-      swiper.slides.forEach((slide) => {
-        const material = slide.querySelector('.customer-carousel__material');
-        const image = slide.querySelector('.customer-carousel__image');
-        if (!material || !image) return;
-
-        const rawProgress = Number.isFinite(slide.progress) ? slide.progress : 0;
-        const progress = Math.max(-1.5, Math.min(1.5, rawProgress));
-        const distance = Math.min(Math.abs(progress), 1);
-        const morph = Math.sin(Math.PI * distance);
-        const scaleX = reduceMotion ? 1 : 1 - morph * 0.16;
-        const materialShift = reduceMotion ? 0 : progress * morph * 3.5;
-        const imageShift = reduceMotion ? 0 : progress * morph * -4;
-        const imageScale = reduceMotion ? 1 : 1 + morph * 0.045;
-
-        material.style.transformOrigin = progress < 0 ? '100% 50%' : progress > 0 ? '0% 50%' : '50% 50%';
-        material.style.transform = `translate3d(${materialShift}%, 0, 0) scaleX(${scaleX})`;
-        image.style.transform = `translate3d(${imageShift}%, 0, 0) scale(${imageScale})`;
-        slide.style.zIndex = String(Math.round(10 - distance * 4));
-      });
-    };
-
-    const setMaterialTransition = (swiper, duration) => {
-      swiper.slides.forEach((slide) => {
-        const material = slide.querySelector('.customer-carousel__material');
-        const image = slide.querySelector('.customer-carousel__image');
-        if (material) material.style.transitionDuration = `${duration}ms`;
-        if (image) image.style.transitionDuration = `${duration}ms`;
-      });
-    };
 
     const initSection = (section) => {
       if (!section || instances.has(section)) return;
@@ -472,7 +468,7 @@
           : false,
         centeredSlides: true,
         followFinger: true,
-        grabCursor: true,
+        grabCursor: false, /* Disabled grab cursor */
         longSwipes: true,
         longSwipesMs: 300,
         longSwipesRatio: 0.24,
@@ -481,7 +477,7 @@
         resistance: true,
         resistanceRatio: 0.82,
         shortSwipes: true,
-        slideToClickedSlide: true,
+        slideToClickedSlide: false,
         slidesPerView: 1.55,
         spaceBetween: 8,
         speed: reduceMotion ? 0 : 500,
@@ -489,18 +485,10 @@
         touchAngle: 45,
         watchSlidesProgress: true,
         breakpoints: {
-          768: { slidesPerView: 1.72, spaceBetween: 16 },
+          768: { slidesPerView: 2.2, spaceBetween: 16 },
+          1024: { slidesPerView: 3.2, spaceBetween: 24 },
         },
         on: {
-          init(swiper) {
-            setMaterialProgress(swiper, reduceMotion);
-          },
-          progress(swiper) {
-            setMaterialProgress(swiper, reduceMotion);
-          },
-          setTransition(swiper, duration) {
-            setMaterialTransition(swiper, duration);
-          },
           realIndexChange(swiper) {
             reviewsSwiper.slideTo(swiper.realIndex, reduceMotion ? 0 : 300);
           },
@@ -512,7 +500,6 @@
           },
           transitionEnd(swiper) {
             section.classList.remove('is-dragging');
-            setMaterialProgress(swiper, reduceMotion);
           },
         },
       });

@@ -1,0 +1,414 @@
+<section
+  class="judgeme-reviews"
+  aria-labelledby="JudgeMeReviewsTitle-{{ section.id }}"
+  style="--judgeme-empty-description: {{ section.settings.empty_description | json | escape }}"
+>
+  <div class="judgeme-reviews__divider divider-top" aria-hidden="true">
+    <span></span>
+  </div>
+
+  <div class="judgeme-reviews__inner">
+    <header class="judgeme-reviews__header">
+      <h2 class="judgeme-reviews__title" id="JudgeMeReviewsTitle-{{ section.id }}">
+        {{ section.settings.title | escape }}
+      </h2>
+
+      <div class="judgeme-reviews__rating" aria-label="{{ section.settings.empty_rating_text | escape }}">
+        <span class="judgeme-reviews__stars" aria-hidden="true">
+          {% for index in (1..5) %}
+            <svg viewBox="0 0 24 24" role="presentation">
+              <path d="M12 2.8l2.78 5.64 6.22.9-4.5 4.39 1.06 6.19L12 17l-5.56 2.92 1.06-6.19L3 9.34l6.22-.9L12 2.8z"></path>
+            </svg>
+          {% endfor %}
+        </span>
+        <span class="judgeme-reviews__rating-text">{{ section.settings.empty_rating_text | escape }}</span>
+      </div>
+    </header>
+
+    <div class="judgeme-reviews__app">
+      {% for block in section.blocks %}
+        {% render block %}
+      {% endfor %}
+    </div>
+
+    <div class="judgeme-reviews__empty-footer">
+      <div class="judgeme-reviews__divider" aria-hidden="true">
+        <span></span>
+      </div>
+
+      <span class="judgeme-reviews__book" aria-hidden="true">
+        <svg viewBox="0 0 32 32" role="presentation">
+          <path d="M4.5 6.5h6.2c2.1 0 4.1.9 5.3 2.4 1.2-1.5 3.2-2.4 5.3-2.4h6.2v18h-6.2c-2.1 0-4.1.9-5.3 2.4-1.2-1.5-3.2-2.4-5.3-2.4H4.5v-18z"></path>
+          <path d="M16 8.9v18M7.8 10h3.8c1.6 0 3.2.6 4.4 1.8M24.2 10h-3.8c-1.6 0-3.2.6-4.4 1.8"></path>
+        </svg>
+      </span>
+
+      <p class="judgeme-reviews__empty-footer-text">
+        {{ section.settings.empty_footer_text | escape }}
+      </p>
+    </div>
+
+    <div class="judgeme-reviews__divider" aria-hidden="true">
+      <span></span>
+    </div>
+  </div>
+</section>
+
+{% stylesheet %}
+  .judgeme-reviews {
+    --judgeme-hairline: 0.0625rem;
+    --judgeme-tracking: 0.28em;
+
+    padding: var(--section-spacing-mobile) var(--layout-padding-mobile) var(--sp-3);
+    background-color: var(--color-cream);
+  }
+
+  .judgeme-reviews__inner {
+    width: 100%;
+    max-width: var(--layout-max-width);
+    margin-inline: auto;
+  }
+
+  .judgeme-reviews__header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .judgeme-reviews__eyebrow {
+    margin: 0;
+    font: var(--type-caption);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--judgeme-tracking);
+    text-transform: uppercase;
+    color: var(--color-bark);
+  }
+
+  .judgeme-reviews__ornament {
+    width: var(--sp-6);
+    margin-block-start: var(--sp-4);
+    border-block-start: var(--judgeme-hairline) solid var(--color-bark);
+  }
+
+  .judgeme-reviews__title {
+    max-width: 100%;
+    margin: var(--sp-4) 0 0;
+    font-family: var(--font-display);
+    font-size: clamp(var(--font-size-display-sm), 7.5vw, var(--font-size-display-lg));
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-tight);
+    letter-spacing: var(--letter-spacing-tight);
+    text-wrap: balance;
+    color: var(--text-primary);
+  }
+
+  .judgeme-reviews__rating {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: var(--sp-4);
+    margin-block-start: var(--sp-4);
+  }
+
+  .judgeme-reviews:has(.jm-no-reviews-state) .judgeme-reviews__rating {
+    display: flex;
+  }
+
+  .judgeme-reviews__stars {
+    display: flex;
+    gap: var(--sp-1);
+    color: var(--color-bark);
+  }
+
+  .judgeme-reviews__stars svg {
+    width: var(--sp-5);
+    height: var(--sp-5);
+    overflow: visible;
+    fill: none;
+    stroke: currentcolor;
+    stroke-width: 1.25;
+    stroke-linejoin: round;
+  }
+
+  .judgeme-reviews__rating-text {
+    font: var(--type-body-small);
+    color: var(--text-secondary);
+  }
+
+  .judgeme-reviews__app {
+    margin-block-start: var(--sp-5);
+  }
+
+  .judgeme-reviews__app .jm-review-widget {
+    --jm-review-widget-star-and-histogram-color: var(--color-bark) !important;
+    --jm-review-widget-button-color: var(--color-bark) !important;
+    --jm-review-widget-button-text-color: var(--text-inverse) !important;
+    --jm-review-widget-text-color: var(--text-primary) !important;
+    --jm-review-widget-lighter-text-color: var(--text-secondary) !important;
+    --jm-widget-primary-color: var(--color-bark) !important;
+    --jm-widget-border-radius: var(--radius-sm) !important;
+    --jm-widget-border-radius-simplified: var(--radius-sm) !important;
+    --jm-review-widget-form-border-radius: var(--radius-sm) !important;
+    --jm-review-widget-form-background-color: var(--color-cream) !important;
+    --jm-review-widget-form-button-color: var(--color-bark) !important;
+    --jm-review-widget-form-button-text-color: var(--text-inverse) !important;
+    --jm-review-widget-form-field-background-color: var(--surface-elevated) !important;
+    --jm-review-widget-form-text-color: var(--text-primary) !important;
+
+    width: 100% !important;
+    max-width: none !important;
+    padding: 0 !important;
+    background: transparent !important;
+  }
+
+  .judgeme-reviews__app .jm-review-widget-minimal-header__title {
+    display: none !important;
+  }
+
+  .judgeme-reviews:has(.jm-no-reviews-state) .jm-review-widget-minimal-header > .jm-cluster {
+    display: none !important;
+  }
+
+  .judgeme-reviews__app .jm-no-reviews-state {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: var(--sp-5) var(--sp-5) !important;
+    border: var(--judgeme-hairline) solid var(--border-default);
+    border-radius: var(--radius-sm) !important;
+    background: transparent;
+  }
+
+  .judgeme-reviews__app .jm-no-reviews-state > .jm-stack {
+    width: 100% !important;
+    max-width: none !important;
+    align-items: center !important;
+    gap: var(--sp-5) !important;
+  }
+
+  .judgeme-reviews__app .jm-no-reviews-state__text {
+    margin: 0 !important;
+    width: 100% !important;
+    font-family: var(--font-display) !important;
+    font-size: clamp(var(--font-size-body-lg), 5vw, var(--font-size-display-md)) !important;
+    font-weight: var(--font-weight-regular) !important;
+    line-height: var(--line-height-tight) !important;
+    letter-spacing: var(--letter-spacing-tight) !important;
+    text-wrap: balance;
+    color: var(--text-primary) !important;
+  }
+
+  .judgeme-reviews__app .jm-no-reviews-state__text::after {
+    display: block;
+    max-width: 60ch;
+    margin: var(--sp-3) auto 0;
+    font: var(--type-body-small);
+    letter-spacing: var(--letter-spacing-normal);
+    content: var(--judgeme-empty-description);
+    color: var(--text-secondary);
+  }
+
+  .judgeme-reviews__app .jm-no-reviews-state__action-buttons,
+  .judgeme-reviews__app .jm-no-reviews-state__action-buttons > .jm-stack {
+    width: 100%;
+    justify-content: center !important;
+  }
+
+  .judgeme-reviews__app .jm-no-reviews-state__action-buttons > .jm-stack {
+    max-width: 21rem;
+  }
+
+  .judgeme-reviews__app .jm-button.jm-button--primary {
+    width: 100% !important;
+    min-height: var(--sp-7);
+    padding: var(--button-padding-vertical) var(--button-padding-horizontal) !important;
+    border: var(--judgeme-hairline) solid var(--color-bark) !important;
+    border-radius: var(--radius-sm) !important;
+    background-color: var(--color-bark) !important;
+    box-shadow: none !important;
+    font-family: var(--font-body) !important;
+    font-size: var(--font-size-body-sm) !important;
+    font-weight: var(--font-weight-semibold) !important;
+    letter-spacing: var(--judgeme-tracking) !important;
+    text-transform: uppercase;
+    color: var(--text-inverse) !important;
+    transition: var(--transition-fast) !important;
+  }
+
+  .judgeme-reviews__app .jm-button.jm-button--primary:hover {
+    border-color: var(--color-ebony) !important;
+    background-color: var(--color-ebony) !important;
+    transform: translateY(calc(var(--sp-1) * -1));
+  }
+
+  .judgeme-reviews__app .jm-button.jm-button--primary:active {
+    transform: translateY(0) scale(0.98);
+  }
+
+  .judgeme-reviews__app .jm-button.jm-button--primary:focus-visible {
+    outline: none !important;
+    box-shadow: var(--shadow-focus) !important;
+  }
+
+  .judgeme-reviews:has(.jdgm-empty-state) .jm-review-widget__body {
+    display: none !important;
+  }
+
+  .judgeme-reviews__empty-footer {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .judgeme-reviews:has(.jm-no-reviews-state) .judgeme-reviews__empty-footer {
+    display: flex;
+  }
+
+  .judgeme-reviews__divider {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    margin-block: var(--sp-5) var(--sp-6);
+  }
+  .judgeme-reviews__divider.divider-top {
+    margin-block-start: 0;
+    margin-block-end: var(--sp-4);
+  }
+
+  .judgeme-reviews__divider::before,
+  .judgeme-reviews__divider::after {
+    flex: 1;
+    border-block-start: var(--judgeme-hairline) solid var(--border-light);
+    content: '';
+  }
+
+  .judgeme-reviews__divider span {
+    width: var(--sp-2);
+    height: var(--sp-2);
+    margin-inline: var(--sp-3);
+    border: var(--judgeme-hairline) solid var(--border-default);
+    transform: rotate(45deg);
+  }
+
+  .judgeme-reviews__book {
+    display: grid;
+    width: var(--sp-8);
+    height: var(--sp-8);
+    place-items: center;
+    border-radius: var(--radius-full);
+    background-color: var(--color-stone);
+    color: var(--color-bark);
+  }
+
+  .judgeme-reviews__book svg {
+    width: var(--sp-6);
+    height: var(--sp-6);
+    fill: none;
+    stroke: currentcolor;
+    stroke-width: 1.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .judgeme-reviews__empty-footer-text {
+    margin: var(--sp-4) 0 0;
+    font: var(--type-body-small);
+    color: var(--text-secondary);
+  }
+
+  @media (min-width: 720px) {
+    .judgeme-reviews {
+      padding: var(--section-spacing-tablet) var(--layout-padding-tablet) calc(var(--sp-8) + var(--sp-6));
+    }
+
+    .judgeme-reviews__rating {
+      gap: var(--sp-5);
+      margin-block-start: var(--sp-7);
+    }
+
+    .judgeme-reviews__stars svg {
+      width: var(--sp-6);
+      height: var(--sp-6);
+    }
+
+    .judgeme-reviews__rating-text,
+    .judgeme-reviews__empty-footer-text {
+      font: var(--type-body-regular);
+    }
+
+    .judgeme-reviews__app {
+      margin-block-start: var(--sp-7);
+    }
+
+    .judgeme-reviews__app .jm-no-reviews-state {
+      padding: var(--sp-7) var(--sp-6) !important;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .judgeme-reviews {
+      padding: calc(var(--sp-8) + var(--sp-6)) var(--layout-padding-desktop) calc(var(--sp-8) + var(--sp-7));
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .judgeme-reviews__app .jm-button.jm-button--primary {
+      transition: none !important;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Judge.me Reviews",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "Eyebrow",
+      "default": "Customer reviews"
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Heading",
+      "default": "What people tell about this product"
+    },
+    {
+      "type": "text",
+      "id": "empty_rating_text",
+      "label": "Empty rating text",
+      "default": "No reviews yet"
+    },
+    {
+      "type": "textarea",
+      "id": "empty_description",
+      "label": "Empty state description",
+      "default": "Share your experience with this piece and help other customers."
+    },
+    {
+      "type": "text",
+      "id": "empty_footer_text",
+      "label": "Empty footer text",
+      "default": "Reviews will appear here once published."
+    }
+  ],
+  "blocks": [
+    {
+      "type": "@app"
+    }
+  ],
+  "max_blocks": 1,
+  "presets": [
+    {
+      "name": "Judge.me Reviews"
+    }
+  ]
+}
+{% endschema %}

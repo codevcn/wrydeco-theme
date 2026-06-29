@@ -1,0 +1,1 @@
+shopify theme push --store wrydeco.myshopify.com

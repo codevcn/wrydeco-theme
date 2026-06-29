@@ -7,44 +7,100 @@
 <script src="{{ 'product-form.js' | asset_url }}" defer="defer"></script>
 <script src="{{ 'sale-event.js' | asset_url }}" defer="defer"></script>
 
-{% style %}
+{% stylesheet %}
   .main-product {
-    padding: 0px 0px 24px;
-    max-width: 1200px;
-    margin: 0 auto;
+    width: 100%;
+    max-width: var(--layout-max-width);
+    margin-inline: auto;
+  }
+  .main-product__media {
+    min-width: 0;
   }
   .main-product__info {
     display: flex;
     flex-direction: column;
+    min-width: 0;
   }
   .main-product__title {
-    font-size: 20px;
-    font-weight: 700;
-    line-height: 1.2;
     margin: 0;
-    padding: 0 14px;
-    letter-spacing: 0rem;
+    padding-inline: var(--layout-gutter-mobile);
+    font-size: var(--font-size-body-xl);
+    font-weight: var(--font-weight-bold);
+    line-height: var(--line-height-tight);
+    letter-spacing: var(--letter-spacing-normal);
+    color: var(--text-primary);
+    text-wrap: balance;
   }
-  .main-product__details {
-    padding: 18px 0px 10px;
-    margin: 0 12px;
-    background-color: #fff;
-    border-radius: 8px;
-  }
-  .main-product__price_inventory {
+  .main-product__price-inventory {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
+    flex-wrap: wrap;
+    gap: var(--sp-3);
   }
-  @media screen and (min-width: 768px) {
+  .main-product__details {
+    margin: 0;
+    margin-inline: var(--layout-gutter-mobile);
+    padding-block: var(--sp-4) var(--sp-3);
+    background-color: var(--surface-elevated);
+    border-radius: var(--radius-lg);
+  }
+
+  @media screen and (min-width: 720px) {
     .main-product {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 48px;
+      grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+      align-items: start;
+      gap: var(--sp-5);
+      padding: var(--section-spacing-tablet) var(--layout-padding-tablet);
+      max-width: 1200px;
+    }
+    .main-product__info {
+      gap: var(--sp-4);
+    }
+    .main-product__title {
+      padding-inline: 0;
+      font-family: var(--font-display);
+      font-size: var(--font-size-display-sm);
+      letter-spacing: var(--letter-spacing-tight);
+    }
+    .main-product__price-inventory {
+      align-items: flex-end;
+    }
+    .main-product__details {
+      margin-inline: 0;
+      padding: var(--sp-5);
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-elevation-1);
+    }
+    .main-product__price-inventory .product-price,
+    .main-product__price-inventory .product-inventory {
+      margin: 0;
+      padding-inline: 0px;
+    }
+
+    .main-product__price-inventory .product-inventory {
+      margin: 0;
+      padding-inline: 8px;
+    }
+
+    .main-product__details .product-variant-picker,
+    .main-product__details .product-buy-buttons,
+    .main-product__details .product-rating-summary {
+      padding-inline: 0;
     }
   }
-{% endstyle %}
+
+  @media screen and (min-width: 1024px) {
+    .main-product {
+      gap: var(--sp-7);
+      padding: var(--section-spacing-desktop) var(--layout-padding-desktop);
+    }
+    .main-product__title {
+      font-size: var(--font-size-display-md);
+    }
+  }
+{% endstylesheet %}
 
 {% liquid
   assign current_variant = product.selected_or_first_available_variant
@@ -62,13 +118,16 @@
   class="main-product"
   data-product-id="{{ product.id }}"
   data-product-url="{{ product.url }}"
+  aria-labelledby="MainProductTitle-{{ section.id }}"
 >
+  <div class="main-product__media">
+    {% render 'product-media-gallery', product: product, current_variant: current_variant, section_id: section.id %}
+  </div>
+
   <div class="main-product__info">
-    {% render 'product-media-gallery', product: product, current_variant: current_variant %}
+    <h1 class="main-product__title" id="MainProductTitle-{{ section.id }}">{{ product.title | escape }}</h1>
 
-    <h1 class="main-product__title">{{ product.title | escape }}</h1>
-
-    <div class="main-product__price_inventory">
+    <div class="main-product__price-inventory">
       {% render 'product-price', product: product, current_variant: current_variant %}
 
       {% render 'product-inventory-status', current_variant: current_variant %}
@@ -90,8 +149,15 @@
       {% render 'product-consultation', product: product %}
 
       {% render 'product-rating-summary', product: product %}
-    </div>
 
+      {% for block in section.blocks %}
+        {% if block.type == '@app' %}
+          <div class="main-product__app-block" {{ block.shopify_attributes }}>
+            {% render block %}
+          </div>
+        {% endif %}
+      {% endfor %}
+    </div>
   </div>
 </section>
 
@@ -138,6 +204,9 @@
           "info": "Optional"
         }
       ]
+    },
+    {
+      "type": "@app"
     }
   ],
   "settings": []

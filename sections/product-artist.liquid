@@ -36,69 +36,73 @@
   <div class="product-artist__card">
     {% if has_author_info %}
       <section class="product-artist__inner" aria-labelledby="ProductArtistHeading-{{ section.id }}" data-product-author>
-        {% if section.settings.heading != blank %}
-          <p class="product-artist__eyebrow" id="ProductArtistHeading-{{ section.id }}">
-            {{ section.settings.heading | escape }}
-          </p>
-        {% endif %}
-
-        <div class="product-artist__identity">
-          {% if author_image_url != blank %}
-            <div class="product-artist__avatar">
-              <img
-                class="product-artist__avatar-img"
-                src="{{ author_image_url | escape }}"
-                alt="{{ author_name | default: 'Product artist' | escape }}"
-                width="160"
-                height="160"
-                loading="lazy"
-              >
-            </div>
-          {% endif %}
-
-          <div class="product-artist__meta">
-            {% if author_name != blank %}
-              <h2 class="product-artist__name">{{ author_name | escape }}</h2>
-            {% endif %}
-            {% if section.settings.role_label != blank %}
-              <p class="product-artist__role">{{ section.settings.role_label | escape }}</p>
-            {% endif %}
-          </div>
-        </div>
-
-        {% if section.settings.show_view_profile and section.settings.view_profile_link != blank %}
-          <a class="product-artist__profile-btn" href="{{ section.settings.view_profile_link }}">
-            {{ section.settings.view_profile_label | default: 'View profile' | escape }}
-          </a>
-        {% endif %}
-
-        {% if author_bio != blank %}
-          <div class="product-artist__bio">
-            {{ author_bio | escape | newline_to_br }}
-          </div>
-        {% endif %}
-
-        {% if section.blocks.size > 0 %}
-          <hr class="product-artist__divider">
-
-          {% if section.settings.recognition_heading != blank %}
-            <p class="product-artist__eyebrow product-artist__eyebrow--sub">
-              {{ section.settings.recognition_heading | escape }}
+        <div class="product-artist__profile">
+          {% if section.settings.heading != blank %}
+            <p class="product-artist__eyebrow" id="ProductArtistHeading-{{ section.id }}">
+              {{ section.settings.heading | escape }}
             </p>
           {% endif %}
 
-          <ul class="product-artist__recognition" role="list">
-            {% for block in section.blocks %}
-              {% if block.type == 'recognition' %}
-                <li class="product-artist__recognition-item" {{ block.shopify_attributes }}>
-                  <span class="product-artist__recognition-icon" aria-hidden="true">
-                    {% render 'icon-artist-recognition', icon: block.settings.icon %}
-                  </span>
-                  <span class="product-artist__recognition-text">{{ block.settings.text | escape }}</span>
-                </li>
+          <div class="product-artist__identity">
+            {% if author_image_url != blank %}
+              <div class="product-artist__avatar">
+                <img
+                  class="product-artist__avatar-img"
+                  src="{{ author_image_url | escape }}"
+                  alt="{{ author_name | default: 'Product artist' | escape }}"
+                  width="160"
+                  height="160"
+                  loading="lazy"
+                >
+              </div>
+            {% endif %}
+
+            <div class="product-artist__meta">
+              {% if author_name != blank %}
+                <h2 class="product-artist__name">{{ author_name | escape }}</h2>
               {% endif %}
-            {% endfor %}
-          </ul>
+              {% if section.settings.role_label != blank %}
+                <p class="product-artist__role">{{ section.settings.role_label | escape }}</p>
+              {% endif %}
+            </div>
+          </div>
+
+          {% if section.settings.show_view_profile and section.settings.view_profile_link != blank %}
+            <a class="product-artist__profile-btn" href="{{ section.settings.view_profile_link }}">
+              {{ section.settings.view_profile_label | default: 'View profile' | escape }}
+            </a>
+          {% endif %}
+
+          {% if author_bio != blank %}
+            <div class="product-artist__bio">
+              {{ author_bio | escape | newline_to_br }}
+            </div>
+          {% endif %}
+        </div>
+
+        {% if section.blocks.size > 0 %}
+          <div class="product-artist__recognition-panel">
+            <hr class="product-artist__divider">
+
+            {% if section.settings.recognition_heading != blank %}
+              <p class="product-artist__eyebrow product-artist__eyebrow--sub">
+                {{ section.settings.recognition_heading | escape }}
+              </p>
+            {% endif %}
+
+            <ul class="product-artist__recognition" role="list">
+              {% for block in section.blocks %}
+                {% if block.type == 'recognition' %}
+                  <li class="product-artist__recognition-item" {{ block.shopify_attributes }}>
+                    <span class="product-artist__recognition-icon" aria-hidden="true">
+                      {% render 'icon-artist-recognition', icon: block.settings.icon %}
+                    </span>
+                    <span class="product-artist__recognition-text">{{ block.settings.text | escape }}</span>
+                  </li>
+                {% endif %}
+              {% endfor %}
+            </ul>
+          </div>
         {% endif %}
       </section>
     {% else %}
@@ -111,13 +115,13 @@
 
 {% stylesheet %}
   .product-artist {
-    padding: var(--section-spacing-mobile) var(--layout-padding-mobile);
+    padding: var(--section-spacing-mobile) var(--layout-gutter-mobile);
   }
 
   .product-artist__card {
-    max-width: 480px;
-    margin: 0 auto;
-    padding: var(--card-padding-mobile) var(--card-padding-mobile) 12px;
+    max-width: 30rem;
+    margin-inline: auto;
+    padding: var(--card-padding-mobile) var(--card-padding-mobile) var(--sp-3);
     background-color: var(--surface-elevated);
     border: 1px solid var(--border-light);
     border-radius: var(--radius-lg);
@@ -128,8 +132,8 @@
     margin: 0 0 var(--sp-4);
     font-family: var(--font-body);
     font-size: var(--font-size-caption);
-    font-weight: var(--font-weight-semibold);
-    letter-spacing: 0.12em;
+    font-weight: var(--font-weight-bold);
+    letter-spacing: var(--letter-spacing-wide);
     text-transform: uppercase;
     color: var(--text-secondary);
   }
@@ -146,8 +150,8 @@
   }
 
   .product-artist__avatar {
-    flex: 0 0 72px;
-    width: 72px;
+    flex: 0 0 calc(var(--sp-8) + var(--sp-2));
+    width: calc(var(--sp-8) + var(--sp-2));
     aspect-ratio: 1 / 1;
     overflow: hidden;
     border-radius: var(--radius-full);
@@ -182,7 +186,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 48px;
+    min-height: calc(var(--sp-7) + var(--sp-1));
     margin-top: var(--sp-5);
     padding: var(--button-padding-vertical) var(--button-padding-horizontal);
     border: 1px solid var(--color-ebony);
@@ -191,7 +195,7 @@
     font-family: var(--font-body);
     font-size: var(--font-size-body-sm);
     font-weight: var(--font-weight-semibold);
-    letter-spacing: 0.1em;
+    letter-spacing: var(--letter-spacing-wide);
     text-transform: uppercase;
     text-decoration: none;
     color: var(--color-ebony);
@@ -253,8 +257,8 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    width: 44px;
-    height: 44px;
+    width: calc(var(--sp-5) + var(--sp-5) - var(--sp-1));
+    height: calc(var(--sp-5) + var(--sp-5) - var(--sp-1));
     border-radius: var(--radius-full);
     border: 1px solid var(--border-light);
     background-color: var(--color-cream);
@@ -268,8 +272,8 @@
   }
 
   .product-artist__recognition-icon svg {
-    width: 22px;
-    height: 22px;
+    width: var(--font-size-body-2xl);
+    height: var(--font-size-body-2xl);
   }
 
   .product-artist__recognition-text {
@@ -286,14 +290,50 @@
     color: var(--text-secondary);
   }
 
-  @media (min-width: 750px) {
+  @media (min-width: 720px) {
+    .product-artist {
+      padding: var(--section-spacing-tablet) var(--layout-padding-tablet);
+    }
+
+    .product-artist__card {
+      max-width: var(--layout-max-width);
+      padding: var(--sp-6);
+    }
+
+    .product-artist__inner {
+      display: grid;
+      grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+      align-items: start;
+      gap: var(--sp-6);
+    }
+
+    .product-artist__avatar {
+      flex-basis: calc(var(--sp-8) + var(--sp-4));
+      width: calc(var(--sp-8) + var(--sp-4));
+    }
+
+    .product-artist__divider {
+      display: none;
+    }
+
+    .product-artist__eyebrow--sub {
+      margin-top: 0;
+      margin-bottom: var(--sp-4);
+    }
+
+    .product-artist__recognition-item {
+      aspect-ratio: auto;
+      min-height: calc(var(--sp-8) * 2);
+    }
+  }
+
+  @media (min-width: 1024px) {
     .product-artist {
       padding: var(--section-spacing-desktop) var(--layout-padding-desktop);
     }
 
-    .product-artist__avatar {
-      flex-basis: 80px;
-      width: 80px;
+    .product-artist__inner {
+      gap: var(--sp-7);
     }
   }
 {% endstylesheet %}

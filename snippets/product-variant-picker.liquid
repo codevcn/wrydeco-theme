@@ -242,6 +242,18 @@
           "{{ v.id }}": {{ v.metafields.custom.variant_images.value | default: v.metafields.custom.variant_images | json }}{% unless forloop.last %},{% endunless %}
         {% endfor %}
       };
+
+      // Tự map dữ liệu Inventory vì API/json đôi khi không trả về inventory_quantity
+      const variantInventoryMap = {
+        {% for v in product.variants %}
+          "{{ v.id }}": {
+             "qty": {{ v.inventory_quantity | default: 0 }},
+             "policy": {{ v.inventory_policy | json }},
+             "management": {{ v.inventory_management | json }},
+             "available": {{ v.available | json }}
+          }{% unless forloop.last %},{% endunless %}
+        {% endfor %}
+      };
       
       for (const input of variantInputs) {
         input.addEventListener('change', function () {
@@ -310,6 +322,40 @@
             } else {
               // Không có metafield -> show hết
               document.querySelectorAll('.product-gallery__thumbnail').forEach(t => t.style.display = '');
+            }
+
+            // Cập nhật Inventory Status
+            const invInfo = variantInventoryMap[selectedVariant.id];
+            const invStatusEl = document.querySelector('[data-inventory-status]');
+            if (invStatusEl && invInfo) {
+               let status = 'in-stock';
+               let label = 'In stock';
+               const threshold = 10;
+               
+               if (!invInfo.available) {
+                 status = 'out';
+                 label = 'Out of stock';
+               } else if (!invInfo.management) {
+                 status = 'in-stock';
+                 label = 'In stock';
+               } else {
+                 if (invInfo.qty > 0) {
+                   if (invInfo.qty <= threshold) {
+                     status = 'low';
+                     label = 'Only ' + invInfo.qty + ' left in stock';
+                   } else {
+                     status = 'in-stock';
+                     label = invInfo.qty + ' in stock';
+                   }
+                 } else {
+                   status = 'backorder';
+                   label = 'Available to order';
+                 }
+               }
+               
+               invStatusEl.className = 'product-inventory product-inventory--' + status;
+               const textEl = invStatusEl.querySelector('.product-inventory__text');
+               if (textEl) textEl.textContent = label;
             }
           }
           

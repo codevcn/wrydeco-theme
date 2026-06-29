@@ -22,9 +22,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const form = document.querySelector('form[data-type="add-to-cart-form"]');
   if (!form) return;
 
-  const btn = form.querySelector('.btn--add-to-cart');
+  const btn = form.querySelector('.custom-add-to-cart-btn');
   const errorWrapper = form.querySelector('[data-error-message-wrapper]');
   const errorMessage = form.querySelector('[data-error-message]');
+  
+  let originalBtnHtml = '';
 
   form.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -32,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
     errorWrapper.hidden = true;
     
     if (btn) {
+      originalBtnHtml = btn.innerHTML;
       btn.setAttribute('aria-disabled', true);
       btn.classList.add('loading');
       btn.innerHTML = '<span class="spinner"></span> Loading...'; // Simple spinner text for demo
@@ -54,7 +57,36 @@ document.addEventListener('DOMContentLoaded', () => {
           throw new Error(response.description);
         }
         // Success
-        window.location.href = window.Shopify.routes.root + 'cart';
+        if (window.showToast) {
+          window.showToast({
+            message: 'Item added to your cart.',
+            type: 'success',
+            position: 'bottom-right'
+          });
+        } else {
+          window.location.href = window.Shopify.routes.root + 'cart';
+        }
+
+        // Update header cart count
+        fetch(window.Shopify.routes.root + 'cart.js')
+          .then(res => res.json())
+          .then(cart => {
+            const cartIcon = document.querySelector('.header__icon--cart');
+            if (cartIcon) {
+              let bubble = cartIcon.querySelector('.cart-count-bubble');
+              if (cart.item_count > 0) {
+                if (!bubble) {
+                  bubble = document.createElement('div');
+                  bubble.className = 'cart-count-bubble';
+                  bubble.innerHTML = '<span></span>';
+                  cartIcon.appendChild(bubble);
+                }
+                bubble.querySelector('span').textContent = cart.item_count;
+              } else if (bubble) {
+                bubble.remove();
+              }
+            }
+          });
       })
       .catch((error) => {
         errorWrapper.hidden = false;
@@ -64,9 +96,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (btn) {
           btn.removeAttribute('aria-disabled');
           btn.classList.remove('loading');
-          // Reset button text
-          const btnText = btn.querySelector('[data-add-to-cart-text]');
-          btn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg> <span data-add-to-cart-text>Add to cart</span>`;
+          // Restore original button text
+          btn.innerHTML = originalBtnHtml;
         }
       });
   });

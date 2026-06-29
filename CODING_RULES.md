@@ -39,3 +39,8 @@ The technical implementation must align with the brand's luxury positioning.
 
 - Cố gắng giữ shopify-section có `display: block`
 - Khi bắt buộc thay đổi `display` của shopify-section thì phải hỏi trước.
+
+## 6. Global Notifications (Toast)
+
+- All user-facing temporary notifications, alerts, and feedback messages MUST use the global Toast component.
+- **Implementation:** Do not write custom alert logic or duplicate notification UI. Always call the global JavaScript function `window.showToast({ message: '...', type: 'success|error|info', position: 'top-right|bottom-right|...', duration: 4000 })`.

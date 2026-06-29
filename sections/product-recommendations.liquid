@@ -3,17 +3,24 @@
     <h2 class="product-recommendations__heading">
       {{ section.settings.heading | default: 'You might also <em>like</em>' }}
     </h2>
-    <div class="product-recommendations__grid">
-      {% for product in recommendations.products %}
-        {%- capture image_ratio -%}square{%- endcapture -%}
-        <div class="pin-card pin-card--{{ image_ratio }}">
+    <div class="product-recommendations__rows">
+      <div class="product-recommendations__grid">
+        {% for product in recommendations.products %}
+          {%- capture image_ratio -%}square{%- endcapture -%}
+          <div class="pin-card pin-card--{{ image_ratio }}">
           <div class="pin-card__image-wrapper">
-            <a href="{{ product.url }}" style="display: block; width: 100%; height: 100%;">
+            <a class="pin-card__image-link" href="{{ product.url }}">
               {%- if product.featured_media != blank -%}
+                {% assign recommendation_image_alt = product.featured_media.alt | default: product.title %}
                 {{
                   product.featured_media.preview_image
-                  | image_url: width: 400
-                  | image_tag: class: 'pin-card__image', loading: 'lazy'
+                  | image_url: width: 640
+                  | image_tag:
+                    class: 'pin-card__image',
+                    loading: 'lazy',
+                    widths: '240, 360, 480, 640',
+                    sizes: '(min-width: 1024px) 25vw, (min-width: 720px) 33vw, 75vw',
+                    alt: recommendation_image_alt
                 }}
               {%- else -%}
                 {{ 'product-1' | placeholder_svg_tag: 'pin-card__image placeholder-svg' }}
@@ -23,7 +30,7 @@
 
           <div class="pin-card__info">
             <h3 class="pin-card__title">
-              <a href="{{ product.url }}" style="text-decoration: none; color: inherit;">
+              <a class="pin-card__title-link" href="{{ product.url }}">
                 {{ product.title | escape }}
               </a>
             </h3>
@@ -42,10 +49,12 @@
                 <div class="pin-card__avatar">
                   {% if author_image_url != blank %}
                     <img
+                      class="pin-card__avatar-image"
                       src="{{ author_image_url | escape }}"
                       alt="{{ author_name | escape }}"
+                      width="80"
+                      height="80"
                       loading="lazy"
-                      style="width: 100%; height: 100%; object-fit: cover;"
                     >
                   {% else %}
                     <svg viewBox="0 0 24 24" fill="#333" width="100%" height="100%">
@@ -67,7 +76,8 @@
             {{ product.price | money }}
           </div>
         </div>
-      {% endfor %}
+        {% endfor %}
+      </div>
     </div>
   </div>
 {% else %}
@@ -110,12 +120,20 @@
     color: #e60023; /* Or var(--color-2) if available */
     font-style: italic;
   }
-  .product-recommendations__grid {
+  .product-recommendations__rows {
     display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .product-recommendations__grid {
+    display: grid;
+    grid-template-columns: repeat(6, calc(75% - var(--sp-4)));
+    grid-template-rows: repeat(2, auto);
     overflow-x: auto;
-    gap: 16px;
-    padding-bottom: 12px;
+    gap: var(--sp-4);
+    padding: 0 var(--layout-gutter-mobile) var(--sp-3);
     scrollbar-width: thin;
+    scroll-snap-type: x mandatory;
   }
   .product-recommendations__grid::-webkit-scrollbar {
     height: 8px;
@@ -129,36 +147,58 @@
     border-radius: 4px;
   }
   .product-recommendations__grid > .pin-card {
-    flex: 0 0 calc(85% - 16px);
-    scroll-snap-align: start;
     margin-bottom: 0; /* Override default margin from pin-card */
+    scroll-snap-align: start;
   }
-  .product-recommendations__grid > .pin-card:first-child {
-    margin-left: 14px;
-  }
-  .product-recommendations__grid > .pin-card:last-child {
-    margin-right: 14px;
-  }
-  @media screen and (min-width: 768px) {
+  @media screen and (min-width: 720px) {
+    .product-recommendations {
+      max-width: var(--layout-max-width);
+      margin-inline: auto;
+      padding: var(--section-spacing-tablet) 0;
+    }
+    .product-recommendations__heading {
+      margin: 0 0 var(--sp-5);
+      padding: 0;
+      font-size: var(--font-size-display-md);
+      color: var(--text-primary);
+      text-wrap: balance;
+    }
+    .product-recommendations__rows {
+      gap: var(--sp-5);
+    }
+    .product-recommendations__grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-rows: repeat(1, auto);
+      gap: var(--sp-4);
+      overflow: visible;
+      padding: 0;
+      scroll-snap-type: none;
+    }
     .product-recommendations__grid > .pin-card {
-      flex: 0 0 calc(33.333% - 16px);
+      min-width: 0;
+      margin: 0;
+      scroll-snap-align: none;
     }
   }
   @media screen and (min-width: 1024px) {
-    .product-recommendations__grid > .pin-card {
-      flex: 0 0 calc(25% - 16px);
+    .product-recommendations {
+      padding: var(--section-spacing-desktop) 0;
+    }
+    .product-recommendations__grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: var(--sp-5);
     }
   }
 
   /* Reuse pin-card styling from for-you-masonry if missing, but we assume it's global or we'll ensure it works */
-  .pin-card {
+  .product-recommendations .pin-card {
     display: block;
     margin-bottom: 18px;
     border-radius: 12px;
     overflow: hidden;
     background-color: #fff;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-    border-bottom: 4px solid var(--color-earth-brown, #4a2c18);
     position: relative;
   }
   .pin-card--square .pin-card__image-wrapper {
@@ -168,6 +208,11 @@
     position: relative;
     overflow: hidden;
     width: 100%;
+  }
+  .pin-card__image-link {
+    display: block;
+    width: 100%;
+    height: 100%;
   }
   .pin-card__image {
     width: 100%;
@@ -196,6 +241,10 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
+  .pin-card__title-link {
+    color: inherit;
+    text-decoration: none;
+  }
   .pin-card__meta {
     display: flex;
     justify-content: space-between;
@@ -218,6 +267,11 @@
     justify-content: center;
     overflow: hidden;
   }
+  .pin-card__avatar-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
   .recommendation__pin-card__author-name {
     display: inline-block;
     font-weight: 500;
@@ -233,7 +287,7 @@
     background-color: var(--color-earth-brown, #4a2c18);
     color: #fff;
     font-weight: 600;
-    font-size: 20px;
+    font-size: 18px;
     border-top-left-radius: 16px;
     padding: 4px 12px 4px 12px;
   }
@@ -243,7 +297,6 @@
 {
   "name": "Product Recommendations",
   "limit": 1,
-  "templates": ["product"],
   "settings": [
     {
       "type": "html",
@@ -255,7 +308,7 @@
       "type": "range",
       "id": "products_to_show",
       "min": 2,
-      "max": 10,
+      "max": 12,
       "step": 1,
       "default": 4,
       "label": "Maximum products to show"

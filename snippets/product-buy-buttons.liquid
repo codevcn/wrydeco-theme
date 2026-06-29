@@ -24,31 +24,72 @@
   .custom-buy-it-now-btn {
     width: 100%;
   }
-  .quantity-input {
+  .quantity-input-shell {
     display: flex;
     align-items: center;
-    border: 1px solid #ccc;
-    border-radius: 30px;
-    height: 54px;
-    width: 120px;
+    background-color: rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 999px;
+    padding: 4px;
+    height: 52px;
+    width: 130px;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);
+  }
+  .quantity-input-core {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    height: 100%;
+    background-color: #ffffff;
+    border-radius: 999px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.03), inset 0 0 0 1px rgba(0,0,0,0.02);
   }
   .quantity-input__btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     background: none;
     border: none;
     width: 40px;
     height: 100%;
-    font-size: 20px;
     cursor: pointer;
+    color: #666;
+    border-radius: 999px;
+    transition: transform 0.3s cubic-bezier(0.32,0.72,0,1), color 0.2s, background-color 0.2s;
+  }
+  .quantity-input__btn:focus {
+    outline: none;
+    box-shadow: none;
+  }
+  .quantity-input__btn:hover {
     color: #111;
+    background-color: rgba(0,0,0,0.02);
+  }
+  .quantity-input__btn:active {
+    transform: scale(0.85);
   }
   .quantity-input__input {
-    width: 40px;
+    flex: 1;
+    min-width: 0;
     text-align: center;
     border: none;
     background: none;
-    font-size: 16px;
-    font-weight: 500;
+    font-size: 20px;
+    font-family: var(--font-body, inherit);
+    font-weight: 400;
     color: #111;
+    padding: 0;
+  }
+  
+  /* Remove number arrows */
+  .quantity-input__input::-webkit-outer-spin-button,
+  .quantity-input__input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  .quantity-input__input[type=number] {
+    -moz-appearance: textfield;
   }
   .custom-add-to-cart-btn {
     flex: 1;
@@ -80,15 +121,21 @@
   
   <div class="product-buy-buttons">
     <div class="product-buy-buttons__primary">
-      <div class="quantity-input" data-quantity-selector>
-        <button type="button" class="quantity-input__btn" aria-label="Decrease quantity" data-action="decrease">-</button>
-        <input type="number" 
-               name="quantity" 
-               class="quantity-input__input" 
-               value="1" 
-               min="1" 
-               aria-label="Quantity">
-        <button type="button" class="quantity-input__btn" aria-label="Increase quantity" data-action="increase">+</button>
+      <div class="quantity-input-shell" data-quantity-selector>
+        <div class="quantity-input-core">
+          <button type="button" class="quantity-input__btn" aria-label="Decrease quantity" data-action="decrease">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="4" y1="12" x2="20" y2="12"></line></svg>
+          </button>
+          <input type="number" 
+                 name="quantity" 
+                 class="quantity-input__input" 
+                 value="1" 
+                 min="1" 
+                 aria-label="Quantity">
+          <button type="button" class="quantity-input__btn" aria-label="Increase quantity" data-action="increase">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="12" y1="4" x2="12" y2="20"></line><line x1="4" y1="12" x2="20" y2="12"></line></svg>
+          </button>
+        </div>
       </div>
       
       {% capture add_to_cart_content %}

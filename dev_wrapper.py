@@ -66,7 +66,10 @@ def read_output(process):
 def main():
     print("Starting Shopify theme development server with QR code...\n")
 
+    extra_args = " ".join(sys.argv[1:])
     cmd = "shopify theme dev --store wrydeco.myshopify.com"
+    if extra_args:
+        cmd += " " + extra_args
     env = os.environ.copy()
     env["FORCE_COLOR"] = "1"
 
