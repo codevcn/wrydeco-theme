@@ -1,0 +1,283 @@
+{% style %}
+  .product-comparison {
+    padding: 36px 16px 28px;
+    background-color: transparent;
+  }
+  .product-comparison__inner {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  .product-comparison__title {
+    font-family: var(--font-display, 'Playfair Display', serif);
+    font-size: 34px;
+    line-height: 1.15;
+    color: #1a1a1a;
+    margin: 0 0 14px 0;
+    letter-spacing: -0.02em;
+    font-weight: 400;
+  }
+  .product-comparison__title em {
+    font-style: italic;
+    color: #df3e3e;
+  }
+  /* Remove default p margins from richtext */
+  .product-comparison__title p {
+    margin: 0;
+  }
+  .product-comparison__desc {
+    font-family: var(--font-display);
+    font-size: 14px;
+    line-height: 1.6;
+    color: #666;
+    margin: 0 0 14px 0;
+  }
+  .product-comparison__card {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+    border: 1px solid #f0f0f0;
+  }
+  .product-comparison__row {
+    padding: 18px 0;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .product-comparison__row:first-child {
+    padding-top: 0;
+  }
+  .product-comparison__row:last-child {
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+  .product-comparison__row-title {
+    font-weight: 700;
+    font-size: 14px;
+    color: #1a1a1a;
+    margin-bottom: 14px;
+  }
+  .product-comparison__item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .product-comparison__item:last-child {
+    margin-bottom: 0;
+  }
+  .product-comparison__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .product-comparison__icon--bad {
+    background-color: #fce8e8;
+    color: #df3e3e;
+  }
+  .product-comparison__icon--good {
+    background-color: #e6f4ea;
+    color: #1b8a44;
+  }
+  .product-comparison__icon svg {
+    width: 10px;
+    height: 10px;
+  }
+  .product-comparison__text {
+    font-size: 13.5px;
+    line-height: 1.4;
+  }
+  .product-comparison__text--bad {
+    color: #888;
+  }
+  .product-comparison__text--good {
+    color: #1a1a1a;
+    font-weight: 500;
+  }
+
+  @media screen and (min-width: 768px) {
+    .product-comparison__title {
+      font-size: 42px;
+    }
+    .product-comparison__desc {
+      font-size: 15px;
+    }
+  }
+{% endstyle %}
+
+<div class="product-comparison page-width" id="ProductComparison-{{ section.id }}">
+  <div class="product-comparison__inner">
+    {% if section.settings.title != blank %}
+      <div class="product-comparison__title">
+        {{ section.settings.title }}
+      </div>
+    {% endif %}
+
+    {% if section.settings.description != blank %}
+      <p class="product-comparison__desc">
+        {{ section.settings.description | escape }}
+      </p>
+    {% endif %}
+
+    <div class="product-comparison__card">
+      {% for block in section.blocks %}
+        <div class="product-comparison__row" {{ block.shopify_attributes }}>
+          {% if block.settings.heading != blank %}
+            <div class="product-comparison__row-title">{{ block.settings.heading | escape }}</div>
+          {% endif %}
+
+          {% if block.settings.factory_text != blank %}
+            <div class="product-comparison__item">
+              <div class="product-comparison__icon product-comparison__icon--bad">
+                <svg
+                  viewBox="0 0 14 14"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M11 3L3 11M3 3l8 8"/>
+                </svg>
+              </div>
+              <div class="product-comparison__text product-comparison__text--bad">
+                {{ block.settings.factory_text | escape }}
+              </div>
+            </div>
+          {% endif %}
+
+          {% if block.settings.craft_text != blank %}
+            <div class="product-comparison__item">
+              <div class="product-comparison__icon product-comparison__icon--good">
+                <svg
+                  viewBox="0 0 14 14"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M2.5 7.5L5.5 10.5L11.5 3.5"/>
+                </svg>
+              </div>
+              <div class="product-comparison__text product-comparison__text--good">
+                {{ block.settings.craft_text | escape }}
+              </div>
+            </div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "Product Comparison",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "pill_text",
+      "label": "Pill Text",
+      "default": "Craftsmanship vs factory"
+    },
+    {
+      "type": "richtext",
+      "id": "title",
+      "label": "Title (HTML/Italic allowed)",
+      "default": "<p>What separates handcrafted from <em>factory-made</em></p>"
+    },
+    {
+      "type": "textarea",
+      "id": "description",
+      "label": "Description",
+      "default": "Both are solid wood. Both look beautiful in catalog photos. But the difference shows up when you live with the piece for 10 years and again when you pass it down."
+    }
+  ],
+  "blocks": [
+    {
+      "type": "comparison_row",
+      "name": "Comparison Row",
+      "settings": [
+        {
+          "type": "text",
+          "id": "heading",
+          "label": "Feature Heading",
+          "default": "Feature"
+        },
+        {
+          "type": "text",
+          "id": "factory_text",
+          "label": "Factory (Bad) Text",
+          "default": "Factory made feature"
+        },
+        {
+          "type": "text",
+          "id": "craft_text",
+          "label": "Craftsmanship (Good) Text",
+          "default": "Handcrafted premium feature"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Product Comparison",
+      "blocks": [
+        {
+          "type": "comparison_row",
+          "settings": {
+            "heading": "Wood grain",
+            "factory_text": "Identical (catalog repeated)",
+            "craft_text": "1 of 1 uniquely yours"
+          }
+        },
+        {
+          "type": "comparison_row",
+          "settings": {
+            "heading": "Joinery",
+            "factory_text": "Screws + dowels (will loosen)",
+            "craft_text": "Hand-cut mortise & tenon"
+          }
+        },
+        {
+          "type": "comparison_row",
+          "settings": {
+            "heading": "Finish",
+            "factory_text": "Spray lacquer + sealant",
+            "craft_text": "Hand-rubbed natural oil"
+          }
+        },
+        {
+          "type": "comparison_row",
+          "settings": {
+            "heading": "Made by",
+            "factory_text": "Anonymous factory line",
+            "craft_text": "Master craftsman (named)"
+          }
+        },
+        {
+          "type": "comparison_row",
+          "settings": {
+            "heading": "Cost per year of use",
+            "factory_text": "$13.20",
+            "craft_text": "$8.80"
+          }
+        },
+        {
+          "type": "comparison_row",
+          "settings": {
+            "heading": "Customization",
+            "factory_text": "4 catalog colors only",
+            "craft_text": "Choose your slab from photos"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

@@ -6,87 +6,91 @@
 
 {% style %}
   .product-gallery {
-    position: relative;
     width: 100%;
-    overflow: hidden;
-    margin-bottom: 16px;
-    position: relative;
-  }
-  .product-gallery__slider {
+    margin-bottom: var(--sp-4, 16px);
     display: flex;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE/Edge */
+    flex-direction: column;
+    gap: var(--sp-2, 12px);
   }
-  .product-gallery__slider::-webkit-scrollbar {
-    display: none; /* Chrome/Safari */
-  }
-  .product-gallery__item {
-    flex: 0 0 100%;
-    scroll-snap-align: start;
+  .product-gallery__main {
+    width: 100%;
     position: relative;
+    overflow: hidden;
+    background-color: var(--bg-secondary, #e8e4df);
   }
-  .product-gallery__media {
+  .product-gallery__main-item {
+    display: none;
+    width: 100%;
+  }
+  .product-gallery__main-item.is-active {
+    display: block;
+  }
+  .product-gallery__main-media {
     width: 100%;
     height: auto;
     display: block;
     object-fit: contain;
-    overflow: hidden;
   }
-  .product-gallery__dots {
+  .product-gallery__thumbnails {
     display: flex;
-    justify-content: center;
-    gap: 6px;
-    margin-top: 16px;
-    position: absolute;
-    bottom: 10px;
-    left: 50%;
-    transform: translateX(-50%);
+    overflow-x: auto;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+    padding: 0 6px;
   }
-  .product-gallery__dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background-color: #ccc;
-    border: none;
-    padding: 0;
+  .product-gallery__thumbnails::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
+  }
+  .product-gallery__thumbnail {
+    flex: 0 0 calc(20% - (var(--sp-2, 8px) * 4 / 5));
+    aspect-ratio: 1;
     cursor: pointer;
+    border: 4px solid transparent;
+    border-radius: var(--radius-md, 4px);
+    overflow: hidden;
+    opacity: 0.6;
+    transition: opacity 0.2s ease, border-color 0.2s ease;
+    background-color: var(--bg-secondary, #e8e4df);
   }
-  .product-gallery__dot.is-active {
-    background-color: var(--color-human-skin);
-    width: 24px;
-    border-radius: 4px;
+  .product-gallery__thumbnail.is-active,
+  .product-gallery__thumbnail:hover {
+    opacity: 1;
+    border-color: var(--color-earth-brown, #e6bf9b);
+  }
+  .product-gallery__thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
   }
 {% endstyle %}
 
 <div class="product-gallery" data-product-gallery>
-  <div class="product-gallery__slider" data-gallery-slider>
+  <div class="product-gallery__main">
+    {% assign featured_media = current_variant.featured_media | default: product.featured_media %}
     {% for media in product.media %}
       <div
-        class="product-gallery__item"
-        data-media-id="{{ media.id }}"
-        {% if current_variant.featured_media.id == media.id %}
-          data-is-featured
-        {% endif %}
+        class="product-gallery__main-item {% if media.id == featured_media.id or featured_media == blank and forloop.first %}is-active{% endif %}"
+        data-main-media-id="{{ media.id }}"
+        data-alt="{{ media.alt | escape }}"
       >
         {% case media.media_type %}
           {% when 'image' %}
             {% assign loading = 'lazy' %}
-            {% if forloop.first %}
+            {% if media.id == featured_media.id or featured_media == blank and forloop.first %}
               {% assign loading = 'eager' %}
             {% endif %}
-            {{ media | image_url: width: 1200 | image_tag: class: 'product-gallery__media', loading: loading }}
+            {{ media | image_url: width: 1200 | image_tag: class: 'product-gallery__main-media', loading: loading }}
           {% when 'external_video' %}
-            <div class="product-gallery__media">
+            <div class="product-gallery__main-media">
               {{ media | external_video_tag }}
             </div>
           {% when 'video' %}
-            <div class="product-gallery__media">
+            <div class="product-gallery__main-media">
               {{ media | video_tag: controls: true, autoplay: true }}
             </div>
           {% else %}
-            <div class="product-gallery__media">
+            <div class="product-gallery__main-media">
               {{ media | media_tag }}
             </div>
         {% endcase %}
@@ -95,14 +99,30 @@
   </div>
 
   {% if product.media.size > 1 %}
-    <div class="product-gallery__dots" data-gallery-dots>
+    <div class="product-gallery__thumbnails">
       {% for media in product.media %}
-        <button
-          class="product-gallery__dot {% if forloop.first %}is-active{% endif %}"
-          data-index="{{ forloop.index0 }}"
-          aria-label="Go to slide {{ forloop.index }}"
-        ></button>
+        <div
+          class="product-gallery__thumbnail {% if media.id == featured_media.id or featured_media == blank and forloop.first %}is-active{% endif %}"
+          data-thumbnail-id="{{ media.id }}"
+          data-alt="{{ media.alt | escape }}"
+          onclick="
+            document.querySelectorAll('.product-gallery__main-item').forEach(el => el.classList.remove('is-active'));
+            document.querySelector('.product-gallery__main-item[data-main-media-id=\'{{ media.id }}\']').classList.add('is-active');
+            document.querySelectorAll('.product-gallery__thumbnail').forEach(el => el.classList.remove('is-active'));
+            this.classList.add('is-active');
+          "
+        >
+          {{ media | image_url: width: 160 | image_tag: loading: 'lazy' }}
+        </div>
       {% endfor %}
     </div>
   {% endif %}
 </div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Lấy toàn bộ danh sách media của sản phẩm dưới dạng JSON
+    const productMedia = {{ product.media | json }};
+    console.log("Danh sách tất cả Product Media: ", productMedia);
+  });
+</script>

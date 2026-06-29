@@ -3,6 +3,25 @@
     padding: 0 16px;
     margin: 0 auto;
     max-width: 800px; /* or a suitable max-width */
+    margin-top: var(--sp-4, 16px);
+  }
+
+  .product-accordion-section__title {
+    font-family: var(--font-display, 'Playfair Display', serif);
+    font-size: 32px;
+    line-height: 1.15;
+    color: #1a1a1a;
+    margin: 0 0 16px 0;
+    letter-spacing: -0.02em;
+    font-weight: 400;
+  }
+  .product-accordion-section__title em {
+    font-style: italic;
+    color: #df3e3e;
+  }
+  /* Remove default p margins from richtext */
+  .product-accordion-section__title p {
+    margin: 0;
   }
 
   .product-accordion-container {
@@ -17,7 +36,7 @@
     border-bottom: 1px solid #e2dcd2;
     font-weight: 700;
   }
-  
+
   .product-accordion-item:last-child {
     border-bottom: none;
   }
@@ -35,7 +54,7 @@
     text-transform: uppercase;
     list-style: none; /* Removes default arrow in most browsers */
   }
-  
+
   .product-accordion-summary::-webkit-details-marker {
     display: none; /* Removes default arrow in Safari */
   }
@@ -49,7 +68,7 @@
     width: 14px;
     height: 14px;
   }
-  
+
   .product-accordion-icon::before,
   .product-accordion-icon::after {
     content: '';
@@ -60,12 +79,12 @@
     transform: translate(-50%, -50%);
     transition: transform 0.3s ease;
   }
-  
+
   .product-accordion-icon::before {
     width: 14px;
     height: 1.5px;
   }
-  
+
   .product-accordion-icon::after {
     height: 14px;
     width: 1.5px;
@@ -85,6 +104,9 @@
 {% endstyle %}
 
 <div class="product-accordion-section page-width">
+  <div class="product-accordion-section__title">
+    {{ section.settings.title }}
+  </div>
   <div class="product-accordion-container">
     {% for block in section.blocks %}
       <details class="product-accordion-item" {{ block.shopify_attributes }}>
@@ -109,7 +131,13 @@
   "name": "Product Accordion",
   "tag": "section",
   "class": "section",
-  "settings": [],
+  "settings": [
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Section Title"
+    }
+  ],
   "blocks": [
     {
       "type": "accordion",

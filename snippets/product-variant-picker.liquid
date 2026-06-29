@@ -222,4 +222,103 @@
       {% endif %}
     {% endfor %}
   </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const selectedOptions = {};
+      
+      // 1. Khởi tạo giá trị ban đầu dựa vào các input đã được check
+      const checkedInputs = document.querySelectorAll('.product-variant-picker input[type="radio"]:checked');
+      checkedInputs.forEach(input => {
+        selectedOptions[input.dataset.index] = input.value;
+      });
+
+      const variantInputs = document.querySelectorAll('.product-variant-picker input[type="radio"]');
+      const productVariants = {{ product.variants | json }};
+      
+      // 2. Bắt buộc: Tự map dữ liệu Metafield bằng Liquid vì bộ lọc `| json` của Shopify sẽ xóa mất Metafield
+      const variantMetafieldsMap = {
+        {% for v in product.variants %}
+          "{{ v.id }}": {{ v.metafields.custom.variant_images.value | default: v.metafields.custom.variant_images | json }}{% unless forloop.last %},{% endunless %}
+        {% endfor %}
+      };
+      
+      for (const input of variantInputs) {
+        input.addEventListener('change', function () {
+          // 3. Cập nhật giá trị mới khi user chọn
+          selectedOptions[input.dataset.index] = input.value;
+          
+          // 4. Tìm variant khớp với toàn bộ lựa chọn
+          const selectedVariant = productVariants.find(variant => {
+            return Object.keys(selectedOptions).every(key => {
+              return variant[key] === selectedOptions[key];
+            });
+          });
+          
+          if (selectedVariant) {
+            // Gắn thêm metafield vào selectedVariant để tiện sử dụng
+            selectedVariant.metafields = {
+              custom: {
+                variant_images: variantMetafieldsMap[selectedVariant.id]
+              }
+            };
+            
+            // Logic lọc ảnh theo variant-images
+            const variantImagesRaw = selectedVariant.metafields.custom.variant_images;
+            if (variantImagesRaw) {
+              // Phân tích ra thành 1 mảng variant-image[] (string[])
+              const variantImages = variantImagesRaw.split('\n').map(s => s.trim().replace(/<br\s*\/?>/g, '')).filter(s => s !== '');
+              
+              if (variantImages.length > 0) {
+                const thumbnails = document.querySelectorAll('.product-gallery__thumbnail');
+                const mainItems = document.querySelectorAll('.product-gallery__main-item');
+                
+                let firstMatchedThumbnail = null;
+                
+                // Lọc thumbnails
+                thumbnails.forEach(thumb => {
+                  const alt = thumb.dataset.alt || '';
+                  // Kiểm tra alt có chứa bất kỳ string nào trong mảng variantImages không
+                  const isMatch = variantImages.some(vImg => alt.includes(vImg));
+                  
+                  if (isMatch) {
+                    thumb.style.display = ''; // Show
+                    if (!firstMatchedThumbnail) firstMatchedThumbnail = thumb;
+                  } else {
+                    thumb.style.display = 'none'; // Hide
+                    thumb.classList.remove('is-active');
+                  }
+                });
+                
+                // Xóa active khỏi các main items không khớp
+                mainItems.forEach(item => {
+                  const alt = item.dataset.alt || '';
+                  const isMatch = variantImages.some(vImg => alt.includes(vImg));
+                  if (!isMatch) {
+                     item.classList.remove('is-active');
+                  }
+                });
+                
+                // Chọn ảnh đầu tiên trong pickedMediaList
+                if (firstMatchedThumbnail) {
+                  firstMatchedThumbnail.click(); 
+                }
+              } else {
+                // Nếu mảng rỗng thì show hết
+                document.querySelectorAll('.product-gallery__thumbnail').forEach(t => t.style.display = '');
+              }
+            } else {
+              // Không có metafield -> show hết
+              document.querySelectorAll('.product-gallery__thumbnail').forEach(t => t.style.display = '');
+            }
+          }
+          
+    const productMedia = {{ product.media | json }};
+    console.log("Danh sách tất cả Product Media: ", productMedia);
+          console.log(">>> Variant được chọn:", selectedVariant);
+          console.log(">>> Giá trị của metafields:", selectedVariant ? selectedVariant.metafields : undefined);
+        });
+      }
+    });
+  </script>
 {% endunless %}
