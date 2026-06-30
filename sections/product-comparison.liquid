@@ -1,351 +1,514 @@
+{% comment %}
+  Details, Materials & Care section.
+
+  Left column: eyebrow, title, subtitle, divider and a "what makes this piece
+  special" feature grid (feature blocks). Right column: a numbered accordion
+  (accordion blocks); the first item is open by default.
+{% endcomment %}
+
 {% stylesheet %}
-  .product-comparison {
-    padding: 36px 16px 28px;
-    background-color: transparent;
+  /* Desktop-first */
+  .details-materials {
+    width: 100%;
+    max-width: var(--layout-max-width);
+    margin-inline: auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+    align-items: start;
+    column-gap: var(--sp-8);
+    padding: var(--sp-7) var(--layout-padding-desktop);
   }
-  .product-comparison__inner {
-    max-width: 600px;
-    margin: 0 auto;
+
+  .details-materials__eyebrow {
+    margin: 0 0 var(--sp-4);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-bark);
   }
-  .product-comparison__title {
-    font-family: var(--font-display, 'Playfair Display', serif);
-    font-size: 32px;
-    line-height: 1.15;
-    color: #1a1a1a;
-    margin: 0 0 14px 0;
-    letter-spacing: -0.02em;
-    font-weight: 400;
-  }
-  .product-comparison__title em {
-    font-style: italic;
-    color: #df3e3e;
-  }
-  /* Remove default p margins from richtext */
-  .product-comparison__title p {
-    margin: 0;
-  }
-  .product-comparison__desc {
+  .details-materials__title {
+    margin: 0 0 var(--sp-4);
     font-family: var(--font-display);
-    font-size: 14px;
-    line-height: 1.6;
-    color: #666;
-    margin: 0 0 14px 0;
+    font-size: var(--font-size-display-lg);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-display);
+    letter-spacing: var(--letter-spacing-normal);
+    color: var(--text-primary);
+    text-wrap: balance;
   }
-  .product-comparison__card {
-    background: #ffffff;
-    border-radius: 16px;
-    padding: 24px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-    border: 1px solid #f0f0f0;
+  .details-materials__subtitle {
+    margin: 0;
+    max-width: 52ch;
+    font-size: var(--font-size-body-lg);
+    line-height: var(--line-height-relaxed);
+    color: var(--text-secondary);
   }
-  .product-comparison__row {
-    padding: 18px 0;
-    border-bottom: 1px solid #f0f0f0;
+  .details-materials__rule {
+    width: 100%;
+    height: 1px;
+    margin: var(--sp-6) 0;
+    border: none;
+    background-color: var(--border-light);
   }
-  .product-comparison__row:first-child {
+
+  .details-materials__features-eyebrow {
+    margin: 0 0 var(--sp-5);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-bark);
+  }
+
+  .details-materials__features {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .dm-feature {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--sp-4);
+    padding: var(--sp-5);
+  }
+  .dm-feature:nth-child(odd) {
+    padding-left: 0;
+    border-right: 1px solid var(--border-light);
+  }
+  .dm-feature:nth-child(even) {
+    padding-right: 0;
+  }
+  .dm-feature:nth-child(1),
+  .dm-feature:nth-child(2) {
     padding-top: 0;
   }
-  .product-comparison__row:last-child {
+  .dm-feature:nth-child(n + 3) {
+    border-top: 1px solid var(--border-light);
     padding-bottom: 0;
+  }
+  .dm-feature__icon {
+    flex: 0 0 auto;
+    width: 44px;
+    height: 44px;
+    color: var(--color-bark);
+  }
+  .dm-feature__icon svg {
+    width: 100%;
+    height: 100%;
+  }
+  .dm-feature__body {
+    min-width: 0;
+  }
+  .dm-feature__title {
+    margin: 0 0 var(--sp-2);
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-lg);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-tight);
+    color: var(--text-primary);
+  }
+  .dm-feature__text {
+    margin: 0;
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-relaxed);
+    color: var(--text-secondary);
+  }
+
+  /* Accordion */
+  .dm-accordion {
+    border: 1px solid #33333328;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background-color: transparent;
+  }
+  .dm-acc {
+    border-bottom: 1px solid #33333328;
+  }
+  .dm-acc:last-child {
     border-bottom: none;
   }
-  .product-comparison__row-title {
-    font-weight: 700;
-    font-size: 14px;
-    color: #1a1a1a;
-    margin-bottom: 14px;
-  }
-  .product-comparison__item {
-    display: flex;
+  .dm-acc__summary {
+    display: grid;
+    grid-template-columns: 2.75rem 1fr auto;
     align-items: center;
-    gap: 12px;
-    margin-bottom: 12px;
+    gap: var(--sp-4);
+    padding: var(--sp-5) var(--sp-5);
+    cursor: pointer;
+    list-style: none;
   }
-  .product-comparison__item:last-child {
+  .dm-acc__summary::-webkit-details-marker {
+    display: none;
+  }
+  .dm-acc__summary:hover {
+    background-color: var(--bg-secondary);
+  }
+  .dm-acc__num {
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-regular);
+    color: var(--color-clay);
+  }
+  .dm-acc__title {
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-xl);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-tight);
+    color: var(--text-primary);
+  }
+  .dm-acc__icon {
+    position: relative;
+    width: 16px;
+    height: 16px;
+    color: var(--text-secondary);
+  }
+  .dm-acc__icon::before,
+  .dm-acc__icon::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: currentColor;
+    transition: transform var(--timing-base) var(--ease-standard);
+  }
+  .dm-acc__icon::before {
+    width: 16px;
+    height: 1.5px;
+  }
+  .dm-acc__icon::after {
+    width: 1.5px;
+    height: 16px;
+  }
+  .dm-acc[open] .dm-acc__icon::after {
+    transform: translate(-50%, -50%) rotate(90deg);
+  }
+  .dm-acc__content {
+    padding: 0 var(--sp-5) var(--sp-5) 32px;
+    max-height: 220px;
+    overflow-y: auto;
+    font-size: var(--font-size-body-md);
+    line-height: var(--line-height-generous);
+    color: var(--text-secondary);
+  }
+  .dm-acc__content > :last-child {
     margin-bottom: 0;
   }
-  .product-comparison__icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-  .product-comparison__icon--bad {
-    background-color: #fce8e8;
-    color: #df3e3e;
-  }
-  .product-comparison__icon--good {
-    background-color: #e6f4ea;
-    color: #1b8a44;
-  }
-  .product-comparison__icon svg {
-    width: 10px;
-    height: 10px;
-  }
-  .product-comparison__text {
-    font-size: 13.5px;
-    line-height: 1.4;
-  }
-  .product-comparison__text--bad {
-    color: #888;
-  }
-  .product-comparison__text--good {
-    color: #1a1a1a;
-    font-weight: 500;
-  }
 
-  @media screen and (min-width: 720px) {
-    .product-comparison {
-      padding: var(--section-spacing-tablet) var(--layout-padding-tablet);
+  @media screen and (max-width: 1024px) {
+    .details-materials {
+      column-gap: var(--sp-6);
+      padding-inline: var(--layout-padding-tablet);
     }
-    .product-comparison__inner {
-      max-width: var(--layout-max-width);
-    }
-    .product-comparison__title {
-      max-width: 18ch;
+    .details-materials__title {
       font-size: var(--font-size-display-md);
-      color: var(--text-primary);
-      text-wrap: balance;
-    }
-    .product-comparison__desc {
-      max-width: 65ch;
-      margin-block-end: var(--sp-6);
-      font-size: var(--font-size-body-md);
-      line-height: var(--line-height-generous);
-      color: var(--text-secondary);
-    }
-    .product-comparison__card {
-      padding: 0;
-      border-color: var(--border-light);
-      border-radius: var(--radius-sm);
-      box-shadow: var(--shadow-elevation-1);
-    }
-    .product-comparison__row,
-    .product-comparison__row:first-child,
-    .product-comparison__row:last-child {
-      display: grid;
-      grid-template-columns: minmax(7rem, 0.8fr) repeat(2, minmax(0, 1fr));
-      align-items: center;
-      gap: var(--sp-4);
-      padding: var(--sp-4) var(--sp-5);
-      border-color: var(--border-light);
-    }
-    .product-comparison__row-title,
-    .product-comparison__item {
-      margin: 0;
-    }
-    .product-comparison__row-title {
-      font-size: var(--font-size-body-sm);
-    }
-    .product-comparison__item {
-      gap: var(--sp-3);
-    }
-    .product-comparison__text {
-      font-size: var(--font-size-body-sm);
-      line-height: var(--line-height-normal);
     }
   }
 
-  @media screen and (min-width: 1024px) {
-    .product-comparison {
-      padding: 30px var(--layout-padding-desktop) 30px;
+  @media screen and (max-width: 768px) {
+    .details-materials {
+      grid-template-columns: minmax(0, 1fr);
+      row-gap: var(--sp-6);
+      padding: var(--section-spacing-mobile) var(--layout-padding-mobile);
     }
-    .product-comparison__inner {
-      display: grid;
-      grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
-      grid-template-rows: auto 1fr;
-      align-items: start;
-      column-gap: var(--sp-8);
+    .details-materials__title {
+      font-size: var(--font-size-display-md);
     }
-    .product-comparison__title {
-      grid-column: 1;
-      grid-row: 1;
+    .details-materials__subtitle {
+      font-size: var(--font-size-body-md);
     }
-    .product-comparison__desc {
-      grid-column: 1;
-      grid-row: 2;
-      max-width: 36ch;
-      margin: 0;
+    .details-materials__features {
+      grid-template-columns: 1fr;
     }
-    .product-comparison__card {
-      grid-column: 2;
-      grid-row: 1 / span 2;
-      border-radius: 8px;
-      overflow: hidden;
+    .dm-feature,
+    .dm-feature:nth-child(odd),
+    .dm-feature:nth-child(even) {
+      padding: var(--sp-5) 0;
+      border-right: none;
+      border-top: 1px solid var(--border-light);
+    }
+    .dm-feature:nth-child(1) {
+      border-top: none;
+      padding-top: 0;
+    }
+    .dm-acc__content {
+      max-height: none;
     }
   }
 {% endstylesheet %}
 
-<div class="product-comparison page-width" id="ProductComparison-{{ section.id }}">
-  <div class="product-comparison__inner">
+<section class="details-materials" id="ProductComparison-{{ section.id }}">
+  <div class="details-materials__left">
+    {% if section.settings.eyebrow != blank %}
+      <p class="details-materials__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+    {% endif %}
+
     {% if section.settings.title != blank %}
-      <h2 class="product-comparison__title">
-        {{ section.settings.title | remove: '<p>' | remove: '</p>' }}
-      </h2>
+      <h2 class="details-materials__title">{{ section.settings.title | escape }}</h2>
     {% endif %}
 
-    {% if section.settings.description != blank %}
-      <p class="product-comparison__desc">
-        {{ section.settings.description | escape }}
-      </p>
+    {% if section.settings.subtitle != blank %}
+      <p class="details-materials__subtitle">{{ section.settings.subtitle | escape }}</p>
     {% endif %}
 
-    <div class="product-comparison__card">
+    <hr class="details-materials__rule">
+
+    {% if section.settings.features_heading != blank %}
+      <p class="details-materials__features-eyebrow">{{ section.settings.features_heading | escape }}</p>
+    {% endif %}
+
+    <div class="details-materials__features">
       {% for block in section.blocks %}
-        <div class="product-comparison__row" {{ block.shopify_attributes }}>
-          {% if block.settings.heading != blank %}
-            <div class="product-comparison__row-title">{{ block.settings.heading | escape }}</div>
-          {% endif %}
-
-          {% if block.settings.factory_text != blank %}
-            <div class="product-comparison__item">
-              <div class="product-comparison__icon product-comparison__icon--bad">
-                <svg
-                  viewBox="0 0 14 14"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <path d="M11 3L3 11M3 3l8 8"/>
-                </svg>
-              </div>
-              <div class="product-comparison__text product-comparison__text--bad">
-                {{ block.settings.factory_text | escape }}
-              </div>
+        {% if block.type == 'feature' %}
+          <div class="dm-feature" {{ block.shopify_attributes }}>
+            <span class="dm-feature__icon" aria-hidden="true">
+              {% case block.settings.icon %}
+                {% when 'grain' %}
+                  <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4">
+                    <circle cx="24" cy="24" r="19"></circle>
+                    <circle cx="24" cy="24" r="13.5"></circle>
+                    <circle cx="24" cy="24" r="8"></circle>
+                    <circle cx="24" cy="24" r="2.6" fill="currentColor" stroke="none"></circle>
+                  </svg>
+                {% when 'joinery' %}
+                  <svg
+                    viewBox="0 0 48 48"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.4"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M8 30l9-9 4 4-9 9a2.8 2.8 0 0 1-4-4Z"></path>
+                    <path d="M21 25l13-13"></path>
+                    <path d="M30 8l10 10-5 5-10-10Z"></path>
+                    <path d="M28 34l4 4"></path>
+                  </svg>
+                {% when 'finish' %}
+                  <svg
+                    viewBox="0 0 48 48"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.4"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M22 24V13a2.5 2.5 0 0 1 5 0M27 23v-13a2.5 2.5 0 0 1 5 0v3"></path>
+                    <path d="M17 25.5V18a2.5 2.5 0 0 1 5 0v6"></path>
+                    <path d="M32 15a2.5 2.5 0 0 1 5 0v9a11 11 0 0 1-11 11h-1c-3 0-5-1-7-3l-5-5a2.5 2.5 0 0 1 3.6-3.5l3.4 3"></path>
+                    <path d="M12 8l1.2 2.8L16 12l-2.8 1.2L12 16l-1.2-2.8L8 12l2.8-1.2Z"></path>
+                  </svg>
+                {% when 'made_to_order' %}
+                  <svg
+                    viewBox="0 0 48 48"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.4"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M18 11h12"></path>
+                    <path d="M19 11c0 4-4 5-4 11a9 9 0 0 0 18 0c0-6-4-7-4-11"></path>
+                    <path d="M16 24h16"></path>
+                  </svg>
+                {% else %}
+                  <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4">
+                    <circle cx="24" cy="24" r="18"></circle>
+                  </svg>
+              {% endcase %}
+            </span>
+            <div class="dm-feature__body">
+              {% if block.settings.title != blank %}
+                <h3 class="dm-feature__title">{{ block.settings.title | escape }}</h3>
+              {% endif %}
+              {% if block.settings.text != blank %}
+                <p class="dm-feature__text">{{ block.settings.text | escape }}</p>
+              {% endif %}
             </div>
-          {% endif %}
-
-          {% if block.settings.craft_text != blank %}
-            <div class="product-comparison__item">
-              <div class="product-comparison__icon product-comparison__icon--good">
-                <svg
-                  viewBox="0 0 14 14"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <path d="M2.5 7.5L5.5 10.5L11.5 3.5"/>
-                </svg>
-              </div>
-              <div class="product-comparison__text product-comparison__text--good">
-                {{ block.settings.craft_text | escape }}
-              </div>
-            </div>
-          {% endif %}
-        </div>
+          </div>
+        {% endif %}
       {% endfor %}
     </div>
   </div>
-</div>
+
+  <div class="details-materials__right">
+    <div class="dm-accordion">
+      {% assign acc_index = 0 %}
+      {% for block in section.blocks %}
+        {% if block.type == 'accordion' %}
+          {% assign acc_index = acc_index | plus: 1 %}
+          {% assign acc_label = acc_index | prepend: '0' %}
+          <details
+            class="dm-acc"
+            {% if acc_index == 1 %}
+              open
+            {% endif %}
+            {{ block.shopify_attributes }}
+          >
+            <summary class="dm-acc__summary">
+              <span class="dm-acc__num">{{ acc_label }}</span>
+              <span class="dm-acc__title">{{ block.settings.heading | escape }}</span>
+              <span class="dm-acc__icon" aria-hidden="true"></span>
+            </summary>
+            <div class="dm-acc__content custom-scrollbar">
+              {% if block.settings.use_product_description %}
+                {{ product.description }}
+              {% else %}
+                {{ block.settings.content }}
+              {% endif %}
+            </div>
+          </details>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+</section>
 
 {% schema %}
 {
-  "name": "Product Comparison",
+  "name": "Details & Materials",
   "tag": "section",
   "class": "section",
   "settings": [
     {
       "type": "text",
-      "id": "pill_text",
-      "label": "Pill Text",
-      "default": "Craftsmanship vs factory"
-    },
-    {
-      "type": "richtext",
       "id": "title",
-      "label": "Title (HTML/Italic allowed)",
-      "default": "<p>What separates handcrafted from <em>factory-made</em></p>"
+      "label": "Title",
+      "default": "Details, Materials & Care"
     },
     {
       "type": "textarea",
-      "id": "description",
-      "label": "Description",
-      "default": "Both are solid wood. Both look beautiful in catalog photos. But the difference shows up when you live with the piece for 10 years and again when you pass it down."
+      "id": "subtitle",
+      "label": "Subtitle",
+      "default": "Thoughtfully made from solid walnut and finished by hand, this fluted floating shelf brings quiet depth and refined texture to your space."
+    },
+    {
+      "type": "text",
+      "id": "features_heading",
+      "label": "Features heading",
+      "default": "What makes this piece special"
     }
   ],
   "blocks": [
     {
-      "type": "comparison_row",
-      "name": "Comparison Row",
+      "type": "feature",
+      "name": "Feature",
+      "settings": [
+        {
+          "type": "select",
+          "id": "icon",
+          "label": "Icon",
+          "default": "grain",
+          "options": [
+            { "value": "grain", "label": "Wood grain" },
+            { "value": "joinery", "label": "Joinery" },
+            { "value": "finish", "label": "Finish" },
+            { "value": "made_to_order", "label": "Made to order" }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "label": "Title",
+          "default": "Feature title"
+        },
+        {
+          "type": "textarea",
+          "id": "text",
+          "label": "Description",
+          "default": "Describe what makes this aspect special."
+        }
+      ]
+    },
+    {
+      "type": "accordion",
+      "name": "Accordion item",
       "settings": [
         {
           "type": "text",
           "id": "heading",
-          "label": "Feature Heading",
-          "default": "Feature"
+          "label": "Heading",
+          "default": "Heading"
         },
         {
-          "type": "text",
-          "id": "factory_text",
-          "label": "Factory (Bad) Text",
-          "default": "Factory made feature"
+          "type": "checkbox",
+          "id": "use_product_description",
+          "label": "Use product description as content",
+          "default": false
         },
         {
-          "type": "text",
-          "id": "craft_text",
-          "label": "Craftsmanship (Good) Text",
-          "default": "Handcrafted premium feature"
+          "type": "richtext",
+          "id": "content",
+          "label": "Content",
+          "default": "<p>Add details here.</p>"
         }
       ]
     }
   ],
   "presets": [
     {
-      "name": "Product Comparison",
+      "name": "Details & Materials",
       "blocks": [
         {
-          "type": "comparison_row",
+          "type": "feature",
           "settings": {
-            "heading": "Wood grain",
-            "factory_text": "Identical (catalog repeated)",
-            "craft_text": "1 of 1 uniquely yours"
+            "icon": "grain",
+            "title": "Unique natural grain",
+            "text": "Each shelf showcases the organic beauty of solid walnut, with distinct grain patterns that make every piece one of a kind."
           }
         },
         {
-          "type": "comparison_row",
+          "type": "feature",
           "settings": {
-            "heading": "Joinery",
-            "factory_text": "Screws + dowels (will loosen)",
-            "craft_text": "Hand-cut mortise & tenon"
+            "icon": "joinery",
+            "title": "Hand-shaped joinery",
+            "text": "Expertly crafted with precision joinery for lasting strength and a seamless, architectural silhouette."
           }
         },
         {
-          "type": "comparison_row",
+          "type": "feature",
           "settings": {
-            "heading": "Finish",
-            "factory_text": "Spray lacquer + sealant",
-            "craft_text": "Hand-rubbed natural oil"
+            "icon": "finish",
+            "title": "Hand-rubbed finish",
+            "text": "Finished by hand using natural oils and waxes to enhance the wood's depth, texture, and timeless appeal."
           }
         },
         {
-          "type": "comparison_row",
+          "type": "feature",
           "settings": {
-            "heading": "Made by",
-            "factory_text": "Anonymous factory line",
-            "craft_text": "Master craftsman (named)"
+            "icon": "made_to_order",
+            "title": "Made-to-order craftsmanship",
+            "text": "Each piece is made to order in small batches with care and intention, not mass produced."
+          }
+        },
+        { "type": "accordion", "settings": { "heading": "Description", "use_product_description": true } },
+        {
+          "type": "accordion",
+          "settings": {
+            "heading": "Dimensions",
+            "content": "<p>24\" L x 8\" D x 2.5\" H. Custom dimensions available on request.</p>"
           }
         },
         {
-          "type": "comparison_row",
+          "type": "accordion",
           "settings": {
-            "heading": "Cost per year of use",
-            "factory_text": "$13.20",
-            "craft_text": "$8.80"
+            "heading": "Delivery & Returns",
+            "content": "<p>Made to order in 3–5 weeks. White-glove delivery available. 30-day returns on catalog items.</p>"
           }
         },
         {
-          "type": "comparison_row",
+          "type": "accordion",
+          "settings": {
+            "heading": "Care Guide",
+            "content": "<p>Wipe clean with a soft, dry cloth. Keep away from direct sunlight and extreme temperatures to preserve the finish.</p>"
+          }
+        },
+        {
+          "type": "accordion",
           "settings": {
             "heading": "Customization",
-            "factory_text": "4 catalog colors only",
-            "craft_text": "Choose your slab from photos"
+            "content": "<p>Choose your slab and finish, or work with our design concierge to tailor dimensions to your space.</p>"
           }
         }
       ]

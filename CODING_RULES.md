@@ -2,12 +2,12 @@
 
 This document outlines the mandatory rules and standards that must be followed when writing code for the WRYDECO Shopify Theme.
 
-## 1. Responsive Design (Mobile-First)
+## 1. Responsive Design (Desktop-First)
 
 All new components and layouts must follow modern responsive design practices.
 
 - **Skill Reference:** `.agents/skills/responsive-design`
-- **Approach:** Always design and code mobile-first. Start with mobile styles and enhance for larger screens using content-based breakpoints.
+- **Approach:** Always design and code desktop-first. Start with desktop styles and override for smaller screens using max-width breakpoints.
 - **Techniques:** Utilize fluid typography, CSS Grid, Flexbox, and container queries for adaptive interfaces. Ensure touch targets are at least 44x44px.
 
 ## 2. SEO & SSR-First Coding
@@ -22,9 +22,8 @@ All code must be optimized for search engines following an Server-Side Rendering
 
 Maintain design consistency by strictly adhering to the defined design system tokens and components.
 
-- **Main Design System:** `doc/design-system/` folder. Từ bây giờ trở đi, folder này sẽ là design system chính của project.
-- **Reference File:** `assets/base.css` (để tham khảo các biến cơ bản, tuy nhiên cần ưu tiên đối chiếu với `doc/design-system/`).
-- **Approach:** All styling must reference the global CSS variables and components defined in the design system. Do not use hardcoded hex codes, pixel values for spacing/radius, or arbitrary font sizes.
+- **Reference File:** `assets/base.css` — đây là nguồn duy nhất cho toàn bộ CSS variables (màu sắc, typography, spacing, shadows, motion).
+- **Approach:** All styling must reference the global CSS variables defined in `assets/base.css`. Do not use hardcoded hex codes, pixel values for spacing/radius, or arbitrary font sizes.
 - **Scope:** This rule applies across all CSS files, Liquid `{% stylesheet %}` tags, and inline styles.
 
 ## 4. Business Context & Tone

@@ -8,6 +8,7 @@ class SearchPopup extends HTMLElement {
     this.recentContainer = this.querySelector('.search-popup__recent');
     this.recentList = this.querySelector('.search-popup__recent-list');
     this.predictiveList = this.querySelector('.search-popup__predictive-list');
+    this.topResultsContainer = this.querySelector('.search-popup__top-results');
     this.viewAllContainer = this.querySelector('.search-popup__view-all');
     this.viewAllBtn = this.querySelector('.search-popup__view-all-btn');
     
@@ -18,21 +19,21 @@ class SearchPopup extends HTMLElement {
     this.storageKey = 'wrydeco_recently_searched';
     this.maxRecent = 8;
     this.debounceTimer = null;
+    this.focusTimer = null;
+    this.currentMode = '';
+    this.defaultResultsHtml = this.predictiveList?.innerHTML || '';
+    this.defaultRecentSearches = Array.from(this.predictiveList?.querySelectorAll('.search-product-card') || []).map(card => ({
+      title: card.dataset.title,
+      url: card.dataset.url,
+      image: card.dataset.image
+    }));
     
     this.bindEvents();
     this.renderRecentSearches();
   }
 
   bindEvents() {
-    this.closeButton?.addEventListener('click', () => {
-      if (this.input.value.length > 0) {
-        this.input.value = '';
-        this.onInput();
-        this.input.focus();
-      } else {
-        this.close();
-      }
-    });
+    this.closeButton?.addEventListener('click', () => this.close());
     
     this.overlay?.addEventListener('click', (e) => {
       if (e.target === this.overlay) {
@@ -47,6 +48,21 @@ class SearchPopup extends HTMLElement {
     });
 
     this.input?.addEventListener('input', this.onInput.bind(this));
+
+    this.recentList?.addEventListener('click', (event) => {
+      const removeButton = event.target.closest('[data-remove-recent]');
+      if (removeButton) {
+        event.stopPropagation();
+        this.removeRecentSearch(Number(removeButton.dataset.removeRecent));
+        return;
+      }
+
+      const chip = event.target.closest('[data-recent-query]');
+      if (chip) {
+        this.input.value = chip.dataset.recentQuery;
+        this.onInput();
+      }
+    });
     
     this.addEventListener('click', this.handleProductClick.bind(this));
   }
@@ -56,15 +72,18 @@ class SearchPopup extends HTMLElement {
   }
 
   open() {
+    if (this.isOpen()) return;
+
     this.setAttribute('open', '');
     document.body.style.overflow = 'hidden';
-    this.renderRecentSearches();
-    setTimeout(() => {
+    clearTimeout(this.focusTimer);
+    this.focusTimer = setTimeout(() => {
       this.input?.focus();
-    }, 100);
+    }, 220);
   }
 
   close() {
+    clearTimeout(this.focusTimer);
     this.removeAttribute('open');
     document.body.style.overflow = '';
   }
@@ -102,6 +121,7 @@ class SearchPopup extends HTMLElement {
   
   renderPredictiveResults(products, query) {
     this.hideAllSections();
+    this.currentMode = 'results';
     
     if (!products || products.length === 0) {
       this.showEmptyState();
@@ -110,6 +130,7 @@ class SearchPopup extends HTMLElement {
     
     this.predictiveList.innerHTML = products.map((product, index) => this.createProductCardHtml(product, index, query)).join('');
     this.predictiveList.style.display = 'grid';
+    if (this.topResultsContainer) this.topResultsContainer.style.display = 'block';
     
     if (this.viewAllContainer && this.viewAllBtn) {
       this.viewAllBtn.href = `/search?q=${encodeURIComponent(query)}&type=product`;
@@ -119,24 +140,28 @@ class SearchPopup extends HTMLElement {
   
   renderRecentSearches() {
     const recent = this.getRecentSearches();
+    const visibleRecent = recent.length > 0 ? recent : this.defaultRecentSearches;
     
     if (this.input.value.trim().length >= 2) {
       return; 
     }
+
+    if (this.currentMode === 'recent') return;
     
     this.hideAllSections();
+    this.currentMode = 'recent';
     
-    if (recent.length === 0 && this.input.value.trim().length === 0) {
-      if (this.initialState) this.initialState.style.display = 'flex';
-      return;
-    }
-    
-    if (recent.length > 0) {
-      this.recentList.innerHTML = recent.map((product, index) => this.createProductCardHtml(product, index)).join('');
+    if (visibleRecent.length > 0) {
+      this.recentList.innerHTML = visibleRecent.slice(0, 4).map((product, index) => this.createRecentChipHtml(product, index)).join('');
       this.recentContainer.style.display = 'block';
-    } else {
-      if (this.initialState) this.initialState.style.display = 'flex';
     }
+
+    this.predictiveList.innerHTML = recent.length > 0
+      ? recent.slice(0, 4).map((product, index) => this.createProductCardHtml(product, index)).join('')
+      : this.defaultResultsHtml;
+    this.predictiveList.style.display = 'grid';
+    if (this.topResultsContainer) this.topResultsContainer.style.display = 'block';
+    if (this.viewAllContainer) this.viewAllContainer.style.display = 'block';
   }
   
   showRecentSearches() {
@@ -145,17 +170,20 @@ class SearchPopup extends HTMLElement {
   
   showLoading() {
     this.hideAllSections();
+    this.currentMode = 'loading';
     this.loadingSpinner.style.display = 'flex';
   }
   
   showEmptyState() {
     this.hideAllSections();
+    this.currentMode = 'empty';
     this.emptyState.style.display = 'block';
   }
   
   hideAllSections() {
     if (this.recentContainer) this.recentContainer.style.display = 'none';
     if (this.predictiveList) this.predictiveList.style.display = 'none';
+    if (this.topResultsContainer) this.topResultsContainer.style.display = 'none';
     if (this.loadingSpinner) this.loadingSpinner.style.display = 'none';
     if (this.emptyState) this.emptyState.style.display = 'none';
     if (this.viewAllContainer) this.viewAllContainer.style.display = 'none';
@@ -170,6 +198,25 @@ class SearchPopup extends HTMLElement {
       console.error('Failed to parse recent searches', e);
       return [];
     }
+  }
+
+  removeRecentSearch(index) {
+    const recent = this.getRecentSearches();
+    recent.splice(index, 1);
+    localStorage.setItem(this.storageKey, JSON.stringify(recent));
+    this.currentMode = '';
+    this.renderRecentSearches();
+  }
+
+  createRecentChipHtml(product, index) {
+    const title = this.escapeHtml(product.title || 'Recent search');
+    const imageUrl = product.image || product.featured_image || '';
+    const image = imageUrl ? `<img src="${this.escapeHtml(imageUrl)}" alt="" width="32" height="32">` : '';
+    return `<button type="button" class="search-popup__recent-chip" data-recent-query="${title}">${image}<span>${title}</span><i data-remove-recent="${index}" aria-label="Remove ${title}">&times;</i></button>`;
+  }
+
+  escapeHtml(value) {
+    return String(value || '').replace(/[&<>"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[character]);
   }
   
   saveToRecentSearches(product) {
@@ -216,13 +263,20 @@ class SearchPopup extends HTMLElement {
       displayTitle = displayTitle.replace(regex, '<mark>$1</mark>');
     }
       
+    const productType = this.escapeHtml(product.type || product.product_type || 'Handcrafted furniture');
+    const rawPrice = String(product.price || '');
+    const formattedPrice = rawPrice && /^\d/.test(rawPrice) ? `$${rawPrice}` : rawPrice;
+    const price = formattedPrice ? `<span class="search-product-card__price">${this.escapeHtml(formattedPrice)}</span>` : '';
+
     return `
       <a href="${product.url}" class="search-product-card" data-title="${product.title.replace(/"/g, '&quot;')}" data-url="${product.url}" data-image="${imageUrl}" style="animation-delay: ${index * 0.05}s">
         <div class="search-product-card__image">
           ${imageHtml}
         </div>
         <div class="search-product-card__info">
+          <span class="search-product-card__type">${productType}</span>
           <span class="search-product-card__title">${displayTitle}</span>
+          ${price}
         </div>
       </a>
     `;

@@ -1,7 +1,14 @@
+
+{% doc %}
+  Renders the global product search dialog with recent searches and predictive results.
+{% enddoc %}
+
 <search-popup class="search-popup-wrapper">
   <div class="search-popup__overlay">
-    <div class="search-popup__content" role="dialog" aria-modal="true" aria-label="Search">
+    <div class="search-popup__content" role="dialog" aria-modal="true" aria-labelledby="SearchPopupTitle">
       <div class="search-popup__header">
+        <h2 class="search-popup__heading" id="SearchPopupTitle">Search the Collection</h2>
+        <p class="search-popup__subtitle">Discover handcrafted pieces crafted by nature, designed to last for generations.</p>
         <form
           action="{{ routes.search_url }}"
           method="get"
@@ -26,7 +33,7 @@
               type="search"
               name="q"
               value=""
-              placeholder="Search for products..."
+              placeholder="Search for products, collections, or inspiration..."
               class="search-popup__input"
               aria-label="Search"
               autocomplete="off"
@@ -63,27 +70,33 @@
         </div>
 
         <div class="search-popup__recent" style="display: none;">
-          <h3 class="search-popup__title">Recently Searches</h3>
-          <div class="search-popup__recent-list search-popup__grid"></div>
+          <h3 class="search-popup__title">Recent Searches</h3>
+          <div class="search-popup__recent-list"></div>
         </div>
 
-        <div class="search-popup__predictive-list search-popup__grid" style="display: none;"></div>
-
-        <div class="search-popup__view-all" style="display: none;">
-          <a href="{{ routes.search_url }}" class="search-popup__view-all-btn">
-            <span>View all results</span>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20px"
-              height="20px"
-              fill="currentColor"
-              class="bi bi-box-arrow-right"
-              viewBox="0 0 16 16"
-            >
-              <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0z"/>
-              <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708z"/>
-            </svg>
-          </a>
+        <div class="search-popup__top-results" style="display: none;">
+          <div class="search-popup__results-header">
+            <h3 class="search-popup__title">Top Results</h3>
+            <div class="search-popup__view-all">
+              <a href="{{ routes.search_url }}" class="search-popup__view-all-btn">
+                <span>View all results</span><span aria-hidden="true">&rarr;</span>
+              </a>
+            </div>
+          </div>
+          <div class="search-popup__predictive-list search-popup__grid">
+            {% for default_product in collections.all.products limit: 4 %}
+              <a href="{{ default_product.url }}" class="search-product-card" data-title="{{ default_product.title | escape }}" data-url="{{ default_product.url }}" data-image="{{ default_product.featured_image | image_url: width: 480 }}">
+                <div class="search-product-card__image">
+                  {{ default_product.featured_image | image_url: width: 480 | image_tag: loading: 'lazy', widths: '240,360,480', sizes: '(min-width: 769px) 190px, 44vw', alt: default_product.title }}
+                </div>
+                <div class="search-product-card__info">
+                  <span class="search-product-card__type">{{ default_product.type | default: 'Handcrafted furniture' | escape }}</span>
+                  <span class="search-product-card__title">{{ default_product.title | escape }}</span>
+                  <span class="search-product-card__price">{{ default_product.price | money }}</span>
+                </div>
+              </a>
+            {% endfor %}
+          </div>
         </div>
 
         <div class="search-popup__loading" style="display: none;">
@@ -105,6 +118,11 @@
           <p>No products found.</p>
         </div>
       </div>
+
+      <div class="search-popup__footer">
+        <span class="search-popup__footer-note">Handcrafted. Timeless. Yours.</span>
+        <span>Need help finding something? <a href="{{ routes.root_url }}pages/contact">Contact our team</a></span>
+      </div>
     </div>
   </div>
 </search-popup>
@@ -113,24 +131,21 @@
 
 {% stylesheet %}
   search-popup {
-    display: block; /* keep in DOM for transitions */
+    display: block;
   }
 
   .search-popup__overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
+    inset: 0;
     z-index: 1000;
     display: flex;
+    align-items: center;
     justify-content: center;
-    align-items: flex-start;
-    padding: var(--sp-4, 16px);
+    padding: var(--sp-6);
+    background-color: var(--bg-overlay);
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
+    transition: opacity var(--timing-short) var(--ease-standard), visibility var(--timing-short) var(--ease-standard);
   }
 
   search-popup[open] .search-popup__overlay {
@@ -139,36 +154,52 @@
   }
 
   .search-popup__content {
-    background-color: var(--bg-primary, #fff);
-    width: 100%;
-    max-width: 800px;
-    margin-top: 4vh;
-    border-radius: 12px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
     display: flex;
     flex-direction: column;
-    max-height: 90vh;
-    transform: translateY(-20px);
+    width: min(100%, calc(var(--sp-8) * 14));
+    height: min(calc(100dvh - var(--sp-8)), calc(var(--sp-8) * 14));
+    max-height: calc(100dvh - var(--sp-8));
+    overflow: hidden;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    background: radial-gradient(circle at top, var(--color-milk) 0%, var(--surface-elevated) 72%);
+    box-shadow: var(--shadow-modal);
+    contain: layout paint;
+    will-change: transform, opacity;
     opacity: 0;
-    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+    transform: translateY(calc(var(--sp-2) * -1));
+    transition: transform var(--timing-short) var(--ease-out), opacity var(--timing-short) var(--ease-standard);
   }
 
   search-popup[open] .search-popup__content {
-    transform: translateY(0);
     opacity: 1;
+    transform: translateY(0);
   }
 
   .search-popup__header {
-    display: flex;
-    align-items: center;
-    padding: var(--sp-2, 8px);
-    padding-right: var(--sp-2, 8px);
-    border-bottom: 1px solid var(--border-default, #eee);
+    position: relative;
+    flex: 0 0 auto;
+    padding: var(--sp-6) var(--sp-7) var(--sp-5);
+    text-align: center;
+  }
+
+  .search-popup__heading {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--font-size-display-md);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-tight);
+    color: var(--text-primary);
+  }
+
+  .search-popup__subtitle {
+    margin: var(--sp-2) 0 var(--sp-5);
+    font-size: var(--font-size-body-sm);
+    color: var(--text-secondary);
   }
 
   .search-popup__form {
-    flex: 1;
+    width: 100%;
   }
 
   .search-popup__input-group {
@@ -179,223 +210,386 @@
 
   .search-popup__icon {
     position: absolute;
-    left: 12px;
-    width: 20px;
-    height: 20px;
-    color: var(--text-primary, #000);
+    left: var(--sp-5);
+    width: var(--sp-6);
+    height: var(--sp-6);
+    color: var(--color-bark);
+    pointer-events: none;
   }
 
   .search-popup__input {
     width: 100%;
-    padding: 12px 12px 12px 40px;
-    border: none;
-    background: transparent;
-    font-size: 16px;
+    min-height: var(--sp-7);
+    padding: var(--sp-3) var(--sp-5) var(--sp-3) calc(var(--sp-8) + var(--sp-3));
+    border: 1px solid var(--border-dark);
+    border-radius: var(--radius-md);
+    background-color: var(--surface-elevated);
     outline: none;
-    color: #565656;
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-lg);
+    color: var(--text-primary);
   }
 
-  .search-popup__input::-webkit-search-decoration,
-  .search-popup__input::-webkit-search-cancel-button,
-  .search-popup__input::-webkit-search-results-button,
-  .search-popup__input::-webkit-search-results-decoration {
-    -webkit-appearance: none;
+  .search-popup__input:focus {
+    border-color: var(--color-earth-brown);
+    box-shadow: var(--shadow-focus);
   }
 
   .search-popup__input::placeholder {
-    color: var(--text-tertiary, #999);
+    color: var(--text-tertiary);
+  }
+
+  .search-popup__input::-webkit-search-cancel-button {
+    -webkit-appearance: none;
   }
 
   .search-popup__close {
-    background: none;
-    border: none;
+    position: absolute;
+    top: var(--sp-5);
+    right: var(--sp-5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--sp-7);
+    height: var(--sp-7);
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-full);
+    background: transparent;
+    color: var(--color-bark);
     cursor: pointer;
-    padding: 8px;
-    color: var(--text-primary, #000);
-    border-radius: var(--radius-full, 50%);
-  }
-
-  .search-popup__close svg {
-    width: 24px;
-    height: 24px;
   }
 
   .search-popup__close:hover {
-    background-color: var(--bg-secondary, #f5f5f5);
+    background-color: var(--surface-tertiary);
+  }
+
+  .search-popup__close svg {
+    width: var(--sp-5);
+    height: var(--sp-5);
   }
 
   .search-popup__body {
-    padding: var(--sp-4, 16px);
+    flex: 1 1 auto;
+    min-height: 0;
     overflow-y: auto;
-    flex: 1;
-    height: fit-content;
+    padding: 0 var(--sp-7) var(--sp-5);
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-default) transparent;
   }
 
   .search-popup__title {
-    font-size: 14px;
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-md);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--letter-spacing-wide);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: var(--sp-4, 16px);
-    color: var(--text-secondary, #666);
+    color: var(--color-earth-brown);
+  }
+
+  .search-popup__recent {
+    margin-bottom: var(--sp-5);
+  }
+
+  .search-popup__recent-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-3);
+    margin-top: var(--sp-3);
+  }
+
+  .search-popup__recent-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    min-height: var(--sp-7);
+    padding: var(--sp-1) var(--sp-3) var(--sp-1) var(--sp-1);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-full);
+    background-color: var(--surface-elevated);
+    font-family: var(--font-body);
+    font-size: var(--font-size-caption);
+    color: var(--text-primary);
+    cursor: pointer;
+    max-width: calc(var(--sp-8) * 3);
+  }
+
+  .search-popup__recent-chip img {
+    width: var(--sp-6);
+    height: var(--sp-6);
+    border-radius: var(--radius-full);
+    object-fit: cover;
+  }
+
+  .search-popup__recent-chip i {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--sp-5);
+    height: var(--sp-5);
+    font-style: normal;
+    color: var(--text-secondary);
+  }
+
+  .search-popup__recent-chip span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .search-popup__top-results {
+    padding-top: var(--sp-2);
+    border-top: 1px solid var(--border-light);
+  }
+
+  .search-popup__results-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-4);
+    margin-bottom: var(--sp-2);
+  }
+
+  .search-popup__view-all {
+    display: block;
+  }
+
+  .search-popup__view-all-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    min-height: var(--sp-7);
+    font-size: var(--font-size-caption);
+    color: var(--text-secondary);
+    text-decoration: none;
   }
 
   .search-popup__grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 16px;
-  }
-
-  @keyframes fadeUp {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--sp-4);
   }
 
   .search-product-card {
     display: flex;
     flex-direction: column;
-    text-decoration: none;
-    color: var(--text-primary, #000);
-    transition: opacity 0.2s;
-    position: relative;
-    border-radius: 8px;
+    min-width: 0;
     overflow: hidden;
-    opacity: 0;
-    animation: fadeUp 0.4s ease forwards;
-    background-color: white;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    background-color: var(--surface-elevated);
+    color: var(--text-primary);
+    text-decoration: none;
+    transition: transform var(--timing-short) var(--ease-standard), box-shadow var(--timing-short) var(--ease-standard);
   }
 
   .search-product-card:hover {
-    opacity: 0.8;
+    transform: translateY(calc(var(--sp-1) * -1));
+    box-shadow: var(--shadow-card);
   }
 
   .search-product-card__image {
-    aspect-ratio: 1;
-    background-color: var(--bg-secondary, #f5f5f5);
     width: 100%;
-    height: 100%;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    background-color: var(--surface-tertiary);
   }
 
   .search-product-card__image img {
+    display: block;
     width: 100%;
     height: 100%;
     object-fit: cover;
   }
 
   .search-product-card__placeholder {
-    width: 100%;
-    height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--text-tertiary, #999);
-    font-size: 12px;
+    height: 100%;
+    font-size: var(--font-size-caption);
+    color: var(--text-tertiary);
   }
 
   .search-product-card__info {
-    width: 100%;
-    padding: 6px 8px 6px 8px;
-    pointer-events: none;
     display: flex;
-    align-items: flex-end;
+    flex: 1;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--sp-2);
+    padding: var(--sp-3);
+  }
+
+  .search-product-card__type {
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--letter-spacing-wide);
+    text-transform: uppercase;
+    color: var(--text-secondary);
   }
 
   .search-product-card__title {
-    font-size: 14px;
-    font-weight: 500;
-    line-height: 1.4;
+    display: -webkit-box;
     overflow: hidden;
-    color: #333;
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-md);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--line-height-normal);
+    color: var(--text-primary);
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .search-product-card__price {
+    margin-top: auto;
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
   }
 
   .search-product-card__title mark {
-    display: inline-block;
-    background: yellow;
-    color: #000;
-    font-weight: 700;
-    border-radius: 4px;
+    background-color: var(--color-stone);
+    color: inherit;
   }
 
-  .search-popup__loading {
+  .search-popup__loading,
+  .search-popup__empty,
+  .search-popup__initial {
     display: flex;
+    align-items: center;
     justify-content: center;
-    padding: 40px 0;
+    flex-direction: column;
+    min-height: calc(var(--sp-8) * 3);
+    color: var(--text-secondary);
+    text-align: center;
   }
 
   .search-popup__spinner {
-    width: 24px;
-    height: 24px;
-    border: 2px solid var(--border-default, #eee);
-    border-top-color: var(--text-primary, #000);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
+    width: var(--sp-5);
+    height: var(--sp-5);
+    border: 2px solid var(--border-default);
+    border-top-color: var(--color-earth-brown);
+    border-radius: var(--radius-full);
+    animation: search-popup-spin var(--timing-extra-long) linear infinite;
   }
 
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
+  @keyframes search-popup-spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .search-popup__empty-icon,
+  .search-popup__initial-icon {
+    width: var(--sp-7);
+    height: var(--sp-7);
+    margin-bottom: var(--sp-4);
+    color: var(--text-tertiary);
+  }
+
+  .search-popup__footer {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-4);
+    min-height: var(--sp-6);
+    padding-inline: var(--sp-7);
+    border-top: 1px solid var(--border-light);
+    background-color: var(--surface-default);
+    font-size: var(--font-size-caption);
+    color: var(--text-secondary);
+  }
+
+  .search-popup__footer-note {
+    color: var(--color-bark);
+  }
+
+  .search-popup__footer a {
+    color: var(--text-primary);
+  }
+
+  @media (max-width: 768px) {
+    .search-popup__overlay {
+      padding: var(--sp-4);
+    }
+
+    .search-popup__content {
+      height: calc(100dvh - (var(--sp-4) * 2));
+      max-height: calc(100dvh - (var(--sp-4) * 2));
+    }
+
+    .search-popup__header {
+      padding: var(--sp-6) var(--sp-5) var(--sp-4);
+    }
+
+    .search-popup__heading {
+      font-size: var(--font-size-display-sm);
+    }
+
+    .search-popup__subtitle {
+      padding-inline: var(--sp-5);
+    }
+
+    .search-popup__body {
+      padding-inline: var(--sp-5);
+    }
+
+    .search-popup__grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .search-popup__footer {
+      padding-inline: var(--sp-5);
     }
   }
 
-  .search-popup__empty {
-    text-align: center;
-    padding: 40px 0;
-    color: var(--text-secondary, #666);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+  @media (max-width: 480px) {
+    .search-popup__overlay {
+      padding: var(--sp-2);
+    }
+
+    .search-popup__content {
+      height: calc(100dvh - (var(--sp-2) * 2));
+      max-height: calc(100dvh - (var(--sp-2) * 2));
+    }
+
+    .search-popup__header {
+      padding: var(--sp-6) var(--sp-4) var(--sp-4);
+    }
+
+    .search-popup__subtitle {
+      margin-bottom: var(--sp-4);
+      padding-inline: var(--sp-4);
+      font-size: var(--font-size-caption);
+    }
+
+    .search-popup__input {
+      font-size: var(--font-size-body-sm);
+    }
+
+    .search-popup__body {
+      padding-inline: var(--sp-4);
+    }
+
+    .search-popup__footer {
+      align-items: flex-start;
+      flex-direction: column;
+      justify-content: center;
+      padding-block: var(--sp-3);
+    }
   }
 
-  .search-popup__empty-icon {
-    width: 48px;
-    height: 48px;
-    margin: 0 auto 16px;
-    color: var(--text-tertiary, #999);
-    opacity: 0.5;
-  }
+  @media (prefers-reduced-motion: reduce) {
+    .search-popup__content,
+    .search-product-card {
+      transition: none;
+      animation: none;
+      opacity: 1;
+      transform: none;
+    }
 
-  .search-popup__initial {
-    text-align: center;
-    padding: 40px 0;
-    color: #858585;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .search-popup__initial-icon {
-    width: 48px;
-    height: 48px;
-    margin-bottom: 16px;
-    opacity: 0.5;
-  }
-
-  .search-popup__view-all {
-    text-align: center;
-    margin-top: var(--sp-4, 18px);
-    padding-top: var(--sp-3, 16px);
-  }
-
-  .search-popup__view-all-btn {
-    display: flex;
-    justify-content: center;
-    gap: 8px;
-    padding: 0px 24px;
-    color: #000;
-    border-radius: var(--radius-sm, 8px);
-    text-decoration: none;
-    font-weight: 500;
-    font-size: 16px;
-    transition: opacity 0.2s;
-    width: 100%;
-  }
-
-  .search-popup__view-all-btn:hover {
-    opacity: 0.8;
+    .search-popup__spinner {
+      animation: none;
+    }
   }
 {% endstylesheet %}

@@ -29,9 +29,10 @@
       </svg>
     </button>
 
-    <div class="meet-makers__slider" data-maker-slider>
-      {%- for block in section.blocks -%}
-        <div class="maker-card" {{ block.shopify_attributes }}>
+    <div class="meet-makers__track">
+      <div class="meet-makers__slider" data-maker-slider>
+        {%- for block in section.blocks -%}
+          <div class="maker-card" {{ block.shopify_attributes }}>
           <div class="maker-card__body">
             <div class="maker-card__image-col">
               {%- assign asset_name = 'artist-' | append: block.settings.name | replace: ' ', '_' | append: '.webp' -%}
@@ -45,7 +46,7 @@
                   loading="lazy"
                   draggable="false"
                   width="600"
-                  height="720"
+                  height="600"
                 >
               {%- endif -%}
             </div>
@@ -92,8 +93,25 @@
           <a href="{{ block.settings.link | default: '#' }}" class="maker-card__btn">
             VIEW PROFILE &rarr;
           </a>
-        </div>
-      {%- endfor -%}
+          </div>
+        {%- endfor -%}
+      </div>
+
+      <div class="meet-makers__dots" aria-label="Maker slides">
+        {%- for block in section.blocks -%}
+          {%- assign dot_remainder = forloop.index0 | modulo: 2 -%}
+          {%- if dot_remainder == 0 -%}
+            <button
+              class="meet-makers__dot{% if forloop.first %} is-active{% endif %}"
+              type="button"
+              aria-label="Go to maker slide {{ forloop.index0 | divided_by: 2 | plus: 1 }}"
+              aria-pressed="{% if forloop.first %}true{% else %}false{% endif %}"
+              data-maker-dot
+              data-maker-frame="{{ forloop.index0 | divided_by: 2 }}"
+            ></button>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
     </div>
 
     <button class="meet-makers__nav meet-makers__nav--next" type="button" aria-label="Next makers" data-maker-next>
@@ -101,22 +119,6 @@
         <path d="M9 5L16 12L9 19" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </button>
-
-    <div class="meet-makers__dots" aria-label="Maker slides">
-      {%- for block in section.blocks -%}
-        {%- assign dot_remainder = forloop.index0 | modulo: 2 -%}
-        {%- if dot_remainder == 0 -%}
-          <button
-            class="meet-makers__dot{% if forloop.first %} is-active{% endif %}"
-            type="button"
-            aria-label="Go to maker slide {{ forloop.index0 | divided_by: 2 | plus: 1 }}"
-            aria-pressed="{% if forloop.first %}true{% else %}false{% endif %}"
-            data-maker-dot
-            data-maker-frame="{{ forloop.index0 | divided_by: 2 }}"
-          ></button>
-        {%- endif -%}
-      {%- endfor -%}
-    </div>
   </div>
 
   <div class="meet-makers__footer">
@@ -228,6 +230,10 @@
   }
 
   .meet-makers__carousel {
+    position: relative;
+  }
+
+  .meet-makers__track {
     position: relative;
   }
 
@@ -446,7 +452,8 @@
   @media screen and (min-width: 1200px) {
     .meet-makers {
       display: grid;
-      grid-template-rows: auto minmax(0, 1fr) auto;
+      grid-template-rows: auto auto auto;
+      align-content: start;
       width: 100%;
       max-width: none;
       min-height: 100svh;
@@ -514,7 +521,7 @@
     }
 
     .meet-makers__carousel {
-      min-height: 0;
+      min-height: auto;
     }
 
     .meet-makers__slider {
@@ -700,14 +707,14 @@
     }
 
     .meet-makers__dots {
-      position: absolute;
-      left: 50%;
-      bottom: calc(-1 * clamp(22px, 2.8svh, 28px));
+      position: static;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: var(--sp-2);
-      transform: translateX(-50%);
+      margin-top: var(--sp-5);
+      margin-bottom: var(--sp-4);
+      transform: none;
     }
 
     .meet-makers__dot {
@@ -729,7 +736,7 @@
     }
 
     .meet-makers__footer {
-      margin-top: clamp(38px, 5svh, 48px);
+      margin-top: var(--sp-5);
     }
 
     .meet-makers__footer-content {
@@ -849,7 +856,7 @@
     }
 
     .meet-makers__footer {
-      margin-top: 22px;
+      margin-top: var(--sp-4);
     }
 
     .meet-makers__footer-text {
@@ -869,9 +876,6 @@
       right: -48px;
     }
 
-    .meet-makers__dots {
-      bottom: -18px;
-    }
   }
 {% endstylesheet %}
 

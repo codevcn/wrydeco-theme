@@ -1,47 +1,667 @@
 {% comment %}
-  This section is used in the collection template to render collection page
-  listing all products within a collection.
+  Collection listing page.
+
+  Top toolbar (Filter + Material/Room/Price facets, Sort by, item count) and a
+  3-column product grid. The Filter button opens an (empty) drawer from the left.
 
   https://shopify.dev/docs/storefronts/themes/architecture/templates/collection
 {% endcomment %}
 
-<h1>{{ collection.title }}</h1>
+<section class="collection-page" id="Collection-{{ section.id }}">
+  <h1 class="visually-hidden">{{ collection.title | escape }}</h1>
 
-<div class="collection-products">
-  {% paginate collection.products by 20 %}
-    {% for product in collection.products %}
-      <div class="collection-product">
-        {% if product.featured_image %}
-          {% render 'image',
-            class: 'collection-product__image',
-            image: product.featured_image,
-            url: product.url,
-            width: 400,
-            height: 400,
-            crop: 'center'
-          %}
-        {% endif %}
-        <div class="collection-product__content">
-          <p>{{ product.title | escape | link_to: product.url }}</p>
-          <p>{{ product.price | money }}</p>
-        </div>
+  <div class="col-toolbar">
+    <div class="col-toolbar__left">
+      <button type="button" class="col-toolbar__filter" data-filter-open aria-controls="FilterDrawer-{{ section.id }}">
+        <svg
+          class="col-toolbar__filter-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.6"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M4 6h8"></path><path d="M16 6h4"></path><circle cx="14" cy="6" r="2"></circle>
+          <path d="M4 12h2"></path><path d="M10 12h10"></path><circle cx="8" cy="12" r="2"></circle>
+          <path d="M4 18h8"></path><path d="M16 18h4"></path><circle cx="14" cy="18" r="2"></circle>
+        </svg>
+        <span>Filter</span>
+      </button>
+
+      <div class="col-toolbar__facets">
+        {% assign facets = 'Material, Room, Price' | split: ', ' %}
+        {% for facet in facets %}
+          <button type="button" class="col-toolbar__facet">
+            <span>{{ facet }}</span>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+        {% endfor %}
       </div>
-    {% endfor %}
+    </div>
 
-    {{ paginate | default_pagination }}
-  {% endpaginate %}
+    <div class="col-toolbar__right">
+      <div class="col-toolbar__sort">
+        <span class="col-toolbar__sort-label">Sort by:</span>
+        <span class="col-toolbar__sort-value">Featured</span>
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+      </div>
+      <div class="col-toolbar__count">{{ collection.products_count }} items</div>
+    </div>
+  </div>
+
+  <div class="col-grid-wrap">
+    {% paginate collection.products by 24 %}
+      {% if collection.products.size == 0 %}
+        <p class="col-empty">No products found in this collection.</p>
+      {% else %}
+        <div class="col-grid">
+          {% for product in collection.products %}
+            {% liquid
+              assign artist = ''
+              assign author = product.metafields.custom.author_info.value | first
+              if author != blank and author.author_name.value != blank
+                assign artist = author.author_name.value
+              elsif product.vendor != blank
+                assign artist = product.vendor
+              endif
+
+              assign material = product.metafields.custom.material
+              assign ptype = product.type
+            %}
+            {% assign card_variant = product.selected_or_first_available_variant | default: product.variants.first %}
+            <article class="pcard">
+              <div class="pcard__media-wrap">
+                <a class="pcard__media" href="{{ product.url }}" aria-label="{{ product.title | escape }}">
+                  {% if product.featured_media != blank %}
+                    {{
+                      product.featured_media.preview_image
+                      | image_url: width: 720
+                      | image_tag:
+                        class: 'pcard__image',
+                        loading: 'lazy',
+                        widths: '280, 420, 560, 720',
+                        sizes: '(min-width: 1024px) 24vw, (min-width: 720px) 33vw, 90vw',
+                        alt: product.featured_media.alt | default: product.title
+                    }}
+                  {% else %}
+                    {{ 'product-1' | placeholder_svg_tag: 'pcard__image placeholder-svg' }}
+                  {% endif %}
+                </a>
+
+                <button
+                  type="button"
+                  class="pcard__add"
+                  data-add-to-cart
+                  data-variant-id="{{ card_variant.id }}"
+                  aria-label="Add {{ product.title | escape }} to cart"
+                  {% unless product.available %}disabled aria-disabled="true"{% endunless %}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-cart-plus-fill" viewBox="0 0 16 16" aria-hidden="true">
+                    <path d="M.5 1a.5.5 0 0 0 0 1h1.11l.401 1.607 1.498 7.985A.5.5 0 0 0 4 12h1a2 2 0 1 0 0 4 2 2 0 0 0 0-4h7a2 2 0 1 0 0 4 2 2 0 0 0 0-4h1a.5.5 0 0 0 .491-.408l1.5-8A.5.5 0 0 0 14.5 3H2.89l-.405-1.621A.5.5 0 0 0 2 1zM6 14a1 1 0 1 1-2 0 1 1 0 0 1 2 0m7 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0M9 5.5V7h1.5a.5.5 0 0 1 0 1H9v1.5a.5.5 0 0 1-1 0V8H6.5a.5.5 0 0 1 0-1H8V5.5a.5.5 0 0 1 1 0"/>
+                  </svg>
+                </button>
+              </div>
+
+              <div class="pcard__info">
+                {% if ptype != blank %}
+                  <span class="pcard__pill">{{ ptype | escape }}</span>
+                {% endif %}
+
+                <h2 class="pcard__title">
+                  <a class="pcard__title-link" href="{{ product.url }}">
+                    {{- product.title | split: ',' | first | split: ' - ' | first | strip | escape -}}
+                  </a>
+                </h2>
+
+                {% if artist != blank %}
+                  <p class="pcard__artist">By {{ artist | escape }}</p>
+                {% endif %}
+
+                <div class="pcard__meta">
+                  {% if material != blank %}
+                    <span class="pcard__meta-item">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"></path>
+                        <path d="M2 21c0-3 1.85-5.36 5.08-6"></path>
+                      </svg>
+                      <span>{{ material | escape }}</span>
+                    </span>
+                    <span class="pcard__meta-sep" aria-hidden="true"></span>
+                  {% endif %}
+                  <span class="pcard__meta-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M18 11V6a2 2 0 0 0-4 0M14 10V4a2 2 0 0 0-4 0v2M10 10.5V6a2 2 0 0 0-4 0v8"></path>
+                      <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"></path>
+                    </svg>
+                    <span>Handcrafted</span>
+                  </span>
+                </div>
+
+                <hr class="pcard__divider">
+
+                <p class="pcard__price">{{ product.price | money }}</p>
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+
+        {% if paginate.pages > 1 %}
+          <nav class="col-pagination" role="navigation" aria-label="Pagination">
+            {{ paginate | default_pagination }}
+          </nav>
+        {% endif %}
+      {% endif %}
+    {% endpaginate %}
+  </div>
+</section>
+
+<div class="filter-drawer" id="FilterDrawer-{{ section.id }}" data-filter-drawer aria-hidden="true">
+  <div class="filter-drawer__overlay" data-filter-close></div>
+  <aside class="filter-drawer__panel" role="dialog" aria-modal="true" aria-label="Filters">
+    <div class="filter-drawer__head">
+      <span class="filter-drawer__title">Filter</span>
+      <button type="button" class="filter-drawer__close" data-filter-close aria-label="Close filters">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.6"
+          stroke-linecap="round"
+          aria-hidden="true"
+        >
+          <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+    <div class="filter-drawer__body"></div>
+  </aside>
 </div>
 
 {% stylesheet %}
-  h1 {
-    font-size: var(--section-title-size);
-    letter-spacing: var(--letter-spacing-tight);
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
   }
-  .collection-products {
+
+  .collection-page {
+    width: 100%;
+    /* Clear the fixed transparent overlay header (~76px tall) */
+    padding-top: calc(var(--sp-8) + var(--sp-5));
+    background-color: var(--color-cream);
+    font-family: var(--font-body);
+  }
+
+  /* Toolbar */
+  .col-toolbar {
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    border-top: 1px solid var(--border-light);
+    border-bottom: 1px solid var(--border-light);
+  }
+  .col-toolbar__left,
+  .col-toolbar__right {
+    display: flex;
+    align-items: stretch;
+  }
+  .col-toolbar__filter,
+  .col-toolbar__facet,
+  .col-toolbar__sort,
+  .col-toolbar__count {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    height: 52px;
+    font-family: var(--font-body);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-primary);
+  }
+  .col-toolbar__filter {
+    padding: 0 var(--sp-5);
+    padding-left: var(--layout-padding-desktop);
+    background: none;
+    border: none;
+    border-right: 1px solid var(--border-light);
+    cursor: pointer;
+  }
+  .col-toolbar__filter-icon {
+    width: 18px;
+    height: 18px;
+    color: var(--text-secondary);
+  }
+  .col-toolbar__facets {
+    display: flex;
+    align-items: stretch;
+  }
+  .col-toolbar__facet {
+    padding: 0 var(--sp-5);
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+  .col-toolbar__facet svg,
+  .col-toolbar__sort svg {
+    width: 14px;
+    height: 14px;
+    color: var(--text-secondary);
+  }
+  .col-toolbar__filter:hover,
+  .col-toolbar__facet:hover {
+    color: var(--color-earth-brown);
+  }
+  .col-toolbar__sort {
+    padding: 0 var(--sp-5);
+  }
+  .col-toolbar__sort-label {
+    color: var(--text-secondary);
+  }
+  .col-toolbar__count {
+    padding: 0 var(--sp-5);
+    padding-right: var(--layout-padding-desktop);
+    border-left: 1px solid var(--border-light);
+    color: var(--text-secondary);
+    background-color: var(--surface-default);
+  }
+
+  /* Grid */
+  .col-grid-wrap {
+    padding: var(--sp-6) 64px var(--section-spacing-desktop);
+  }
+  .col-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    column-gap: var(--sp-5);
+    row-gap: var(--sp-7);
+  }
+  .col-empty {
+    padding: var(--sp-8) 0;
+    text-align: center;
+    color: var(--text-secondary);
+  }
+
+  .pcard {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: var(--sp-3);
+    background-color: var(--color-milk);
+    border: 1px solid var(--border-light);
+    border-radius: calc(var(--radius-xl) * 2);
+    box-shadow: var(--shadow-elevation-2);
+  }
+  .pcard__media-wrap {
+    position: relative;
+  }
+  .pcard__media {
+    display: block;
+    aspect-ratio: 6 / 5;
+    overflow: hidden;
+    border-radius: var(--radius-xl);
+    background-color: var(--bg-secondary);
+  }
+  .pcard__image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform var(--timing-long) var(--ease-standard);
+  }
+  .pcard__media:hover .pcard__image {
+    transform: scale(1.03);
+  }
+  .pcard__add {
+    position: absolute;
+    right: var(--sp-3);
+    bottom: var(--sp-3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border: none;
+    border-radius: var(--radius-full);
+    background-color: var(--surface-elevated);
+    color: var(--color-earth-brown);
+    box-shadow: var(--shadow-elevation-2);
+    cursor: pointer;
+    transition: transform var(--timing-short) var(--ease-standard),
+      background-color var(--timing-short) var(--ease-standard);
+  }
+  .pcard__add svg {
+    width: 18px;
+    height: 18px;
+  }
+  .pcard__add:hover {
+    transform: translateY(-2px);
+    background-color: var(--color-cream);
+  }
+  .pcard__add:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .pcard__add.is-loading {
+    pointer-events: none;
+    opacity: 0.6;
+  }
+
+  .pcard__info {
+    display: flex;
+    flex-direction: column;
+    padding: var(--sp-5) var(--sp-2) var(--sp-2);
+  }
+  .pcard__pill {
+    align-self: flex-start;
+    padding: var(--sp-1) var(--sp-3);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-clay);
+  }
+  .pcard__title {
+    margin: var(--sp-4) 0 0;
+    min-width: 0;
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-xl);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-tight);
+    color: var(--text-primary);
+  }
+  .pcard__title-link {
+    color: inherit;
+    text-decoration: none;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .pcard__artist {
+    margin: var(--sp-3) 0 0;
+    font-size: var(--font-size-body-md);
+    color: var(--color-clay);
+  }
+  .pcard__meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: var(--sp-4);
+    font-size: var(--font-size-caption);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+  .pcard__meta-item {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+  }
+  .pcard__meta-item svg {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
+  }
+  .pcard__meta-sep {
+    width: 1px;
+    height: 14px;
+    margin: 0 var(--sp-4);
+    background-color: var(--border-default);
+  }
+  .pcard__divider {
+    width: 100%;
+    height: 1px;
+    margin: var(--sp-4) 0 0;
+    border: none;
+    background-color: var(--border-light);
+  }
+  .pcard__price {
+    margin: var(--sp-4) 0 0;
+    font-family: var(--font-display);
+    font-size: var(--font-size-display-sm);
+    font-weight: var(--font-weight-regular);
+    color: var(--text-primary);
+  }
+
+  .col-pagination {
+    margin-top: var(--sp-7);
+    text-align: center;
+    font-size: var(--font-size-body-sm);
+  }
+
+  /* Filter drawer (from left) */
+  .filter-drawer {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    visibility: hidden;
+  }
+  .filter-drawer.is-open {
+    visibility: visible;
+  }
+  .filter-drawer__overlay {
+    position: absolute;
+    inset: 0;
+    background-color: var(--bg-overlay);
+    opacity: 0;
+    transition: opacity var(--timing-base) var(--ease-standard);
+  }
+  .filter-drawer.is-open .filter-drawer__overlay {
+    opacity: 1;
+  }
+  .filter-drawer__panel {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 360px;
+    max-width: 86vw;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--surface-elevated);
+    box-shadow: var(--shadow-elevation-4);
+    transform: translateX(-100%);
+    transition: transform var(--timing-base) var(--ease-out);
+  }
+  .filter-drawer.is-open .filter-drawer__panel {
+    transform: translateX(0);
+  }
+  .filter-drawer__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--sp-5);
+    border-bottom: 1px solid var(--border-light);
+  }
+  .filter-drawer__title {
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-primary);
+  }
+  .filter-drawer__close {
+    display: inline-flex;
+    padding: var(--sp-1);
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-secondary);
+  }
+  .filter-drawer__close svg {
+    width: 22px;
+    height: 22px;
+  }
+  .filter-drawer__body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: var(--sp-5);
+  }
+
+  @media screen and (max-width: 1024px) {
+    .col-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media screen and (max-width: 768px) {
+    .col-toolbar__facets {
+      display: none;
+    }
+    .col-toolbar__filter {
+      padding-left: var(--layout-padding-mobile);
+    }
+    .col-toolbar__count {
+      padding-right: var(--layout-padding-mobile);
+    }
+    .col-toolbar__sort-label {
+      display: none;
+    }
+    .col-grid-wrap {
+      padding: var(--sp-5) var(--layout-padding-mobile) var(--section-spacing-mobile);
+    }
+    .col-grid {
+      column-gap: var(--sp-4);
+      row-gap: var(--sp-6);
+    }
+  }
+
+  @media screen and (max-width: 480px) {
+    .col-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
 {% endstylesheet %}
+
+<script>
+  (function () {
+    function initCollection() {
+      // Filter drawer
+      document.querySelectorAll('[data-filter-drawer]').forEach(function (drawer) {
+        if (drawer.dataset.init === 'true') return;
+        drawer.dataset.init = 'true';
+
+        var openBtns = document.querySelectorAll('[data-filter-open]');
+        var closeEls = drawer.querySelectorAll('[data-filter-close]');
+
+        function open() {
+          drawer.classList.add('is-open');
+          drawer.setAttribute('aria-hidden', 'false');
+          document.body.style.overflow = 'hidden';
+        }
+        function close() {
+          drawer.classList.remove('is-open');
+          drawer.setAttribute('aria-hidden', 'true');
+          document.body.style.overflow = '';
+        }
+
+        openBtns.forEach(function (b) {
+          b.addEventListener('click', open);
+        });
+        closeEls.forEach(function (b) {
+          b.addEventListener('click', close);
+        });
+        document.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape' && drawer.classList.contains('is-open')) close();
+        });
+      });
+
+      // Add to cart (AJAX) from product cards
+      function updateCartBubble() {
+        fetch(window.Shopify.routes.root + 'cart.js')
+          .then(function (res) { return res.json(); })
+          .then(function (cart) {
+            var cartIcon = document.querySelector('.header__icon--cart');
+            if (!cartIcon) return;
+            var bubble = cartIcon.querySelector('.cart-count-bubble');
+            if (cart.item_count > 0) {
+              if (!bubble) {
+                bubble = document.createElement('div');
+                bubble.className = 'cart-count-bubble';
+                bubble.innerHTML = '<span></span>';
+                cartIcon.appendChild(bubble);
+              }
+              bubble.querySelector('span').textContent = cart.item_count;
+            } else if (bubble) {
+              bubble.remove();
+            }
+          });
+      }
+
+      document.querySelectorAll('[data-add-to-cart]').forEach(function (btn) {
+        if (btn.dataset.init === 'true') return;
+        btn.dataset.init = 'true';
+        btn.addEventListener('click', function () {
+          if (btn.disabled || btn.classList.contains('is-loading')) return;
+          var variantId = btn.dataset.variantId;
+          if (!variantId) return;
+
+          btn.classList.add('is-loading');
+          fetch(window.Shopify.routes.root + 'cart/add.js', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/javascript' },
+            body: JSON.stringify({ id: variantId, quantity: 1 }),
+          })
+            .then(function (res) { return res.json(); })
+            .then(function (data) {
+              if (data.status) { throw new Error(data.description || 'Could not add to cart'); }
+              if (window.showToast) {
+                window.showToast({ message: 'Item added to your cart.', type: 'success', position: 'bottom-right' });
+              }
+              updateCartBubble();
+            })
+            .catch(function (err) {
+              if (window.showToast) {
+                window.showToast({ message: err.message, type: 'error', position: 'bottom-right' });
+              }
+            })
+            .finally(function () {
+              btn.classList.remove('is-loading');
+            });
+        });
+      });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initCollection);
+    } else {
+      initCollection();
+    }
+  })();
+</script>
 
 {% schema %}
 {

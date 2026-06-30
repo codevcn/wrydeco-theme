@@ -90,7 +90,15 @@ def main():
     output_thread.daemon = True
     output_thread.start()
 
-    p.wait()
+    try:
+        p.wait()
+    except KeyboardInterrupt:
+        print("\nStopping Shopify CLI...")
+        if os.name == 'nt':
+            # Kill the process tree on Windows to prevent zombie node/ruby processes
+            subprocess.call(['taskkill', '/F', '/T', '/PID', str(p.pid)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        else:
+            p.terminate()
 
 
 if __name__ == "__main__":

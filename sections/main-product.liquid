@@ -8,10 +8,16 @@
 <script src="{{ 'sale-event.js' | asset_url }}" defer="defer"></script>
 
 {% stylesheet %}
+  /* Desktop-first layout */
   .main-product {
     width: 100%;
-    max-width: var(--layout-max-width);
     margin-inline: auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+    column-gap: var(--sp-8);
+    row-gap: var(--sp-7);
+    padding: 100px 64px var(--section-spacing-desktop);
   }
   .main-product__media {
     min-width: 0;
@@ -19,86 +25,332 @@
   .main-product__info {
     display: flex;
     flex-direction: column;
+    gap: var(--sp-5);
     min-width: 0;
+  }
+
+  .main-product__header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+  }
+  .main-product__eyebrow {
+    margin: 0;
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-clay);
   }
   .main-product__title {
     margin: 0;
-    padding-inline: var(--layout-gutter-mobile);
-    font-size: var(--font-size-body-xl);
-    font-weight: 400;
+    font-family: var(--font-display);
+    font-size: var(--font-size-display-md);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-tight);
+    letter-spacing: 0;
+    color: var(--text-primary);
+    text-wrap: balance;
+  }
+  .main-product__subtitle {
+    margin: 0;
+    max-width: 46ch;
+    font-size: var(--font-size-body-lg);
+    line-height: var(--line-height-relaxed);
+    color: var(--text-secondary);
+  }
+
+  .main-product__features {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-evenly;
+    gap: var(--sp-4);
+  }
+  .main-product__feature {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    margin: 0;
+    font-size: var(--font-size-body-sm);
+    color: var(--text-secondary);
+  }
+  .main-product__feature svg {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
+    color: var(--color-bark);
+  }
+  .main-product__feature + .main-product__feature {
+    padding-left: var(--sp-4);
+    border-left: 1px solid var(--border-default);
+  }
+
+  .main-product__divider {
+    width: 100%;
+    height: 2px;
+    margin: 0;
+    border: none;
+    background-color: #33333317;
+  }
+
+  /* Neutralize the legacy gutter padding on the untouched buy-buttons snippet */
+  .main-product__purchase .product-buy-buttons {
+    padding-inline: 0;
+    margin-bottom: 0;
+  }
+
+  /* Craft assurance panel spanning full width below both product columns */
+  .main-product__trust {
+    grid-column: 1 / -1;
+    width: 100%;
+    margin-top: var(--sp-7);
+    padding: 0 0 0;
+    background: radial-gradient(circle at top, var(--color-milk) 0%, var(--surface-default) 65%);
+  }
+
+  .main-product__trust-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: var(--layout-max-width);
+    margin-inline: auto;
+    margin-bottom: var(--sp-6);
+    text-align: center;
+  }
+
+  .main-product__trust-eyebrow {
+    margin: 0 0 var(--sp-3);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-semibold);
+    line-height: var(--line-height-normal);
+    letter-spacing: calc(var(--letter-spacing-wide) * 5);
+    text-transform: uppercase;
+    color: var(--color-bark);
+  }
+
+  .main-product__trust-heading {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--font-size-display-lg);
+    font-weight: var(--font-weight-regular);
     line-height: var(--line-height-tight);
     letter-spacing: var(--letter-spacing-normal);
     color: var(--text-primary);
     text-wrap: balance;
   }
-  .main-product__price-inventory {
+
+  .main-product__trust-ornament {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: var(--sp-3);
+    justify-content: center;
+    gap: var(--sp-5);
+    width: 100%;
+    margin-top: var(--sp-5);
+    color: var(--color-clay);
   }
-  .main-product__details {
+
+  .main-product__trust-ornament-line {
+    width: calc(var(--sp-8) * 2);
+    height: 1px;
+    background-color: currentColor;
+  }
+
+  .main-product__trust-ornament-mark {
+    width: var(--sp-3);
+    height: var(--sp-3);
+    border: 2px solid currentColor;
+    transform: rotate(45deg);
+  }
+
+  .main-product__trust-list {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--sp-5);
+    width: 100%;
     margin: 0;
-    margin-inline: var(--layout-gutter-mobile);
-    padding-block: var(--sp-4) var(--sp-3);
-    background-color: var(--surface-elevated);
+    padding: 0;
+    list-style: none;
+  }
+
+  .main-product__trust-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-width: 0;
+    margin: 0;
+    padding: var(--sp-6);
+    border: 1px solid var(--border-light);
     border-radius: var(--radius-lg);
+    background-color: var(--color-milk);
+    box-shadow: var(--shadow-card);
+    text-align: center;
+    transition:
+      transform var(--timing-short) var(--ease-standard),
+      box-shadow var(--timing-short) var(--ease-standard);
   }
 
-  @media screen and (min-width: 720px) {
+  .main-product__trust-item:hover {
+    transform: translateY(calc(var(--sp-1) * -1));
+    box-shadow: var(--shadow-card-hover);
+  }
+
+  .main-product__trust-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: calc(var(--sp-6) * 2);
+    height: calc(var(--sp-6) * 2);
+    margin-bottom: var(--sp-5);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-full);
+    background-color: var(--surface-default);
+    color: var(--color-bark);
+  }
+
+  .main-product__trust-icon svg {
+    width: var(--sp-6);
+    height: var(--sp-6);
+  }
+
+  .main-product__trust-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: var(--font-weight-medium);
+    line-height: var(--line-height-tight);
+    color: var(--text-primary);
+    text-wrap: balance;
+  }
+
+  .main-product__trust-title::after {
+    content: '';
+    display: block;
+    width: var(--sp-7);
+    height: 1px;
+    margin: var(--sp-3) auto var(--sp-2);
+    background-color: var(--color-clay);
+  }
+
+  .main-product__trust-sub {
+    margin: 0;
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-md);
+    line-height: var(--line-height-generous);
+    color: var(--text-secondary);
+    text-wrap: pretty;
+  }
+
+  @media screen and (max-width: 1024px) {
     .main-product {
-      display: grid;
-      grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
-      align-items: start;
-      gap: var(--sp-5);
-      padding: var(--section-spacing-tablet) var(--layout-padding-tablet);
-      max-width: 1200px;
+      column-gap: var(--sp-6);
+      padding-inline: var(--layout-padding-tablet);
     }
-    .main-product__info {
-      gap: var(--sp-4);
+
+    .main-product__trust {
+      min-height: calc(var(--sp-8) * 8);
+      padding-block: calc(var(--sp-8) * 2);
     }
-    .main-product__title {
-      padding-inline: 0;
-      font-family: var(--font-display);
-      font-size: var(--font-size-display-sm);
-      letter-spacing: 0.01rem;
+
+    .main-product__trust-heading {
+      font-size: var(--font-size-display-md);
     }
-    .main-product__price-inventory {
-      align-items: flex-end;
-    }
-    .main-product__details {
-      margin-inline: 0;
+
+    .main-product__trust-item {
+      min-height: calc(var(--sp-8) * 5);
       padding: var(--sp-5);
-      border-radius: 8px;
-      box-shadow: var(--shadow-elevation-1);
-    }
-    .main-product__price-inventory .product-price,
-    .main-product__price-inventory .product-inventory {
-      margin: 0;
-      padding-inline: 0px;
     }
 
-    .main-product__price-inventory .product-inventory {
-      margin: 0;
-      padding-inline: 8px;
+    .main-product__trust-icon {
+      width: calc(var(--sp-7) * 2);
+      height: calc(var(--sp-7) * 2);
     }
 
-    .main-product__details .product-variant-picker,
-    .main-product__details .product-buy-buttons,
-    .main-product__details .product-rating-summary {
-      padding-inline: 0;
+    .main-product__trust-icon svg {
+      width: var(--sp-6);
+      height: var(--sp-6);
+    }
+
+    .main-product__trust-title {
+      font-size: var(--font-size-body-xl);
     }
   }
 
-  @media screen and (min-width: 1024px) {
+  @media screen and (max-width: 768px) {
     .main-product {
-      gap: var(--sp-7);
-      padding-left: 0;
-      padding-right: 0;
+      grid-template-columns: minmax(0, 1fr);
+      row-gap: var(--sp-6);
+      padding: var(--sp-5) var(--layout-padding-mobile) var(--section-spacing-mobile);
     }
     .main-product__title {
       font-size: var(--font-size-display-sm);
+    }
+    .main-product__subtitle {
+      font-size: var(--font-size-body-md);
+    }
+    .main-product__trust {
+      margin-top: var(--sp-4);
+      padding-block: var(--sp-8);
+    }
+
+    .main-product__trust-list {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .main-product__trust-item {
+      min-height: calc(var(--sp-8) * 4);
+    }
+  }
+
+  @media screen and (max-width: 480px) {
+    .main-product__trust {
+      padding-block: var(--sp-7);
+    }
+
+    .main-product__trust-header {
+      margin-bottom: var(--sp-6);
+    }
+
+    .main-product__trust-eyebrow {
+      font-size: var(--font-size-caption);
+    }
+
+    .main-product__trust-heading {
+      font-size: var(--font-size-display-sm);
+    }
+
+    .main-product__trust-ornament {
+      gap: var(--sp-3);
+    }
+
+    .main-product__trust-ornament-line {
+      width: var(--sp-8);
+    }
+
+    .main-product__trust-item {
+      min-height: calc(var(--sp-8) * 5);
+      padding: var(--sp-6) var(--sp-5);
+    }
+
+    .main-product__trust-title {
+      font-size: var(--font-size-body-xl);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .main-product__trust-item {
+      transition: none;
+    }
+
+    .main-product__trust-item:hover {
+      transform: none;
     }
   }
 {% endstylesheet %}
@@ -126,44 +378,179 @@
   </div>
 
   <div class="main-product__info">
-    <h1 class="main-product__title" id="MainProductTitle-{{ section.id }}">{{ product.title | escape }}</h1>
-
-    <div class="main-product__price-inventory">
-      {% render 'product-price', product: product, current_variant: current_variant %}
-
-      {% render 'product-inventory-status', current_variant: current_variant %}
+    <div class="main-product__header">
+      <p class="main-product__eyebrow">Verona Collection</p>
+      <h1 class="main-product__title" id="MainProductTitle-{{ section.id }}">{{ product.title | escape }}</h1>
+      <p class="main-product__subtitle">
+        Sculptural function. Hand-carved fluting and solid walnut bring quiet sophistication to any space.
+      </p>
     </div>
 
-    {% render 'product-annualized-cost', product: product, current_variant: current_variant %}
+    {% render 'product-price', product: product, current_variant: current_variant %}
 
-    <div class="main-product__details">
-      {% render 'product-sale-notice', product: product, current_variant: current_variant %}
+    <ul class="main-product__features">
+      <li class="main-product__feature">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"></path>
+          <path d="M2 21c0-3 1.85-5.36 5.08-6"></path>
+        </svg>
+        Solid walnut
+      </li>
+      <li class="main-product__feature">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M18 11V6a2 2 0 0 0-2-2 2 2 0 0 0-2 2"></path>
+          <path d="M14 10V4a2 2 0 0 0-2-2 2 2 0 0 0-2 2v2"></path>
+          <path d="M10 10.5V6a2 2 0 0 0-2-2 2 2 0 0 0-2 2v8"></path>
+          <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"></path>
+        </svg>
+        Hand-finished
+      </li>
+      <li class="main-product__feature">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+          <line x1="16" y1="2" x2="16" y2="6"></line>
+          <line x1="8" y1="2" x2="8" y2="6"></line>
+          <line x1="3" y1="10" x2="21" y2="10"></line>
+        </svg>
+        Made to order in 3–5 weeks
+      </li>
+    </ul>
 
-      {% render 'product-variant-picker', product: product, current_variant: current_variant, section_id: section.id %}
+    <hr class="main-product__divider">
 
+    {% render 'product-variant-picker', product: product, current_variant: current_variant, section_id: section.id %}
+
+    <div class="main-product__purchase">
       {% render 'product-buy-buttons',
         product: product,
         current_variant: current_variant,
         product_form_id: product_form_id
       %}
-
-      {% render 'product-consultation', product: product %}
-
-      {% render 'product-rating-summary', product: product %}
-
-      {% for block in section.blocks %}
-        {% if block.type == '@app' %}
-          <div class="main-product__app-block" {{ block.shopify_attributes }}>
-            {% render block %}
-          </div>
-        {% endif %}
-      {% endfor %}
     </div>
+
+    {% render 'product-consultation', product: product %}
+
+    {% for block in section.blocks %}
+      {% if block.type == '@app' %}
+        <div class="main-product__app-block" {{ block.shopify_attributes }}>
+          {% render block %}
+        </div>
+      {% endif %}
+    {% endfor %}
   </div>
+
+  <aside class="main-product__trust" aria-labelledby="MainProductTrustHeading-{{ section.id }}">
+    <header class="main-product__trust-header">
+      {% if section.settings.trust_eyebrow != blank %}
+        <p class="main-product__trust-eyebrow">{{ section.settings.trust_eyebrow | escape }}</p>
+      {% endif %}
+      <h2 class="main-product__trust-heading" id="MainProductTrustHeading-{{ section.id }}">
+        {{ section.settings.trust_heading | escape }}
+      </h2>
+      <div class="main-product__trust-ornament" aria-hidden="true">
+        <span class="main-product__trust-ornament-line"></span>
+        <span class="main-product__trust-ornament-mark"></span>
+        <span class="main-product__trust-ornament-line"></span>
+      </div>
+    </header>
+
+    <ul class="main-product__trust-list" role="list">
+      <li class="main-product__trust-item">
+        <span class="main-product__trust-icon" aria-hidden="true">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M1 3h15v13H1z"></path>
+            <path d="M16 8h4l3 3v5h-7V8Z"></path>
+            <circle cx="5.5" cy="18.5" r="2.5"></circle>
+            <circle cx="18.5" cy="18.5" r="2.5"></circle>
+          </svg>
+        </span>
+        <h3 class="main-product__trust-title">{{ section.settings.trust_delivery_title | escape }}</h3>
+        <p class="main-product__trust-sub">{{ section.settings.trust_delivery_text | escape }}</p>
+      </li>
+
+      <li class="main-product__trust-item">
+        <span class="main-product__trust-icon" aria-hidden="true">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="12" r="10"></circle>
+            <circle cx="12" cy="12" r="6"></circle>
+            <circle cx="12" cy="12" r="2"></circle>
+          </svg>
+        </span>
+        <h3 class="main-product__trust-title">{{ section.settings.trust_grain_title | escape }}</h3>
+        <p class="main-product__trust-sub">{{ section.settings.trust_grain_text | escape }}</p>
+      </li>
+
+      <li class="main-product__trust-item">
+        <span class="main-product__trust-icon" aria-hidden="true">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M12 19 8.7 22.3a1 1 0 0 1-1.4 0l-2.6-2.6a1 1 0 0 1 0-1.4L8 15"></path>
+            <path d="M14.5 12.5 18 9"></path>
+            <path d="m15 5 4 4"></path>
+            <path d="m18.5 2.5 3 3-3.5 3.5-3-3Z"></path>
+          </svg>
+        </span>
+        <h3 class="main-product__trust-title">{{ section.settings.trust_craft_title | escape }}</h3>
+        <p class="main-product__trust-sub">{{ section.settings.trust_craft_text | escape }}</p>
+      </li>
+    </ul>
+  </aside>
 </section>
 
 {% render 'product-consultation-popup' %}
 
+<script>
+  const mainProductSection = document.getElementById('MainProduct-{{ section.id }}');
+  if (mainProductSection) {
+    mainProductSection.closest('body').querySelector('.header__icon--search').style.color = 'var(--color-earth-brown)';
+    mainProductSection.closest('body').querySelector('.header__icon--cart').style.color = 'var(--color-earth-brown)';
+    mainProductSection.closest('body').querySelector('.header').style.border = '1px solid #cfcbc7b4';
+  }
+</script>
 <script type="application/json" data-product-state>
   {
     "id": {{ product.id | json }},
@@ -210,6 +597,59 @@
       "type": "@app"
     }
   ],
-  "settings": []
+  "settings": [
+    {
+      "type": "header",
+      "content": "Craft assurance panel"
+    },
+    {
+      "type": "text",
+      "id": "trust_eyebrow",
+      "label": "Eyebrow",
+      "default": "Crafted to be lived with"
+    },
+    {
+      "type": "text",
+      "id": "trust_heading",
+      "label": "Heading",
+      "default": "Thoughtful details. Lasting quality."
+    },
+    {
+      "type": "text",
+      "id": "trust_delivery_title",
+      "label": "Delivery title",
+      "default": "White-glove delivery available"
+    },
+    {
+      "type": "text",
+      "id": "trust_delivery_text",
+      "label": "Delivery description",
+      "default": "Carefully delivered to your home."
+    },
+    {
+      "type": "text",
+      "id": "trust_grain_title",
+      "label": "Natural grain title",
+      "default": "Natural grain variation in every piece"
+    },
+    {
+      "type": "text",
+      "id": "trust_grain_text",
+      "label": "Natural grain description",
+      "default": "Uniquely yours."
+    },
+    {
+      "type": "text",
+      "id": "trust_craft_title",
+      "label": "Craftsmanship title",
+      "default": "Crafted by master artisans"
+    },
+    {
+      "type": "text",
+      "id": "trust_craft_text",
+      "label": "Craftsmanship description",
+      "default": "Heirloom quality, built to last."
+    }
+  ]
 }
 {% endschema %}

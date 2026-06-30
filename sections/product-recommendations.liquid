@@ -1,95 +1,62 @@
 {% if recommendations.performed and recommendations.products_count > 0 %}
   <div class="product-recommendations page-width">
-    <h2 class="product-recommendations__heading">
-      {{ section.settings.heading | default: 'You might also <em>like</em>' }}
-    </h2>
-    <div class="product-recommendations__rows">
-      <div class="product-recommendations__grid">
-        {% for product in recommendations.products %}
-          {%- capture image_ratio -%}square{%- endcapture -%}
-          <div class="pin-card pin-card--{{ image_ratio }}">
-            <div class="pin-card__image-wrapper">
-              <a class="pin-card__image-link" href="{{ product.url }}">
-                {%- if product.featured_media != blank -%}
-                  {% assign recommendation_image_alt = product.featured_media.alt | default: product.title %}
-                  {{
-                    product.featured_media.preview_image
-                    | image_url: width: 640
-                    | image_tag:
-                      class: 'pin-card__image',
-                      loading: 'lazy',
-                      widths: '240, 360, 480, 640',
-                      sizes: '(min-width: 1024px) 25vw, (min-width: 720px) 33vw, 75vw',
-                      alt: recommendation_image_alt
-                  }}
-                {%- else -%}
-                  {{ 'product-1' | placeholder_svg_tag: 'pin-card__image placeholder-svg' }}
-                {%- endif -%}
+    <div class="product-recommendations__header">
+      {% if section.settings.eyebrow != blank %}
+        <p class="product-recommendations__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+      {% endif %}
+      {% if section.settings.title != blank %}
+        <h2 class="product-recommendations__title">{{ section.settings.title | escape }}</h2>
+      {% endif %}
+      {% if section.settings.subtitle != blank %}
+        <p class="product-recommendations__subtitle">{{ section.settings.subtitle | escape }}</p>
+      {% endif %}
+    </div>
+
+    <div class="product-recommendations__grid">
+      {% for product in recommendations.products limit: 6 %}
+        {% liquid
+          assign material = product.metafields.custom.material
+          if material == blank
+            assign material = section.settings.material_label
+          endif
+        %}
+        <article class="pairs-card">
+          <a class="pairs-card__media" href="{{ product.url }}">
+            {%- if product.featured_media != blank -%}
+              {% assign recommendation_image_alt = product.featured_media.alt | default: product.title %}
+              {{
+                product.featured_media.preview_image
+                | image_url: width: 640
+                | image_tag:
+                  class: 'pairs-card__image',
+                  loading: 'lazy',
+                  widths: '240, 360, 480, 640',
+                  sizes: '(min-width: 1024px) 32vw, (min-width: 720px) 33vw, 90vw',
+                  alt: recommendation_image_alt
+              }}
+            {%- else -%}
+              {{ 'product-1' | placeholder_svg_tag: 'pairs-card__image placeholder-svg' }}
+            {%- endif -%}
+          </a>
+
+          <div class="pairs-card__info">
+            <h3 class="pairs-card__title">
+              <a class="pairs-card__title-link" href="{{ product.url }}">
+                {{- product.title | split: ',' | first | split: ' - ' | first | strip | escape -}}
               </a>
-              {%- if product.available -%}
-                {% form 'product', product %}
-                  <input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}">
-                  <button type="submit" name="add" class="pin-card__add-to-cart btn-pill btn-pill--earth-brown">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="24"
-                      height="24"
-                      fill="currentColor"
-                      class="bi bi-cart-plus"
-                      viewBox="0 0 16 16"
-                    >
-                      <path d="M9 5.5a.5.5 0 0 0-1 0V7H6.5a.5.5 0 0 0 0 1H8v1.5a.5.5 0 0 0 1 0V8h1.5a.5.5 0 0 0 0-1H9z"/>
-                      <path d="M.5 1a.5.5 0 0 0 0 1h1.11l.401 1.607 1.498 7.985A.5.5 0 0 0 4 12h1a2 2 0 1 0 0 4 2 2 0 0 0 0-4h7a2 2 0 1 0 0 4 2 2 0 0 0 0-4h1a.5.5 0 0 0 .491-.408l1.5-8A.5.5 0 0 0 14.5 3H2.89l-.405-1.621A.5.5 0 0 0 2 1zm3.915 10L3.102 4h10.796l-1.313 7zM6 14a1 1 0 1 1-2 0 1 1 0 0 1 2 0m7 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0"/>
-                    </svg>
-                  </button>
-                {% endform %}
-              {%- else -%}
-                <button class="pin-card__add-to-cart btn-pill btn-pill--earth-brown" disabled>Sold out</button>
-              {%- endif -%}
-            </div>
-
-            <div class="pin-card__info">
-              <h3 class="pin-card__title">
-                <a class="pin-card__title-link" href="{{ product.url }}">
-                  {{ product.title | escape }}
-                </a>
-              </h3>
-              <div class="pin-card__meta">
-                <div class="pin-card__price">
-                  {{ product.price | money }}
-                </div>
-                <div class="pin-card__author">
-                  {% liquid
-                    assign author = product.metafields.custom.author_info.value | first
-                    assign author_name = blank
-                    assign author_image_url = blank
-
-                    if author != blank
-                      assign author_name = author.author_name.value
-                      assign author_image_url = author.author_image_url.value
-                    endif
-                  %}
-                  <span class="for-you-masonry__pin-card__crafted-by"> Crafted by </span>
-                  <div class="pin-card__avatar">
-                    {% if author_image_url != blank %}
-                      <img
-                        src="{{ author_image_url | escape }}"
-                        alt="{{ author_name | escape }}"
-                        loading="lazy"
-                        style="width: 100%; height: 100%; object-fit: cover;"
-                      >
-                    {% else %}
-                      <svg viewBox="0 0 24 24" fill="#333" width="100%" height="100%">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
-                      </svg>
-                    {% endif %}
-                  </div>
-                </div>
-              </div>
-            </div>
+            </h3>
+            {% if material != blank %}
+              <p class="pairs-card__material">{{ material | escape }}</p>
+            {% endif %}
+            <a class="pairs-card__link" href="{{ product.url }}">
+              <span>{{ section.settings.cta_label | default: 'View piece' }}</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </a>
           </div>
-        {% endfor %}
-      </div>
+        </article>
+      {% endfor %}
     </div>
   </div>
 {% else %}
@@ -102,15 +69,22 @@
     document.addEventListener('DOMContentLoaded', function () {
       const container = document.getElementById('recommendations-container-{{ section.id }}');
       const productId = container.dataset.productId;
-      const limit = {{ section.settings.products_to_show | default: 4 }};
+      const productName = {{ product.title | split: ',' | first | strip | json }};
+      const limit = {{ section.settings.products_to_show | default: 6 }};
 
       if (productId) {
         fetch(`/recommendations/products?section_id={{ section.id }}&product_id=${productId}&limit=${limit}`)
           .then(r => r.text())
           .then(html => {
-            container.innerHTML = new DOMParser()
+            const inner = new DOMParser()
               .parseFromString(html, 'text/html')
               .querySelector('.product-recommendations')?.innerHTML || '';
+            container.innerHTML = inner;
+
+            const subtitle = container.querySelector('.product-recommendations__subtitle');
+            if (subtitle && subtitle.textContent.indexOf('{product}') !== -1) {
+              subtitle.textContent = subtitle.textContent.replace('{product}', productName).replace(/\s+/g, ' ').trim();
+            }
           });
       }
     });
@@ -118,215 +92,158 @@
 {% endif %}
 
 {% stylesheet %}
+  /* Desktop-first */
   .product-recommendations {
-    padding: 20px 0 40px;
-  }
-  .product-recommendations__heading {
-    font-size: 32px;
-    margin-bottom: 12px;
-    font-weight: 500;
-    font-family: var(--font-display);
-    padding-left: 14px;
-  }
-  .product-recommendations__heading em {
-    color: #e60023; /* Or var(--color-2) if available */
-    font-style: italic;
-  }
-  .product-recommendations__rows {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-  .product-recommendations__grid {
-    display: grid;
-    grid-template-columns: repeat(4, calc(75% - var(--sp-4)));
-    grid-template-rows: repeat(2, auto);
-    overflow-x: auto;
-    gap: var(--sp-4);
-    padding: 0 var(--layout-gutter-mobile) var(--sp-3);
-    scrollbar-width: thin;
-    scroll-snap-type: x mandatory;
-  }
-  .product-recommendations__grid::-webkit-scrollbar {
-    height: 8px;
-  }
-  .product-recommendations__grid::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
-  }
-  .product-recommendations__grid::-webkit-scrollbar-thumb {
-    background: #ccc;
-    border-radius: 4px;
-  }
-  .product-recommendations__grid > .pin-card {
-    margin-bottom: 0; /* Override default margin from pin-card */
-    scroll-snap-align: start;
-  }
-  @media screen and (min-width: 720px) {
-    .product-recommendations {
-      max-width: var(--layout-max-width);
-      margin-inline: auto;
-      padding: var(--section-spacing-tablet) 0;
-    }
-    .product-recommendations__heading {
-      margin: 0 0 var(--sp-5);
-      padding: 0;
-      font-size: var(--font-size-display-md);
-      color: var(--text-primary);
-      text-wrap: balance;
-    }
-    .product-recommendations__rows {
-      gap: var(--sp-5);
-    }
-    .product-recommendations__grid {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: var(--sp-4);
-      overflow: visible;
-      padding: 0;
-      scroll-snap-type: none;
-    }
-    .product-recommendations__grid > .pin-card {
-      min-width: 0;
-      margin: 0;
-      scroll-snap-align: none;
-    }
-  }
-  @media screen and (min-width: 1024px) {
-    .product-recommendations {
-      padding: var(--section-spacing-desktop) 0;
-    }
-    .product-recommendations__grid {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: var(--sp-5);
-    }
+    width: 100%;
+    margin-inline: auto;
+    padding: var(--section-spacing-desktop) 140px;
   }
 
-  /* Reuse pin-card styling from for-you-masonry if missing, but we assume it's global or we'll ensure it works */
-  .product-recommendations .pin-card {
-    display: block;
-    margin-bottom: 18px;
-    border-radius: 12px;
-    overflow: hidden;
-    background-color: #fff;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-    position: relative;
+  .product-recommendations__header {
+    text-align: center;
+    max-width: 60ch;
+    margin: 0 auto var(--sp-5);
   }
-  .pin-card--square .pin-card__image-wrapper {
-    aspect-ratio: 1 / 1;
+  .product-recommendations__eyebrow {
+    margin: 0 0 var(--sp-3);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-clay);
   }
-  .pin-card__image-wrapper {
-    position: relative;
-    overflow: hidden;
-    width: 100%;
+  .product-recommendations__title {
+    margin: 0 0 var(--sp-4);
+    font-family: var(--font-display);
+    font-size: var(--font-size-display-lg);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-display);
+    letter-spacing: var(--letter-spacing-normal);
+    color: var(--text-primary);
+    text-wrap: balance;
   }
-  .pin-card__image-link {
-    display: block;
-    width: 100%;
-    height: 100%;
+  .product-recommendations__subtitle {
+    margin: 0;
+    font-size: var(--font-size-body-lg);
+    line-height: var(--line-height-relaxed);
+    color: var(--text-secondary);
+    text-wrap: balance;
   }
-  .pin-card__image {
-    width: 100%;
-    height: 100%;
-    display: block;
-    object-fit: cover;
-    position: absolute;
-    top: 0;
-    left: 0;
+
+  .product-recommendations__grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    column-gap: var(--sp-4);
+    row-gap: var(--sp-7);
   }
-  .pin-card__add-to-cart {
-    position: absolute;
-    bottom: 6px;
-    right: 6px;
-    z-index: 5;
-    font-size: 15px;
-    padding: 3px 5px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    font-weight: 700;
-    color: #fff;
-    outline: 2px solid var(--color-human-skin, #e0d0c0);
-    cursor: pointer;
-    background-color: var(--color-earth-brown, #5c4033);
-    border: none;
-    border-radius: 50px;
+
+  .pairs-card {
+    min-width: 0;
     display: flex;
-    align-items: center;
-    justify-content: center;
+    flex-direction: column;
   }
-  .pin-card__add-to-cart:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-    background-color: #888;
-    padding: 6px 12px;
-  }
-  .pin-card__add-to-cart svg {
-    pointer-events: none;
-  }
-  .pin-card__info {
-    padding: 8px;
-  }
-  .pin-card__title {
+  .pairs-card__media {
     display: block;
-    border-bottom: 1px solid var(--color-human-skin, #e0d0c0);
-    padding-bottom: 6px;
-    font-size: 14px;
-    font-weight: 500;
-    margin: 0 0 8px 0;
-    line-height: 1.4;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    border-radius: var(--radius-xl);
+    background-color: var(--bg-secondary);
+    box-shadow: var(--shadow-elevation-2);
   }
-  .pin-card__title-link {
+  .pairs-card__image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform var(--timing-long) var(--ease-standard);
+  }
+  .pairs-card__media:hover .pairs-card__image {
+    transform: scale(1.03);
+  }
+
+  .pairs-card__info {
+    padding-top: var(--sp-4);
+  }
+  .pairs-card__title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-xl);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-tight);
+    color: var(--text-primary);
+  }
+  .pairs-card__title-link {
     color: inherit;
     text-decoration: none;
     display: -webkit-box;
-    -webkit-line-clamp: 2;
+    -webkit-line-clamp: 1;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
-  .pin-card__meta {
-    display: flex;
-    justify-content: space-between;
+  .pairs-card__material {
+    margin: var(--sp-2) 0 0;
+    font-size: var(--font-size-body-sm);
+    color: var(--color-clay);
+  }
+  .pairs-card__link {
+    display: inline-flex;
     align-items: center;
-    font-size: 14px;
-    gap: 8px;
+    gap: var(--sp-2);
+    margin-top: var(--sp-4);
+    padding-bottom: var(--sp-4);
+    min-width: 130px;
+    border-bottom: 1px solid var(--border-default);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-medium);
+    color: var(--text-primary);
+    text-decoration: none;
+    transition: border-color var(--timing-short) var(--ease-standard),
+      gap var(--timing-short) var(--ease-standard);
   }
-  .pin-card__author {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+  .pairs-card__link svg {
+    width: 14px;
+    height: 14px;
   }
-  .pin-card__avatar {
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    background: #f1f1f1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-  }
-  .pin-card__avatar-image {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-  .recommendation__pin-card__author-name {
-    display: inline-block;
-    font-weight: 500;
-    font-size: 18px;
-    color: #442c1a;
-    white-space: nowrap;
-    min-width: 0;
-  }
-  .product-recommendations .pin-card__price {
-    font-weight: 600;
+  .pairs-card__link:hover {
+    border-color: var(--color-clay);
+    gap: var(--sp-3);
+    color: var(--text-primary);
   }
 
-  @media screen and (min-width: 720px) {
-    .recommendation__pin-card__author-name {
-      font-size: 16px;
+  @media screen and (max-width: 1024px) {
+    .product-recommendations {
+      padding-inline: var(--layout-padding-tablet);
     }
-    .product-recommendations .pin-card__price {
-      font-size: 16px;
+    .product-recommendations__title {
+      font-size: var(--font-size-display-md);
+    }
+    .product-recommendations__grid {
+      column-gap: var(--sp-5);
+      row-gap: var(--sp-6);
+    }
+  }
+
+  @media screen and (max-width: 768px) {
+    .product-recommendations {
+      padding: var(--section-spacing-mobile) var(--layout-padding-mobile);
+    }
+    .product-recommendations__title {
+      font-size: var(--font-size-display-md);
+    }
+    .product-recommendations__subtitle {
+      font-size: var(--font-size-body-md);
+    }
+    .product-recommendations__grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      column-gap: var(--sp-4);
+      row-gap: var(--sp-5);
+    }
+  }
+
+  @media screen and (max-width: 480px) {
+    .product-recommendations__grid {
+      grid-template-columns: minmax(0, 1fr);
     }
   }
 {% endstylesheet %}
@@ -337,10 +254,36 @@
   "limit": 1,
   "settings": [
     {
-      "type": "html",
-      "id": "heading",
-      "label": "Heading",
-      "default": "You might also <em>like</em>"
+      "type": "text",
+      "id": "eyebrow",
+      "label": "Eyebrow",
+      "default": "Curated for harmony"
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Title",
+      "default": "Pairs Beautifully With"
+    },
+    {
+      "type": "textarea",
+      "id": "subtitle",
+      "label": "Subtitle",
+      "info": "Use {product} to insert the current product name.",
+      "default": "Thoughtfully selected pieces that complement the {product} in form, material, and mood."
+    },
+    {
+      "type": "text",
+      "id": "material_label",
+      "label": "Material label (fallback)",
+      "info": "Used when a product has no custom.material metafield.",
+      "default": "Solid walnut"
+    },
+    {
+      "type": "text",
+      "id": "cta_label",
+      "label": "Card link label",
+      "default": "View Piece"
     },
     {
       "type": "range",
@@ -348,7 +291,7 @@
       "min": 2,
       "max": 12,
       "step": 1,
-      "default": 8,
+      "default": 6,
       "label": "Maximum products to show"
     }
   ],

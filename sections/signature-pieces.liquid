@@ -1,55 +1,61 @@
 <div class="signature-pieces page-width">
-  <div class="signature-pieces__header">
+  <header class="signature-pieces__header">
     <p class="signature-pieces__eyebrow">{{ section.settings.eyebrow | upcase }}</p>
     <h2 class="signature-pieces__heading">{{ section.settings.heading }}</h2>
     <p class="signature-pieces__subtitle">{{ section.settings.subtitle | newline_to_br }}</p>
-  </div>
+  </header>
 
-  <div class="signature-pieces__grid">
-    {%- assign collection = section.settings.collection -%}
-    {%- if collection == blank -%}
-      {%- assign collection = collections['signature-pieces'] -%}
-    {%- endif -%}
+  {%- assign collection = section.settings.collection -%}
+  {%- if collection == blank -%}
+    {%- assign collection = collections['signature-pieces'] -%}
+  {%- endif -%}
+
+  <div class="signature-pieces__carousel" data-signature-slider>
+    <button
+      class="signature-pieces__nav signature-pieces__nav--prev"
+      type="button"
+      aria-label="Previous products"
+      aria-controls="SignaturePiecesTrack-{{ section.id }}"
+      data-signature-prev
+    >
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+        <path d="M15 18 9 12l6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+
+    <div
+      class="signature-pieces__grid"
+      id="SignaturePiecesTrack-{{ section.id }}"
+      role="list"
+      data-signature-track
+      tabindex="0"
+    >
 
     {%- for product in collection.products limit: 10 -%}
-      <div class="signature-pieces__card">
+      {%- assign display_title = product.metafields.custom.artwork_name.value | default: product.title -%}
+      <article class="signature-pieces__card" role="listitem">
         <div class="signature-pieces__image-wrapper">
           <a href="{{ product.url }}" class="signature-pieces__image-link" tabindex="-1">
             {%- if product.featured_media != blank -%}
               {{
                 product.featured_media.preview_image
-                | image_url: width: 600
-                | image_tag: class: 'signature-pieces__img', loading: 'lazy'
+                | image_url: width: 900
+                | image_tag:
+                  class: 'signature-pieces__img',
+                  loading: 'lazy',
+                  widths: '320, 480, 640, 900',
+                  sizes: '(min-width: 64rem) 25vw, (min-width: 48rem) 50vw, 82vw'
               }}
             {%- else -%}
               {{ 'product-' | append: forloop.index | placeholder_svg_tag: 'signature-pieces__img placeholder-svg' }}
             {%- endif -%}
           </a>
 
-          {%- if product.available -%}
-            <div class="signature-pieces__quick-add-wrapper">
-              {% form 'product', product %}
-                <input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}">
-                <button type="submit" name="add" class="signature-pieces__quick-add" aria-label="Add to cart">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    fill="currentColor"
-                    class="bi bi-cart-plus-fill"
-                    viewBox="0 0 16 16"
-                  >
-                    <path d="M.5 1a.5.5 0 0 0 0 1h1.11l.401 1.607 1.498 7.985A.5.5 0 0 0 4 12h1a2 2 0 1 0 0 4 2 2 0 0 0 0-4h7a2 2 0 1 0 0 4 2 2 0 0 0 0-4h1a.5.5 0 0 0 .491-.408l1.5-8A.5.5 0 0 0 14.5 3H2.89l-.405-1.621A.5.5 0 0 0 2 1zM6 14a1 1 0 1 1-2 0 1 1 0 0 1 2 0m7 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0M9 5.5V7h1.5a.5.5 0 0 1 0 1H9v1.5a.5.5 0 0 1-1 0V8H6.5a.5.5 0 0 1 0-1H8V5.5a.5.5 0 0 1 1 0"/>
-                  </svg>
-                </button>
-              {% endform %}
-            </div>
-          {%- endif -%}
         </div>
 
         <div class="signature-pieces__content">
           <h3 class="signature-pieces__title">
-            <a href="{{ product.url }}">{{ product.title }}</a>
+            <a href="{{ product.url }}">{{ display_title }}</a>
           </h3>
           <p class="signature-pieces__price">From {{ product.price | money_without_trailing_zeros }}</p>
 
@@ -70,13 +76,14 @@
             {%- endif -%}
           </p>
         </div>
-      </div>
+      </article>
     {%- else -%}
-      {%- for i in (1..4) -%}
-        <div class="signature-pieces__card">
+      {%- for i in (1..10) -%}
+        {%- assign placeholder_index = i | minus: 1 | modulo: 6 | plus: 1 -%}
+        <article class="signature-pieces__card" role="listitem">
           <div class="signature-pieces__image-wrapper">
             <div class="signature-pieces__image-link">
-              {{ 'product-' | append: i | placeholder_svg_tag: 'signature-pieces__img placeholder-svg' }}
+              {{ 'product-' | append: placeholder_index | placeholder_svg_tag: 'signature-pieces__img placeholder-svg' }}
             </div>
           </div>
           <div class="signature-pieces__content">
@@ -87,9 +94,22 @@
             <hr class="signature-pieces__divider">
             <p class="signature-pieces__meta">Solid walnut &bull; Made to order</p>
           </div>
-        </div>
+        </article>
       {%- endfor -%}
     {%- endfor -%}
+    </div>
+
+    <button
+      class="signature-pieces__nav signature-pieces__nav--next"
+      type="button"
+      aria-label="Next products"
+      aria-controls="SignaturePiecesTrack-{{ section.id }}"
+      data-signature-next
+    >
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+        <path d="m9 18 6-6-6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
   </div>
 
   {%- if section.settings.button_label != blank -%}
@@ -108,7 +128,7 @@
           stroke-width="1.5"
           stroke-linecap="round"
           stroke-linejoin="round"
-          style="margin-left: 8px;"
+          class="signature-pieces__btn-icon"
         >
           <line x1="5" y1="12" x2="19" y2="12"></line>
           <polyline points="12 5 19 12 12 19"></polyline>
@@ -120,58 +140,61 @@
 
 {% stylesheet %}
   .signature-pieces {
-    padding-top: var(--sp-2, 64px);
-    padding-bottom: var(--sp-4, 64px);
-    background-color: var(--bg-primary, #f5f1ed);
-    color: var(--text-primary, #1a1815);
+    width: min(calc(100% - (var(--layout-padding-mobile) * 2)), var(--layout-max-width));
+    margin-inline: auto;
+    padding-block: var(--sp-6);
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
   }
 
   .signature-pieces__header {
     text-align: center;
-    margin-bottom: 28px;
+    margin-bottom: var(--sp-6);
   }
 
   .signature-pieces__eyebrow {
     font-family: var(--font-body);
-    font-size: var(--font-size-body-xs, 12px);
-    letter-spacing: 0.1em;
-    color: var(--text-secondary, #6b5d52);
-    margin-bottom: var(--sp-2, 8px);
-    font-weight: 500;
+    font-size: var(--font-size-caption);
+    letter-spacing: calc(var(--letter-spacing-wide) * 5);
+    color: var(--text-secondary);
+    margin: 0 0 var(--sp-3);
+    font-weight: var(--font-weight-medium);
   }
 
   .signature-pieces__heading {
     font-family: var(--font-display);
-    font-size: clamp(36px, 4vw, 52px);
-    font-weight: var(--font-weight-regular, 400);
-    color: var(--text-primary, #1a1815);
-    margin-bottom: var(--sp-3, 12px);
-    letter-spacing: var(--letter-spacing-tight, -0.04em);
+    font-size: var(--font-size-display-md);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-tight);
+    color: var(--text-primary);
+    margin: 0 0 var(--sp-4);
+    letter-spacing: var(--letter-spacing-tight);
+    text-wrap: balance;
   }
 
   .signature-pieces__subtitle {
     font-family: var(--font-body);
-    font-size: var(--font-size-body-md, 16px);
-    color: var(--text-secondary, #6b5d52);
-    line-height: var(--line-height-relaxed, 1.5);
+    font-size: var(--font-size-body-sm);
+    color: var(--text-secondary);
+    line-height: var(--line-height-relaxed);
     margin: 0 auto;
-    max-width: 600px;
+    max-width: calc(var(--layout-max-width) / 2);
+    text-wrap: balance;
   }
 
-  /* Grid Layout - Mobile First */
+  .signature-pieces__carousel {
+    position: relative;
+  }
+
   .signature-pieces__grid {
     display: flex;
-    gap: var(--sp-4, 16px);
+    gap: var(--sp-4);
     overflow-x: auto;
-    padding-bottom: var(--sp-4, 16px);
+    padding-bottom: var(--sp-3);
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
-  }
-  .signature-pieces__grid .signature-pieces__card:first-child {
-    margin-left: 64px;
-  }
-  .signature-pieces__grid .signature-pieces__card:last-child {
-    margin-right: 64px;
+    scroll-snap-type: x mandatory;
+    overscroll-behavior-inline: contain;
   }
 
   .signature-pieces__grid::-webkit-scrollbar {
@@ -181,36 +204,23 @@
   .signature-pieces__card {
     display: flex;
     flex-direction: column;
-    border-radius: 10px;
+    flex: 0 0 82%;
+    min-width: 0;
+    border: 1px solid color-mix(in srgb, var(--color-linen) 48%, transparent);
+    border-radius: var(--radius-lg);
     overflow: hidden;
     scroll-snap-align: start;
-    flex: 0 0 85%;
-    border: 1px solid rgba(143, 134, 127, 0.24); /* very faint border */
-  }
-
-  @media screen and (min-width: 768px) {
-    .signature-pieces__grid {
-      display: flex;
-      flex-wrap: nowrap;
-      overflow-x: auto;
-    }
-    .signature-pieces__card {
-      flex: 0 0 calc(40% - 16px);
-    }
-  }
-
-  @media screen and (min-width: 1024px) {
-    .signature-pieces__card {
-      flex: 0 0 calc(28% - 166px);
-    }
+    background-color: var(--bg-primary);
+    transition: box-shadow var(--timing-base) var(--ease-standard),
+      transform var(--timing-base) var(--ease-standard);
   }
 
   .signature-pieces__image-wrapper {
     position: relative;
     width: 100%;
-    aspect-ratio: 4 / 5;
+    aspect-ratio: 1 / 1.04;
     overflow: hidden;
-    background-color: #f0ebe4;
+    background-color: var(--bg-secondary);
   }
 
   .signature-pieces__image-link {
@@ -223,61 +233,12 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 0.6s ease;
+    transition: transform var(--timing-extra-long) var(--ease-standard);
     -webkit-user-drag: none;
   }
 
-  .signature-pieces__card:hover .signature-pieces__img {
-    transform: scale(1.03);
-  }
-
-  /* Quick Add Button */
-  .signature-pieces__quick-add-wrapper {
-    position: absolute;
-    bottom: 12px;
-    right: 12px;
-    z-index: 5;
-  }
-
-  .signature-pieces__quick-add {
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    background-color: var(--color-earth-brown, #442c1a);
-    color: #fff;
-    border: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    opacity: 0;
-    transform: translateY(10px);
-    transition: opacity 0.3s ease, transform 0.3s ease, background-color 0.2s ease;
-  }
-
-  .signature-pieces__quick-add:hover {
-    background-color: #2c1c11; /* Darker brown */
-  }
-
-  /* Show quick add on hover for desktop */
-  @media screen and (min-width: 768px) {
-    .signature-pieces__card:hover .signature-pieces__quick-add {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  /* Always show quick add on mobile */
-  @media screen and (max-width: 767px) {
-    .signature-pieces__quick-add {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
   .signature-pieces__content {
-    padding: var(--sp-4, 20px) var(--sp-4, 16px);
+    padding: var(--sp-4);
     display: flex;
     flex-direction: column;
     flex-grow: 1;
@@ -285,127 +246,364 @@
 
   .signature-pieces__title {
     font-family: var(--font-display);
-    font-size: var(--font-size-display-xs, 20px);
-    font-weight: var(--font-weight-regular, 400);
-    margin: 0 0 6px 0;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
+    font-size: var(--font-size-body-2xl);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-normal);
+    margin: 0 0 var(--sp-2);
+    white-space: nowrap;
     overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .signature-pieces__title a {
-    color: #000;
+    color: var(--text-primary);
     text-decoration: none;
   }
 
   .signature-pieces__title a:hover {
-    text-decoration: underline;
+    color: var(--color-earth-brown);
   }
 
   .signature-pieces__price {
-    font-family: var(--font-roboto);
-    font-size: 16px;
-    font-weight: 700;
-    color: #cc8b58;
-    margin: 0 0 12px 0;
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-md);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-clay);
+    margin: 0 0 var(--sp-4);
+    font-variant-numeric: tabular-nums;
   }
 
   .signature-pieces__divider {
     border: none;
-    border-top: 1px solid rgba(107, 93, 82, 0.2);
-    margin: auto 0 12px 0; /* Auto margin top pushes it to the bottom if content is short */
+    border-top: 1px solid color-mix(in srgb, var(--color-linen) 48%, transparent);
+    margin: auto 0 var(--sp-4);
   }
 
   .signature-pieces__meta {
-    font-family: var(--font-roboto);
-    font-size: 12px;
-    color: var(--text-secondary, #6b5d52);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-normal);
+    color: var(--text-secondary);
     margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
-  /* Footer CTA */
   .signature-pieces__footer {
     display: flex;
     justify-content: center;
-    margin-top: 14px;
+    margin-top: var(--sp-5);
+  }
+
+  .signature-pieces__nav {
+    position: absolute;
+    top: 50%;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--sp-7);
+    height: var(--sp-7);
+    padding: 0;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-full);
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-card);
+    cursor: pointer;
+    transform: translateY(-50%);
+    transition: color var(--timing-short) var(--ease-standard),
+      background-color var(--timing-short) var(--ease-standard),
+      opacity var(--timing-short) var(--ease-standard);
+  }
+
+  .signature-pieces__nav svg {
+    width: var(--sp-5);
+    height: var(--sp-5);
+  }
+
+  .signature-pieces__nav--prev {
+    left: var(--sp-2);
+  }
+
+  .signature-pieces__nav--next {
+    right: var(--sp-2);
+  }
+
+  .signature-pieces__nav:hover:not(:disabled) {
+    background-color: var(--color-earth-brown);
+    color: var(--text-inverse);
+  }
+
+  .signature-pieces__nav:disabled {
+    opacity: 0.35;
+    cursor: default;
+    pointer-events: none;
   }
 
   .signature-pieces__btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background-color: var(--color-earth-brown, #442c1a);
-    color: #fff;
-    padding: 8px 32px;
+    min-height: var(--sp-7);
+    background-color: var(--color-earth-brown);
+    color: var(--text-inverse);
+    padding-inline: var(--sp-8);
     font-family: var(--font-body);
-    font-size: var(--font-size-body-sm, 14px);
-    font-weight: 500;
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-medium);
     text-decoration: none;
-    transition: transform 0.2s ease;
-    border-radius: var(--radius-md, 8px);
+    transition: background-color var(--timing-short) var(--ease-standard),
+      transform var(--timing-short) var(--ease-standard);
+    border-radius: var(--radius-sm);
   }
 
   .signature-pieces__btn:hover {
-    color: #fff;
-    transform: scale(1.05);
+    color: var(--text-inverse);
+    background-color: var(--color-ebony);
+    transform: translateY(calc(var(--sp-1) * -0.5));
   }
-  .signature-pieces__grid.is-dragging {
-    cursor: grabbing;
+
+  .signature-pieces__btn:active {
+    transform: translateY(0);
   }
-  .signature-pieces__grid.is-dragging .signature-pieces__card {
-    pointer-events: none;
-    user-select: none;
+
+  .signature-pieces__btn-icon {
+    margin-left: var(--sp-2);
+    transition: transform var(--timing-short) var(--ease-standard);
+  }
+
+  .signature-pieces__btn:hover .signature-pieces__btn-icon {
+    transform: translateX(var(--sp-1));
+  }
+
+  .signature-pieces :is(a, button):focus-visible {
+    outline: var(--radius-sm) solid var(--color-sage);
+    outline-offset: var(--sp-1);
+  }
+
+  @media screen and (min-width: 48rem) {
+    .signature-pieces {
+      width: min(calc(100% - (var(--layout-padding-tablet) * 2)), var(--layout-max-width));
+      padding-block: var(--sp-6);
+    }
+
+    .signature-pieces__heading {
+      font-size: var(--font-size-display-lg);
+    }
+
+    .signature-pieces__subtitle {
+      font-size: var(--font-size-body-md);
+    }
+
+    .signature-pieces__card {
+      flex-basis: calc((100% - var(--sp-4)) / 2);
+    }
+
+    .signature-pieces__content {
+      padding: var(--sp-5);
+    }
+  }
+
+  @media screen and (min-width: 64rem) {
+    .signature-pieces {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      width: min(calc(100% - (var(--sp-8) * 2)), var(--layout-showcase-max-width));
+      height: 100svh;
+      min-height: 0;
+      padding-block: var(--sp-7);
+      overflow: hidden;
+    }
+
+    .signature-pieces__header {
+      margin-bottom: var(--sp-7);
+    }
+
+    .signature-pieces__heading {
+      font-size: var(--font-size-display-xl);
+    }
+
+    .signature-pieces__carousel {
+      width: 100%;
+      min-height: 0;
+      min-width: 0;
+    }
+
+    .signature-pieces__grid {
+      height: 100%;
+      min-height: 0;
+      padding-bottom: 0;
+    }
+
+    .signature-pieces__card {
+      flex-basis: calc((100% - (var(--sp-4) * 3)) / 4);
+      height: 100%;
+    }
+
+    .signature-pieces__content {
+      padding-block: var(--sp-5);
+      padding-inline: var(--sp-6);
+    }
+
+    .signature-pieces__title {
+      font-size: var(--font-size-display-sm);
+      line-height: var(--line-height-tight);
+    }
+
+    .signature-pieces__image-wrapper {
+      flex: 1 1 auto;
+      min-height: 0;
+    }
+
+    .signature-pieces__nav--prev {
+      left: calc(var(--sp-7) * -0.5);
+    }
+
+    .signature-pieces__nav--next {
+      right: calc(var(--sp-7) * -0.5);
+    }
+
+    .signature-pieces__carousel .signature-pieces__nav {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .signature-pieces__carousel:hover .signature-pieces__nav:not(:disabled),
+    .signature-pieces__carousel:focus-within .signature-pieces__nav:not(:disabled) {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .signature-pieces__card:hover {
+      box-shadow: var(--shadow-card);
+      transform: translateY(calc(var(--sp-1) * -1));
+    }
+
+    .signature-pieces__card:hover .signature-pieces__img {
+      transform: scale(1.025);
+    }
+
+    .signature-pieces__btn {
+      min-width: calc(var(--sp-8) * 4);
+    }
+  }
+
+  @media screen and (min-width: 64rem) and (max-height: 51.25rem) {
+    .signature-pieces {
+      padding-block: var(--sp-5);
+    }
+
+    .signature-pieces__header {
+      margin-bottom: var(--sp-5);
+    }
+
+    .signature-pieces__heading {
+      font-size: var(--font-size-display-lg);
+    }
+
+    .signature-pieces__footer {
+      margin-top: var(--sp-5);
+    }
+  }
+
+  @media screen and (min-width: 100rem) {
+    .signature-pieces {
+      width: min(calc(100% - (var(--sp-8) * 2)), var(--layout-showcase-max-width));
+    }
+
+    .signature-pieces__header {
+      margin-bottom: var(--sp-7);
+    }
+
+    .signature-pieces__grid {
+      gap: var(--sp-4);
+    }
+
+    .signature-pieces__card {
+      flex-basis: calc((100% - (var(--sp-4) * 3)) / 4);
+    }
+
+    .signature-pieces__footer {
+      margin-top: var(--sp-6);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .signature-pieces__card,
+    .signature-pieces__img,
+    .signature-pieces__btn,
+    .signature-pieces__btn-icon,
+    .signature-pieces__nav {
+      transition-duration: 0s;
+    }
   }
 {% endstylesheet %}
 
 {% javascript %}
-  document.addEventListener('DOMContentLoaded', () => {
-    const sliders = document.querySelectorAll('.signature-pieces__grid');
-    sliders.forEach(slider => {
-      let isDown = false;
-      let startX;
-      let scrollLeft;
+  const initializeSignaturePieces = (root = document) => {
+    root.querySelectorAll('[data-signature-slider]:not([data-signature-ready])').forEach((slider) => {
+      const track = slider.querySelector('[data-signature-track]');
+      const previousButton = slider.querySelector('[data-signature-prev]');
+      const nextButton = slider.querySelector('[data-signature-next]');
 
-      slider.addEventListener('mousedown', (e) => {
-        isDown = true;
-        slider.classList.add('is-dragging');
-        startX = e.pageX - slider.offsetLeft;
-        scrollLeft = slider.scrollLeft;
-      });
+      if (!track || !previousButton || !nextButton) return;
 
-      slider.addEventListener('mouseleave', () => {
-        isDown = false;
-        slider.classList.remove('is-dragging');
-      });
+      slider.dataset.signatureReady = 'true';
 
-      slider.addEventListener('mouseup', () => {
-        isDown = false;
-        slider.classList.remove('is-dragging');
-      });
+      const updateNavigation = () => {
+        const maximumScroll = track.scrollWidth - track.clientWidth;
+        const hasOverflow = maximumScroll > 1;
 
-      slider.addEventListener('mousemove', (e) => {
-        if (!isDown) return;
-        e.preventDefault();
-        const x = e.pageX - slider.offsetLeft;
-        const walk = (x - startX) * 2;
-        slider.scrollLeft = scrollLeft - walk;
-      });
-      
-      let isDragging = false;
-      slider.addEventListener('mousemove', (e) => {
-        if(isDown) isDragging = true;
-      });
-      slider.addEventListener('mousedown', () => {
-        isDragging = false;
-      });
-      slider.addEventListener('click', (e) => {
-        if(isDragging) {
-          e.preventDefault();
+        previousButton.hidden = !hasOverflow;
+        nextButton.hidden = !hasOverflow;
+        previousButton.disabled = track.scrollLeft <= 1;
+        nextButton.disabled = track.scrollLeft >= maximumScroll - 1;
+      };
+
+      const scrollPage = (direction) => {
+        const card = track.querySelector('.signature-pieces__card');
+        if (!card) return;
+
+        const styles = window.getComputedStyle(track);
+        const gap = Number.parseFloat(styles.columnGap || styles.gap) || 0;
+        const cardStep = card.getBoundingClientRect().width + gap;
+        const visibleCards = Math.max(1, Math.round(track.clientWidth / cardStep));
+
+        track.scrollBy({
+          left: direction * cardStep * visibleCards,
+          behavior: 'smooth'
+        });
+      };
+
+      previousButton.addEventListener('click', () => scrollPage(-1));
+      nextButton.addEventListener('click', () => scrollPage(1));
+      track.addEventListener('keydown', (event) => {
+        if (event.key === 'ArrowLeft') {
+          event.preventDefault();
+          scrollPage(-1);
+        }
+
+        if (event.key === 'ArrowRight') {
+          event.preventDefault();
+          scrollPage(1);
         }
       });
+      track.addEventListener('scroll', updateNavigation, { passive: true });
+      window.addEventListener('resize', updateNavigation);
+      updateNavigation();
     });
-  });
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => initializeSignaturePieces());
+  } else {
+    initializeSignaturePieces();
+  }
+
+  document.addEventListener('shopify:section:load', (event) => initializeSignaturePieces(event.target));
 {% endjavascript %}
 
 {% schema %}

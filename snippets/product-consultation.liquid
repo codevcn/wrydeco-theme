@@ -1,79 +1,165 @@
 {% comment %}
-  Renders a line item property checkbox for Private design consultation.
+  Renders the "Private design guidance" card.
+
+  Visually an informational card matching the design; functionally it still
+  carries the consultation line-item property and opens the scheduling popup.
+  The hidden checkbox keeps the existing popup trigger logic
+  ([data-consultation-trigger]) and the line-item property untouched.
+
   @param {product} product
 {% endcomment %}
 
 {% style %}
-  .product-consultation {
-    border: 1px solid var(--border-default);
-    border-radius: 4px;
-    padding: var(--sp-4);
-    margin-bottom: var(--sp-4);
-    display: flex;
-    align-items: flex-start;
-    gap: var(--sp-3);
-  }
-  .product-consultation__checkbox {
-    width: var(--sp-5);
-    height: var(--sp-5);
-    margin-top: 2px;
-    cursor: pointer;
-    accent-color: var(--text-primary);
-  }
-  .product-consultation__content {
-    display: flex;
-    flex-direction: column;
-    gap: var(--sp-2);
-  }
-  .product-consultation__header {
+  .product-guidance {
     display: flex;
     align-items: center;
-    gap: var(--sp-2);
+    gap: var(--sp-4);
+    padding: var(--sp-4) var(--sp-5);
+    background-color: transparent;
+    border: 1px solid #33333329;
+    border-radius: var(--radius-lg);
   }
-  .product-consultation__title {
-    font-size: var(--font-size-body-md);
-    font-weight: var(--font-weight-semibold);
-    color: var(--text-primary);
-    margin: 0;
+  .product-guidance__trigger {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
   }
-  .product-consultation__badge {
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    border: 1px solid var(--color-clay);
+  .product-guidance__icon {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-full);
+    background-color: var(--bg-secondary);
     color: var(--color-clay);
-    padding: 2px 6px;
-    border-radius: 2px;
   }
-  .product-consultation__desc {
-    font-size: var(--font-size-body-sm);
-    color: var(--text-secondary);
+  .product-guidance__icon svg {
+    width: 24px;
+    height: 24px;
+  }
+  .product-guidance__content {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-1);
+  }
+  .product-guidance__title {
     margin: 0;
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: var(--letter-spacing-wide);
+    text-transform: uppercase;
+    color: var(--text-primary);
+  }
+  .product-guidance__desc {
+    margin: 0;
+    font-size: var(--font-size-body-sm);
     line-height: var(--line-height-relaxed);
+    color: var(--text-secondary);
+  }
+  .product-guidance__cta {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    background: none;
+    border: none;
+    padding: var(--sp-1) 0;
+    font-family: var(--font-body);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--letter-spacing-wide);
+    text-transform: uppercase;
+    color: var(--color-clay);
+    cursor: pointer;
+    transition: color var(--timing-short) var(--ease-standard);
+  }
+  .product-guidance__cta:hover {
+    color: var(--color-charcoal);
+  }
+  .product-guidance__cta svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  @media screen and (max-width: 768px) {
+    .product-guidance {
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+    .product-guidance__cta {
+      width: 100%;
+      justify-content: flex-start;
+      margin-top: var(--sp-2);
+      padding-left: calc(48px + var(--sp-4));
+    }
   }
 {% endstyle %}
 
-<div class="product-consultation">
-  <!-- We use form attribute to associate with the product form outside of it -->
-  <!-- Note: HTML5 allows form attribute, but we'll include it directly in the form later if possible. 
-       Wait, since this snippet is outside the form in main-product.liquid, we MUST use the form="" attribute. -->
-  <input type="hidden" name="properties[Private design consultation]" value="No" form="{{ 'ProductForm-' | append: section.id }}">
-  <input type="checkbox" 
-         id="Consultation-{{ section.id }}" 
-         name="properties[Private design consultation]" 
-         value="Yes" 
-         class="product-consultation__checkbox"
-         data-consultation-trigger="true"
-         form="{{ 'ProductForm-' | append: section.id }}">
-  <div class="product-consultation__content">
-    <div class="product-consultation__header">
-      <label for="Consultation-{{ section.id }}" class="product-consultation__title">
-        Private design consultation
-      </label>
-      <span class="product-consultation__badge">PRIORITY</span>
-    </div>
-    <p class="product-consultation__desc">
-      Complimentary for buyers &middot; 30 minutes &middot; Senior designer
+<div class="product-guidance">
+  {% comment %} Hidden field keeps the consultation line-item property on the product form {% endcomment %}
+  <input
+    type="hidden"
+    name="properties[Private design consultation]"
+    value="No"
+    form="{{ 'ProductForm-' | append: section.id }}"
+  >
+  <input
+    type="checkbox"
+    id="Consultation-{{ section.id }}"
+    name="properties[Private design consultation]"
+    value="Yes"
+    class="product-guidance__trigger"
+    data-consultation-trigger="true"
+    form="{{ 'ProductForm-' | append: section.id }}"
+  >
+
+  <span class="product-guidance__icon" aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.5"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M6 9V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v3"></path>
+      <path d="M4 11a2 2 0 0 1 2 2v3h12v-3a2 2 0 0 1 4 0v5a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2Z"></path>
+      <path d="M6 19v2"></path>
+      <path d="M18 19v2"></path>
+    </svg>
+  </span>
+
+  <div class="product-guidance__content">
+    <h3 class="product-guidance__title">Private design guidance</h3>
+    <p class="product-guidance__desc">
+      Work with our design concierge to customize dimensions, finish, and layout for your space.
     </p>
   </div>
+
+  <label for="Consultation-{{ section.id }}" class="product-guidance__cta" role="button">
+    Schedule a call
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <line x1="5" y1="12" x2="19" y2="12"></line>
+      <polyline points="12 5 19 12 12 19"></polyline>
+    </svg>
+  </label>
 </div>

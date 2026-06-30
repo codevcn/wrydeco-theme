@@ -6,58 +6,49 @@
 
 {% style %}
   .product-price {
-    margin-top: var(--sp-3);
-    margin-bottom: var(--sp-4);
-    padding: 0 var(--sp-3);
+    margin: 0;
+    padding: 0;
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: var(--sp-3);
   }
   .product-price__regular {
-    font-size: var(--font-size-display-sm); /* Using typography token */
-    font-weight: var(--font-weight-bold);
+    font-family: var(--font-roboto);
+    font-size: var(--font-size-display-md);
+    font-weight: var(--font-weight-semibold);
     color: var(--text-primary);
     line-height: var(--line-height-tight);
-    letter-spacing: var(--letter-spacing-tight);
-    display: inline-flex;
-    align-items: center;
-  }
-  .product-price-icon {
-    display: inline-flex;
-    width: var(--sp-5);
-    height: var(--sp-5);
-    fill: currentColor;
-    margin-right: -4px; /* slight spacing for visual balance if needed, or leave without */
-    margin-top: 2px;
+    letter-spacing: var(--letter-spacing-normal);
   }
   .product-price__compare {
-    font-size: var(--font-size-body-lg);
-    color: var(--text-secondary);
+    font-family: var(--font-roboto);
+    font-size: var(--font-size-body-2xl);
+    color: var(--text-tertiary);
     text-decoration: line-through;
-    margin-left: var(--sp-1);
-    display: inline-flex;
-    align-items: center;
   }
-  .product-price__compare svg {
-    height: var(--font-size-body-md);
-    width: var(--font-size-body-md);
+
+  @media screen and (max-width: 768px) {
+    .product-price__regular {
+      font-size: var(--font-size-display-sm);
+    }
+    .product-price__compare {
+      font-size: var(--font-size-body-lg);
+    }
   }
 {% endstyle %}
-
-{% capture price_icon %}
-<svg xmlns="http://www.w3.org/2000/svg" class="bi bi-currency-dollar product-price-icon" viewBox="0 0 16 16" stroke-width="3">
-  <path d="M4 10.781c.148 1.667 1.513 2.85 3.591 3.003V15h1.043v-1.216c2.27-.179 3.678-1.438 3.678-3.3 0-1.59-.947-2.51-2.956-3.028l-.722-.187V3.467c1.122.11 1.879.714 2.07 1.616h1.47c-.166-1.6-1.54-2.748-3.54-2.875V1H7.591v1.233c-1.939.23-3.27 1.472-3.27 3.156 0 1.454.966 2.483 2.661 2.917l.61.162v4.031c-1.149-.17-1.94-.8-2.131-1.718zm3.391-3.836c-1.043-.263-1.6-.825-1.6-1.616 0-.944.704-1.641 1.8-1.828v3.495l-.2-.05zm1.591 1.872c1.287.323 1.852.859 1.852 1.769 0 1.097-.826 1.828-2.2 1.939V8.73z"/>
-</svg>
-{% endcapture %}
 
 <div
   class="product-price {% if current_variant.compare_at_price > current_variant.price %}product-price--has-sale{% endif %}"
   data-price-container
 >
   <span class="product-price__regular" data-regular-price>
-    {{- current_variant.price | money | replace: '$', price_icon -}}
+    {{- current_variant.price | money -}}
   </span>
 
   {% if current_variant.compare_at_price > current_variant.price %}
     <span class="product-price__compare" data-compare-price>
-      {{- current_variant.compare_at_price | money | replace: '$', price_icon -}}
+      {{- current_variant.compare_at_price | money -}}
     </span>
   {% else %}
     <span class="product-price__compare" data-compare-price style="display: none;"></span>
