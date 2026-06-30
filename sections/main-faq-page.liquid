@@ -1,0 +1,842 @@
+{%- liquid
+  assign hero_alt = section.settings.hero_image_alt | default: 'A handcrafted WRYDECO wood interior styled as functional art'
+  assign contact_url = section.settings.contact_url | default: '/pages/contact'
+  assign consultation_url = section.settings.consultation_url | default: '/pages/customization'
+-%}
+
+<main class="faq-page" id="faq-page-{{ section.id }}">
+  <header class="faq-page__hero">
+    <div class="faq-page__hero-copy">
+      <nav class="faq-page__breadcrumb" aria-label="Breadcrumb">
+        <a href="{{ routes.root_url }}">{{ section.settings.home_label | escape }}</a>
+        <span aria-hidden="true">/</span>
+        <span aria-current="page">{{ section.settings.breadcrumb_label | escape }}</span>
+      </nav>
+
+      <h1 class="faq-page__title">{{ section.settings.heading | escape }}</h1>
+      <span class="faq-page__accent" aria-hidden="true"></span>
+
+      {%- if section.settings.intro != blank -%}
+        <div class="faq-page__intro">{{ section.settings.intro }}</div>
+      {%- endif -%}
+    </div>
+
+    <div class="faq-page__hero-media">
+      {%- if section.settings.hero_image != blank -%}
+        {{
+          section.settings.hero_image
+          | image_url: width: 1800
+          | image_tag:
+            widths: '640, 900, 1200, 1500, 1800',
+            sizes: '(min-width: 48rem) 54vw, 100vw',
+            loading: 'eager',
+            fetchpriority: 'high',
+            alt: hero_alt
+        }}
+      {%- else -%}
+        <img
+          src="{{ 'hero.png' | asset_img_url: '1200x' }}"
+          srcset="
+            {{ 'hero.png' | asset_img_url: '640x' }} 640w,
+            {{ 'hero.png' | asset_img_url: '900x' }} 900w,
+            {{ 'hero.png' | asset_img_url: '1200x' }} 1200w
+          "
+          sizes="(min-width: 48rem) 54vw, 100vw"
+          width="1024"
+          height="1536"
+          alt="{{ hero_alt | escape }}"
+          loading="eager"
+          fetchpriority="high"
+        >
+      {%- endif -%}
+    </div>
+  </header>
+
+  <div class="faq-page__content-shell">
+    <section class="faq-page__questions" aria-label="{{ section.settings.questions_label | escape }}">
+      {%- for block in section.blocks -%}
+        {%- if block.type == 'category' -%}
+          <details
+            class="faq-category"
+            {{ block.shopify_attributes }}
+            {%- if block.settings.open_by_default %} open{% endif -%}
+          >
+            <summary class="faq-category__summary">
+              <span class="faq-category__title" role="heading" aria-level="2">
+                {{ block.settings.heading | escape }}
+              </span>
+              <span class="faq-toggle" aria-hidden="true"></span>
+            </summary>
+
+            <div class="faq-category__body">
+              {%- if block.settings.question_1 != blank and block.settings.answer_1 != blank -%}
+                <details class="faq-question"{% if block.settings.open_first_question %} open{% endif %}>
+                  <summary class="faq-question__summary">
+                    <span role="heading" aria-level="3">{{ block.settings.question_1 | escape }}</span>
+                    <span class="faq-toggle" aria-hidden="true"></span>
+                  </summary>
+                  <div class="faq-question__answer rte">{{ block.settings.answer_1 }}</div>
+                </details>
+              {%- endif -%}
+
+              {%- if block.settings.question_2 != blank and block.settings.answer_2 != blank -%}
+                <details class="faq-question">
+                  <summary class="faq-question__summary">
+                    <span role="heading" aria-level="3">{{ block.settings.question_2 | escape }}</span>
+                    <span class="faq-toggle" aria-hidden="true"></span>
+                  </summary>
+                  <div class="faq-question__answer rte">{{ block.settings.answer_2 }}</div>
+                </details>
+              {%- endif -%}
+
+              {%- if block.settings.question_3 != blank and block.settings.answer_3 != blank -%}
+                <details class="faq-question">
+                  <summary class="faq-question__summary">
+                    <span role="heading" aria-level="3">{{ block.settings.question_3 | escape }}</span>
+                    <span class="faq-toggle" aria-hidden="true"></span>
+                  </summary>
+                  <div class="faq-question__answer rte">{{ block.settings.answer_3 }}</div>
+                </details>
+              {%- endif -%}
+            </div>
+          </details>
+        {%- endif -%}
+      {%- else -%}
+        <div class="faq-page__empty">
+          <h2>{{ section.settings.empty_heading | escape }}</h2>
+          <p>{{ section.settings.empty_text | escape }}</p>
+        </div>
+      {%- endfor -%}
+    </section>
+
+    <aside class="faq-page__aside" aria-label="{{ section.settings.assistance_label | escape }}">
+      <section class="faq-support-card">
+        <p class="faq-support-card__eyebrow">{{ section.settings.assistance_label | escape }}</p>
+        <h2>{{ section.settings.assistance_heading | escape }}</h2>
+        <span class="faq-page__accent" aria-hidden="true"></span>
+
+        <dl class="faq-support-card__details">
+          {%- if section.settings.support_email != blank -%}
+            <div>
+              <dt>{{ section.settings.email_label | escape }}</dt>
+              <dd>
+                <a href="mailto:{{ section.settings.support_email | escape }}">
+                  {{ section.settings.support_email | escape }}
+                </a>
+              </dd>
+            </div>
+          {%- endif -%}
+          {%- if section.settings.support_hours != blank -%}
+            <div>
+              <dt>{{ section.settings.hours_label | escape }}</dt>
+              <dd>{{ section.settings.support_hours | escape }}</dd>
+            </div>
+          {%- endif -%}
+        </dl>
+
+        <div class="faq-support-card__footer">
+          <p>{{ section.settings.contact_prompt | escape }}</p>
+          <a class="faq-text-link" href="{{ contact_url }}">
+            {{ section.settings.contact_link_label | escape }}
+            <span aria-hidden="true">→</span>
+          </a>
+        </div>
+      </section>
+
+      <section class="faq-consultation-card">
+        <p class="faq-support-card__eyebrow">{{ section.settings.consultation_label | escape }}</p>
+        <h2>{{ section.settings.consultation_heading | escape }}</h2>
+        <span class="faq-page__accent" aria-hidden="true"></span>
+        <p>{{ section.settings.consultation_text | escape }}</p>
+        <a class="faq-primary-link" href="{{ consultation_url }}">
+          {{ section.settings.consultation_link_label | escape }}
+        </a>
+      </section>
+    </aside>
+  </div>
+</main>
+
+<script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {%- assign faq_entry_count = 0 -%}
+      {%- for block in section.blocks -%}
+        {%- if block.type == 'category' -%}
+          {%- if block.settings.question_1 != blank and block.settings.answer_1 != blank -%}
+            {%- if faq_entry_count > 0 -%},{%- endif -%}
+            {
+              "@type": "Question",
+              "name": {{ block.settings.question_1 | json }},
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": {{ block.settings.answer_1 | strip_html | strip | json }}
+              }
+            }
+            {%- assign faq_entry_count = faq_entry_count | plus: 1 -%}
+          {%- endif -%}
+          {%- if block.settings.question_2 != blank and block.settings.answer_2 != blank -%}
+            {%- if faq_entry_count > 0 -%},{%- endif -%}
+            {
+              "@type": "Question",
+              "name": {{ block.settings.question_2 | json }},
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": {{ block.settings.answer_2 | strip_html | strip | json }}
+              }
+            }
+            {%- assign faq_entry_count = faq_entry_count | plus: 1 -%}
+          {%- endif -%}
+          {%- if block.settings.question_3 != blank and block.settings.answer_3 != blank -%}
+            {%- if faq_entry_count > 0 -%},{%- endif -%}
+            {
+              "@type": "Question",
+              "name": {{ block.settings.question_3 | json }},
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": {{ block.settings.answer_3 | strip_html | strip | json }}
+              }
+            }
+            {%- assign faq_entry_count = faq_entry_count | plus: 1 -%}
+          {%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+    ]
+  }
+</script>
+
+{% stylesheet %}
+  .faq-page {
+    container: faq-page / inline-size;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+  }
+
+  .faq-page__hero {
+    display: grid;
+    inline-size: min(100%, var(--layout-max-width));
+    margin-inline: auto;
+  }
+
+  .faq-page__hero-copy {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: var(--sp-7) var(--layout-padding-mobile);
+  }
+
+  .faq-page__breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    margin-block-end: var(--sp-6);
+    color: var(--color-bark);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--letter-spacing-wide);
+    text-transform: uppercase;
+  }
+
+  .faq-page__breadcrumb a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .faq-page__breadcrumb a:hover {
+    color: var(--color-ebony);
+  }
+
+  .faq-page__breadcrumb a:focus-visible,
+  .faq-text-link:focus-visible,
+  .faq-primary-link:focus-visible,
+  .faq-support-card__details a:focus-visible,
+  .faq-category__summary:focus-visible,
+  .faq-question__summary:focus-visible {
+    outline: 2px solid var(--color-sage);
+    outline-offset: var(--radius-sm);
+  }
+
+  .faq-page__title {
+    max-inline-size: 12ch;
+    margin: 0;
+    color: var(--color-ebony);
+    font-family: var(--font-display);
+    font-size: clamp(var(--font-size-display-md), 8vw, var(--font-size-display-lg));
+    font-weight: var(--font-weight-regular);
+    letter-spacing: var(--letter-spacing-tight);
+    line-height: var(--line-height-tight);
+  }
+
+  .faq-page__accent {
+    display: block;
+    inline-size: var(--sp-6);
+    block-size: var(--radius-sm);
+    margin-block: var(--sp-5);
+    background: var(--color-sage);
+  }
+
+  .faq-page__intro {
+    max-inline-size: 36rem;
+    color: var(--text-secondary);
+    font-size: var(--font-size-body-md);
+    line-height: var(--line-height-generous);
+  }
+
+  .faq-page__intro p {
+    margin: 0;
+  }
+
+  .faq-page__hero-media {
+    min-block-size: calc(var(--sp-8) * 5);
+    overflow: hidden;
+    background: var(--bg-secondary);
+  }
+
+  .faq-page__hero-media img {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+    object-position: center;
+  }
+
+  .faq-page__content-shell {
+    display: grid;
+    gap: var(--sp-5);
+    inline-size: min(100%, var(--layout-max-width));
+    margin-inline: auto;
+    padding: var(--sp-7) var(--layout-padding-mobile) var(--sp-8);
+  }
+
+  .faq-page__questions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-4);
+    min-inline-size: 0;
+  }
+
+  .faq-category {
+    overflow: clip;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    background: var(--surface-default);
+  }
+
+  .faq-category__summary,
+  .faq-question__summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-4);
+    min-block-size: var(--sp-7);
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .faq-category__summary::-webkit-details-marker,
+  .faq-question__summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .faq-category__summary {
+    padding: var(--sp-3) var(--sp-5);
+  }
+
+  .faq-category__title {
+    color: var(--color-charcoal);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--letter-spacing-wide);
+    text-transform: uppercase;
+  }
+
+  .faq-category[open] > .faq-category__summary {
+    border-block-end: 1px solid var(--border-light);
+  }
+
+  .faq-category__body {
+    padding-inline: var(--sp-5);
+  }
+
+  .faq-question + .faq-question {
+    border-block-start: 1px solid var(--border-light);
+  }
+
+  .faq-question__summary {
+    padding-block: var(--sp-5);
+    color: var(--color-ebony);
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-lg);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-normal);
+  }
+
+  .faq-question__answer {
+    max-inline-size: 60ch;
+    padding: 0 var(--sp-7) var(--sp-5) 0;
+    color: var(--text-secondary);
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-generous);
+  }
+
+  .faq-question__answer p {
+    margin-block: 0 var(--sp-3);
+  }
+
+  .faq-question__answer p:last-child {
+    margin-block-end: 0;
+  }
+
+  .faq-toggle {
+    position: relative;
+    flex: 0 0 var(--sp-7);
+    inline-size: var(--sp-7);
+    block-size: var(--sp-7);
+  }
+
+  .faq-toggle::before,
+  .faq-toggle::after {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    inline-size: var(--sp-4);
+    block-size: 1px;
+    background: currentcolor;
+    content: '';
+    transform: translate(-50%, -50%);
+    transition: transform var(--timing-short) var(--ease-standard);
+  }
+
+  .faq-toggle::after {
+    transform: translate(-50%, -50%) rotate(90deg);
+  }
+
+  details[open] > summary .faq-toggle::after {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+
+  .faq-page__aside {
+    display: grid;
+    align-content: start;
+    gap: var(--sp-5);
+  }
+
+  .faq-support-card,
+  .faq-consultation-card,
+  .faq-page__empty {
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    background: var(--surface-default);
+    padding: var(--sp-5);
+  }
+
+  .faq-support-card__eyebrow {
+    margin: 0 0 var(--sp-4);
+    color: var(--text-secondary);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--letter-spacing-wide);
+    text-transform: uppercase;
+  }
+
+  .faq-support-card h2,
+  .faq-consultation-card h2,
+  .faq-page__empty h2 {
+    max-inline-size: 12ch;
+    margin: 0;
+    color: var(--color-ebony);
+    font-family: var(--font-display);
+    font-size: var(--font-size-display-sm);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-tight);
+  }
+
+  .faq-support-card__details {
+    display: grid;
+    gap: var(--sp-4);
+    margin: 0;
+  }
+
+  .faq-support-card__details div {
+    display: grid;
+    gap: var(--sp-1);
+  }
+
+  .faq-support-card__details dt {
+    color: var(--text-secondary);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-semibold);
+    text-transform: uppercase;
+  }
+
+  .faq-support-card__details dd {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-relaxed);
+  }
+
+  .faq-support-card__details a,
+  .faq-text-link {
+    color: inherit;
+    text-decoration-thickness: 1px;
+    text-underline-offset: var(--sp-1);
+  }
+
+  .faq-support-card__footer {
+    margin-block-start: var(--sp-5);
+    padding-block-start: var(--sp-5);
+    border-block-start: 1px solid var(--border-light);
+  }
+
+  .faq-support-card__footer p,
+  .faq-consultation-card > p:not(.faq-support-card__eyebrow),
+  .faq-page__empty p {
+    margin: 0 0 var(--sp-3);
+    color: var(--text-secondary);
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-generous);
+  }
+
+  .faq-text-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-medium);
+  }
+
+  .faq-primary-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-block-size: var(--sp-7);
+    margin-block-start: var(--sp-4);
+    padding: var(--button-padding-vertical) var(--button-padding-horizontal);
+    border: 1px solid var(--color-ebony);
+    border-radius: var(--radius-sm);
+    background: var(--color-ebony);
+    color: var(--text-inverse);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--letter-spacing-wide);
+    text-decoration: none;
+    text-transform: uppercase;
+    transition:
+      background-color var(--timing-short) var(--ease-standard),
+      border-color var(--timing-short) var(--ease-standard);
+  }
+
+  .faq-primary-link:hover {
+    border-color: var(--color-charcoal);
+    background: var(--color-charcoal);
+  }
+
+  .faq-primary-link:active {
+    transform: translateY(var(--radius-sm));
+  }
+
+  @media (min-width: 48rem) {
+    .faq-page__hero {
+      grid-template-columns: minmax(0, 46%) minmax(0, 54%);
+      min-block-size: calc(var(--sp-8) * 7);
+    }
+
+    .faq-page__hero-copy {
+      padding: var(--sp-7) var(--layout-padding-tablet);
+    }
+
+    .faq-page__hero-media {
+      min-block-size: 100%;
+    }
+
+    .faq-page__hero-media img {
+      object-position: center 44%;
+    }
+
+    .faq-page__content-shell {
+      padding-inline: var(--layout-padding-tablet);
+    }
+
+    .faq-category__summary,
+    .faq-category__body,
+    .faq-support-card,
+    .faq-consultation-card,
+    .faq-page__empty {
+      padding-inline: var(--sp-6);
+    }
+  }
+
+  @container faq-page (min-width: 56rem) {
+    .faq-page__content-shell {
+      grid-template-columns: minmax(0, 2fr) minmax(16rem, 1fr);
+      align-items: start;
+      gap: var(--sp-5);
+    }
+
+    .faq-page__aside {
+      position: sticky;
+    }
+  }
+
+  @media (min-width: 64rem) {
+    .faq-page__hero-copy {
+      padding-inline: var(--layout-padding-desktop);
+    }
+
+    .faq-page__title {
+      font-size: calc(var(--font-size-display-lg) + var(--sp-3));
+    }
+
+    .faq-page__content-shell {
+      padding: var(--sp-8) var(--layout-padding-desktop);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .faq-toggle::before,
+    .faq-toggle::after,
+    .faq-primary-link {
+      transition: none;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Main FAQ page",
+  "tag": "section",
+  "class": "section-main-faq-page",
+  "settings": [
+    {
+      "type": "text",
+      "id": "home_label",
+      "label": "Home label",
+      "default": "Home"
+    },
+    {
+      "type": "text",
+      "id": "breadcrumb_label",
+      "label": "Breadcrumb label",
+      "default": "FAQ"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Frequently Asked Questions"
+    },
+    {
+      "type": "richtext",
+      "id": "intro",
+      "label": "Introduction",
+      "default": "<p>Answers about our furniture, bespoke process, delivery, and care. If you need more detail, our team is ready to help.</p>"
+    },
+    {
+      "type": "image_picker",
+      "id": "hero_image",
+      "label": "Hero image"
+    },
+    {
+      "type": "text",
+      "id": "hero_image_alt",
+      "label": "Hero image alt text",
+      "default": "A handcrafted WRYDECO wood interior styled as functional art"
+    },
+    {
+      "type": "text",
+      "id": "questions_label",
+      "label": "Questions region label",
+      "default": "Frequently asked questions"
+    },
+    {
+      "type": "header",
+      "content": "Assistance card"
+    },
+    {
+      "type": "text",
+      "id": "assistance_label",
+      "label": "Label",
+      "default": "Need assistance?"
+    },
+    {
+      "type": "text",
+      "id": "assistance_heading",
+      "label": "Heading",
+      "default": "We're here for you."
+    },
+    {
+      "type": "text",
+      "id": "email_label",
+      "label": "Email label",
+      "default": "Email"
+    },
+    {
+      "type": "text",
+      "id": "support_email",
+      "label": "Support email",
+      "default": "support@wrydeco.com"
+    },
+    {
+      "type": "text",
+      "id": "hours_label",
+      "label": "Hours label",
+      "default": "Support hours"
+    },
+    {
+      "type": "text",
+      "id": "support_hours",
+      "label": "Support hours",
+      "default": "Mon - Fri, 8AM-5PM PST"
+    },
+    {
+      "type": "text",
+      "id": "contact_prompt",
+      "label": "Contact prompt",
+      "default": "Prefer to write?"
+    },
+    {
+      "type": "text",
+      "id": "contact_link_label",
+      "label": "Contact link label",
+      "default": "Send us a message"
+    },
+    {
+      "type": "url",
+      "id": "contact_url",
+      "label": "Contact page"
+    },
+    {
+      "type": "header",
+      "content": "Consultation card"
+    },
+    {
+      "type": "text",
+      "id": "consultation_label",
+      "label": "Label",
+      "default": "Private consultation"
+    },
+    {
+      "type": "text",
+      "id": "consultation_heading",
+      "label": "Heading",
+      "default": "Design with intention"
+    },
+    {
+      "type": "textarea",
+      "id": "consultation_text",
+      "label": "Text",
+      "default": "Our team can help you choose a piece, refine dimensions, and plan for your space."
+    },
+    {
+      "type": "text",
+      "id": "consultation_link_label",
+      "label": "Link label",
+      "default": "Request a consultation"
+    },
+    {
+      "type": "url",
+      "id": "consultation_url",
+      "label": "Consultation page"
+    },
+    {
+      "type": "header",
+      "content": "Empty state"
+    },
+    {
+      "type": "text",
+      "id": "empty_heading",
+      "label": "Heading",
+      "default": "Questions are being curated"
+    },
+    {
+      "type": "textarea",
+      "id": "empty_text",
+      "label": "Text",
+      "default": "Add FAQ category blocks in the theme editor to publish answers here."
+    }
+  ],
+  "blocks": [
+    {
+      "type": "category",
+      "name": "FAQ category",
+      "settings": [
+        {
+          "type": "text",
+          "id": "heading",
+          "label": "Category heading",
+          "default": "Orders & payment"
+        },
+        {
+          "type": "checkbox",
+          "id": "open_by_default",
+          "label": "Open category by default",
+          "default": false
+        },
+        {
+          "type": "checkbox",
+          "id": "open_first_question",
+          "label": "Open first question by default",
+          "default": false
+        },
+        {
+          "type": "header",
+          "content": "Question 1"
+        },
+        {
+          "type": "text",
+          "id": "question_1",
+          "label": "Question",
+          "default": "How do I place an order?"
+        },
+        {
+          "type": "richtext",
+          "id": "answer_1",
+          "label": "Answer",
+          "default": "<p>Browse the collection, choose your piece, and follow the purchase or inquiry option shown on its product page.</p>"
+        },
+        {
+          "type": "header",
+          "content": "Question 2"
+        },
+        {
+          "type": "text",
+          "id": "question_2",
+          "label": "Question",
+          "default": "What payment methods do you accept?"
+        },
+        {
+          "type": "richtext",
+          "id": "answer_2",
+          "label": "Answer",
+          "default": "<p>Available payment methods appear securely at checkout. Bespoke projects follow the payment schedule confirmed in your proposal.</p>"
+        },
+        {
+          "type": "header",
+          "content": "Question 3"
+        },
+        {
+          "type": "text",
+          "id": "question_3",
+          "label": "Question",
+          "default": "Can I modify or cancel my order?"
+        },
+        {
+          "type": "richtext",
+          "id": "answer_3",
+          "label": "Answer",
+          "default": "<p>Contact us as soon as possible. Options depend on whether sourcing, fabrication, or delivery preparation has begun.</p>"
+        }
+      ]
+    }
+  ],
+  "max_blocks": 12,
+  "presets": [
+    {
+      "name": "Main FAQ page"
+    }
+  ]
+}
+{% endschema %}

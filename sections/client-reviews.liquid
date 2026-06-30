@@ -1,0 +1,494 @@
+<div class="client-reviews page-width">
+  <div class="client-reviews__inner">
+    <!-- Left Column: Fixed Text -->
+    <div class="client-reviews__left">
+      <div class="client-reviews__eyebrow-wrapper">
+        <div class="client-reviews__eyebrow-line"></div>
+        <span class="client-reviews__eyebrow">TESTIMONIALS</span>
+      </div>
+
+      <h2 class="client-reviews__heading">
+        What Our<br>
+        Clients Say
+      </h2>
+      <p class="client-reviews__subtitle">
+        Real stories from homes where craftsmanship becomes part of everyday living.
+      </p>
+
+      <div class="client-reviews__quote-mark">“</div>
+
+      <p class="client-reviews__quote-text" id="client-review-text"></p>
+
+      <div class="client-reviews__author-box">
+        <p class="client-reviews__author-name" id="client-review-author"></p>
+        <p class="client-reviews__author-location">Hanoi, Vietnam</p>
+      </div>
+    </div>
+
+    <!-- Right Column: Image Slider -->
+    <div class="client-reviews__right">
+      <div class="client-reviews__slider" id="client-reviews-slider">
+        {%- for block in section.blocks -%}
+          <div
+            class="client-reviews__card"
+            data-review="{{ block.settings.review_text | escape }}"
+            data-author="{{ block.settings.author_name | escape }}"
+            {{ block.shopify_attributes }}
+          >
+            {%- if block.settings.image != blank -%}
+              {{
+                block.settings.image
+                | image_url: width: 800
+                | image_tag: class: 'client-reviews__img', loading: 'lazy', draggable: 'false'
+              }}
+            {%- else -%}
+              <img
+                src="{{ block.settings.fallback_image | asset_url }}"
+                alt="{{ block.settings.author_name }}"
+                class="client-reviews__img"
+                loading="lazy"
+                draggable="false"
+              >
+            {%- endif -%}
+          </div>
+        {%- endfor -%}
+      </div>
+    </div>
+  </div>
+
+  <div class="client-reviews__footer">
+    <div class="client-reviews__footer-content">
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 40 40"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        class="client-reviews__footer-icon"
+      >
+        <circle cx="20" cy="20" r="19" stroke="currentColor" stroke-width="2" stroke-dasharray="2 2"/>
+        <circle cx="20" cy="20" r="12" stroke="currentColor" stroke-width="2"/>
+        <circle cx="20" cy="20" r="5" stroke="currentColor" stroke-width="2"/>
+      </svg>
+      <span class="client-reviews__footer-text">HANDCRAFTED FROM SOLID WOOD</span>
+      <span class="client-reviews__footer-sep">•</span>
+      <span class="client-reviews__footer-text">INSPIRED BY NATURE</span>
+      <span class="client-reviews__footer-sep">•</span>
+      <span class="client-reviews__footer-text">MADE TO ENDURE</span>
+    </div>
+  </div>
+</div>
+
+{% stylesheet %}
+  .client-reviews {
+    padding-top: var(--sp-12, 64px);
+    padding-bottom: var(--sp-12, 64px);
+    background-color: var(--bg-primary, #f5f1ed);
+    color: var(--text-primary, #1a1815);
+  }
+
+  .client-reviews__inner {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-14, 48px);
+  }
+
+  @media screen and (min-width: 900px) {
+    .client-reviews__inner {
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 10vw;
+    }
+  }
+
+  /* Left Column */
+  .client-reviews__left {
+    display: flex;
+    flex-direction: column;
+    transform: translateX(78px); /* Create a new stacking context for sticky positioning */
+    max-width: 420px;
+  }
+
+  @media screen and (min-width: 900px) {
+    .client-reviews__left {
+    }
+  }
+
+  .client-reviews__eyebrow-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: var(--sp-4, 16px);
+  }
+
+  .client-reviews__eyebrow-line {
+    height: 1px;
+    width: 24px;
+    background-color: var(--text-primary, #1a1815);
+  }
+
+  .client-reviews__eyebrow {
+    font-family: var(--font-body);
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    font-weight: 600;
+  }
+
+  .client-reviews__heading {
+    font-family: var(--font-display);
+    font-size: clamp(40px, 5vw, 64px);
+    font-weight: var(--font-weight-regular, 400);
+    line-height: 1.1;
+    margin: 0 0 var(--sp-4, 16px) 0;
+    letter-spacing: -0.02em;
+  }
+
+  .client-reviews__subtitle {
+    font-family: var(--font-body);
+    font-size: 18px;
+    line-height: 1.6;
+    color: var(--text-secondary, #6b5d52);
+    margin: 0 0 var(--sp-8, 32px) 0;
+  }
+
+  .client-reviews__quote-mark {
+    font-family: var(--font-display);
+    font-size: 80px;
+    line-height: 0.6;
+    color: rgba(107, 93, 82, 0.4);
+    margin-bottom: 6px;
+    transform: translateY(18px); /* Adjust vertical alignment */
+  }
+
+  .client-reviews__quote-text {
+    font-family: var(--font-display);
+    font-size: clamp(20px, 2.5vw, 24px);
+    line-height: 1.4;
+    font-weight: var(--font-weight-regular, 400);
+    margin: 0 0 0 0;
+    min-height: 120px; /* Prevent layout jump */
+    transition: opacity 0.3s ease;
+  }
+
+  .client-reviews__author-name {
+    font-family: var(--font-body);
+    font-size: 16px;
+    font-weight: 500;
+    margin: 0 0 4px 0;
+  }
+
+  .client-reviews__author-location {
+    font-family: var(--font-body);
+    font-size: 13px;
+    color: var(--text-secondary, #6b5d52);
+    margin: 0 0 var(--sp-5, 20px) 0;
+  }
+
+  /* Right Column (Slider) */
+  .client-reviews__right {
+    flex: 1.4;
+    width: 100%;
+    min-width: 0; /* Important for flex-child overflow */
+  }
+
+  .client-reviews__slider {
+    display: flex;
+    gap: var(--sp-4, 16px);
+    overflow-x: auto;
+    padding-bottom: var(--sp-4, 16px);
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    cursor: grab;
+  }
+
+  .client-reviews__slider::-webkit-scrollbar {
+    display: none;
+  }
+
+  .client-reviews__slider.is-dragging {
+    cursor: grabbing;
+  }
+
+  .client-reviews__slider.is-dragging .client-reviews__card {
+    pointer-events: none;
+  }
+
+  .client-reviews__card {
+    flex: 0 0 85%;
+    max-width: 450px;
+    border-radius: var(--radius-lg, 12px);
+    overflow: hidden;
+    position: relative;
+    aspect-ratio: 3 / 4; /* Tall portrait images like the screenshot */
+    opacity: 0.4;
+    transition: opacity 0.4s ease;
+  }
+
+  .client-reviews__card.slider-focused {
+    opacity: 1;
+  }
+
+  @media screen and (min-width: 768px) {
+    .client-reviews__card {
+      flex: 0 0 65%;
+    }
+  }
+
+  .client-reviews__img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    -webkit-user-drag: none;
+    user-select: none;
+  }
+
+  /* Footer Section */
+  .client-reviews__footer {
+    margin-top: var(--sp-12, 64px);
+    display: flex;
+    justify-content: center;
+  }
+
+  .client-reviews__footer-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    color: var(--text-secondary, #6b5d52);
+  }
+
+  .client-reviews__footer-text {
+    font-family: var(--font-body);
+    font-size: 13px;
+    letter-spacing: 0.12em;
+    font-weight: 500;
+  }
+
+  .client-reviews__footer-sep {
+    font-size: 8px;
+    opacity: 0.5;
+  }
+
+  .client-reviews__footer-icon {
+    opacity: 0.8;
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  document.addEventListener('DOMContentLoaded', () => {
+    const slider = document.getElementById('client-reviews-slider');
+    if (!slider) return;
+
+    const cards = Array.from(slider.querySelectorAll('.client-reviews__card'));
+    const textEl = document.getElementById('client-review-text');
+    const authorEl = document.getElementById('client-review-author');
+
+    let isUpdating = false;
+    let currentFocusedCard = null;
+
+    function updateText(card) {
+      if (!card || card === currentFocusedCard || isUpdating) return;
+      isUpdating = true;
+      currentFocusedCard = card;
+
+      // Update active class on cards
+      cards.forEach((c) => c.classList.remove('slider-focused'));
+      card.classList.add('slider-focused');
+
+      // Slight fade effect
+      textEl.style.opacity = '0';
+      authorEl.style.opacity = '0';
+
+      setTimeout(() => {
+        textEl.textContent = `“${card.dataset.review}”`;
+        authorEl.textContent = card.dataset.author;
+        textEl.style.opacity = '1';
+        authorEl.style.opacity = '1';
+        isUpdating = false;
+      }, 150);
+    }
+
+    function updateLayout() {
+      if (cards.length === 0) return;
+      const lastCard = cards[cards.length - 1];
+      const sliderWidth = slider.clientWidth;
+      const cardWidth = lastCard.offsetWidth;
+      const extraSpace = sliderWidth - cardWidth;
+      if (extraSpace > 0) {
+        lastCard.style.marginRight = `${extraSpace}px`;
+      }
+    }
+
+    function updateFocusedCard() {
+      if (cards.length === 0) return;
+
+      const sliderRect = slider.getBoundingClientRect();
+      const sliderLeftEdge = sliderRect.left;
+
+      let closestCard = cards[0];
+      let minDistance = Infinity;
+
+      cards.forEach((card) => {
+        const cardRect = card.getBoundingClientRect();
+        const cardLeftEdge = cardRect.left;
+        const distance = Math.abs(sliderLeftEdge - cardLeftEdge);
+
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestCard = card;
+        }
+      });
+
+      updateText(closestCard);
+    }
+
+    // Initial check
+    updateLayout();
+    updateFocusedCard();
+
+    // Listen for scroll events on the slider to update the focused card
+    let ticking = false;
+    slider.addEventListener(
+      'scroll',
+      () => {
+        if (!ticking) {
+          window.requestAnimationFrame(() => {
+            updateFocusedCard();
+            ticking = false;
+          });
+          ticking = true;
+        }
+      },
+      { passive: true }
+    );
+
+    // Also update on window resize since layout might change
+    window.addEventListener('resize', () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          updateLayout();
+          updateFocusedCard();
+          ticking = false;
+        });
+        ticking = true;
+      }
+    });
+
+    // Drag to scroll logic
+    let isDown = false;
+    let startX;
+    let scrollLeft;
+
+    slider.addEventListener('mousedown', (e) => {
+      isDown = true;
+      slider.classList.add('is-dragging');
+      startX = e.pageX - slider.offsetLeft;
+      scrollLeft = slider.scrollLeft;
+    });
+    slider.addEventListener('mouseleave', () => {
+      isDown = false;
+      slider.classList.remove('is-dragging');
+    });
+    slider.addEventListener('mouseup', () => {
+      isDown = false;
+      slider.classList.remove('is-dragging');
+    });
+    slider.addEventListener('mousemove', (e) => {
+      if (!isDown) return;
+      e.preventDefault();
+      const x = e.pageX - slider.offsetLeft;
+      const walk = (x - startX) * 2.5; // Scroll speed multiplier
+      slider.scrollLeft = scrollLeft - walk;
+    });
+  });
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "What Our Clients Say",
+  "tag": "section",
+  "class": "section section-client-reviews",
+  "settings": [],
+  "blocks": [
+    {
+      "type": "review",
+      "name": "Review",
+      "limit": 12,
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Room Image"
+        },
+        {
+          "type": "text",
+          "id": "fallback_image",
+          "label": "Fallback Asset Filename",
+          "default": "review-1.jpg"
+        },
+        {
+          "type": "textarea",
+          "id": "review_text",
+          "label": "Review Text",
+          "default": "Every piece from WRYDECO brings a sense of calm and character to our home. The craftsmanship is exceptional, and you can truly feel the beauty of natural wood in every detail."
+        },
+        {
+          "type": "text",
+          "id": "author_name",
+          "label": "Author Name",
+          "default": "Nguyen H. Minh"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "What Our Clients Say",
+      "blocks": [
+        {
+          "type": "review",
+          "settings": {
+            "fallback_image": "review-1.jpg",
+            "review_text": "Love the table and the craftsmanship. Two things to be aware of: the piece is substantial and beautifully made.",
+            "author_name": "David N."
+          }
+        },
+        {
+          "type": "review",
+          "settings": {
+            "fallback_image": "review-2.jpg",
+            "review_text": "The grain and hand-shaped edges are even more beautiful in person. It changed the whole room.",
+            "author_name": "Melissa O."
+          }
+        },
+        {
+          "type": "review",
+          "settings": {
+            "fallback_image": "review-3.jpg",
+            "review_text": "Every guest asks who made it. The craftsmanship feels personal, thoughtful, and built to last.",
+            "author_name": "Ryan C."
+          }
+        },
+        {
+          "type": "review",
+          "settings": {
+            "fallback_image": "review-4.jpg",
+            "review_text": "Our shelf looks like it grew into the room. Installation was clear and the finish is flawless.",
+            "author_name": "Nicole P."
+          }
+        },
+        {
+          "type": "review",
+          "settings": {
+            "fallback_image": "review-5.jpg",
+            "review_text": "A functional piece of art. The scale, warmth, and natural form are exactly what the space needed.",
+            "author_name": "Jasmine W."
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

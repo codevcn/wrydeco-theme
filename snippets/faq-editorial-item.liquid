@@ -1,0 +1,30 @@
+{% doc %}
+  Renders one numbered FAQ disclosure row for the editorial FAQ page.
+
+  @param {string} question - The visible FAQ question
+  @param {string} answer - Rich text containing the answer
+  @param {number} number - The one-based question number
+  @param {string} accordion_name - Shared name for exclusive disclosure behavior
+  @param {boolean} [open_by_default] - Opens this row on initial render
+
+  @example
+  {% render 'faq-editorial-item', question: 'Is this solid wood?', answer: answer, number: 1, accordion_name: 'faq-main', open_by_default: true %}
+{% enddoc %}
+
+{%- assign display_number = number | prepend: '0' -%}
+
+<details
+  class="faq-editorial-item"
+  name="{{ accordion_name }}"
+  {%- if open_by_default %} open{% endif -%}
+>
+  <summary class="faq-editorial-item__summary">
+    <span class="faq-editorial-item__number" aria-hidden="true">{{ display_number }}</span>
+    <span class="faq-editorial-item__question" role="heading" aria-level="2">{{ question | escape }}</span>
+    <span class="faq-editorial-item__toggle" aria-hidden="true"></span>
+  </summary>
+
+  <div class="faq-editorial-item__answer rte">
+    {{ answer }}
+  </div>
+</details>

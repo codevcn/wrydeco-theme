@@ -3,12 +3,14 @@
 ## ✅ What's Ready
 
 ### Foundation & Tokens
-- ✅ **110 CSS custom properties** organized by concern:
-  - Colors (primary, semantic, text, background, border, surface)
-  - Typography (font families, weights, sizes, line heights)
-  - Spacing scale (4px to 64px)
+- ✅ **130+ CSS custom properties** organized by concern:
+  - Colors (primary, semantic, text, background, border, surface, brand-specific)
+  - Typography (font families incl. Roboto, weights, sizes, line heights, section title)
+  - Spacing scale (4px to 64px) + legacy `--space-*` aliases
   - Shadows & elevation system (4 levels)
   - Motion & easing (timing, transitions)
+
+> **Last sync**: June 2026 — Tokens verified against `assets/base.css` (source of truth)
 
 ### Visual Foundation Specimens (17 cards)
 - ✅ Primary palette, accent colors, semantic colors

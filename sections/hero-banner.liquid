@@ -1,13 +1,20 @@
 <div class="hero-premium">
   <div class="hero-premium__background">
-    {%- if section.settings.video != blank -%}
-      {{ section.settings.video | video_tag: autoplay: true, loop: true, muted: true, controls: false, playsinline: true, image_size: '1500x' }}
-    {%- elsif section.settings.asset_video != blank -%}
-      <video src="{{ section.settings.asset_video | asset_url }}" autoplay loop muted playsinline class="hero-premium__video"></video>
+    {%- if section.settings.background_image != blank -%}
+      {{
+        section.settings.background_image
+        | image_url: width: 2000
+        | image_tag: class: 'hero-premium__bg-image', fetchpriority: 'high'
+      }}
     {%- else -%}
-      {{ 'lifestyle-2' | placeholder_svg_tag: 'placeholder-svg hero-premium__video' }}
+      <img
+        src="{{ 'hero-background.png' | asset_url }}"
+        alt="Wrydeco Heritage"
+        class="hero-premium__bg-image"
+        fetchpriority="high"
+      >
     {%- endif -%}
-    <div class="hero-premium__overlay"></div>
+    <div class="hero-premium__bg-gradient"></div>
   </div>
 
   <div class="hero-premium__content page-width">
@@ -15,27 +22,74 @@
       {%- for block in section.blocks -%}
         {%- case block.type -%}
           {%- when 'eyebrow' -%}
-            <span class="hero-premium__eyebrow">{{ block.settings.text }}</span>
+            <span class="hero-premium__eyebrow" {{ block.shopify_attributes }}>{{ block.settings.text }}</span>
           {%- when 'heading' -%}
-            <h1 class="hero-premium__heading">{{ block.settings.text }}</h1>
+            <h1 class="hero-premium__heading" {{ block.shopify_attributes }}>{{ block.settings.text }}</h1>
           {%- when 'subtext' -%}
-            <p class="hero-premium__subtext">{{ block.settings.text }}</p>
+            <p class="hero-premium__subtext" {{ block.shopify_attributes }}>{{ block.settings.text }}</p>
+          {%- when 'buttons' -%}
+            <div class="hero-premium__buttons" {{ block.shopify_attributes }}>
+              {%- if block.settings.primary_label != blank -%}
+                <a
+                  href="{{ block.settings.primary_link | default: '#' }}"
+                  class="hero-premium__btn hero-premium__btn--primary"
+                >
+                  <span class="hero-premium__btn-label">{{ block.settings.primary_label }}</span>
+                  <span class="hero-premium__btn-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </span>
+                </a>
+              {%- endif -%}
+              {%- if block.settings.secondary_label != blank -%}
+                <a
+                  href="{{ block.settings.secondary_link | default: '#' }}"
+                  class="hero-premium__btn hero-premium__btn--secondary"
+                >
+                  <span class="hero-premium__btn-label">{{ block.settings.secondary_label }}</span>
+                </a>
+              {%- endif -%}
+            </div>
         {%- endcase -%}
       {%- endfor -%}
+    </div>
+
+    <div class="hero-premium__footer">
+      {%- assign left_widget = section.blocks | where: 'type', 'bottom_left_widget' | first -%}
+      {%- if left_widget -%}
+        <div class="hero-premium__left-widget" {{ left_widget.shopify_attributes }}>
+          <div class="hero-premium__left-widget-icon">
+            <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="20" cy="20" r="19" stroke="currentColor" stroke-width="1" stroke-dasharray="2 2"/>
+              <circle cx="20" cy="20" r="14" stroke="currentColor" stroke-width="1"/>
+              <circle cx="20" cy="20" r="9" stroke="currentColor" stroke-width="1" stroke-dasharray="1 3"/>
+              <circle cx="20" cy="20" r="4" stroke="currentColor" stroke-width="1"/>
+            </svg>
+          </div>
+          <div class="hero-premium__left-widget-text">
+            <span class="hero-premium__left-widget-title">{{ left_widget.settings.title }}</span>
+            <span class="hero-premium__left-widget-desc">{{ left_widget.settings.text }}</span>
+          </div>
+        </div>
+      {%- endif -%}
+
+      {%- assign right_widget = section.blocks | where: 'type', 'bottom_right_widget' | first -%}
     </div>
   </div>
 </div>
 
 {% stylesheet %}
-  /* Reset and base styles for the premium hero */
+  /* Base Styles for the premium hero */
   .hero-premium {
     position: relative;
     width: 100%;
+    min-height: 100vh;
     min-height: 100dvh;
     display: flex;
-    align-items: flex-end; /* Editorial split style - text at the bottom */
+    flex-direction: column;
     overflow: hidden;
-    color: var(--color-cream, #FDFCF0);
+    background-color: var(--bg-primary, #f5f1ed);
   }
 
   .hero-premium__background {
@@ -44,22 +98,62 @@
     z-index: 0;
     width: 100%;
     height: 100%;
+    display: flex;
+    justify-content: flex-end;
   }
 
-  .hero-premium__background video,
-  .hero-premium__video {
+  .hero-premium__bg-image {
     width: 100%;
     height: 100%;
+    max-height: 100vh;
     object-fit: cover;
+    object-position: center right;
   }
 
-  /* Dark overlay for contrast */
-  .hero-premium__overlay {
+  /* Gradient to fade from the background color to the image */
+  .hero-premium__bg-gradient {
+    top: 0;
+    left: 0;
+    width: 90%;
+    height: 100%;
     position: absolute;
-    inset: 0;
-    background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0.1) 100%);
+    /* On mobile, fade from bottom up */
+    background: linear-gradient(
+      to top,
+      var(--bg-primary, #f5f1ed) 10%,
+      rgba(245, 241, 237, 0.8) 50%,
+      rgba(245, 241, 237, 0) 100%
+    );
     z-index: 1;
     pointer-events: none;
+  }
+
+  @media screen and (min-width: 768px) {
+    .hero-premium__bg-image {
+      width: 80%; /* Image takes up right 80% */
+    }
+    .hero-premium__bg-gradient {
+      /* Smooth horizontal fade on wider screens */
+      background: linear-gradient(
+        to right,
+        var(--bg-primary, #f5f1ed) 0%,
+        var(--bg-primary, #f5f1ed) 25%,
+        rgba(245, 241, 237, 0.85) 45%,
+        rgba(245, 241, 237, 0) 75%
+      );
+    }
+  }
+
+  @media screen and (min-width: 1024px) {
+    .hero-premium__bg-gradient {
+      background: linear-gradient(
+        to right,
+        var(--bg-primary, #f5f1ed) 0%,
+        var(--bg-primary, #f5f1ed) 35%,
+        rgba(245, 241, 237, 0.9) 50%,
+        rgba(245, 241, 237, 0) 80%
+      );
+    }
   }
 
   .hero-premium__content {
@@ -68,137 +162,202 @@
     width: 100%;
     max-width: var(--page-width, 1400px);
     margin: 0 auto;
-    padding: var(--space-8, 32px) var(--space-4, 16px);
-    padding-bottom: var(--space-12, 64px);
+    padding: var(--sp-6, 24px) var(--sp-4, 16px);
     display: flex;
     flex-direction: column;
+    flex-grow: 1;
   }
 
   @media screen and (min-width: 768px) {
     .hero-premium__content {
-      padding: var(--space-12, 64px) var(--space-8, 32px);
-      padding-bottom: var(--space-20, 100px);
+      padding: var(--sp-8, 32px) var(--sp-8, 32px);
     }
   }
 
   .hero-premium__text-box {
-    max-width: 720px;
+    max-width: 680px;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
+    margin-top: 100px;
   }
 
-  /* Animations */
-  @keyframes cinematicFadeUp {
-    from {
-      opacity: 0;
-      transform: translateY(40px);
-      filter: blur(8px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-      filter: blur(0);
+  @media screen and (min-width: 1024px) {
+    .hero-premium__text-box {
     }
   }
 
   .hero-premium__eyebrow {
-    display: inline-block;
-    padding: 6px 12px;
-    border-radius: 9999px;
-    background-color: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    display: block;
     font-size: 11px;
     text-transform: uppercase;
-    letter-spacing: 0.2em;
-    font-weight: 500;
-    margin-bottom: var(--space-6, 24px);
-    
-    animation: cinematicFadeUp 1.2s cubic-bezier(0.32, 0.72, 0, 1) forwards;
-    opacity: 0;
+    letter-spacing: 0.25em;
+    font-weight: var(--font-weight-medium, 500);
+    margin-bottom: var(--sp-4, 16px);
+    color: var(--text-secondary, #6b5d52);
   }
 
   .hero-premium__heading {
-    font-size: 48px;
-    line-height: 1.05;
-    font-weight: 400; /* Sophisticated clean weight */
-    letter-spacing: -0.02em;
-    margin: 0 0 var(--space-6, 24px) 0;
-    color: #fff;
-    
-    animation: cinematicFadeUp 1.2s cubic-bezier(0.32, 0.72, 0, 1) forwards;
-    animation-delay: 0.15s;
-    opacity: 0;
-  }
-
-  @media screen and (min-width: 768px) {
-    .hero-premium__heading {
-      font-size: clamp(64px, 6vw, 96px);
-    }
+    font-family: var(--font-display);
+    font-size: clamp(30px, 3vw, 66px);
+    line-height: var(--line-height-tight, 1.2);
+    font-weight: var(--font-weight-regular, 400);
+    letter-spacing: var(--letter-spacing-tight, -0.06em);
+    margin: 0 0 var(--sp-4, 16px) 0;
+    color: var(--text-primary, #1a1815);
   }
 
   .hero-premium__subtext {
-    font-size: 18px;
-    line-height: 1.5;
-    color: rgba(255, 255, 255, 0.85);
+    font-family: var(--font-body);
+    font-size: clamp(16px, 2vw, 20px);
+    line-height: var(--line-height-relaxed, 1.5);
+    color: var(--text-secondary, #6b5d52);
     max-width: 500px;
-    margin: 0 0 var(--space-8, 32px) 0;
-    
-    animation: cinematicFadeUp 1.2s cubic-bezier(0.32, 0.72, 0, 1) forwards;
-    animation-delay: 0.3s;
-    opacity: 0;
+    margin: 0 0 var(--sp-6, 24px) 0;
   }
 
-  @media screen and (min-width: 768px) {
-    .hero-premium__subtext {
-      font-size: 20px;
-    }
+  .hero-premium__buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-4, 16px);
+    align-items: center;
   }
 
-  /* High-end Button-in-Button Architecture */
   .hero-premium__btn {
     display: inline-flex;
     align-items: center;
-    justify-content: space-between;
-    background-color: #ffffff;
-    color: #000000;
-    padding: 6px;
-    padding-left: 24px;
-    border-radius: 9999px;
+    justify-content: center;
+    padding: 16px 28px;
     text-decoration: none;
-    font-weight: 500;
-    font-size: 15px;
-    transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
-    
-    animation: cinematicFadeUp 1.2s cubic-bezier(0.32, 0.72, 0, 1) forwards;
-    animation-delay: 0.45s;
-    opacity: 0;
+    font-family: var(--font-body);
+    font-weight: var(--font-weight-medium, 500);
+    font-size: var(--font-size-body-sm, 14px);
+    transition: all var(--timing-short, 0.2s) var(--ease-standard, ease);
+    border-radius: 0;
   }
 
-  .hero-premium__btn:active {
-    transform: scale(0.98);
+  .hero-premium__btn--primary {
+    background-color: var(--color-earth-brown, #4a2c18);
+    color: var(--text-inverse, #f5f1ed);
   }
 
-  .hero-premium__btn-label {
-    margin-right: 16px;
+  .hero-premium__btn--primary:hover {
+    background-color: var(--color-charcoal, #2a2622);
   }
 
   .hero-premium__btn-icon {
+    margin-left: 12px;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    background-color: rgba(0, 0, 0, 0.05);
-    border-radius: 50%;
-    transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1), background-color 0.4s ease;
   }
 
-  .hero-premium__btn:hover .hero-premium__btn-icon {
-    transform: translate(4px, -1px) scale(1.05);
-    background-color: rgba(0, 0, 0, 0.08);
+  .hero-premium__btn--secondary {
+    background-color: transparent;
+    color: var(--text-primary, #1a1815);
+    border: 1px solid var(--border-default, #b8b4af);
+  }
+
+  .hero-premium__btn--secondary:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+    border-color: var(--text-primary, #1a1815);
+  }
+
+  /* Footer Section containing widgets */
+  .hero-premium__footer {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--sp-6, 24px);
+    padding-bottom: var(--sp-4, 16px);
+  }
+
+  @media screen and (min-width: 768px) {
+    .hero-premium__footer {
+      flex-direction: row;
+      align-items: flex-end;
+      gap: var(--sp-4, 16px);
+      margin-top: 20px;
+    }
+  }
+
+  /* Left Widget */
+  .hero-premium__left-widget {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-4, 16px);
+    max-width: 300px;
+    margin-top: 20px;
+  }
+
+  .hero-premium__left-widget-icon {
+    color: var(--border-default, #b8b4af);
+    flex-shrink: 0;
+  }
+
+  .hero-premium__left-widget-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .hero-premium__left-widget-title {
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: var(--font-weight-bold, 700);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-primary, #1a1815);
+  }
+
+  .hero-premium__left-widget-desc {
+    font-family: var(--font-body);
+    font-size: 13px;
+    color: var(--text-secondary, #6b5d52);
+    line-height: var(--line-height-normal, 1.4);
+  }
+
+  .hero-premium__rw-img,
+  .hero-premium__rw-placeholder {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .hero-premium__rw-placeholder {
+    background-color: var(--color-earth-brown, #4a2c18);
+  }
+
+  .hero-premium__right-widget-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex-grow: 1;
+  }
+
+  .hero-premium__right-widget-title {
+    font-family: var(--font-body);
+    font-size: 13px;
+    color: var(--text-inverse, #f5f1ed);
+    font-weight: var(--font-weight-medium, 500);
+  }
+
+  .hero-premium__right-widget-desc {
+    font-family: var(--font-body);
+    font-size: 12px;
+    color: rgba(245, 241, 237, 0.8);
+    line-height: var(--line-height-normal, 1.4);
+  }
+
+  .hero-premium__right-widget-arrow {
+    color: var(--text-inverse, #f5f1ed);
+    display: flex;
+    align-items: center;
+    opacity: 0.7;
+    transition: transform 0.3s ease;
+  }
+
+  .hero-premium__right-widget-arrow {
+    transform: translateX(4px);
   }
 {% endstylesheet %}
 
@@ -206,19 +365,12 @@
 {
   "name": "Hero Video (Premium)",
   "tag": "section",
-  "class": "section",
+  "class": "section section-hero-premium",
   "settings": [
     {
-      "type": "video",
-      "id": "video",
-      "label": "Shopify Video"
-    },
-    {
-      "type": "text",
-      "id": "asset_video",
-      "label": "Local Asset Video",
-      "info": "Filename of an mp4 in the assets folder. Ex: 'hero-family-vid.mp4'",
-      "default": "hero-family-vid.mp4"
+      "type": "image_picker",
+      "id": "background_image",
+      "label": "Background Image"
     }
   ],
   "blocks": [
@@ -230,7 +382,7 @@
         {
           "type": "text",
           "id": "text",
-          "default": "Wrydeco Heritage",
+          "default": "CRAFTED BY NATURE. DESIGNED TO ENDURE.",
           "label": "Text"
         }
       ]
@@ -243,7 +395,7 @@
         {
           "type": "text",
           "id": "text",
-          "default": "Raw Nature, Refined for Living.",
+          "default": "Sculptural Wooden Furniture for Timeless Homes",
           "label": "Heading"
         }
       ]
@@ -256,38 +408,99 @@
         {
           "type": "textarea",
           "id": "text",
-          "default": "Every grain tells a story. We shape sustainably sourced timber into timeless centerpieces for your sanctuary.",
+          "default": "Handcrafted from solid wood. Inspired by nature.\nMade for refined living.",
           "label": "Subtext"
         }
       ]
     },
     {
-      "type": "button",
-      "name": "Button",
+      "type": "buttons",
+      "name": "Buttons Group",
       "limit": 1,
       "settings": [
         {
           "type": "text",
-          "id": "button_label",
-          "default": "Shop the Collection",
-          "label": "Button label"
+          "id": "primary_label",
+          "default": "Explore Signature Pieces",
+          "label": "Primary Button Label"
         },
         {
           "type": "url",
-          "id": "button_link",
-          "label": "Button link"
+          "id": "primary_link",
+          "label": "Primary Button Link"
+        },
+        {
+          "type": "text",
+          "id": "secondary_label",
+          "default": "Book a Private Consultation",
+          "label": "Secondary Button Label"
+        },
+        {
+          "type": "url",
+          "id": "secondary_link",
+          "label": "Secondary Button Link"
+        }
+      ]
+    },
+    {
+      "type": "bottom_left_widget",
+      "name": "Bottom Left Widget",
+      "limit": 1,
+      "settings": [
+        {
+          "type": "text",
+          "id": "title",
+          "default": "SUSTAINABLE. ETHICAL. EXCEPTIONAL.",
+          "label": "Title"
+        },
+        {
+          "type": "textarea",
+          "id": "text",
+          "default": "Responsibly sourced wood. Thoughtfully crafted.",
+          "label": "Description"
+        }
+      ]
+    },
+    {
+      "type": "bottom_right_widget",
+      "name": "Bottom Right Widget",
+      "limit": 1,
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Wood Grain Image"
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "default": "Each piece is unique",
+          "label": "Title"
+        },
+        {
+          "type": "textarea",
+          "id": "text",
+          "default": "Discover the beauty of natural wood grain and handcrafted detail.",
+          "label": "Description"
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "Link"
         }
       ]
     }
   ],
   "presets": [
     {
-      "name": "Hero Video (Premium)",
+      "name": "Hero Banner (Premium)",
       "blocks": [
         { "type": "eyebrow" },
         { "type": "heading" },
         { "type": "subtext" },
-        { "type": "button" }
+        { "type": "buttons" },
+        { "type": "bottom_left_widget" },
+        { "type": "bottom_right_widget" }
       ]
     }
   ]

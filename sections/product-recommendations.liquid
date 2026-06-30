@@ -8,74 +8,86 @@
         {% for product in recommendations.products %}
           {%- capture image_ratio -%}square{%- endcapture -%}
           <div class="pin-card pin-card--{{ image_ratio }}">
-          <div class="pin-card__image-wrapper">
-            <a class="pin-card__image-link" href="{{ product.url }}">
-              {%- if product.featured_media != blank -%}
-                {% assign recommendation_image_alt = product.featured_media.alt | default: product.title %}
-                {{
-                  product.featured_media.preview_image
-                  | image_url: width: 640
-                  | image_tag:
-                    class: 'pin-card__image',
-                    loading: 'lazy',
-                    widths: '240, 360, 480, 640',
-                    sizes: '(min-width: 1024px) 25vw, (min-width: 720px) 33vw, 75vw',
-                    alt: recommendation_image_alt
-                }}
-              {%- else -%}
-                {{ 'product-1' | placeholder_svg_tag: 'pin-card__image placeholder-svg' }}
-              {%- endif -%}
-            </a>
-          </div>
-
-          <div class="pin-card__info">
-            <h3 class="pin-card__title">
-              <a class="pin-card__title-link" href="{{ product.url }}">
-                {{ product.title | escape }}
+            <div class="pin-card__image-wrapper">
+              <a class="pin-card__image-link" href="{{ product.url }}">
+                {%- if product.featured_media != blank -%}
+                  {% assign recommendation_image_alt = product.featured_media.alt | default: product.title %}
+                  {{
+                    product.featured_media.preview_image
+                    | image_url: width: 640
+                    | image_tag:
+                      class: 'pin-card__image',
+                      loading: 'lazy',
+                      widths: '240, 360, 480, 640',
+                      sizes: '(min-width: 1024px) 25vw, (min-width: 720px) 33vw, 75vw',
+                      alt: recommendation_image_alt
+                  }}
+                {%- else -%}
+                  {{ 'product-1' | placeholder_svg_tag: 'pin-card__image placeholder-svg' }}
+                {%- endif -%}
               </a>
-            </h3>
-            <div class="pin-card__meta">
-              <div class="pin-card__author">
-                {% liquid
-                  assign author = product.metafields.custom.author_info.value | first
-                  assign author_name = blank
-                  assign author_image_url = blank
-
-                  if author != blank
-                    assign author_name = author.author_name.value
-                    assign author_image_url = author.author_image_url.value
-                  endif
-                %}
-                <div class="pin-card__avatar">
-                  {% if author_image_url != blank %}
-                    <img
-                      class="pin-card__avatar-image"
-                      src="{{ author_image_url | escape }}"
-                      alt="{{ author_name | escape }}"
-                      width="80"
-                      height="80"
-                      loading="lazy"
+              {%- if product.available -%}
+                {% form 'product', product %}
+                  <input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}">
+                  <button type="submit" name="add" class="pin-card__add-to-cart btn-pill btn-pill--earth-brown">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      fill="currentColor"
+                      class="bi bi-cart-plus"
+                      viewBox="0 0 16 16"
                     >
-                  {% else %}
-                    <svg viewBox="0 0 24 24" fill="#333" width="100%" height="100%">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
+                      <path d="M9 5.5a.5.5 0 0 0-1 0V7H6.5a.5.5 0 0 0 0 1H8v1.5a.5.5 0 0 0 1 0V8h1.5a.5.5 0 0 0 0-1H9z"/>
+                      <path d="M.5 1a.5.5 0 0 0 0 1h1.11l.401 1.607 1.498 7.985A.5.5 0 0 0 4 12h1a2 2 0 1 0 0 4 2 2 0 0 0 0-4h7a2 2 0 1 0 0 4 2 2 0 0 0 0-4h1a.5.5 0 0 0 .491-.408l1.5-8A.5.5 0 0 0 14.5 3H2.89l-.405-1.621A.5.5 0 0 0 2 1zm3.915 10L3.102 4h10.796l-1.313 7zM6 14a1 1 0 1 1-2 0 1 1 0 0 1 2 0m7 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0"/>
                     </svg>
-                  {% endif %}
+                  </button>
+                {% endform %}
+              {%- else -%}
+                <button class="pin-card__add-to-cart btn-pill btn-pill--earth-brown" disabled>Sold out</button>
+              {%- endif -%}
+            </div>
+
+            <div class="pin-card__info">
+              <h3 class="pin-card__title">
+                <a class="pin-card__title-link" href="{{ product.url }}">
+                  {{ product.title | escape }}
+                </a>
+              </h3>
+              <div class="pin-card__meta">
+                <div class="pin-card__price">
+                  {{ product.price | money }}
                 </div>
-                <span class="recommendation__pin-card__author-name">
-                  {% if author_name != blank %}
-                    {{ author_name | escape }}
-                  {% else %}
-                    Chưa có thông tin
-                  {% endif %}
-                </span>
+                <div class="pin-card__author">
+                  {% liquid
+                    assign author = product.metafields.custom.author_info.value | first
+                    assign author_name = blank
+                    assign author_image_url = blank
+
+                    if author != blank
+                      assign author_name = author.author_name.value
+                      assign author_image_url = author.author_image_url.value
+                    endif
+                  %}
+                  <span class="for-you-masonry__pin-card__crafted-by"> Crafted by </span>
+                  <div class="pin-card__avatar">
+                    {% if author_image_url != blank %}
+                      <img
+                        src="{{ author_image_url | escape }}"
+                        alt="{{ author_name | escape }}"
+                        loading="lazy"
+                        style="width: 100%; height: 100%; object-fit: cover;"
+                      >
+                    {% else %}
+                      <svg viewBox="0 0 24 24" fill="#333" width="100%" height="100%">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
+                      </svg>
+                    {% endif %}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-          <div class="pin-card__price">
-            {{ product.price | money }}
-          </div>
-        </div>
         {% endfor %}
       </div>
     </div>
@@ -127,7 +139,7 @@
   }
   .product-recommendations__grid {
     display: grid;
-    grid-template-columns: repeat(6, calc(75% - var(--sp-4)));
+    grid-template-columns: repeat(4, calc(75% - var(--sp-4)));
     grid-template-rows: repeat(2, auto);
     overflow-x: auto;
     gap: var(--sp-4);
@@ -168,8 +180,7 @@
     }
     .product-recommendations__grid {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      grid-template-rows: repeat(1, auto);
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: var(--sp-4);
       overflow: visible;
       padding: 0;
@@ -223,9 +234,36 @@
     top: 0;
     left: 0;
   }
+  .pin-card__add-to-cart {
+    position: absolute;
+    bottom: 6px;
+    right: 6px;
+    z-index: 5;
+    font-size: 15px;
+    padding: 3px 5px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    font-weight: 700;
+    color: #fff;
+    outline: 2px solid var(--color-human-skin, #e0d0c0);
+    cursor: pointer;
+    background-color: var(--color-earth-brown, #5c4033);
+    border: none;
+    border-radius: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .pin-card__add-to-cart:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    background-color: #888;
+    padding: 6px 12px;
+  }
+  .pin-card__add-to-cart svg {
+    pointer-events: none;
+  }
   .pin-card__info {
     padding: 8px;
-    background-color: var(--color-milk, #f5f5f5);
   }
   .pin-card__title {
     display: block;
@@ -235,15 +273,14 @@
     font-weight: 500;
     margin: 0 0 8px 0;
     line-height: 1.4;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
   .pin-card__title-link {
     color: inherit;
     text-decoration: none;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
   .pin-card__meta {
     display: flex;
@@ -280,16 +317,17 @@
     white-space: nowrap;
     min-width: 0;
   }
-  .pin-card__price {
-    position: absolute;
-    bottom: 0px;
-    right: 0px;
-    background-color: var(--color-earth-brown, #4a2c18);
-    color: #fff;
+  .product-recommendations .pin-card__price {
     font-weight: 600;
-    font-size: 18px;
-    border-top-left-radius: 16px;
-    padding: 4px 12px 4px 12px;
+  }
+
+  @media screen and (min-width: 720px) {
+    .recommendation__pin-card__author-name {
+      font-size: 16px;
+    }
+    .product-recommendations .pin-card__price {
+      font-size: 16px;
+    }
   }
 {% endstylesheet %}
 
@@ -310,7 +348,7 @@
       "min": 2,
       "max": 12,
       "step": 1,
-      "default": 4,
+      "default": 8,
       "label": "Maximum products to show"
     }
   ],

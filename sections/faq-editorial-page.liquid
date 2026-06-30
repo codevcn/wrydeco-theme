@@ -1,0 +1,774 @@
+{%- liquid
+  assign consultation_url = section.settings.consultation_url | default: '/pages/customization'
+  assign question_limit = section.settings.max_questions | default: 8
+  assign accordion_name = 'faq-editorial-' | append: section.id
+  assign displayed_questions = 0
+-%}
+
+<main class="faq-editorial" id="faq-editorial-{{ section.id }}">
+  <div class="faq-editorial__main">
+    <div class="faq-editorial__layout">
+      <section class="faq-editorial__intro-panel" aria-labelledby="faq-editorial-title-{{ section.id }}">
+        <div class="faq-editorial__intro-copy">
+          <p class="faq-editorial__eyebrow">Client care</p>
+          <h1 class="faq-editorial__title" id="faq-editorial-title-{{ section.id }}">
+            {{ section.settings.heading | escape }}
+          </h1>
+          <div class="faq-editorial__intro rte">{{ section.settings.intro }}</div>
+        </div>
+
+        <aside class="faq-editorial-consultation" aria-labelledby="faq-editorial-consultation-{{ section.id }}">
+          <div class="faq-editorial-consultation__media">
+            <img
+              src="{{ 'FAQ-photo.png' | asset_img_url: '720x' }}"
+              srcset="
+                {{ 'FAQ-photo.png' | asset_img_url: '360x' }} 360w,
+                {{ 'FAQ-photo.png' | asset_img_url: '540x' }} 540w,
+                {{ 'FAQ-photo.png' | asset_img_url: '720x' }} 720w
+              "
+              sizes="(min-width: 64rem) 18rem, (min-width: 40rem) 42vw, 100vw"
+              width="945"
+              height="1672"
+              alt="{{ section.settings.hero_image_alt | escape }}"
+              loading="lazy"
+            >
+          </div>
+
+          <div class="faq-editorial-consultation__content">
+            <span class="faq-editorial-consultation__mark" aria-hidden="true">
+              {% render 'icon-artist-recognition', icon: 'leaf' %}
+            </span>
+            <h2 id="faq-editorial-consultation-{{ section.id }}">
+              {{ section.settings.consultation_heading | escape }}
+            </h2>
+            <p>{{ section.settings.consultation_text | escape }}</p>
+            <span class="faq-editorial-consultation__divider" aria-hidden="true"></span>
+            <a class="faq-editorial-consultation__button" href="{{ consultation_url }}">
+              <span>{{ section.settings.consultation_link_label | escape }}</span>
+              <span aria-hidden="true">→</span>
+            </a>
+          </div>
+        </aside>
+      </section>
+
+      <section class="faq-editorial__questions-panel" aria-label="{{ section.settings.questions_label | escape }}">
+        {%- for block in section.blocks -%}
+          {%- if block.type == 'category' -%}
+            {%- if displayed_questions < question_limit -%}
+              {%- if block.settings.question_1 != blank and block.settings.answer_1 != blank -%}
+                {%- assign displayed_questions = displayed_questions | plus: 1 -%}
+                {% render 'faq-editorial-item',
+                  question: block.settings.question_1,
+                  answer: block.settings.answer_1,
+                  number: displayed_questions,
+                  accordion_name: accordion_name,
+                  open_by_default: block.settings.open_first_question
+                %}
+              {%- endif -%}
+            {%- endif -%}
+
+            {%- if displayed_questions < question_limit -%}
+              {%- if block.settings.question_2 != blank and block.settings.answer_2 != blank -%}
+                {%- assign displayed_questions = displayed_questions | plus: 1 -%}
+                {% render 'faq-editorial-item',
+                  question: block.settings.question_2,
+                  answer: block.settings.answer_2,
+                  number: displayed_questions,
+                  accordion_name: accordion_name
+                %}
+              {%- endif -%}
+            {%- endif -%}
+
+            {%- if displayed_questions < question_limit -%}
+              {%- if block.settings.question_3 != blank and block.settings.answer_3 != blank -%}
+                {%- assign displayed_questions = displayed_questions | plus: 1 -%}
+                {% render 'faq-editorial-item',
+                  question: block.settings.question_3,
+                  answer: block.settings.answer_3,
+                  number: displayed_questions,
+                  accordion_name: accordion_name
+                %}
+              {%- endif -%}
+            {%- endif -%}
+          {%- endif -%}
+        {%- endfor -%}
+
+        {%- if displayed_questions == 0 -%}
+          <div class="faq-editorial__empty">
+            <h2>{{ section.settings.empty_heading | escape }}</h2>
+            <p>{{ section.settings.empty_text | escape }}</p>
+          </div>
+        {%- endif -%}
+      </section>
+    </div>
+  </div>
+
+  <section class="faq-editorial-trust" aria-label="Why choose WRYDECO">
+    <div class="faq-editorial-trust__inner">
+      <div class="faq-editorial-trust__item">
+        <span class="faq-editorial-trust__icon" aria-hidden="true">
+          {% render 'icon-artist-recognition', icon: 'leaf' %}
+        </span>
+        <div class="faq-editorial-trust__item-content">
+          <h2>Handcrafted from solid wood</h2>
+          <p>Natural materials. Honest craftsmanship.</p>
+        </div>
+      </div>
+      <div class="faq-editorial-trust__item">
+        <span class="faq-editorial-trust__icon" aria-hidden="true">
+          {% render 'icon-artist-recognition', icon: 'check' %}
+        </span>
+        <div class="faq-editorial-trust__item-content">
+          <h2>Made to endure</h2>
+          <p>Built with integrity for generations.</p>
+        </div>
+      </div>
+      <div class="faq-editorial-trust__item">
+        <span class="faq-editorial-trust__icon" aria-hidden="true">
+          {% render 'icon-artist-recognition', icon: 'hand' %}
+        </span>
+        <div class="faq-editorial-trust__item-content">
+          <h2>Thoughtfully guided</h2>
+          <p>Expert guidance at every step.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {%- assign schema_count = 0 -%}
+      {%- for block in section.blocks -%}
+        {%- if block.type == 'category' -%}
+          {%- if schema_count < question_limit -%}
+            {%- if block.settings.question_1 != blank and block.settings.answer_1 != blank -%}
+              {%- if schema_count > 0 -%},{%- endif -%}
+              {
+                "@type": "Question",
+                "name": {{ block.settings.question_1 | json }},
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": {{ block.settings.answer_1 | strip_html | strip | json }}
+                }
+              }
+              {%- assign schema_count = schema_count | plus: 1 -%}
+            {%- endif -%}
+          {%- endif -%}
+          {%- if schema_count < question_limit -%}
+            {%- if block.settings.question_2 != blank and block.settings.answer_2 != blank -%}
+              {%- if schema_count > 0 -%},{%- endif -%}
+              {
+                "@type": "Question",
+                "name": {{ block.settings.question_2 | json }},
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": {{ block.settings.answer_2 | strip_html | strip | json }}
+                }
+              }
+              {%- assign schema_count = schema_count | plus: 1 -%}
+            {%- endif -%}
+          {%- endif -%}
+          {%- if schema_count < question_limit -%}
+            {%- if block.settings.question_3 != blank and block.settings.answer_3 != blank -%}
+              {%- if schema_count > 0 -%},{%- endif -%}
+              {
+                "@type": "Question",
+                "name": {{ block.settings.question_3 | json }},
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": {{ block.settings.answer_3 | strip_html | strip | json }}
+                }
+              }
+              {%- assign schema_count = schema_count | plus: 1 -%}
+            {%- endif -%}
+          {%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+    ]
+  }
+</script>
+
+{% stylesheet %}
+  .faq-editorial {
+    --faq-max-width: calc(var(--layout-max-width) + var(--sp-8) + var(--sp-8));
+    --faq-line: color-mix(in srgb, var(--color-linen) 72%, transparent);
+    container: faq-editorial / inline-size;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+  }
+
+  .faq-editorial__main {
+    background-color: #f5f1ed;
+  }
+
+  .faq-editorial__layout {
+    display: grid;
+    inline-size: min(100%, var(--faq-max-width));
+    margin-inline: auto;
+  }
+
+  .faq-editorial__intro-panel,
+  .faq-editorial__questions-panel {
+    min-inline-size: 0;
+  }
+
+  .faq-editorial__intro-panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-7);
+    padding: var(--sp-7) var(--layout-padding-mobile);
+    background: var(--bg-primary);
+  }
+
+  .faq-editorial__eyebrow {
+    position: relative;
+    margin: 0 0 var(--sp-6);
+    padding-block-end: var(--sp-3);
+    color: var(--color-charcoal);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--letter-spacing-wide);
+    line-height: var(--line-height-normal);
+    text-transform: uppercase;
+  }
+
+  .faq-editorial__eyebrow::after {
+    position: absolute;
+    inset-block-end: 0;
+    inset-inline-start: 0;
+    inline-size: var(--sp-7);
+    block-size: 1px;
+    background: var(--color-bark);
+    content: '';
+  }
+
+  .faq-editorial__title {
+    max-inline-size: 24ch;
+    margin: 0;
+    color: var(--color-ebony);
+    font-family: var(--font-display);
+    font-size: clamp(var(--font-size-display-md), 8vw, var(--font-size-display-lg));
+    font-weight: var(--font-weight-regular);
+    letter-spacing: var(--letter-spacing-tight);
+    line-height: var(--line-height-tight);
+  }
+
+  .faq-editorial__intro {
+    max-inline-size: 52ch;
+    margin-block-start: var(--sp-5);
+    color: var(--text-secondary);
+    font-size: var(--font-size-body-md);
+    line-height: var(--line-height-generous);
+  }
+
+  .faq-editorial__intro p,
+  .faq-editorial-item__answer p {
+    margin: 0;
+  }
+
+  .faq-editorial-consultation {
+    display: grid;
+    overflow: hidden;
+    border: 1px solid #e2e2e2;
+    border-radius: var(--radius-md);
+    background: var(--surface-default);
+    box-shadow: var(--shadow-elevation-1);
+  }
+
+  .faq-editorial-consultation__media {
+    min-block-size: calc(var(--sp-8) * 4);
+    overflow: hidden;
+    background: var(--bg-secondary);
+  }
+
+  .faq-editorial-consultation__media img {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+    object-position: center 58%;
+  }
+
+  .faq-editorial-consultation__content {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    padding: var(--sp-5);
+  }
+
+  .faq-editorial-consultation__mark,
+  .faq-editorial-trust__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    border: 1px solid var(--color-linen);
+    border-radius: var(--radius-full);
+    color: var(--color-bark);
+  }
+
+  .faq-editorial-consultation__mark,
+  .faq-editorial-trust__icon {
+    inline-size: var(--sp-8);
+    block-size: var(--sp-8);
+  }
+
+  .faq-editorial-consultation__mark {
+    margin-block-end: var(--sp-4);
+  }
+
+  .faq-editorial-consultation__mark svg,
+  .faq-editorial-trust__icon svg {
+    inline-size: var(--sp-5);
+    block-size: var(--sp-5);
+  }
+
+  .faq-editorial-consultation h2 {
+    margin: 0;
+    color: var(--color-ebony);
+    font-family: var(--font-display);
+    font-size: var(--font-size-display-sm);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-normal);
+  }
+
+  .faq-editorial-consultation__content > p {
+    max-inline-size: 36ch;
+    margin: var(--sp-3) 0 0;
+    color: var(--text-secondary);
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-generous);
+  }
+
+  .faq-editorial-consultation__divider {
+    inline-size: var(--sp-8);
+    block-size: 1px;
+    margin-block: var(--sp-4);
+    background: var(--color-clay);
+  }
+
+  .faq-editorial-consultation__button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-3);
+    inline-size: 100%;
+    min-block-size: var(--sp-7);
+    padding: var(--button-padding-vertical) var(--button-padding-horizontal);
+    border: 1px solid var(--color-earth-brown);
+    border-radius: var(--radius-sm);
+    background: var(--color-earth-brown);
+    color: var(--text-inverse);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--letter-spacing-wide);
+    line-height: var(--line-height-normal);
+    text-decoration: none;
+    text-transform: uppercase;
+    white-space: nowrap;
+    transition: background-color var(--timing-short) var(--ease-standard),
+      border-color var(--timing-short) var(--ease-standard), transform var(--timing-short) var(--ease-standard);
+  }
+
+  .faq-editorial-consultation__button:hover {
+    border-color: var(--color-charcoal);
+    background: var(--color-charcoal);
+  }
+
+  .faq-editorial-consultation__button:active {
+    transform: translateY(var(--radius-sm));
+  }
+
+  .faq-editorial-consultation__button:focus-visible,
+  .faq-editorial-item__summary:focus-visible {
+    outline: 2px solid var(--color-sage);
+    outline-offset: var(--radius-sm);
+  }
+
+  .faq-editorial__questions-panel {
+    padding: var(--sp-6) var(--layout-padding-mobile) var(--sp-8);
+    background: #fffaf6;
+  }
+
+  .faq-editorial-item {
+    border-block-start: 1px solid var(--faq-line);
+  }
+
+  .faq-editorial-item:last-of-type {
+    border-block-end: 1px solid var(--faq-line);
+  }
+
+  .faq-editorial-item__summary {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) var(--sp-7);
+    align-items: center;
+    gap: var(--sp-4);
+    min-block-size: calc(var(--sp-8) + var(--sp-4));
+    padding-block: var(--sp-3);
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .faq-editorial-item__summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .faq-editorial-item__number {
+    min-inline-size: var(--sp-6);
+    color: var(--color-bark);
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-lg);
+    line-height: var(--line-height-normal);
+  }
+
+  .faq-editorial-item__question {
+    color: var(--color-ebony);
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-xl);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-normal);
+  }
+
+  .faq-editorial-item__toggle {
+    position: relative;
+    inline-size: var(--sp-7);
+    block-size: var(--sp-7);
+  }
+
+  .faq-editorial-item__toggle::before,
+  .faq-editorial-item__toggle::after {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    inline-size: var(--sp-4);
+    block-size: 1px;
+    background: var(--color-charcoal);
+    content: '';
+    transform: translate(-50%, -50%);
+    transition: transform var(--timing-short) var(--ease-standard);
+  }
+
+  .faq-editorial-item__toggle::after {
+    transform: translate(-50%, -50%) rotate(90deg);
+  }
+
+  .faq-editorial-item[open] .faq-editorial-item__toggle::after {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+
+  .faq-editorial-item__answer {
+    max-inline-size: 64ch;
+    margin-inline-start: calc(var(--sp-6) + var(--sp-4));
+    padding: 0 var(--sp-7) var(--sp-5);
+    color: var(--text-secondary);
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-generous);
+  }
+
+  .faq-editorial-item__answer::before {
+    display: block;
+    inline-size: var(--sp-8);
+    block-size: 1px;
+    margin-block-end: var(--sp-4);
+    background: var(--color-clay);
+    content: '';
+  }
+
+  .faq-editorial__empty {
+    padding-block: var(--sp-7);
+    border-block: 1px solid var(--faq-line);
+  }
+
+  .faq-editorial__empty h2 {
+    margin: 0 0 var(--sp-3);
+    font-family: var(--font-display);
+    font-size: var(--font-size-display-sm);
+    font-weight: var(--font-weight-regular);
+  }
+
+  .faq-editorial__empty p {
+    margin: 0;
+    color: var(--text-secondary);
+    line-height: var(--line-height-generous);
+  }
+
+  .faq-editorial-trust {
+    border-block-start: 1px solid #dcdbda;
+    background: var(--bg-primary);
+  }
+
+  .faq-editorial-trust__inner {
+    display: grid;
+    gap: var(--sp-5);
+    inline-size: min(100%, var(--faq-max-width));
+    margin-inline: auto;
+    padding: var(--sp-6) var(--layout-padding-mobile);
+  }
+
+  .faq-editorial-trust__item {
+    display: grid;
+    grid-template-columns: var(--sp-8) minmax(0, 1fr);
+    align-items: center;
+    gap: var(--sp-4);
+  }
+
+  .faq-editorial-trust__item h2 {
+    margin: 0;
+    color: var(--color-charcoal);
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--letter-spacing-wide);
+    line-height: var(--line-height-normal);
+    text-transform: uppercase;
+  }
+
+  .faq-editorial-trust__item p {
+    margin: var(--sp-1) 0 0;
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: var(--line-height-relaxed);
+  }
+
+  @container faq-editorial (min-width: 40rem) {
+    .faq-editorial__intro-panel,
+    .faq-editorial__questions-panel {
+      padding-inline: var(--layout-padding-tablet);
+    }
+
+    .faq-editorial-consultation {
+      grid-template-columns: minmax(0, 38%) minmax(0, 62%);
+    }
+
+    .faq-editorial-consultation__media {
+      min-block-size: calc(var(--sp-8) * 5);
+    }
+
+    .faq-editorial-trust__inner {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      padding-inline: var(--layout-padding-tablet);
+    }
+
+    .faq-editorial-trust__item + .faq-editorial-trust__item {
+      padding-inline-start: var(--sp-5);
+      border-inline-start: 1px solid var(--faq-line);
+    }
+  }
+
+  @container faq-editorial (min-width: 64rem) {
+    .faq-editorial__layout {
+      grid-template-columns: minmax(0, 52%) minmax(0, 48%);
+      align-items: stretch;
+    }
+
+    .faq-editorial__intro-panel {
+      justify-content: space-between;
+      min-block-size: calc(var(--sp-8) * 11);
+      padding: var(--sp-8) var(--sp-7) var(--sp-7);
+    }
+
+    .faq-editorial__title {
+      font-size: var(--font-size-display-lg);
+    }
+
+    .faq-editorial__questions-panel {
+      padding: var(--sp-8) var(--sp-7) var(--sp-7);
+    }
+
+    .faq-editorial-consultation__content {
+      padding: var(--sp-6);
+    }
+
+    .faq-editorial-item__summary {
+      grid-template-columns: var(--sp-7) minmax(0, 1fr) var(--sp-7);
+    }
+
+    .faq-editorial-item__answer {
+      margin-inline-start: calc(var(--sp-7) + var(--sp-4));
+    }
+
+    .faq-editorial-trust__inner {
+      padding: var(--sp-5) var(--sp-7);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .faq-editorial-consultation__button,
+    .faq-editorial-item__toggle::before,
+    .faq-editorial-item__toggle::after {
+      transition: none;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Editorial FAQ page",
+  "tag": "section",
+  "class": "section-editorial-faq-page",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Everything to Know Before Choosing a Piece"
+    },
+    {
+      "type": "richtext",
+      "id": "intro",
+      "label": "Introduction",
+      "default": "<p>Beautiful furniture should feel as effortless as it is meaningful. Find clear answers about materials, made-to-order work, delivery, care, and customization.</p>"
+    },
+    {
+      "type": "text",
+      "id": "questions_label",
+      "label": "Questions region label",
+      "default": "Client care questions"
+    },
+    {
+      "type": "range",
+      "id": "max_questions",
+      "label": "Questions to show",
+      "min": 3,
+      "max": 12,
+      "step": 1,
+      "default": 8
+    },
+    {
+      "type": "header",
+      "content": "Private consultation"
+    },
+    {
+      "type": "text",
+      "id": "consultation_heading",
+      "label": "Heading",
+      "default": "Need personal guidance?"
+    },
+    {
+      "type": "textarea",
+      "id": "consultation_text",
+      "label": "Text",
+      "default": "Our design advisors help you choose a piece, refine proportions, and make it feel at home in your space."
+    },
+    {
+      "type": "text",
+      "id": "consultation_link_label",
+      "label": "Link label",
+      "default": "Book a private consultation"
+    },
+    {
+      "type": "url",
+      "id": "consultation_url",
+      "label": "Consultation page"
+    },
+    {
+      "type": "text",
+      "id": "hero_image_alt",
+      "label": "Consultation image alt text",
+      "default": "Sculptural solid wood shelving and desk in a warm WRYDECO interior"
+    },
+    {
+      "type": "header",
+      "content": "Empty state"
+    },
+    {
+      "type": "text",
+      "id": "empty_heading",
+      "label": "Heading",
+      "default": "Questions are being curated"
+    },
+    {
+      "type": "textarea",
+      "id": "empty_text",
+      "label": "Text",
+      "default": "Add FAQ category blocks in the theme editor to publish answers here."
+    }
+  ],
+  "blocks": [
+    {
+      "type": "category",
+      "name": "FAQ category",
+      "settings": [
+        {
+          "type": "text",
+          "id": "heading",
+          "label": "Internal category name",
+          "default": "Questions"
+        },
+        {
+          "type": "checkbox",
+          "id": "open_by_default",
+          "label": "Keep category open",
+          "default": false
+        },
+        {
+          "type": "checkbox",
+          "id": "open_first_question",
+          "label": "Open first question",
+          "default": false
+        },
+        {
+          "type": "header",
+          "content": "Question 1"
+        },
+        {
+          "type": "text",
+          "id": "question_1",
+          "label": "Question",
+          "default": "Is each piece made from solid wood?"
+        },
+        {
+          "type": "richtext",
+          "id": "answer_1",
+          "label": "Answer",
+          "default": "<p>WRYDECO focuses on solid natural wood selected for grain, form, strength, and suitability for the design.</p>"
+        },
+        {
+          "type": "header",
+          "content": "Question 2"
+        },
+        {
+          "type": "text",
+          "id": "question_2",
+          "label": "Question",
+          "default": "Can I customize the size, finish, or wood tone?"
+        },
+        {
+          "type": "richtext",
+          "id": "answer_2",
+          "label": "Answer",
+          "default": "<p>Depending on the design, we can explore dimensions, wood selection, finish, and proportions.</p>"
+        },
+        {
+          "type": "header",
+          "content": "Question 3"
+        },
+        {
+          "type": "text",
+          "id": "question_3",
+          "label": "Question",
+          "default": "How long does a made-to-order piece take?"
+        },
+        {
+          "type": "richtext",
+          "id": "answer_3",
+          "label": "Answer",
+          "default": "<p>We provide a project-specific estimate once the design, materials, and destination are confirmed.</p>"
+        }
+      ]
+    }
+  ],
+  "max_blocks": 12,
+  "presets": [
+    {
+      "name": "Editorial FAQ page"
+    }
+  ]
+}
+{% endschema %}
