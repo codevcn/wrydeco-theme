@@ -22,63 +22,101 @@
     </div>
   </div>
 
-  <div class="meet-makers__slider">
-    {%- for block in section.blocks -%}
-      <div class="maker-card" {{ block.shopify_attributes }}>
-        <div class="maker-card__body">
-          <div class="maker-card__image-col">
-            {%- assign asset_name = 'artist-' | append: block.settings.name | replace: ' ', '_' | append: '.webp' -%}
-            {%- if block.settings.image != blank -%}
-              {{ block.settings.image | image_url: width: 600 | image_tag: class: 'maker-card__img', loading: 'lazy', draggable: 'false' }}
-            {%- else -%}
-              <img src="{{ asset_name | asset_url }}" alt="{{ block.settings.name }}" class="maker-card__img" loading="lazy" draggable="false">
-            {%- endif -%}
-          </div>
-          <div class="maker-card__text-col">
-            <p class="maker-card__role">{{ block.settings.role | upcase }}</p>
-            <h3 class="maker-card__name">{{ block.settings.name }}</h3>
-            <p class="maker-card__tags">{{ block.settings.tags }}</p>
-            <p class="maker-card__bio">{{ block.settings.bio | newline_to_br }}</p>
-            
-            <div class="maker-card__quote">
-              <span class="maker-card__quote-mark">“</span>
-              <p><i>{{ block.settings.quote | newline_to_br }}</i></p>
+  <div class="meet-makers__carousel" data-maker-carousel>
+    <button class="meet-makers__nav meet-makers__nav--prev" type="button" aria-label="Previous makers" data-maker-prev>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M15 5L8 12L15 19" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+
+    <div class="meet-makers__slider" data-maker-slider>
+      {%- for block in section.blocks -%}
+        <div class="maker-card" {{ block.shopify_attributes }}>
+          <div class="maker-card__body">
+            <div class="maker-card__image-col">
+              {%- assign asset_name = 'artist-' | append: block.settings.name | replace: ' ', '_' | append: '.webp' -%}
+              {%- if block.settings.image != blank -%}
+                {{ block.settings.image | image_url: width: 600 | image_tag: class: 'maker-card__img', loading: 'lazy', draggable: 'false' }}
+              {%- else -%}
+                <img
+                  src="{{ asset_name | asset_url }}"
+                  alt="{{ block.settings.name }}"
+                  class="maker-card__img"
+                  loading="lazy"
+                  draggable="false"
+                  width="600"
+                  height="720"
+                >
+              {%- endif -%}
             </div>
-            
-            <div class="maker-card__features">
-              <div class="maker-feature">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
-                  <circle cx="12" cy="12" r="10" stroke-dasharray="2 2"/>
-                  <circle cx="12" cy="12" r="6"/>
-                  <circle cx="12" cy="12" r="2"/>
-                </svg>
-                <span>{{ block.settings.feature_1 | newline_to_br }}</span>
+            <div class="maker-card__text-col">
+              <p class="maker-card__role">{{ block.settings.role | upcase }}</p>
+              <h3 class="maker-card__name">{{ block.settings.name }}</h3>
+              <p class="maker-card__tags">{{ block.settings.tags }}</p>
+              <p class="maker-card__bio">{{ block.settings.bio | newline_to_br }}</p>
+              
+              <div class="maker-card__quote">
+                <span class="maker-card__quote-mark">“</span>
+                <p><i>{{ block.settings.quote | newline_to_br }}</i></p>
               </div>
-              <div class="maker-feature maker-feature--border">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M18 11V6a2 2 0 0 0-4 0v4"/>
-                  <path d="M14 10V5a2 2 0 0 0-4 0v5"/>
-                  <path d="M10 10.5V4a2 2 0 0 0-4 0v8"/>
-                  <path d="M6 14v-2a2 2 0 0 0-4 0v6a6 6 0 0 0 6 6h2a8 8 0 0 0 8-8v-7a2 2 0 0 0-4 0v3"/>
-                </svg>
-                <span>{{ block.settings.feature_2 | newline_to_br }}</span>
-              </div>
-              <div class="maker-feature maker-feature--border">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c0 0 0-4.48 0-10S17.52 2 12 2z"/>
-                  <path d="M12 22C17.52 22 22 17.52 22 12S17.52 2 12 2"/>
-                  <path d="M12 2v20"/>
-                </svg>
-                <span>{{ block.settings.feature_3 | newline_to_br }}</span>
+              
+              <div class="maker-card__features">
+                <div class="maker-feature">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                    <circle cx="12" cy="12" r="10" stroke-dasharray="2 2"/>
+                    <circle cx="12" cy="12" r="6"/>
+                    <circle cx="12" cy="12" r="2"/>
+                  </svg>
+                  <span>{{ block.settings.feature_1 | newline_to_br }}</span>
+                </div>
+                <div class="maker-feature maker-feature--border">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 11V6a2 2 0 0 0-4 0v4"/>
+                    <path d="M14 10V5a2 2 0 0 0-4 0v5"/>
+                    <path d="M10 10.5V4a2 2 0 0 0-4 0v8"/>
+                    <path d="M6 14v-2a2 2 0 0 0-4 0v6a6 6 0 0 0 6 6h2a8 8 0 0 0 8-8v-7a2 2 0 0 0-4 0v3"/>
+                  </svg>
+                  <span>{{ block.settings.feature_2 | newline_to_br }}</span>
+                </div>
+                <div class="maker-feature maker-feature--border">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c0 0 0-4.48 0-10S17.52 2 12 2z"/>
+                    <path d="M12 22C17.52 22 22 17.52 22 12S17.52 2 12 2"/>
+                    <path d="M12 2v20"/>
+                  </svg>
+                  <span>{{ block.settings.feature_3 | newline_to_br }}</span>
+                </div>
               </div>
             </div>
           </div>
+          <a href="{{ block.settings.link | default: '#' }}" class="maker-card__btn">
+            VIEW PROFILE &rarr;
+          </a>
         </div>
-        <a href="{{ block.settings.link | default: '#' }}" class="maker-card__btn">
-          VIEW PROFILE &rarr;
-        </a>
-      </div>
-    {%- endfor -%}
+      {%- endfor -%}
+    </div>
+
+    <button class="meet-makers__nav meet-makers__nav--next" type="button" aria-label="Next makers" data-maker-next>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M9 5L16 12L9 19" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+
+    <div class="meet-makers__dots" aria-label="Maker slides">
+      {%- for block in section.blocks -%}
+        {%- assign dot_remainder = forloop.index0 | modulo: 2 -%}
+        {%- if dot_remainder == 0 -%}
+          <button
+            class="meet-makers__dot{% if forloop.first %} is-active{% endif %}"
+            type="button"
+            aria-label="Go to maker slide {{ forloop.index0 | divided_by: 2 | plus: 1 }}"
+            aria-pressed="{% if forloop.first %}true{% else %}false{% endif %}"
+            data-maker-dot
+            data-maker-frame="{{ forloop.index0 | divided_by: 2 }}"
+          ></button>
+        {%- endif -%}
+      {%- endfor -%}
+    </div>
   </div>
 
   <div class="meet-makers__footer">
@@ -105,6 +143,14 @@
 </div>
 
 {% stylesheet %}
+  @font-face {
+    font-family: 'Fraunces';
+    src: url('Fraunces.woff2') format('woff2');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+  }
+
   .meet-makers {
     padding-top: var(--sp-12, 64px);
     padding-bottom: var(--sp-12, 64px);
@@ -179,6 +225,15 @@
 
   .meet-makers__slider::-webkit-scrollbar {
     display: none; /* Chrome, Safari */
+  }
+
+  .meet-makers__carousel {
+    position: relative;
+  }
+
+  .meet-makers__nav,
+  .meet-makers__dots {
+    display: none;
   }
 
   /* Maker Card */
@@ -387,12 +442,511 @@
   .meet-makers__footer-icon {
     opacity: 0.8;
   }
+
+  @media screen and (min-width: 1200px) {
+    .meet-makers {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      width: 100%;
+      max-width: none;
+      min-height: 100svh;
+      height: 100svh;
+      padding: clamp(24px, 2.6svh, 32px) clamp(92px, 5.6vw, 94px) clamp(30px, 4svh, 38px);
+      overflow: hidden;
+    }
+
+    .meet-makers__header {
+      margin-bottom: clamp(28px, 3.5svh, 34px);
+    }
+
+    .meet-makers__icon {
+      margin-bottom: clamp(10px, 1.3svh, 12px);
+    }
+
+    .meet-makers__icon svg {
+      width: 36px;
+      height: 36px;
+      opacity: 0.58;
+    }
+
+    .meet-makers__eyebrow {
+      margin-bottom: clamp(12px, 1.8svh, 16px);
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.28em;
+      color: var(--color-bark, #6b5d52);
+    }
+
+    .meet-makers__heading {
+      margin-bottom: clamp(14px, 1.8svh, 16px);
+      font-size: clamp(64px, 4.7vw, 78px);
+      font-weight: 300;
+      letter-spacing: -0.055em;
+      line-height: 0.96;
+    }
+
+    .meet-makers__subtitle {
+      max-width: 580px;
+      font-size: clamp(15px, 0.95vw, 17px);
+      line-height: 1.5;
+    }
+
+    .meet-makers__leaf-icon {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: var(--sp-4);
+      margin-top: clamp(18px, 2.4svh, 24px);
+      color: var(--color-bark, #6b5d52);
+    }
+
+    .meet-makers__leaf-icon::before,
+    .meet-makers__leaf-icon::after {
+      width: 80px;
+      height: 1px;
+      background: rgba(107, 93, 82, 0.3);
+      content: '';
+    }
+
+    .meet-makers__leaf-icon svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .meet-makers__carousel {
+      min-height: 0;
+    }
+
+    .meet-makers__slider {
+      display: flex;
+      gap: clamp(14px, 0.95vw, 16px);
+      min-height: 0;
+      padding-bottom: 0;
+      overflow-x: hidden;
+      scroll-behavior: smooth;
+      scroll-snap-type: x mandatory;
+      cursor: default;
+    }
+
+    .maker-card {
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) 48px;
+      flex: 0 0 calc((100% - clamp(14px, 0.95vw, 16px)) / 2);
+      max-width: none;
+      min-width: 0;
+      height: 100%;
+      border-color: rgba(107, 93, 82, 0.18);
+      border-radius: var(--radius-lg, 8px);
+      background: color-mix(in srgb, var(--bg-primary, #f5f1ed) 92%, #ffffff);
+      box-shadow: none;
+      scroll-snap-align: start;
+    }
+
+    .maker-card__body {
+      display: grid;
+      grid-template-columns: minmax(0, 49.5%) minmax(0, 50.5%);
+      min-height: 0;
+    }
+
+    .maker-card__image-col {
+      width: auto;
+      min-height: 0;
+    }
+
+    .maker-card__img {
+      min-height: 0;
+      height: 100%;
+      filter: grayscale(1) contrast(1.06);
+      object-position: center center;
+    }
+
+    .maker-card__text-col {
+      min-height: 0;
+      padding: clamp(32px, 3.9svh, 38px) clamp(36px, 3vw, 44px) clamp(22px, 2.5svh, 26px);
+    }
+
+    .maker-card__role {
+      margin-bottom: clamp(16px, 2svh, 20px);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      color: var(--color-bark, #6b5d52);
+    }
+
+    .maker-card__name {
+      margin-bottom: clamp(12px, 1.5svh, 14px);
+      font-size: clamp(40px, 2.7vw, 46px);
+      font-weight: 300;
+      letter-spacing: -0.055em;
+      line-height: 0.98;
+    }
+
+    .maker-card__tags {
+      margin-bottom: clamp(22px, 2.9svh, 28px);
+      font-size: 15px;
+      line-height: 1.45;
+    }
+
+    .maker-card__bio {
+      max-width: 34ch;
+      margin-bottom: clamp(18px, 2.6svh, 24px);
+      font-size: 14px;
+      line-height: 1.6;
+      flex-grow: 0;
+    }
+
+    .maker-card__quote {
+      gap: var(--sp-2);
+      margin-bottom: clamp(20px, 2.8svh, 28px);
+    }
+
+    .maker-card__quote-mark {
+      font-size: 44px;
+      color: var(--color-earth-brown, #4a2c18);
+    }
+
+    .maker-card__quote p {
+      font-family: var(--font-display);
+      font-size: clamp(16px, 1.08vw, 18px);
+      line-height: 1.35;
+      color: var(--color-earth-brown, #4a2c18);
+    }
+
+    .maker-card__features {
+      padding-top: 0;
+      border-top: 0;
+      margin-top: auto;
+    }
+
+    .maker-feature {
+      gap: var(--sp-2);
+    }
+
+    .maker-feature--border {
+      border-left-color: rgba(107, 93, 82, 0.32);
+    }
+
+    .maker-feature svg {
+      width: 28px;
+      height: 28px;
+      color: var(--color-bark, #6b5d52);
+    }
+
+    .maker-feature span {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      line-height: 1.32;
+      color: var(--color-earth-brown, #4a2c18);
+    }
+
+    .maker-card__btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 48px;
+      padding: 0;
+      background: var(--color-earth-brown, #4a2c18);
+      color: var(--text-inverse, #f5f1ed);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+    }
+
+    .meet-makers__nav {
+      position: absolute;
+      z-index: 3;
+      top: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 44px;
+      border: 1px solid rgba(107, 93, 82, 0.36);
+      border-radius: var(--radius-full);
+      background: color-mix(in srgb, var(--bg-primary, #f5f1ed) 82%, white);
+      color: var(--color-earth-brown, #4a2c18);
+      cursor: pointer;
+      transform: translateY(-50%);
+      transition: background-color var(--timing-short) var(--ease-standard),
+        border-color var(--timing-short) var(--ease-standard), opacity var(--timing-short) var(--ease-standard),
+        transform var(--timing-short) var(--ease-standard);
+    }
+
+    .meet-makers__nav:hover {
+      border-color: rgba(74, 44, 24, 0.65);
+      background: var(--color-milk, #f7f2ec);
+      transform: translateY(-50%) scale(1.04);
+    }
+
+    .meet-makers__nav:focus-visible,
+    .meet-makers__dot:focus-visible {
+      outline: 2px solid var(--color-sage);
+      outline-offset: var(--sp-1);
+    }
+
+    .meet-makers__nav[disabled] {
+      opacity: 0.34;
+      cursor: default;
+      pointer-events: none;
+    }
+
+    .meet-makers__nav--prev {
+      left: calc(-1 * clamp(58px, 4.2vw, 68px));
+    }
+
+    .meet-makers__nav--next {
+      right: calc(-1 * clamp(58px, 4.2vw, 68px));
+    }
+
+    .meet-makers__dots {
+      position: absolute;
+      left: 50%;
+      bottom: calc(-1 * clamp(22px, 2.8svh, 28px));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--sp-2);
+      transform: translateX(-50%);
+    }
+
+    .meet-makers__dot {
+      width: 8px;
+      height: 8px;
+      padding: 0;
+      border: 1px solid rgba(107, 93, 82, 0.46);
+      border-radius: var(--radius-full);
+      background: transparent;
+      cursor: pointer;
+      transition: width var(--timing-short) var(--ease-standard), background-color var(--timing-short) var(--ease-standard),
+        border-color var(--timing-short) var(--ease-standard);
+    }
+
+    .meet-makers__dot.is-active {
+      width: 24px;
+      background: var(--color-earth-brown, #4a2c18);
+      border-color: var(--color-earth-brown, #4a2c18);
+    }
+
+    .meet-makers__footer {
+      margin-top: clamp(38px, 5svh, 48px);
+    }
+
+    .meet-makers__footer-content {
+      gap: clamp(18px, 1.6vw, 28px);
+    }
+
+    .meet-makers__footer-text {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      color: var(--color-earth-brown, #4a2c18);
+    }
+
+    .meet-makers__footer-sep {
+      font-size: 13px;
+      color: rgba(107, 93, 82, 0.45);
+      opacity: 1;
+    }
+  }
+
+  @media screen and (min-width: 1200px) and (max-height: 820px) {
+    .meet-makers {
+      padding: 18px clamp(56px, 5vw, 74px) 22px;
+    }
+
+    .meet-makers__header {
+      margin-bottom: 18px;
+    }
+
+    .meet-makers__icon {
+      margin-bottom: 6px;
+    }
+
+    .meet-makers__icon svg {
+      width: 28px;
+      height: 28px;
+    }
+
+    .meet-makers__eyebrow {
+      margin-bottom: 8px;
+      font-size: 11px;
+    }
+
+    .meet-makers__heading {
+      margin-bottom: 8px;
+      font-size: clamp(44px, 4vw, 58px);
+    }
+
+    .meet-makers__subtitle {
+      font-size: 13px;
+      line-height: 1.42;
+    }
+
+    .meet-makers__leaf-icon {
+      margin-top: 10px;
+    }
+
+    .meet-makers__slider {
+      gap: 14px;
+    }
+
+    .maker-card {
+      grid-template-rows: minmax(0, 1fr) 42px;
+      flex-basis: calc((100% - 14px) / 2);
+    }
+
+    .maker-card__text-col {
+      padding: 24px 32px 18px;
+    }
+
+    .maker-card__role {
+      margin-bottom: 10px;
+      font-size: 10px;
+    }
+
+    .maker-card__name {
+      margin-bottom: 8px;
+      font-size: clamp(32px, 2.7vw, 38px);
+    }
+
+    .maker-card__tags {
+      margin-bottom: 14px;
+      font-size: 13px;
+    }
+
+    .maker-card__bio {
+      margin-bottom: 12px;
+      font-size: 12px;
+      line-height: 1.48;
+    }
+
+    .maker-card__quote {
+      margin-bottom: 14px;
+    }
+
+    .maker-card__quote-mark {
+      font-size: 34px;
+    }
+
+    .maker-card__quote p {
+      font-size: 14px;
+      line-height: 1.28;
+    }
+
+    .maker-feature svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    .maker-feature span {
+      font-size: 8px;
+    }
+
+    .maker-card__btn {
+      min-height: 42px;
+      font-size: 10px;
+    }
+
+    .meet-makers__footer {
+      margin-top: 22px;
+    }
+
+    .meet-makers__footer-text {
+      font-size: 10px;
+    }
+
+    .meet-makers__nav {
+      width: 38px;
+      height: 38px;
+    }
+
+    .meet-makers__nav--prev {
+      left: -48px;
+    }
+
+    .meet-makers__nav--next {
+      right: -48px;
+    }
+
+    .meet-makers__dots {
+      bottom: -18px;
+    }
+  }
 {% endstylesheet %}
 
 {% javascript %}
   document.addEventListener('DOMContentLoaded', () => {
     const sliders = document.querySelectorAll('.meet-makers__slider');
     sliders.forEach(slider => {
+      const carousel = slider.closest('[data-maker-carousel]');
+      const prevButton = carousel ? carousel.querySelector('[data-maker-prev]') : null;
+      const nextButton = carousel ? carousel.querySelector('[data-maker-next]') : null;
+      const dots = carousel ? Array.from(carousel.querySelectorAll('[data-maker-dot]')) : [];
+      const cards = Array.from(slider.querySelectorAll('.maker-card'));
+      const desktopQuery = window.matchMedia('(min-width: 1200px)');
+      let activeFrame = 0;
+
+      const getCardsPerFrame = () => desktopQuery.matches ? 2 : 1;
+      const getFrameCount = () => Math.max(1, Math.ceil(cards.length / getCardsPerFrame()));
+
+      const getFrameLeft = (frame) => {
+        const targetCard = cards[Math.min(frame * getCardsPerFrame(), cards.length - 1)];
+        if (!targetCard) return 0;
+        return targetCard.offsetLeft - slider.offsetLeft;
+      };
+
+      const updateCarouselState = () => {
+        const frameCount = getFrameCount();
+        activeFrame = Math.min(Math.max(activeFrame, 0), frameCount - 1);
+
+        if (prevButton) prevButton.disabled = activeFrame === 0;
+        if (nextButton) nextButton.disabled = activeFrame >= frameCount - 1;
+
+        dots.forEach((dot, index) => {
+          const isActive = index === activeFrame;
+          dot.classList.toggle('is-active', isActive);
+          dot.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+          dot.hidden = index >= frameCount;
+        });
+      };
+
+      const goToFrame = (frame, behavior = 'smooth') => {
+        activeFrame = Math.min(Math.max(frame, 0), getFrameCount() - 1);
+        slider.scrollTo({ left: getFrameLeft(activeFrame), behavior });
+        updateCarouselState();
+      };
+
+      prevButton?.addEventListener('click', () => goToFrame(activeFrame - 1));
+      nextButton?.addEventListener('click', () => goToFrame(activeFrame + 1));
+      dots.forEach((dot) => {
+        dot.addEventListener('click', () => {
+          const frame = Number(dot.dataset.makerFrame || 0);
+          goToFrame(frame);
+        });
+      });
+
+      slider.addEventListener('scroll', () => {
+        if (!desktopQuery.matches) return;
+        const frameCount = getFrameCount();
+        let closestFrame = 0;
+        let closestDistance = Infinity;
+        for (let frame = 0; frame < frameCount; frame += 1) {
+          const distance = Math.abs(slider.scrollLeft - getFrameLeft(frame));
+          if (distance < closestDistance) {
+            closestDistance = distance;
+            closestFrame = frame;
+          }
+        }
+        activeFrame = closestFrame;
+        updateCarouselState();
+      }, { passive: true });
+
+      const handleResize = () => goToFrame(activeFrame, 'auto');
+      window.addEventListener('resize', handleResize);
+      desktopQuery.addEventListener?.('change', handleResize);
+      updateCarouselState();
+
       let isDown = false;
       let startX;
       let scrollLeft;
