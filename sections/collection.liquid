@@ -11,221 +11,170 @@
   <div class="col-toolbar">
     <div class="col-toolbar__left">
       <div class="col-toolbar__facets">
-        {% for filter in collection.filters %}
-          <div class="col-dropdown col-dropdown--left col-toolbar__facet">
-            <button type="button" class="col-dropdown__trigger">
-              <span>{{ filter.label }}</span>
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.5"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <polyline points="6 9 12 15 18 9"></polyline>
-              </svg>
+        {%- capture col_caret -%}
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        {%- endcapture -%}
+        {%- capture col_check -%}
+          <span class="col-checkbox"><svg viewBox="0 0 14 14" fill="none" class="col-checkbox__icon"><path d="M3 7.5L6 10.5L11 3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        {%- endcapture -%}
+
+        {%- liquid
+          assign avail_filter = null
+          assign price_filter = null
+          assign wood_native = null
+          for f in collection.filters
+            if f.type == 'price_range'
+              assign price_filter = f
+            elsif f.param_name == 'filter.v.availability'
+              assign avail_filter = f
+            elsif f.param_name contains 'wood_type'
+              assign wood_native = f
+            endif
+          endfor
+        -%}
+
+        {%- comment -%} Availability — native storefront filter (multi-select) {%- endcomment -%}
+        {%- if avail_filter != blank -%}
+          <div class="col-dropdown col-dropdown--left col-toolbar__facet{% if avail_filter.active_values.size > 0 %} has-active{% endif %}" data-dropdown>
+            <button type="button" class="col-dropdown__trigger" data-dropdown-toggle aria-expanded="false" aria-haspopup="true">
+              <span>{{ avail_filter.label | escape }}</span>
+              {{ col_caret }}
             </button>
             <div class="col-dropdown__menu">
-              {% if filter.type == 'price_range' %}
-                <form class="col-price-form">
-                  <div class="col-price-form__header">
-                    <span>MIN</span>
-                    <span>MAX</span>
-                  </div>
-                  <div class="col-price-form__inputs">
-                    <input
-                      name="{{ filter.min_value.param_name }}"
-                      type="number"
-                      placeholder="0"
-                      value="{{ filter.min_value.value | money_without_currency | replace: ',', '' }}"
-                      step="0.01"
-                      min="0"
-                    >
-                    <input
-                      name="{{ filter.max_value.param_name }}"
-                      type="number"
-                      placeholder="{{ filter.range_max | money_without_currency | replace: ',', '' }}"
-                      value="{{ filter.max_value.value | money_without_currency | replace: ',', '' }}"
-                      step="0.01"
-                      min="0"
-                    >
-                  </div>
-                  <button type="submit" class="col-price-form__apply">Apply</button>
-
-                  {%- for active_filter in collection.filters -%}
-                    {%- if active_filter.type != 'price_range' -%}
-                      {%- for active_value in active_filter.active_values -%}
-                        <input type="hidden" name="{{ active_value.param_name }}" value="{{ active_value.value }}">
-                      {%- endfor -%}
-                    {%- endif -%}
-                  {%- endfor -%}
-                  {%- if collection.sort_by != blank -%}
-                    <input type="hidden" name="sort_by" value="{{ collection.sort_by }}">
-                  {%- endif -%}
-                </form>
-                {% if filter.min_value.value != null or filter.max_value.value != null %}
-                  <a href="{{ filter.url_to_remove }}" class="col-dropdown__clear">Clear</a>
-                {% endif %}
-              {% else %}
-                {% assign is_radio = false %}
-                {% if filter.label == 'Availability' or filter.type == 'boolean' %}
-                  {% assign is_radio = true %}
-                {% endif %}
-
-                {% for value in filter.values %}
-                  {% assign link_href = value.url_to_add %}
-                  {% if is_radio %}
-                    {% assign base_url = request.path %}
-                    {% assign query_string = '' %}
-                    {%- for f in collection.filters -%}
-                      {%- if f.label != filter.label -%}
-                        {%- if f.type == 'price_range' -%}
-                          {%- if f.min_value.value != null -%}
-                            {% assign query_string = query_string
-                              | append: '&'
-                              | append: f.min_value.param_name
-                              | append: '='
-                              | append: f.min_value.value
-                            %}
-                          {%- endif -%}
-                          {%- if f.max_value.value != null -%}
-                            {% assign query_string = query_string
-                              | append: '&'
-                              | append: f.max_value.param_name
-                              | append: '='
-                              | append: f.max_value.value
-                            %}
-                          {%- endif -%}
-                        {%- else -%}
-                          {%- for v in f.active_values -%}
-                            {% assign encoded_val = v.value | url_encode %}
-                            {% assign query_string = query_string
-                              | append: '&'
-                              | append: v.param_name
-                              | append: '='
-                              | append: encoded_val
-                            %}
-                          {%- endfor -%}
-                        {%- endif -%}
-                      {%- endif -%}
-                    {%- endfor -%}
-                    {%- if collection.sort_by != blank -%}
-                      {% assign query_string = query_string | append: '&sort_by=' | append: collection.sort_by %}
-                    {%- endif -%}
-
-                    {% assign encoded_current_val = value.value | url_encode %}
-                    {% assign query_string = query_string
-                      | append: '&'
-                      | append: value.param_name
-                      | append: '='
-                      | append: encoded_current_val
-                    %}
-
-                    {% assign query_string = query_string | replace_first: '&', '?' %}
-                    {% assign link_href = base_url | append: query_string %}
-                  {% endif %}
-
-                  <a
-                    href="{% if value.active %}{{ filter.url_to_remove }}{% else %}{{ link_href }}{% endif %}"
-                    class="col-dropdown__option {% if value.active %}is-active{% endif %}"
-                  >
-                    {% if is_radio %}
-                      <input
-                        type="radio"
-                        class="visually-hidden"
-                        {% if value.active %}
-                          checked
-                        {% endif %}
-                        tabindex="-1"
-                        aria-hidden="true"
-                      >
-                      <span class="col-radio">
-                        <span class="col-radio__inner"></span>
-                      </span>
-                    {% else %}
-                      <input
-                        type="checkbox"
-                        class="visually-hidden"
-                        {% if value.active %}
-                          checked
-                        {% endif %}
-                        tabindex="-1"
-                        aria-hidden="true"
-                      >
-                      <span class="col-checkbox">
-                        <svg viewBox="0 0 14 14" fill="none" class="col-checkbox__icon">
-                          <path d="M3 7.5L6 10.5L11 3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                      </span>
-                    {% endif %}
-                    <span class="col-dropdown__option-label">{{ value.label | escape }}</span>
-                    <span class="col-dropdown__option-count">({{ value.count }})</span>
-                  </a>
-                {% endfor %}
-
-                {% if filter.active_values.size > 0 %}
-                  <a href="{{ filter.url_to_remove }}" class="col-dropdown__clear">Clear</a>
-                {% endif %}
-              {% endif %}
+              {%- for value in avail_filter.values -%}
+                <a
+                  href="{% if value.active %}{{ value.url_to_remove }}{% else %}{{ value.url_to_add }}{% endif %}"
+                  class="col-dropdown__option{% if value.active %} is-active{% endif %}"
+                >
+                  <input type="checkbox" class="visually-hidden"{% if value.active %} checked{% endif %} tabindex="-1" aria-hidden="true">
+                  {{ col_check }}
+                  <span class="col-dropdown__option-label">{{ value.label | escape }}</span>
+                  <span class="col-dropdown__option-count">({{ value.count }})</span>
+                </a>
+              {%- endfor -%}
+              {%- if avail_filter.active_values.size > 0 -%}
+                <a href="{{ avail_filter.url_to_remove }}" class="col-dropdown__clear">Clear</a>
+              {%- endif -%}
             </div>
           </div>
-        {% else %}
-          {% comment %} Fallback dummy UI for development when no filters are set up {% endcomment %}
-          {% assign facets = 'Material, Price, Categories' | split: ', ' %}
-          {% for facet in facets %}
-            <div class="col-dropdown col-dropdown--left col-toolbar__facet">
-              <button type="button" class="col-dropdown__trigger">
-                <span>{{ facet }}</span>
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
+        {%- endif -%}
+
+        {%- comment -%} Price — native price_range filter (carries other active filters + sort) {%- endcomment -%}
+        {%- if price_filter != blank -%}
+          {%- assign price_active = false -%}
+          {%- if price_filter.min_value.value != null or price_filter.max_value.value != null -%}
+            {%- assign price_active = true -%}
+          {%- endif -%}
+          <div class="col-dropdown col-dropdown--left col-toolbar__facet{% if price_active %} has-active{% endif %}" data-dropdown>
+            <button type="button" class="col-dropdown__trigger" data-dropdown-toggle aria-expanded="false" aria-haspopup="true">
+              <span>{{ price_filter.label | escape }}</span>
+              {{ col_caret }}
+            </button>
+            <div class="col-dropdown__menu">
+              <form class="col-price-form">
+                <div class="col-price-form__header">
+                  <span>MIN</span>
+                  <span>MAX</span>
+                </div>
+                <div class="col-price-form__inputs">
+                  <input
+                    name="{{ price_filter.min_value.param_name }}"
+                    type="number"
+                    placeholder="0"
+                    value="{{ price_filter.min_value.value | money_without_currency | replace: ',', '' }}"
+                    step="0.01"
+                    min="0"
+                  >
+                  <input
+                    name="{{ price_filter.max_value.param_name }}"
+                    type="number"
+                    placeholder="{{ price_filter.range_max | money_without_currency | replace: ',', '' }}"
+                    value="{{ price_filter.max_value.value | money_without_currency | replace: ',', '' }}"
+                    step="0.01"
+                    min="0"
+                  >
+                </div>
+                <button type="submit" class="col-price-form__apply">Apply</button>
+
+                {%- for f in collection.filters -%}
+                  {%- if f.type != 'price_range' -%}
+                    {%- for v in f.active_values -%}
+                      <input type="hidden" name="{{ v.param_name }}" value="{{ v.value }}">
+                    {%- endfor -%}
+                  {%- endif -%}
+                {%- endfor -%}
+                {%- if collection.sort_by != blank -%}
+                  <input type="hidden" name="sort_by" value="{{ collection.sort_by }}">
+                {%- endif -%}
+              </form>
+              {%- if price_active -%}
+                <a href="{{ price_filter.url_to_remove }}" class="col-dropdown__clear">Clear</a>
+              {%- endif -%}
+            </div>
+          </div>
+        {%- endif -%}
+
+        {%- comment -%}
+          Wood Type — native storefront filter when the custom.wood_type metafield
+          filter is enabled; otherwise built from the product metafield and toggled
+          client-side (see the <script> below and doc/implement-filter-by-wood-type.md).
+        {%- endcomment -%}
+        {%- if wood_native != blank -%}
+          <div class="col-dropdown col-dropdown--left col-toolbar__facet{% if wood_native.active_values.size > 0 %} has-active{% endif %}" data-dropdown>
+            <button type="button" class="col-dropdown__trigger" data-dropdown-toggle aria-expanded="false" aria-haspopup="true">
+              <span>Wood Type</span>
+              {{ col_caret }}
+            </button>
+            <div class="col-dropdown__menu">
+              {%- for value in wood_native.values -%}
+                <a
+                  href="{% if value.active %}{{ value.url_to_remove }}{% else %}{{ value.url_to_add }}{% endif %}"
+                  class="col-dropdown__option{% if value.active %} is-active{% endif %}"
                 >
-                  <polyline points="6 9 12 15 18 9"></polyline>
-                </svg>
+                  <input type="checkbox" class="visually-hidden"{% if value.active %} checked{% endif %} tabindex="-1" aria-hidden="true">
+                  {{ col_check }}
+                  <span class="col-dropdown__option-label">{{ value.label | escape }}</span>
+                  <span class="col-dropdown__option-count">({{ value.count }})</span>
+                </a>
+              {%- endfor -%}
+              {%- if wood_native.active_values.size > 0 -%}
+                <a href="{{ wood_native.url_to_remove }}" class="col-dropdown__clear">Clear</a>
+              {%- endif -%}
+            </div>
+          </div>
+        {%- else -%}
+          {%- liquid
+            assign wood_types = ''
+            for product in collection.products limit: 250
+              assign wv = product.metafields.custom.wood_type.value
+              if wv != blank
+                assign wj = wv | join: '~'
+                assign wood_types = wood_types | append: '~' | append: wj
+              endif
+            endfor
+            assign wood_list = wood_types | split: '~' | uniq | sort
+          -%}
+          {%- if wood_list.size > 0 -%}
+            <div class="col-dropdown col-dropdown--left col-toolbar__facet" data-dropdown data-wood-filter data-wood-param="filter.p.m.custom.wood_type">
+              <button type="button" class="col-dropdown__trigger" data-dropdown-toggle aria-expanded="false" aria-haspopup="true">
+                <span>Wood Type</span>
+                {{ col_caret }}
               </button>
               <div class="col-dropdown__menu">
-                <a href="#" class="col-dropdown__option is-active">
-                  <input type="checkbox" class="visually-hidden" checked tabindex="-1">
-                  <span class="col-checkbox">
-                    <svg viewBox="0 0 14 14" fill="none" class="col-checkbox__icon">
-                      <path d="M3 7.5L6 10.5L11 3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                  </span>
-                  <span class="col-dropdown__option-label">Bedroom</span>
-                  <span class="col-dropdown__option-count">(15)</span>
-                </a>
-                <a href="#" class="col-dropdown__option">
-                  <input type="checkbox" class="visually-hidden" tabindex="-1">
-                  <span class="col-checkbox">
-                    <svg viewBox="0 0 14 14" fill="none" class="col-checkbox__icon">
-                      <path d="M3 7.5L6 10.5L11 3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                  </span>
-                  <span class="col-dropdown__option-label">Entrance</span>
-                  <span class="col-dropdown__option-count">(15)</span>
-                </a>
-                <a href="#" class="col-dropdown__option">
-                  <input type="checkbox" class="visually-hidden" tabindex="-1">
-                  <span class="col-checkbox">
-                    <svg viewBox="0 0 14 14" fill="none" class="col-checkbox__icon">
-                      <path d="M3 7.5L6 10.5L11 3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                  </span>
-                  <span class="col-dropdown__option-label">Hallway</span>
-                  <span class="col-dropdown__option-count">(6)</span>
-                </a>
-                <a href="#" class="col-dropdown__clear">Clear</a>
+                {%- for wt in wood_list -%}
+                  {%- if wt != blank -%}
+                    <a href="#" class="col-dropdown__option" data-wood-option data-wood-value="{{ wt | escape }}">
+                      <input type="checkbox" class="visually-hidden" tabindex="-1" aria-hidden="true">
+                      {{ col_check }}
+                      <span class="col-dropdown__option-label">{{ wt | escape }}</span>
+                    </a>
+                  {%- endif -%}
+                {%- endfor -%}
+                <a href="#" class="col-dropdown__clear" data-wood-clear hidden>Clear</a>
               </div>
             </div>
-          {% endfor %}
-        {% endfor %}
+          {%- endif -%}
+        {%- endif -%}
       </div>
     </div>
 
@@ -239,8 +188,8 @@
           assign current_sort_label = 'Newest'
         endif
       %}
-      <div class="col-dropdown col-dropdown--right col-toolbar__sort">
-        <div class="col-dropdown__trigger">
+      <div class="col-dropdown col-dropdown--right col-toolbar__sort" data-dropdown>
+        <button type="button" class="col-dropdown__trigger" data-dropdown-toggle aria-expanded="false" aria-haspopup="true">
           <span class="col-toolbar__sort-label">Sort by:</span>
           <span class="col-toolbar__sort-value">{{ current_sort_label }}</span>
           <svg
@@ -254,31 +203,34 @@
           >
             <polyline points="6 9 12 15 18 9"></polyline>
           </svg>
-        </div>
+        </button>
         <div class="col-dropdown__menu">
-          <a href="?sort_by=manual" class="col-dropdown__option {% if sort_by == 'manual' %}is-active{% endif %}">
+          <button type="button" class="col-dropdown__option{% if sort_by == 'manual' %} is-active{% endif %}" data-sort-value="manual">
             <span class="col-dropdown__option-label">Featured</span>
-          </a>
-          <a
-            href="?sort_by=price-ascending"
-            class="col-dropdown__option {% if sort_by contains 'price' %}is-active{% endif %}"
-          >
+          </button>
+          <button type="button" class="col-dropdown__option{% if sort_by contains 'price' %} is-active{% endif %}" data-sort-value="price-ascending">
             <span class="col-dropdown__option-label">Price: Low to High</span>
-          </a>
-          <a
-            href="?sort_by=created-descending"
-            class="col-dropdown__option {% if sort_by contains 'created' %}is-active{% endif %}"
-          >
+          </button>
+          <button type="button" class="col-dropdown__option{% if sort_by contains 'created' %} is-active{% endif %}" data-sort-value="created-descending">
             <span class="col-dropdown__option-label">Newest</span>
-          </a>
+          </button>
         </div>
       </div>
-      <div class="col-toolbar__count">{{ collection.products_count }} items</div>
+      {%- liquid
+        assign per_page = 24
+        assign cur_page = current_page | default: 1
+        assign page_offset = cur_page | minus: 1 | times: per_page
+        assign items_on_page = collection.products_count | minus: page_offset | at_most: per_page
+        if items_on_page < 0
+          assign items_on_page = 0
+        endif
+      -%}
+      <div class="col-toolbar__count">{{ items_on_page }} items</div>
     </div>
   </div>
 
   <div class="col-grid-wrap">
-    {% paginate collection.products by 24 %}
+    {% paginate collection.products by per_page %}
       {% if collection.products.size == 0 %}
         <p class="col-empty">No products found in this collection.</p>
       {% else %}
@@ -559,11 +511,17 @@
     color: var(--text-secondary);
     transition: transform var(--timing-fast) var(--ease-standard);
   }
-  .col-dropdown:hover .col-dropdown__trigger {
+  .col-dropdown__trigger:hover,
+  .col-dropdown__trigger.picked {
     color: var(--color-earth-brown);
   }
-  .col-dropdown:hover .col-dropdown__trigger svg {
+  .col-dropdown__trigger.picked svg {
     transform: rotate(180deg);
+  }
+  /* Indicator when a filter currently has active values */
+  .col-dropdown.has-active > .col-dropdown__trigger {
+    color: var(--color-earth-brown);
+    font-weight: var(--font-weight-bold);
   }
   .col-dropdown__menu {
     position: absolute;
@@ -573,6 +531,7 @@
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-elevation-3);
     min-width: 240px;
+    max-width: calc(100vw - var(--sp-6));
     padding: var(--sp-2) 0;
     opacity: 0;
     visibility: hidden;
@@ -589,7 +548,7 @@
   .col-dropdown--right .col-dropdown__menu {
     right: 0;
   }
-  .col-dropdown:hover .col-dropdown__menu {
+  .col-dropdown.is-open .col-dropdown__menu {
     opacity: 1;
     visibility: visible;
     transform: translateY(0);
@@ -640,6 +599,7 @@
     transition: all var(--timing-fast) var(--ease-standard);
     flex: 0 0 auto;
     pointer-events: none;
+    border-color: var(--color-ebony);
   }
   .col-checkbox__icon {
     width: 12px;
@@ -647,7 +607,6 @@
   }
   input[type='checkbox']:checked + .col-checkbox {
     background-color: var(--color-ebony);
-    border-color: var(--color-ebony);
     color: var(--color-milk);
   }
 
@@ -1026,8 +985,22 @@
     .col-toolbar__count {
       font-size: var(--font-size-caption);
     }
+    /* Stack the toolbar so filters stay usable (tap to open) on mobile */
+    .col-toolbar {
+      flex-direction: column;
+      align-items: stretch;
+    }
     .col-toolbar__facets {
-      display: none;
+      flex-wrap: wrap;
+      padding-left: var(--layout-padding-mobile);
+    }
+    .col-toolbar__facet {
+      padding: 0 var(--sp-4);
+      height: 48px;
+    }
+    .col-toolbar__right {
+      justify-content: space-between;
+      border-top: 1px solid var(--border-light);
     }
     .col-toolbar__count {
       padding-right: var(--layout-padding-mobile);
@@ -1103,6 +1076,7 @@
                 window.showToast({ message: 'Item added to your cart.', type: 'success', position: 'bottom-right' });
               }
               updateCartBubble();
+              document.dispatchEvent(new CustomEvent('cart:updated', { detail: { open: true } }));
             })
             .catch(function (err) {
               if (window.showToast) {
@@ -1152,6 +1126,110 @@
           currentIndex = 0;
           showImage(0);
         });
+      });
+
+      // Filter/sort dropdowns: open on click/tap (mobile friendly) and mark the
+      // pressed trigger with a "picked" class as an open indicator.
+      var dropdowns = Array.prototype.slice.call(document.querySelectorAll('[data-dropdown]'));
+      function closeDropdowns(except) {
+        dropdowns.forEach(function (d) {
+          if (d === except) return;
+          d.classList.remove('is-open');
+          var t = d.querySelector('[data-dropdown-toggle]');
+          if (t) {
+            t.classList.remove('picked');
+            t.setAttribute('aria-expanded', 'false');
+          }
+        });
+      }
+      dropdowns.forEach(function (d) {
+        if (d.dataset.initDropdown === 'true') return;
+        d.dataset.initDropdown = 'true';
+        var toggle = d.querySelector('[data-dropdown-toggle]');
+        if (!toggle) return;
+        toggle.addEventListener('click', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          var willOpen = !d.classList.contains('is-open');
+          closeDropdowns(willOpen ? d : null);
+          d.classList.toggle('is-open', willOpen);
+          toggle.classList.toggle('picked', willOpen);
+          toggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+        });
+      });
+      if (document.body.dataset.colDropdownGlobal !== 'true') {
+        document.body.dataset.colDropdownGlobal = 'true';
+        document.addEventListener('click', function (e) {
+          if (!e.target.closest('[data-dropdown]')) closeDropdowns(null);
+        });
+        document.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape') closeDropdowns(null);
+        });
+      }
+
+      // Sort: preserve active filters (and wood-type params) when changing sort.
+      document.querySelectorAll('[data-sort-value]').forEach(function (el) {
+        if (el.dataset.init === 'true') return;
+        el.dataset.init = 'true';
+        el.addEventListener('click', function (e) {
+          e.preventDefault();
+          var params = new URLSearchParams(window.location.search);
+          params.set('sort_by', el.dataset.sortValue);
+          params.delete('page');
+          window.location.search = params.toString();
+        });
+      });
+
+      // Wood Type (metafield-based fallback): reflect + toggle the filter param
+      // client-side so it combines with the native availability/price filters.
+      document.querySelectorAll('[data-wood-filter]').forEach(function (wrap) {
+        if (wrap.dataset.initWood === 'true') return;
+        wrap.dataset.initWood = 'true';
+        var param = wrap.dataset.woodParam;
+        var options = wrap.querySelectorAll('[data-wood-option]');
+        var clear = wrap.querySelector('[data-wood-clear]');
+        var current = new URLSearchParams(window.location.search).getAll(param);
+        var anyActive = false;
+        options.forEach(function (opt) {
+          if (current.indexOf(opt.dataset.woodValue) !== -1) {
+            opt.classList.add('is-active');
+            var cb = opt.querySelector('input');
+            if (cb) cb.checked = true;
+            anyActive = true;
+          }
+        });
+        wrap.classList.toggle('has-active', anyActive);
+        if (clear) clear.hidden = !anyActive;
+
+        function navigate(values) {
+          var params = new URLSearchParams(window.location.search);
+          params.delete(param);
+          params.delete('page');
+          values.forEach(function (v) {
+            params.append(param, v);
+          });
+          window.location.search = params.toString();
+        }
+        options.forEach(function (opt) {
+          opt.addEventListener('click', function (e) {
+            e.preventDefault();
+            var values = new URLSearchParams(window.location.search).getAll(param);
+            var val = opt.dataset.woodValue;
+            var idx = values.indexOf(val);
+            if (idx === -1) {
+              values.push(val);
+            } else {
+              values.splice(idx, 1);
+            }
+            navigate(values);
+          });
+        });
+        if (clear) {
+          clear.addEventListener('click', function (e) {
+            e.preventDefault();
+            navigate([]);
+          });
+        }
       });
     }
 

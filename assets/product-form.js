@@ -147,6 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 bubble.remove();
               }
             }
+            document.dispatchEvent(new CustomEvent('cart:updated', { detail: { open: true } }));
           });
       })
       .catch((error) => {

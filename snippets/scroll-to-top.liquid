@@ -1,0 +1,81 @@
+{% stylesheet %}
+  .scroll-to-top {
+    position: fixed;
+    bottom: 32px;
+    right: 32px;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    color: var(--color-foreground, #3d2b1f);
+    border: 1px solid var(--color-cream, #fff);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transform: translateY(15px);
+    transition: opacity 0.4s ease, visibility 0.4s ease, transform 0.4s ease, background-color 0.3s ease,
+      color 0.3s ease, border-color 0.3s ease;
+    z-index: 99;
+    background-color: var(--color-foreground, #3d2b1f);
+    color: var(--color-background, #fff);
+  }
+
+  .scroll-to-top.is-visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+
+  .scroll-to-top:hover {
+    transform: translateY(0) scale(1.1);
+  }
+
+  .scroll-to-top svg {
+    width: 16px;
+    height: 16px;
+    stroke-width: 1px;
+  }
+{% endstylesheet %}
+
+<button type="button" class="scroll-to-top" id="scrollToTopBtn" aria-label="Scroll to top">
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="16"
+    height="16"
+    fill="currentColor"
+    class="bi bi-chevron-up"
+    viewBox="0 0 16 16"
+  >
+    <path fill-rule="evenodd" d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708z"/>
+  </svg>
+</button>
+
+{% javascript %}
+  document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('scrollToTopBtn');
+    if (!btn) return;
+
+    window.addEventListener('scroll', () => {
+      if (window.scrollY > 300) {
+        btn.classList.add('is-visible');
+      } else {
+        btn.classList.remove('is-visible');
+      }
+    });
+
+    btn.addEventListener('click', () => {
+      window.scrollTo({
+        top: 100,
+        behavior: 'instant',
+      });
+
+      setTimeout(() => {
+        window.scrollTo({
+          top: 0,
+          behavior: 'smooth',
+        });
+      }, 50);
+    });
+  });
+{% endjavascript %}
