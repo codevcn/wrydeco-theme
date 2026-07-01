@@ -72,6 +72,12 @@
     padding-inline: var(--sp-2);
     scrollbar-width: none;
     -ms-overflow-style: none;
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: grab;
+  }
+  .product-gallery__thumbnails.is-active-drag {
+    cursor: grabbing;
   }
   .product-gallery__thumbnails::-webkit-scrollbar {
     display: none;
@@ -103,6 +109,8 @@
     height: 100%;
     object-fit: cover;
     display: block;
+    pointer-events: none;
+    -webkit-user-drag: none;
   }
 
   @media screen and (min-width: 720px) {
@@ -364,6 +372,46 @@
         document.addEventListener('keydown', function (event) {
           if (event.key === 'Escape' && !lightbox.hidden) closeLightbox();
         });
+
+        var thumbnails = gallery.querySelector('.product-gallery__thumbnails');
+        if (thumbnails) {
+          var isDown = false;
+          var startX;
+          var scrollLeft;
+          var isDragging = false;
+
+          thumbnails.addEventListener('mousedown', function (e) {
+            isDown = true;
+            isDragging = false;
+            thumbnails.classList.add('is-active-drag');
+            startX = e.pageX - thumbnails.offsetLeft;
+            scrollLeft = thumbnails.scrollLeft;
+          });
+          thumbnails.addEventListener('mouseleave', function () {
+            isDown = false;
+            thumbnails.classList.remove('is-active-drag');
+          });
+          thumbnails.addEventListener('mouseup', function () {
+            isDown = false;
+            thumbnails.classList.remove('is-active-drag');
+          });
+          thumbnails.addEventListener('mousemove', function (e) {
+            if (!isDown) return;
+            e.preventDefault();
+            var x = e.pageX - thumbnails.offsetLeft;
+            var walk = (x - startX) * 2; // scroll speed multiplier
+            if (Math.abs(walk) > 5) {
+              isDragging = true;
+            }
+            thumbnails.scrollLeft = scrollLeft - walk;
+          });
+          thumbnails.addEventListener('click', function(e) {
+            if (isDragging) {
+              e.stopPropagation();
+              e.preventDefault();
+            }
+          }, true);
+        }
       });
     }
 

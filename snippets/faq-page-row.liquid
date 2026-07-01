@@ -1,0 +1,28 @@
+{% doc %}
+  Renders one numbered, always-readable FAQ row.
+
+  @param {string} question - The FAQ question
+  @param {string} answer - Rich text containing the answer
+  @param {number} number - The one-based question number
+  @param {string} category - Category key used by the filter controls
+  @param {string} [secondary_category] - Optional second category key
+  @param {string} [block_attributes] - Shopify editor attributes for the source block
+
+  @example
+  {% render 'faq-page-row', question: 'Is this solid wood?', answer: answer, number: 1, category: 'materials-care' %}
+{% enddoc %}
+
+{%- assign display_number = number | prepend: '0' | slice: -2, 2 -%}
+
+<article
+  class="faq-page-row"
+  data-faq-category="{{ category | escape }}"
+  data-faq-secondary-category="{{ secondary_category | escape }}"
+  {{ block_attributes }}
+>
+  <span class="faq-page-row__number" aria-hidden="true">{{ display_number }}</span>
+  <div class="faq-page-row__content">
+    <h3 class="faq-page-row__question">{{ question | escape }}</h3>
+    <div class="faq-page-row__answer rte">{{ answer }}</div>
+  </div>
+</article>

@@ -25,7 +25,7 @@
   .main-product__info {
     display: flex;
     flex-direction: column;
-    gap: var(--sp-5);
+    gap: 20px;
     min-width: 0;
   }
 
@@ -36,12 +36,14 @@
   }
   .main-product__eyebrow {
     margin: 0;
-    font-family: var(--font-body);
+    font-family: var(--font-roboto);
     font-size: 12px;
     font-weight: var(--font-weight-bold);
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--color-clay);
+    padding-left: 12px;
+    border-left: 3px solid var(--color-clay);
   }
   .main-product__title {
     margin: 0;
@@ -78,6 +80,7 @@
     margin: 0;
     font-size: var(--font-size-body-sm);
     color: var(--text-secondary);
+    font-weight: var(--font-weight-medium);
   }
   .main-product__feature svg {
     width: 18px;
@@ -191,9 +194,7 @@
     background-color: var(--color-milk);
     box-shadow: var(--shadow-card);
     text-align: center;
-    transition:
-      transform var(--timing-short) var(--ease-standard),
-      box-shadow var(--timing-short) var(--ease-standard);
+    transition: transform var(--timing-short) var(--ease-standard), box-shadow var(--timing-short) var(--ease-standard);
   }
 
   .main-product__trust-item:hover {
@@ -379,7 +380,12 @@
 
   <div class="main-product__info">
     <div class="main-product__header">
-      <p class="main-product__eyebrow">Verona Collection</p>
+      {%- assign current_collection = collection | default: product.collections.first -%}
+      {%- if current_collection != blank -%}
+        <a href="{{ current_collection.url }}" class="main-product__eyebrow" style="text-decoration: none;">
+          {{ current_collection.title }}
+        </a>
+      {%- endif -%}
       <h1 class="main-product__title" id="MainProductTitle-{{ section.id }}">{{ product.title | escape }}</h1>
       <p class="main-product__subtitle">
         Sculptural function. Hand-carved fluting and solid walnut bring quiet sophistication to any space.

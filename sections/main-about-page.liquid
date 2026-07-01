@@ -1,0 +1,539 @@
+{%- liquid
+  assign story_anchor = '#about-story-' | append: section.id
+  assign makers_anchor = '#about-makers-' | append: section.id
+-%}
+
+<main class="about-page" id="about-page-{{ section.id }}">
+  <section class="about-hero" aria-labelledby="about-title-{{ section.id }}">
+    <div class="about-hero__copy">
+      <p class="about-page__eyebrow">{{ section.settings.hero_eyebrow | escape }}</p>
+      <h1 class="about-hero__title" id="about-title-{{ section.id }}">
+        <span>{{ section.settings.hero_heading_first_line | escape }}</span>
+        <span>{{ section.settings.hero_heading_second_line | escape }}</span>
+      </h1>
+      <span class="about-page__accent" aria-hidden="true"></span>
+      <div class="about-hero__intro rte">{{ section.settings.hero_text }}</div>
+      <a class="about-page__text-link" href="{{ story_anchor }}">
+        {{ section.settings.hero_link_label | escape }}
+        <span aria-hidden="true">&rarr;</span>
+      </a>
+    </div>
+
+    <div class="about-hero__media">
+      <img
+        src="{{ 'faq--faq-img.png' | asset_url }}"
+        width="1792"
+        height="1024"
+        alt="{{ section.settings.hero_image_alt | escape }}"
+        loading="eager"
+        fetchpriority="high"
+      >
+    </div>
+  </section>
+
+  <section class="about-story" id="about-story-{{ section.id }}" aria-labelledby="about-story-title-{{ section.id }}">
+    <div class="about-story__inner">
+      <div class="about-story__copy">
+        <p class="about-page__eyebrow">{{ section.settings.story_eyebrow | escape }}</p>
+        <h2 class="about-story__title" id="about-story-title-{{ section.id }}">
+          <span>{{ section.settings.story_heading_first_line | escape }}</span>
+          <span>{{ section.settings.story_heading_second_line | escape }}</span>
+        </h2>
+        <span class="about-page__accent" aria-hidden="true"></span>
+        <div class="about-story__text rte">{{ section.settings.story_text }}</div>
+        <a class="about-page__text-link" href="{{ makers_anchor }}">
+          {{ section.settings.story_link_label | escape }}
+          <span aria-hidden="true">&rarr;</span>
+        </a>
+      </div>
+
+      <div class="about-story__media">
+        <img
+          src="{{ 'faq--our-story-img.png' | asset_url }}"
+          width="1792"
+          height="1024"
+          alt="{{ section.settings.story_image_alt | escape }}"
+          loading="lazy"
+        >
+      </div>
+    </div>
+  </section>
+
+  <section
+    class="about-makers"
+    id="about-makers-{{ section.id }}"
+    aria-labelledby="about-makers-title-{{ section.id }}"
+  >
+    <header class="about-makers__header">
+      <p class="about-page__eyebrow">{{ section.settings.makers_eyebrow | escape }}</p>
+      <h2 id="about-makers-title-{{ section.id }}">{{ section.settings.makers_heading | escape }}</h2>
+      <span class="about-makers__accent" aria-hidden="true"></span>
+    </header>
+
+    <div class="about-makers__grid">
+      {%- for block in section.blocks -%}
+        {%- if block.type == 'maker' -%}
+          <article class="about-maker" {{ block.shopify_attributes }}>
+            <div class="about-maker__media">
+              <img
+                src="{{ block.settings.image_asset | asset_url }}"
+                width="600"
+                height="600"
+                alt="{{ block.settings.image_alt | default: block.settings.name | escape }}"
+                loading="lazy"
+              >
+            </div>
+            <div class="about-maker__content">
+              <h3>{{ block.settings.name | escape }}</h3>
+              <p class="about-maker__role">{{ block.settings.role | escape }}</p>
+              <span class="about-maker__line" aria-hidden="true"></span>
+              <div class="about-maker__bio rte">{{ block.settings.bio }}</div>
+            </div>
+          </article>
+        {%- endif -%}
+      {%- endfor -%}
+    </div>
+  </section>
+</main>
+
+<script>
+  const mainProductSection = document.getElementById('about-page-{{ section.id }}');
+  if (mainProductSection) {
+    mainProductSection.closest('body').querySelector('.header__icon--search').style.color = 'var(--color-earth-brown)';
+    mainProductSection.closest('body').querySelector('.header__icon--cart').style.color = 'var(--color-earth-brown)';
+    mainProductSection.closest('body').querySelector('.header').style.border = '1px solid #cfcbc7b4';
+  }
+</script>
+<script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "AboutPage",
+    "name": {{ section.settings.hero_eyebrow | json }},
+    "description": {{ section.settings.hero_text | strip_html | strip | json }},
+    "url": {{ canonical_url | json }}
+  }
+</script>
+
+{% stylesheet %}
+  .about-page {
+    --about-max-width: var(--layout-showcase-max-width);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+  }
+
+  .about-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 42.5%) minmax(0, 57.5%);
+    min-block-size: calc(var(--sp-8) * 9);
+    border-block-end: var(--border-width) solid var(--border-light);
+    padding: var(--sp-7) var(--sp-8) var(--sp-8);
+    padding-top: 128px;
+  }
+
+  .about-hero__copy {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    padding-inline: var(--sp-5);
+  }
+
+  .about-page__eyebrow {
+    margin: var(--sp-0) var(--sp-0) var(--sp-5);
+    color: var(--color-earth-brown);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: calc(var(--letter-spacing-wide) * 3);
+    line-height: var(--line-height-normal);
+    text-transform: uppercase;
+  }
+
+  .about-hero__title,
+  .about-story__title {
+    margin: var(--sp-0);
+    color: var(--color-earth-brown);
+    font-family: var(--font-display-light);
+    font-weight: var(--font-weight-light);
+    letter-spacing: var(--letter-spacing-tight);
+    line-height: var(--line-height-display);
+  }
+
+  .about-hero__title {
+    font-size: var(--font-size-display-xl);
+  }
+
+  .about-hero__title span,
+  .about-story__title span {
+    display: block;
+    white-space: nowrap;
+  }
+
+  .about-page__accent {
+    display: block;
+    inline-size: var(--sp-6);
+    block-size: calc(var(--border-width) * 2);
+    margin-block: var(--sp-5);
+    background: var(--color-clay);
+  }
+
+  .about-hero__intro {
+    max-inline-size: 50ch;
+    color: var(--color-bark);
+    font-size: var(--font-size-body-lg);
+    line-height: var(--line-height-generous);
+  }
+
+  .about-hero__intro p,
+  .about-story__text p,
+  .about-maker__bio p {
+    margin: var(--sp-0);
+  }
+
+  .about-page__text-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-4);
+    min-block-size: var(--sp-7);
+    margin-block-start: var(--sp-6);
+    border-block-end: var(--border-width) solid var(--color-bark);
+    color: var(--color-charcoal);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--letter-spacing-wide);
+    text-decoration: none;
+    text-transform: uppercase;
+    transition: color var(--timing-short) var(--ease-standard), border-color var(--timing-short) var(--ease-standard),
+      transform var(--timing-short) var(--ease-standard);
+  }
+
+  .about-page__text-link:hover {
+    border-color: var(--color-earth-brown);
+    color: var(--color-earth-brown);
+  }
+
+  .about-page__text-link:active {
+    transform: translateY(var(--border-width));
+  }
+
+  .about-page__text-link:focus-visible {
+    outline: calc(var(--border-width) * 2) solid var(--color-sage);
+    outline-offset: var(--sp-1);
+  }
+
+  .about-hero__media,
+  .about-story__media,
+  .about-maker__media {
+    overflow: hidden;
+    border-radius: var(--radius-lg);
+  }
+
+  .about-hero__media img,
+  .about-story__media img,
+  .about-maker__media img {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  .about-hero__media img {
+    object-position: center;
+  }
+
+  .about-story {
+    padding: var(--sp-7) var(--sp-8) var(--sp-8);
+  }
+
+  .about-story__inner {
+    display: grid;
+    grid-template-columns: minmax(0, 42.5%) minmax(0, 57.5%);
+    align-items: center;
+    margin-inline: auto;
+  }
+
+  .about-story__copy {
+    padding-inline: var(--sp-5);
+  }
+
+  .about-story__title {
+    font-size: var(--font-size-display-lg);
+  }
+
+  .about-story__text {
+    display: grid;
+    gap: var(--sp-4);
+    max-inline-size: 50ch;
+    color: var(--color-charcoal);
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-generous);
+  }
+
+  .about-story__media {
+    aspect-ratio: 16 / 9;
+    border-radius: var(--radius-lg);
+  }
+
+  .about-makers {
+    inline-size: min(calc(100% - (var(--sp-8) * 2)), var(--about-max-width));
+    margin-inline: auto;
+    padding-block: var(--sp-0) var(--sp-0);
+    margin-block: 36px;
+  }
+
+  .about-makers__header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-block-end: var(--sp-6);
+    text-align: center;
+  }
+
+  .about-makers__header .about-page__eyebrow {
+    margin-block-end: var(--sp-2);
+  }
+
+  .about-makers__header h2 {
+    margin: var(--sp-0);
+    color: var(--color-earth-brown);
+    font-family: var(--font-display-light);
+    font-size: var(--font-size-display-lg);
+    font-weight: var(--font-weight-light);
+    letter-spacing: var(--letter-spacing-tight);
+    line-height: var(--line-height-display);
+  }
+
+  .about-makers__accent {
+    inline-size: var(--sp-5);
+    block-size: var(--border-width);
+    margin-block-start: var(--sp-3);
+    background: var(--color-clay);
+  }
+
+  .about-makers__grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--sp-4);
+  }
+
+  .about-maker {
+    display: grid;
+    grid-template-columns: minmax(0, 48%) minmax(0, 52%);
+    overflow: hidden;
+    min-block-size: calc(var(--sp-8) * 4);
+    border: var(--border-width) solid var(--border-light);
+    border-radius: var(--radius-lg);
+    background: color-mix(in srgb, var(--bg-tertiary) 46%, transparent);
+    box-shadow: var(--shadow-elevation-1);
+  }
+
+  .about-maker__media img {
+    filter: sepia(0.12);
+  }
+
+  .about-maker__content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: var(--sp-5);
+  }
+
+  .about-maker__content h3 {
+    margin: var(--sp-0) var(--sp-0) var(--sp-1);
+    color: var(--color-earth-brown);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-2xl);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-normal);
+  }
+
+  .about-maker__role {
+    margin: var(--sp-0);
+    color: var(--text-secondary);
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-relaxed);
+  }
+
+  .about-maker__line {
+    inline-size: var(--sp-5);
+    block-size: var(--border-width);
+    margin-block: var(--sp-4);
+    background: var(--color-clay);
+  }
+
+  .about-maker__bio {
+    color: var(--color-charcoal);
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-relaxed);
+  }
+
+  @media screen and (max-width: 75rem) {
+    .about-hero__copy {
+      padding-inline: var(--sp-8);
+    }
+
+    .about-hero__title {
+      font-size: var(--font-size-display-lg);
+    }
+
+    .about-makers__grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .about-maker {
+      grid-template-columns: minmax(0, 40%) minmax(0, 60%);
+      min-block-size: calc(var(--sp-8) * 5);
+    }
+  }
+
+  @media screen and (max-width: 64rem) {
+    .about-hero {
+      grid-template-columns: minmax(0, 1fr);
+      padding: var(--sp-7) var(--sp-8) var(--sp-8);
+    }
+
+    .about-hero__copy {
+      min-block-size: calc(var(--sp-8) * 7);
+      padding: var(--sp-11) var(--layout-padding-tablet) var(--sp-8);
+    }
+
+    .about-hero__media {
+      aspect-ratio: 16 / 9;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    .about-story {
+      padding-inline: var(--layout-padding-tablet);
+    }
+
+    .about-story__inner {
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--sp-6);
+    }
+
+    .about-story__copy {
+      padding-inline: var(--sp-0);
+    }
+
+    .about-makers {
+      inline-size: min(calc(100% - (var(--layout-padding-tablet) * 2)), var(--about-max-width));
+    }
+  }
+
+  @media screen and (max-width: 48rem) {
+    .about-hero__copy {
+      min-block-size: calc(var(--sp-8) * 6);
+      padding: var(--sp-10) var(--layout-padding-mobile) var(--sp-7);
+    }
+
+    .about-page__eyebrow {
+      margin-block-end: var(--sp-4);
+    }
+
+    .about-hero__title,
+    .about-story__title,
+    .about-makers__header h2 {
+      font-size: var(--font-size-display-md);
+    }
+
+    .about-hero__title span,
+    .about-story__title span {
+      white-space: normal;
+    }
+
+    .about-hero__intro {
+      font-size: var(--font-size-body-md);
+    }
+
+    .about-story {
+      padding: var(--sp-7) var(--layout-padding-mobile);
+    }
+
+    .about-makers {
+      inline-size: min(calc(100% - (var(--layout-padding-mobile) * 2)), var(--about-max-width));
+      padding-block-end: var(--sp-8);
+    }
+
+    .about-maker {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .about-maker__media {
+      aspect-ratio: 4 / 3;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Main About page",
+  "tag": "section",
+  "class": "section-main-about-page",
+  "settings": [
+    { "type": "header", "content": "Hero" },
+    { "type": "text", "id": "hero_eyebrow", "label": "Eyebrow", "default": "About us" },
+    { "type": "text", "id": "hero_heading_first_line", "label": "Heading first line", "default": "Crafted by Nature." },
+    {
+      "type": "text",
+      "id": "hero_heading_second_line",
+      "label": "Heading second line",
+      "default": "Designed to Last."
+    },
+    {
+      "type": "richtext",
+      "id": "hero_text",
+      "label": "Text",
+      "default": "<p>WRYDECO creates handcrafted natural solid wood furniture that lives between organic art, sculptural design, and luxury bespoke interiors.</p>"
+    },
+    { "type": "text", "id": "hero_link_label", "label": "Link label", "default": "Our story" },
+    {
+      "type": "text",
+      "id": "hero_image_alt",
+      "label": "Image alt text",
+      "default": "Sculptural solid wood dining table and handcrafted chair in a warm interior"
+    },
+    { "type": "header", "content": "Our story" },
+    { "type": "text", "id": "story_eyebrow", "label": "Eyebrow", "default": "Our story" },
+    { "type": "text", "id": "story_heading_first_line", "label": "Heading first line", "default": "Furniture as" },
+    { "type": "text", "id": "story_heading_second_line", "label": "Heading second line", "default": "Functional Art." },
+    {
+      "type": "richtext",
+      "id": "story_text",
+      "label": "Text",
+      "default": "<p>Born from a passion for wood and form, WRYDECO was founded to create timeless pieces that celebrate the beauty of nature and the skill of human hands.</p><p>We work with solid, natural wood—never veneers—honoring the grain, texture, and character that make each piece truly one of a kind.</p>"
+    },
+    { "type": "text", "id": "story_link_label", "label": "Link label", "default": "Learn more about our journey" },
+    {
+      "type": "text",
+      "id": "story_image_alt",
+      "label": "Image alt text",
+      "default": "Sculptural wooden artwork displayed with a framed abstract print"
+    },
+    { "type": "header", "content": "Makers" },
+    { "type": "text", "id": "makers_eyebrow", "label": "Eyebrow", "default": "Meet the makers" },
+    { "type": "text", "id": "makers_heading", "label": "Heading", "default": "The People Behind the Pieces" }
+  ],
+  "blocks": [
+    {
+      "type": "maker",
+      "name": "Maker",
+      "settings": [
+        { "type": "text", "id": "image_asset", "label": "Theme asset filename", "default": "artist-Alex_Nguyen.webp" },
+        { "type": "text", "id": "image_alt", "label": "Image alt text" },
+        { "type": "text", "id": "name", "label": "Name", "default": "Alex Nguyen" },
+        { "type": "text", "id": "role", "label": "Role", "default": "Master Craftsman" },
+        {
+          "type": "richtext",
+          "id": "bio",
+          "label": "Biography",
+          "default": "<p>Alex brings deep respect for natural materials to every piece, shaping solid wood into sculptural furniture made to last.</p>"
+        }
+      ]
+    }
+  ],
+  "max_blocks": 6,
+  "presets": [{ "name": "Main About page" }]
+}
+{% endschema %}
