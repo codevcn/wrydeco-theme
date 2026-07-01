@@ -22,7 +22,7 @@ All code must be optimized for search engines following an Server-Side Rendering
 
 Maintain design consistency by strictly adhering to the defined design system tokens and components.
 
-- **Reference File:** `assets/base.css` — đây là nguồn duy nhất cho toàn bộ CSS variables (màu sắc, typography, spacing, shadows, motion).
+- **Reference File:** `assets/base.css` — this is the single source of truth for all CSS variables (colors, typography, spacing, shadows, motion).
 - **Approach:** All styling must reference the global CSS variables defined in `assets/base.css`. Do not use hardcoded hex codes, pixel values for spacing/radius, or arbitrary font sizes.
 - **Scope:** This rule applies across all CSS files, Liquid `{% stylesheet %}` tags, and inline styles.
 
@@ -36,10 +36,15 @@ The technical implementation must align with the brand's luxury positioning.
 
 ## 5. Shopify Sections Layout
 
-- Cố gắng giữ shopify-section có `display: block`
-- Khi bắt buộc thay đổi `display` của shopify-section thì phải hỏi trước.
+- Try to maintain `display: block` for the shopify-section wrapper.
+- If it is strictly necessary to change the `display` property of the shopify-section, you must ask for permission first.
 
 ## 6. Global Notifications (Toast)
 
 - All user-facing temporary notifications, alerts, and feedback messages MUST use the global Toast component.
 - **Implementation:** Do not write custom alert logic or duplicate notification UI. Always call the global JavaScript function `window.showToast({ message: '...', type: 'success|error|info', position: 'top-right|bottom-right|...', duration: 4000 })`.
+
+## 7. Language and Localization
+
+- All text displayed to the end user (on the website interface) must be written entirely in English.
+- Strictly do not use Vietnamese or any other language for UI components (buttons, labels, placeholders, messages, etc.).

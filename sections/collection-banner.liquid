@@ -1,0 +1,255 @@
+{% comment %}
+  Collection hero banner.
+
+  Full-width banner shown at the top of the collection page: a background image
+  (defaults to the bundled `collection-top-banner.png`) with a breadcrumb,
+  the collection title (rendered as the page H1) and a short intro paragraph
+  overlaid on the left.
+
+  https://shopify.dev/docs/storefronts/themes/architecture/sections
+{% endcomment %}
+
+{% liquid
+  assign heading = section.settings.heading | default: collection.title
+
+  if section.settings.background_image != blank
+    assign bg_alt = section.settings.background_image.alt | default: heading
+  else
+    assign bg_alt = heading
+  endif
+%}
+
+<section class="col-banner" id="CollectionBanner-{{ section.id }}">
+  {% if section.settings.show_breadcrumb %}
+    <nav class="col-banner__crumbs" aria-label="Breadcrumb">
+      <ol class="col-banner__crumbs-list">
+        <li class="col-banner__crumb">
+          <a href="{{ routes.root_url }}">{{ 'general.breadcrumbs.home' | t | default: 'Home' }}</a>
+        </li>
+        <li class="col-banner__crumb-sep" aria-hidden="true">/</li>
+        <li class="col-banner__crumb">
+          <a href="{{ routes.collections_url }}">
+            {{- 'general.breadcrumbs.collections' | t | default: 'Collections' -}}
+          </a>
+        </li>
+        <li class="col-banner__crumb-sep" aria-hidden="true">/</li>
+        <li class="col-banner__crumb col-banner__crumb--current" aria-current="page">
+          {{ heading | escape }}
+        </li>
+      </ol>
+    </nav>
+  {% endif %}
+
+  <div class="col-banner__media">
+    {% if section.settings.background_image != blank %}
+      {{
+        section.settings.background_image
+        | image_url: width: 2400
+        | image_tag:
+          class: 'col-banner__bg',
+          loading: 'eager',
+          fetchpriority: 'high',
+          widths: '768, 1024, 1440, 1920, 2400',
+          sizes: '100vw',
+          alt: bg_alt
+      }}
+    {% else %}
+      <img
+        class="col-banner__bg"
+        src="{{ 'collection-top-banner.png' | asset_url }}"
+        alt="{{ bg_alt | escape }}"
+        loading="eager"
+        fetchpriority="high"
+        width="2169"
+        height="725"
+      >
+    {% endif %}
+  </div>
+
+  <div class="col-banner__inner">
+    <h1 class="col-banner__title">{{ heading | escape }}</h1>
+
+    <span class="col-banner__rule" aria-hidden="true"></span>
+
+    {% if section.settings.description != blank %}
+      <div class="col-banner__desc">{{ section.settings.description }}</div>
+    {% elsif collection.description != blank %}
+      <div class="col-banner__desc">{{ collection.description }}</div>
+    {% endif %}
+  </div>
+</section>
+
+{% stylesheet %}
+  .col-banner {
+    position: relative;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    min-height: clamp(520px, 35vw, 640px);
+    overflow: hidden;
+    background-color: var(--color-cream);
+    font-family: var(--font-body);
+  }
+
+  .col-banner__media {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+  }
+  .col-banner__bg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: right center;
+    display: block;
+  }
+  /* Keep the left-side text legible over the image on narrower viewports. */
+  .col-banner__media::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      var(--color-cream) 0%,
+      rgba(245, 241, 237, 0.85) 30%,
+      rgba(245, 241, 237, 0) 60%
+    );
+  }
+
+  .col-banner__inner {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-6);
+    position: relative;
+    top: 38px;
+    z-index: 1;
+    width: 100%;
+    max-width: 620px;
+    height: fit-content;
+    padding: var(--sp-6) var(--sp-6) var(--sp-6) 72px;
+  }
+
+  .col-banner__crumbs-list {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--sp-2);
+    margin: 0 0 var(--sp-5);
+    padding: 0;
+    list-style: none;
+    font-size: 0.79vw;
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    top: calc(76px + 12px);
+    position: absolute;
+    left: var(--sp-9);
+    z-index: 10;
+  }
+  .col-banner__crumb a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: color var(--timing-short) var(--ease-standard);
+  }
+  .col-banner__crumb a:hover {
+    color: var(--color-earth-brown);
+  }
+  .col-banner__crumb-sep {
+    color: var(--border-default);
+  }
+  .col-banner__crumb--current {
+    color: var(--text-primary);
+  }
+
+  .col-banner__title {
+    margin: 0;
+    font-family: var(--font-display-light);
+    font-size: 3.15vw;
+    font-weight: 600;
+    line-height: var(--line-height-display);
+    letter-spacing: 0.01rem;
+    color: var(--text-primary);
+  }
+
+  .col-banner__rule {
+    display: block;
+    width: 56px;
+    height: 2px;
+    background-color: var(--color-clay);
+    border-radius: var(--radius-full);
+  }
+
+  .col-banner__desc {
+    max-width: 46ch;
+    font-size: 1.18vw;
+    line-height: var(--line-height-generous);
+    color: var(--text-secondary);
+  }
+  .col-banner__desc > * {
+    margin: 0;
+  }
+
+  @media screen and (max-width: 1024px) {
+    .col-banner__inner {
+      max-width: 68%;
+    }
+  }
+
+  @media screen and (max-width: 768px) {
+    .col-banner {
+      min-height: 300px;
+    }
+    .col-banner__media::after {
+      background: linear-gradient(
+        90deg,
+        var(--color-cream) 0%,
+        rgba(245, 241, 237, 0.9) 55%,
+        rgba(245, 241, 237, 0.55) 100%
+      );
+    }
+    .col-banner__inner {
+      max-width: 100%;
+      padding-left: var(--layout-padding-mobile);
+      padding-right: var(--layout-padding-mobile);
+    }
+    .col-banner__desc {
+      font-size: var(--font-size-body-md);
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.collection_banner",
+  "settings": [
+    {
+      "type": "image_picker",
+      "id": "background_image",
+      "label": "t:labels.background"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "info": "t:info.collection_banner_heading"
+    },
+    {
+      "type": "richtext",
+      "id": "description",
+      "label": "t:labels.description"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_breadcrumb",
+      "label": "t:labels.show_breadcrumb",
+      "default": true
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.collection_banner"
+    }
+  ]
+}
+{% endschema %}

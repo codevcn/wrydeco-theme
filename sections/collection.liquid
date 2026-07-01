@@ -8,64 +8,270 @@
 {% endcomment %}
 
 <section class="collection-page" id="Collection-{{ section.id }}">
-  <h1 class="visually-hidden">{{ collection.title | escape }}</h1>
-
   <div class="col-toolbar">
     <div class="col-toolbar__left">
-      <button type="button" class="col-toolbar__filter" data-filter-open aria-controls="FilterDrawer-{{ section.id }}">
-        <svg
-          class="col-toolbar__filter-icon"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.6"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
-          <path d="M4 6h8"></path><path d="M16 6h4"></path><circle cx="14" cy="6" r="2"></circle>
-          <path d="M4 12h2"></path><path d="M10 12h10"></path><circle cx="8" cy="12" r="2"></circle>
-          <path d="M4 18h8"></path><path d="M16 18h4"></path><circle cx="14" cy="18" r="2"></circle>
-        </svg>
-        <span>Filter</span>
-      </button>
-
       <div class="col-toolbar__facets">
-        {% assign facets = 'Material, Room, Price' | split: ', ' %}
-        {% for facet in facets %}
-          <button type="button" class="col-toolbar__facet">
-            <span>{{ facet }}</span>
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.5"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <polyline points="6 9 12 15 18 9"></polyline>
-            </svg>
-          </button>
+        {% for filter in collection.filters %}
+          <div class="col-dropdown col-dropdown--left col-toolbar__facet">
+            <button type="button" class="col-dropdown__trigger">
+              <span>{{ filter.label }}</span>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+            <div class="col-dropdown__menu">
+              {% if filter.type == 'price_range' %}
+                <form class="col-price-form">
+                  <div class="col-price-form__header">
+                    <span>MIN</span>
+                    <span>MAX</span>
+                  </div>
+                  <div class="col-price-form__inputs">
+                    <input
+                      name="{{ filter.min_value.param_name }}"
+                      type="number"
+                      placeholder="0"
+                      value="{{ filter.min_value.value | money_without_currency | replace: ',', '' }}"
+                      step="0.01"
+                      min="0"
+                    >
+                    <input
+                      name="{{ filter.max_value.param_name }}"
+                      type="number"
+                      placeholder="{{ filter.range_max | money_without_currency | replace: ',', '' }}"
+                      value="{{ filter.max_value.value | money_without_currency | replace: ',', '' }}"
+                      step="0.01"
+                      min="0"
+                    >
+                  </div>
+                  <button type="submit" class="col-price-form__apply">Apply</button>
+
+                  {%- for active_filter in collection.filters -%}
+                    {%- if active_filter.type != 'price_range' -%}
+                      {%- for active_value in active_filter.active_values -%}
+                        <input type="hidden" name="{{ active_value.param_name }}" value="{{ active_value.value }}">
+                      {%- endfor -%}
+                    {%- endif -%}
+                  {%- endfor -%}
+                  {%- if collection.sort_by != blank -%}
+                    <input type="hidden" name="sort_by" value="{{ collection.sort_by }}">
+                  {%- endif -%}
+                </form>
+                {% if filter.min_value.value != null or filter.max_value.value != null %}
+                  <a href="{{ filter.url_to_remove }}" class="col-dropdown__clear">Clear</a>
+                {% endif %}
+              {% else %}
+                {% assign is_radio = false %}
+                {% if filter.label == 'Availability' or filter.type == 'boolean' %}
+                  {% assign is_radio = true %}
+                {% endif %}
+
+                {% for value in filter.values %}
+                  {% assign link_href = value.url_to_add %}
+                  {% if is_radio %}
+                    {% assign base_url = request.path %}
+                    {% assign query_string = '' %}
+                    {%- for f in collection.filters -%}
+                      {%- if f.label != filter.label -%}
+                        {%- if f.type == 'price_range' -%}
+                          {%- if f.min_value.value != null -%}
+                            {% assign query_string = query_string
+                              | append: '&'
+                              | append: f.min_value.param_name
+                              | append: '='
+                              | append: f.min_value.value
+                            %}
+                          {%- endif -%}
+                          {%- if f.max_value.value != null -%}
+                            {% assign query_string = query_string
+                              | append: '&'
+                              | append: f.max_value.param_name
+                              | append: '='
+                              | append: f.max_value.value
+                            %}
+                          {%- endif -%}
+                        {%- else -%}
+                          {%- for v in f.active_values -%}
+                            {% assign encoded_val = v.value | url_encode %}
+                            {% assign query_string = query_string
+                              | append: '&'
+                              | append: v.param_name
+                              | append: '='
+                              | append: encoded_val
+                            %}
+                          {%- endfor -%}
+                        {%- endif -%}
+                      {%- endif -%}
+                    {%- endfor -%}
+                    {%- if collection.sort_by != blank -%}
+                      {% assign query_string = query_string | append: '&sort_by=' | append: collection.sort_by %}
+                    {%- endif -%}
+
+                    {% assign encoded_current_val = value.value | url_encode %}
+                    {% assign query_string = query_string
+                      | append: '&'
+                      | append: value.param_name
+                      | append: '='
+                      | append: encoded_current_val
+                    %}
+
+                    {% assign query_string = query_string | replace_first: '&', '?' %}
+                    {% assign link_href = base_url | append: query_string %}
+                  {% endif %}
+
+                  <a
+                    href="{% if value.active %}{{ filter.url_to_remove }}{% else %}{{ link_href }}{% endif %}"
+                    class="col-dropdown__option {% if value.active %}is-active{% endif %}"
+                  >
+                    {% if is_radio %}
+                      <input
+                        type="radio"
+                        class="visually-hidden"
+                        {% if value.active %}
+                          checked
+                        {% endif %}
+                        tabindex="-1"
+                        aria-hidden="true"
+                      >
+                      <span class="col-radio">
+                        <span class="col-radio__inner"></span>
+                      </span>
+                    {% else %}
+                      <input
+                        type="checkbox"
+                        class="visually-hidden"
+                        {% if value.active %}
+                          checked
+                        {% endif %}
+                        tabindex="-1"
+                        aria-hidden="true"
+                      >
+                      <span class="col-checkbox">
+                        <svg viewBox="0 0 14 14" fill="none" class="col-checkbox__icon">
+                          <path d="M3 7.5L6 10.5L11 3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                      </span>
+                    {% endif %}
+                    <span class="col-dropdown__option-label">{{ value.label | escape }}</span>
+                    <span class="col-dropdown__option-count">({{ value.count }})</span>
+                  </a>
+                {% endfor %}
+
+                {% if filter.active_values.size > 0 %}
+                  <a href="{{ filter.url_to_remove }}" class="col-dropdown__clear">Clear</a>
+                {% endif %}
+              {% endif %}
+            </div>
+          </div>
+        {% else %}
+          {% comment %} Fallback dummy UI for development when no filters are set up {% endcomment %}
+          {% assign facets = 'Material, Price, Categories' | split: ', ' %}
+          {% for facet in facets %}
+            <div class="col-dropdown col-dropdown--left col-toolbar__facet">
+              <button type="button" class="col-dropdown__trigger">
+                <span>{{ facet }}</span>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </button>
+              <div class="col-dropdown__menu">
+                <a href="#" class="col-dropdown__option is-active">
+                  <input type="checkbox" class="visually-hidden" checked tabindex="-1">
+                  <span class="col-checkbox">
+                    <svg viewBox="0 0 14 14" fill="none" class="col-checkbox__icon">
+                      <path d="M3 7.5L6 10.5L11 3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </span>
+                  <span class="col-dropdown__option-label">Bedroom</span>
+                  <span class="col-dropdown__option-count">(15)</span>
+                </a>
+                <a href="#" class="col-dropdown__option">
+                  <input type="checkbox" class="visually-hidden" tabindex="-1">
+                  <span class="col-checkbox">
+                    <svg viewBox="0 0 14 14" fill="none" class="col-checkbox__icon">
+                      <path d="M3 7.5L6 10.5L11 3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </span>
+                  <span class="col-dropdown__option-label">Entrance</span>
+                  <span class="col-dropdown__option-count">(15)</span>
+                </a>
+                <a href="#" class="col-dropdown__option">
+                  <input type="checkbox" class="visually-hidden" tabindex="-1">
+                  <span class="col-checkbox">
+                    <svg viewBox="0 0 14 14" fill="none" class="col-checkbox__icon">
+                      <path d="M3 7.5L6 10.5L11 3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </span>
+                  <span class="col-dropdown__option-label">Hallway</span>
+                  <span class="col-dropdown__option-count">(6)</span>
+                </a>
+                <a href="#" class="col-dropdown__clear">Clear</a>
+              </div>
+            </div>
+          {% endfor %}
         {% endfor %}
       </div>
     </div>
 
     <div class="col-toolbar__right">
-      <div class="col-toolbar__sort">
-        <span class="col-toolbar__sort-label">Sort by:</span>
-        <span class="col-toolbar__sort-value">Featured</span>
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
-          <polyline points="6 9 12 15 18 9"></polyline>
-        </svg>
+      {% liquid
+        assign sort_by = collection.sort_by | default: collection.default_sort_by
+        assign current_sort_label = 'Featured'
+        if sort_by contains 'price'
+          assign current_sort_label = 'Price: Low to High'
+        elsif sort_by contains 'created'
+          assign current_sort_label = 'Newest'
+        endif
+      %}
+      <div class="col-dropdown col-dropdown--right col-toolbar__sort">
+        <div class="col-dropdown__trigger">
+          <span class="col-toolbar__sort-label">Sort by:</span>
+          <span class="col-toolbar__sort-value">{{ current_sort_label }}</span>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+        <div class="col-dropdown__menu">
+          <a href="?sort_by=manual" class="col-dropdown__option {% if sort_by == 'manual' %}is-active{% endif %}">
+            <span class="col-dropdown__option-label">Featured</span>
+          </a>
+          <a
+            href="?sort_by=price-ascending"
+            class="col-dropdown__option {% if sort_by contains 'price' %}is-active{% endif %}"
+          >
+            <span class="col-dropdown__option-label">Price: Low to High</span>
+          </a>
+          <a
+            href="?sort_by=created-descending"
+            class="col-dropdown__option {% if sort_by contains 'created' %}is-active{% endif %}"
+          >
+            <span class="col-dropdown__option-label">Newest</span>
+          </a>
+        </div>
       </div>
       <div class="col-toolbar__count">{{ collection.products_count }} items</div>
     </div>
@@ -93,20 +299,35 @@
             {% assign card_variant = product.selected_or_first_available_variant | default: product.variants.first %}
             <article class="pcard">
               <div class="pcard__media-wrap">
-                <a class="pcard__media" href="{{ product.url }}" aria-label="{{ product.title | escape }}">
-                  {% if product.featured_media != blank %}
-                    {{
-                      product.featured_media.preview_image
-                      | image_url: width: 720
-                      | image_tag:
-                        class: 'pcard__image',
-                        loading: 'lazy',
-                        widths: '280, 420, 560, 720',
-                        sizes: '(min-width: 1024px) 24vw, (min-width: 720px) 33vw, 90vw',
-                        alt: product.featured_media.alt | default: product.title
-                    }}
+                <a
+                  class="pcard__media"
+                  href="{{ product.url }}"
+                  aria-label="{{ product.title | escape }}"
+                  data-hover-gallery
+                >
+                  {% if product.media.size > 0 %}
+                    {% assign img_count = 0 %}
+                    {% for media in product.media %}
+                      {% if media.media_type == 'image' %}
+                        {% assign img_class = 'pcard__image' %}
+                        {% if img_count == 0 %}{% assign img_class = 'pcard__image is-active' %}{% endif %}
+                        {{
+                          media.preview_image
+                          | image_url: width: 720
+                          | image_tag:
+                            class: img_class,
+                            loading: 'lazy',
+                            widths: '280, 420, 560, 720',
+                            sizes: '(min-width: 1024px) 24vw, (min-width: 720px) 33vw, 90vw',
+                            alt: media.alt
+                          | default: product.title
+                        }}
+                        {% assign img_count = img_count | plus: 1 %}
+                        {% if img_count >= 5 %}{% break %}{% endif %}
+                      {% endif %}
+                    {% endfor %}
                   {% else %}
-                    {{ 'product-1' | placeholder_svg_tag: 'pcard__image placeholder-svg' }}
+                    {{ 'product-1' | placeholder_svg_tag: 'pcard__image is-active placeholder-svg' }}
                   {% endif %}
                 </a>
 
@@ -116,9 +337,19 @@
                   data-add-to-cart
                   data-variant-id="{{ card_variant.id }}"
                   aria-label="Add {{ product.title | escape }} to cart"
-                  {% unless product.available %}disabled aria-disabled="true"{% endunless %}
+                  {% unless product.available %}
+                    disabled aria-disabled="true"
+                  {% endunless %}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-cart-plus-fill" viewBox="0 0 16 16" aria-hidden="true">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    fill="currentColor"
+                    class="bi bi-cart-plus-fill"
+                    viewBox="0 0 16 16"
+                    aria-hidden="true"
+                  >
                     <path d="M.5 1a.5.5 0 0 0 0 1h1.11l.401 1.607 1.498 7.985A.5.5 0 0 0 4 12h1a2 2 0 1 0 0 4 2 2 0 0 0 0-4h7a2 2 0 1 0 0 4 2 2 0 0 0 0-4h1a.5.5 0 0 0 .491-.408l1.5-8A.5.5 0 0 0 14.5 3H2.89l-.405-1.621A.5.5 0 0 0 2 1zM6 14a1 1 0 1 1-2 0 1 1 0 0 1 2 0m7 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0M9 5.5V7h1.5a.5.5 0 0 1 0 1H9v1.5a.5.5 0 0 1-1 0V8H6.5a.5.5 0 0 1 0-1H8V5.5a.5.5 0 0 1 1 0"/>
                   </svg>
                 </button>
@@ -142,7 +373,15 @@
                 <div class="pcard__meta">
                   {% if material != blank %}
                     <span class="pcard__meta-item">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                      >
                         <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"></path>
                         <path d="M2 21c0-3 1.85-5.36 5.08-6"></path>
                       </svg>
@@ -151,7 +390,15 @@
                     <span class="pcard__meta-sep" aria-hidden="true"></span>
                   {% endif %}
                   <span class="pcard__meta-item">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
                       <path d="M18 11V6a2 2 0 0 0-4 0M14 10V4a2 2 0 0 0-4 0v2M10 10.5V6a2 2 0 0 0-4 0v8"></path>
                       <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"></path>
                     </svg>
@@ -169,35 +416,97 @@
 
         {% if paginate.pages > 1 %}
           <nav class="col-pagination" role="navigation" aria-label="Pagination">
-            {{ paginate | default_pagination }}
+            <div class="col-pagination__inner">
+              {% if paginate.previous %}
+                <a href="{{ paginate.previous.url }}" class="col-pagination__prev" aria-label="Previous page">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                  </svg>
+                  <span>Previous</span>
+                </a>
+              {% else %}
+                <span class="col-pagination__prev is-disabled">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                  </svg>
+                  <span>Previous</span>
+                </span>
+              {% endif %}
+
+              <div class="col-pagination__sep"></div>
+
+              <div class="col-pagination__numbers">
+                {% for part in paginate.parts %}
+                  {% if part.is_link %}
+                    <a href="{{ part.url }}" class="col-pagination__num" aria-label="Page {{ part.title }}">
+                      {{- part.title -}}
+                    </a>
+                  {% else %}
+                    {% if part.title == paginate.current_page %}
+                      <span class="col-pagination__num is-current" aria-current="page">{{ part.title }}</span>
+                    {% else %}
+                      <span class="col-pagination__num is-deco">{{ part.title }}</span>
+                    {% endif %}
+                  {% endif %}
+                {% endfor %}
+              </div>
+
+              <div class="col-pagination__sep"></div>
+
+              {% if paginate.next %}
+                <a href="{{ paginate.next.url }}" class="col-pagination__next" aria-label="Next page">
+                  <span>Next</span>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </a>
+              {% else %}
+                <span class="col-pagination__next is-disabled">
+                  <span>Next</span>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </span>
+              {% endif %}
+            </div>
           </nav>
         {% endif %}
       {% endif %}
     {% endpaginate %}
   </div>
 </section>
-
-<div class="filter-drawer" id="FilterDrawer-{{ section.id }}" data-filter-drawer aria-hidden="true">
-  <div class="filter-drawer__overlay" data-filter-close></div>
-  <aside class="filter-drawer__panel" role="dialog" aria-modal="true" aria-label="Filters">
-    <div class="filter-drawer__head">
-      <span class="filter-drawer__title">Filter</span>
-      <button type="button" class="filter-drawer__close" data-filter-close aria-label="Close filters">
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.6"
-          stroke-linecap="round"
-          aria-hidden="true"
-        >
-          <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
-      </button>
-    </div>
-    <div class="filter-drawer__body"></div>
-  </aside>
-</div>
 
 {% stylesheet %}
   .visually-hidden {
@@ -214,8 +523,6 @@
 
   .collection-page {
     width: 100%;
-    /* Clear the fixed transparent overlay header (~76px tall) */
-    padding-top: calc(var(--sp-8) + var(--sp-5));
     background-color: var(--color-cream);
     font-family: var(--font-body);
   }
@@ -233,7 +540,6 @@
     display: flex;
     align-items: stretch;
   }
-  .col-toolbar__filter,
   .col-toolbar__facet,
   .col-toolbar__sort,
   .col-toolbar__count {
@@ -241,51 +547,245 @@
     align-items: center;
     gap: var(--sp-2);
     height: 52px;
-    font-family: var(--font-body);
-    font-size: var(--font-size-caption);
+    font-family: var(--font-roboto);
+    font-size: var(--font-size-body-md);
     font-weight: var(--font-weight-semibold);
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
+    letter-spacing: 0.05em;
     color: var(--text-primary);
-  }
-  .col-toolbar__filter {
-    padding: 0 var(--sp-5);
-    padding-left: var(--layout-padding-desktop);
-    background: none;
-    border: none;
-    border-right: 1px solid var(--border-light);
-    cursor: pointer;
-  }
-  .col-toolbar__filter-icon {
-    width: 18px;
-    height: 18px;
-    color: var(--text-secondary);
   }
   .col-toolbar__facets {
     display: flex;
     align-items: stretch;
+    padding-left: var(--layout-padding-desktop);
   }
   .col-toolbar__facet {
     padding: 0 var(--sp-5);
-    background: none;
-    border: none;
-    cursor: pointer;
+    border-right: 1px solid var(--border-light);
   }
-  .col-toolbar__facet svg,
-  .col-toolbar__sort svg {
-    width: 14px;
-    height: 14px;
-    color: var(--text-secondary);
-  }
-  .col-toolbar__filter:hover,
-  .col-toolbar__facet:hover {
-    color: var(--color-earth-brown);
+  .col-toolbar__facet:last-child {
+    border-right: none;
   }
   .col-toolbar__sort {
     padding: 0 var(--sp-5);
   }
   .col-toolbar__sort-label {
     color: var(--text-secondary);
+  }
+
+  /* Generic Dropdown Component */
+  .col-dropdown {
+    position: relative;
+  }
+  .col-dropdown__trigger {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    height: 100%;
+    cursor: pointer;
+    transition: color var(--timing-fast) var(--ease-standard);
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    color: inherit;
+  }
+  .col-dropdown__trigger svg {
+    width: 14px;
+    height: 14px;
+    color: var(--text-secondary);
+    transition: transform var(--timing-fast) var(--ease-standard);
+  }
+  .col-dropdown:hover .col-dropdown__trigger {
+    color: var(--color-earth-brown);
+  }
+  .col-dropdown:hover .col-dropdown__trigger svg {
+    transform: rotate(180deg);
+  }
+  .col-dropdown__menu {
+    position: absolute;
+    top: 100%;
+    background-color: var(--color-milk);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-elevation-3);
+    min-width: 240px;
+    padding: var(--sp-2) 0;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px);
+    transition: opacity var(--timing-short) var(--ease-standard), transform var(--timing-short) var(--ease-standard),
+      visibility var(--timing-short) var(--ease-standard);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+  }
+  .col-dropdown--left .col-dropdown__menu {
+    left: 0;
+  }
+  .col-dropdown--right .col-dropdown__menu {
+    right: 0;
+  }
+  .col-dropdown:hover .col-dropdown__menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+  .col-dropdown__option {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-3) var(--sp-5);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-sm);
+    color: var(--text-primary);
+    text-decoration: none;
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: var(--font-weight-medium);
+    transition: background-color var(--timing-fast) var(--ease-standard);
+    text-align: left;
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+  .col-dropdown__option:hover {
+    background-color: var(--surface-default);
+  }
+  .col-dropdown__option.is-active {
+    background-color: var(--bg-secondary);
+    font-weight: var(--font-weight-semibold);
+  }
+  .col-dropdown__option-label {
+    flex: 1 1 auto;
+  }
+  .col-dropdown__option-count {
+    color: var(--text-secondary);
+  }
+
+  /* Custom Checkbox */
+  .col-checkbox {
+    width: 20px;
+    height: 20px;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--color-milk);
+    color: transparent;
+    transition: all var(--timing-fast) var(--ease-standard);
+    flex: 0 0 auto;
+    pointer-events: none;
+  }
+  .col-checkbox__icon {
+    width: 12px;
+    height: 12px;
+  }
+  input[type='checkbox']:checked + .col-checkbox {
+    background-color: var(--color-ebony);
+    border-color: var(--color-ebony);
+    color: var(--color-milk);
+  }
+
+  /* Custom Radio */
+  .col-radio {
+    width: 20px;
+    height: 20px;
+    border: 1px solid #1a1815;
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--color-milk);
+    transition: all var(--timing-fast) var(--ease-standard);
+    flex: 0 0 auto;
+    pointer-events: none;
+  }
+  .col-radio__inner {
+    width: 10px;
+    height: 10px;
+    border-radius: var(--radius-full);
+    background-color: transparent;
+    transition: all var(--timing-fast) var(--ease-standard);
+  }
+  input[type='radio']:checked + .col-radio {
+    border-color: var(--color-ebony);
+  }
+  input[type='radio']:checked + .col-radio .col-radio__inner {
+    background-color: var(--color-ebony);
+  }
+
+  /* Price Form */
+  .col-price-form {
+    padding: var(--sp-3) var(--sp-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-3);
+  }
+  .col-price-form__header {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-roboto);
+    font-size: var(--font-size-caption);
+    color: var(--text-secondary);
+    font-weight: var(--font-weight-medium);
+    padding: 0 var(--sp-2);
+  }
+  .col-price-form__inputs {
+    display: flex;
+    gap: var(--sp-3);
+  }
+  .col-price-form__inputs input {
+    width: 100%;
+    padding: var(--sp-2) var(--sp-3);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-sm);
+    color: var(--text-primary);
+    outline: none;
+    transition: border-color var(--timing-fast) var(--ease-standard);
+    -moz-appearance: textfield;
+  }
+  .col-price-form__inputs input::-webkit-outer-spin-button,
+  .col-price-form__inputs input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  .col-price-form__inputs input:focus {
+    border-color: var(--border-default);
+  }
+  .col-price-form__apply {
+    padding: var(--sp-2);
+    background-color: var(--color-ebony);
+    color: var(--color-milk);
+    border: none;
+    border-radius: var(--radius-md);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-semibold);
+    cursor: pointer;
+    transition: background-color var(--timing-fast) var(--ease-standard);
+    margin-top: var(--sp-2);
+  }
+  .col-price-form__apply:hover {
+    background-color: var(--text-primary);
+  }
+
+  .col-dropdown__clear {
+    display: inline-block;
+    margin: var(--sp-3) var(--sp-5) var(--sp-2);
+    color: var(--color-error);
+    font-size: var(--font-size-body-sm);
+    text-decoration: underline;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    text-align: left;
+  }
+  .col-dropdown__clear:hover {
+    text-decoration: none;
   }
   .col-toolbar__count {
     padding: 0 var(--sp-5);
@@ -318,7 +818,7 @@
     padding: var(--sp-3);
     background-color: var(--color-milk);
     border: 1px solid var(--border-light);
-    border-radius: calc(var(--radius-xl) * 2);
+    border-radius: var(--radius-lg);
     box-shadow: var(--shadow-elevation-2);
   }
   .pcard__media-wrap {
@@ -328,15 +828,29 @@
     display: block;
     aspect-ratio: 6 / 5;
     overflow: hidden;
-    border-radius: var(--radius-xl);
+    border-radius: var(--radius-md);
     background-color: var(--bg-secondary);
+    position: relative;
   }
   .pcard__image {
+    position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
     display: block;
-    transition: transform var(--timing-long) var(--ease-standard);
+    opacity: 0;
+    z-index: 0;
+    transition: transform var(--timing-long) var(--ease-standard), opacity var(--timing-base) var(--ease-standard);
+  }
+  .pcard__image.is-prev {
+    opacity: 1;
+    z-index: 1;
+  }
+  .pcard__image.is-active {
+    opacity: 1;
+    z-index: 2;
   }
   .pcard__media:hover .pcard__image {
     transform: scale(1.03);
@@ -395,9 +909,9 @@
   .pcard__title {
     margin: var(--sp-4) 0 0;
     min-width: 0;
-    font-family: var(--font-display);
+    font-family: var(--font-body);
     font-size: var(--font-size-body-xl);
-    font-weight: var(--font-weight-regular);
+    font-weight: var(--font-weight-semibold);
     line-height: var(--line-height-tight);
     color: var(--text-primary);
   }
@@ -408,6 +922,7 @@
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    letter-spacing: 0.01em;
   }
   .pcard__artist {
     margin: var(--sp-3) 0 0;
@@ -449,86 +964,100 @@
   }
   .pcard__price {
     margin: var(--sp-4) 0 0;
-    font-family: var(--font-display);
-    font-size: var(--font-size-display-sm);
-    font-weight: var(--font-weight-regular);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-xl);
+    font-weight: var(--font-weight-semibold);
     color: var(--text-primary);
   }
 
   .col-pagination {
-    margin-top: var(--sp-7);
-    text-align: center;
-    font-size: var(--font-size-body-sm);
-  }
-
-  /* Filter drawer (from left) */
-  .filter-drawer {
-    position: fixed;
-    inset: 0;
-    z-index: 1000;
-    visibility: hidden;
-  }
-  .filter-drawer.is-open {
-    visibility: visible;
-  }
-  .filter-drawer__overlay {
-    position: absolute;
-    inset: 0;
-    background-color: var(--bg-overlay);
-    opacity: 0;
-    transition: opacity var(--timing-base) var(--ease-standard);
-  }
-  .filter-drawer.is-open .filter-drawer__overlay {
-    opacity: 1;
-  }
-  .filter-drawer__panel {
-    position: absolute;
-    top: 0;
-    left: 0;
-    height: 100%;
-    width: 360px;
-    max-width: 86vw;
+    margin-top: var(--sp-8);
     display: flex;
-    flex-direction: column;
-    background-color: var(--surface-elevated);
-    box-shadow: var(--shadow-elevation-4);
-    transform: translateX(-100%);
-    transition: transform var(--timing-base) var(--ease-out);
+    justify-content: center;
   }
-  .filter-drawer.is-open .filter-drawer__panel {
-    transform: translateX(0);
+  .col-pagination__inner {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-full);
+    height: 52px;
+    background-color: transparent;
   }
-  .filter-drawer__head {
+  .col-pagination__prev,
+  .col-pagination__next {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: var(--sp-5);
-    border-bottom: 1px solid var(--border-light);
+    gap: var(--sp-2);
+    padding: 0 var(--sp-5);
+    font-family: var(--font-body);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: var(--transition-fast);
   }
-  .filter-drawer__title {
+  .col-pagination__prev:not(.is-disabled):hover,
+  .col-pagination__next:not(.is-disabled):hover {
+    color: var(--color-earth-brown);
+  }
+  .col-pagination__prev svg,
+  .col-pagination__next svg {
+    width: 14px;
+    height: 14px;
+  }
+  .col-pagination__prev.is-disabled,
+  .col-pagination__next.is-disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .col-pagination__sep {
+    width: 1px;
+    height: 24px;
+    background-color: var(--border-default);
+  }
+  .col-pagination__numbers {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: 0 var(--sp-4);
+  }
+  .col-pagination__num {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    height: 36px;
+    padding: 0 var(--sp-2);
+    border-radius: var(--radius-lg);
     font-family: var(--font-body);
     font-size: var(--font-size-body-sm);
     font-weight: var(--font-weight-semibold);
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
     color: var(--text-primary);
+    text-decoration: none;
+    border: 1px solid var(--border-default);
+    background-color: transparent;
+    transition: var(--transition-fast);
   }
-  .filter-drawer__close {
-    display: inline-flex;
-    padding: var(--sp-1);
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: var(--text-secondary);
+  .col-pagination__num:not(.is-current):not(.is-deco):hover {
+    background-color: var(--bg-secondary);
   }
-  .filter-drawer__close svg {
-    width: 22px;
-    height: 22px;
+  .col-pagination__num.is-current {
+    background-color: var(--color-earth-brown);
+    color: var(--color-milk);
+    border-color: var(--color-earth-brown);
   }
-  .filter-drawer__body {
-    flex: 1 1 auto;
-    overflow-y: auto;
-    padding: var(--sp-5);
+  .col-pagination__num.is-deco {
+    border-color: transparent;
+  }
+
+  @media screen and (max-width: 1440px) {
+    .col-toolbar__facet,
+    .col-toolbar__sort,
+    .col-toolbar__count {
+      font-size: var(--font-size-body-sm);
+    }
   }
 
   @media screen and (max-width: 1024px) {
@@ -538,11 +1067,13 @@
   }
 
   @media screen and (max-width: 768px) {
+    .col-toolbar__facet,
+    .col-toolbar__sort,
+    .col-toolbar__count {
+      font-size: var(--font-size-caption);
+    }
     .col-toolbar__facets {
       display: none;
-    }
-    .col-toolbar__filter {
-      padding-left: var(--layout-padding-mobile);
     }
     .col-toolbar__count {
       padding-right: var(--layout-padding-mobile);
@@ -569,40 +1100,12 @@
 <script>
   (function () {
     function initCollection() {
-      // Filter drawer
-      document.querySelectorAll('[data-filter-drawer]').forEach(function (drawer) {
-        if (drawer.dataset.init === 'true') return;
-        drawer.dataset.init = 'true';
-
-        var openBtns = document.querySelectorAll('[data-filter-open]');
-        var closeEls = drawer.querySelectorAll('[data-filter-close]');
-
-        function open() {
-          drawer.classList.add('is-open');
-          drawer.setAttribute('aria-hidden', 'false');
-          document.body.style.overflow = 'hidden';
-        }
-        function close() {
-          drawer.classList.remove('is-open');
-          drawer.setAttribute('aria-hidden', 'true');
-          document.body.style.overflow = '';
-        }
-
-        openBtns.forEach(function (b) {
-          b.addEventListener('click', open);
-        });
-        closeEls.forEach(function (b) {
-          b.addEventListener('click', close);
-        });
-        document.addEventListener('keydown', function (e) {
-          if (e.key === 'Escape' && drawer.classList.contains('is-open')) close();
-        });
-      });
-
       // Add to cart (AJAX) from product cards
       function updateCartBubble() {
         fetch(window.Shopify.routes.root + 'cart.js')
-          .then(function (res) { return res.json(); })
+          .then(function (res) {
+            return res.json();
+          })
           .then(function (cart) {
             var cartIcon = document.querySelector('.header__icon--cart');
             if (!cartIcon) return;
@@ -635,9 +1138,13 @@
             headers: { 'Content-Type': 'application/json', Accept: 'application/javascript' },
             body: JSON.stringify({ id: variantId, quantity: 1 }),
           })
-            .then(function (res) { return res.json(); })
+            .then(function (res) {
+              return res.json();
+            })
             .then(function (data) {
-              if (data.status) { throw new Error(data.description || 'Could not add to cart'); }
+              if (data.status) {
+                throw new Error(data.description || 'Could not add to cart');
+              }
               if (window.showToast) {
                 window.showToast({ message: 'Item added to your cart.', type: 'success', position: 'bottom-right' });
               }
@@ -651,6 +1158,45 @@
             .finally(function () {
               btn.classList.remove('is-loading');
             });
+        });
+      });
+      // Hover gallery
+      document.querySelectorAll('[data-hover-gallery]').forEach(function (gallery) {
+        if (gallery.dataset.initHover === 'true') return;
+        gallery.dataset.initHover = 'true';
+
+        var images = gallery.querySelectorAll('.pcard__image');
+        if (images.length <= 1) return;
+
+        var intervalId = null;
+        var currentIndex = 0;
+
+        function showImage(index) {
+          images.forEach(function (img) {
+            img.classList.remove('is-prev');
+            if (img.classList.contains('is-active')) {
+              img.classList.remove('is-active');
+              img.classList.add('is-prev');
+            }
+          });
+          images[index].classList.add('is-active');
+        }
+
+        gallery.addEventListener('mouseenter', function () {
+          if (images.length <= 1) return;
+          currentIndex = 1;
+          showImage(currentIndex);
+
+          intervalId = setInterval(function () {
+            currentIndex = (currentIndex + 1) % images.length;
+            showImage(currentIndex);
+          }, 2000);
+        });
+
+        gallery.addEventListener('mouseleave', function () {
+          clearInterval(intervalId);
+          currentIndex = 0;
+          showImage(0);
         });
       });
     }
