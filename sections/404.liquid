@@ -1,23 +1,503 @@
 {% comment %}
-  This section is used in the 404 template to render page shown when customers
-  enter an invalid store URL.
+  404 page: shown when a customer enters an invalid store URL.
+
+  A full-viewport hero (large "404", message and CTAs on the left, a feature
+  image on the right) sized with viewport-relative units so the whole layout —
+  including the bottom "helpful links" row — fits within a single screen.
 
   https://shopify.dev/docs/storefronts/themes/architecture/templates/404
 {% endcomment %}
 
-<h1>{{ '404.title' | t }}</h1>
+{% liquid
+  assign nf_image = section.settings.image
+  assign home_url = routes.root_url
+  assign shop_url = routes.all_products_collection_url
+%}
 
-<p>
-  {{ '404.not_found' | t }}
-</p>
+{%- capture nf_arrow -%}
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="12" x2="20" y2="12"/><polyline points="13 5 20 12 13 19"/></svg>
+{%- endcapture -%}
+{%- capture nf_ico_chair -%}
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 11V7a2.5 2.5 0 0 1 2.5-2.5h5A2.5 2.5 0 0 1 17 7v4"/><path d="M6 11h12a1.5 1.5 0 0 1 1.5 1.5c0 2.5-2 4.5-4.5 4.5H9c-2.5 0-4.5-2-4.5-4.5A1.5 1.5 0 0 1 6 11Z"/><path d="M7.5 17v3"/><path d="M16.5 17v3"/></svg>
+{%- endcapture -%}
+{%- capture nf_ico_maker -%}
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 16l3-5h10l2 5"/><path d="M3 16h15a2 2 0 0 1 2 2 1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M9 11c0-2 1-3 3-3s2 1 4 1"/></svg>
+{%- endcapture -%}
+{%- capture nf_ico_rings -%}
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="0.5" fill="currentColor"/></svg>
+{%- endcapture -%}
 
-<a href="{{ routes.all_products_collection_url }}">
-  {{ '404.back_to_shopping' | t }}
-</a>
+<section class="nf" id="NotFound-{{ section.id }}">
+  <div class="nf__hero">
+    <div class="nf__content">
+      <nav class="nf__crumbs" aria-label="Breadcrumb">
+        <ol class="nf__crumbs-list">
+          <li>
+            <a href="{{ home_url }}">{{ 'general.breadcrumbs.home' | t | default: 'Home' }}</a>
+          </li>
+          <li class="nf__crumb-sep" aria-hidden="true">/</li>
+          <li class="nf__crumb--current" aria-current="page">{{ '404.title' | t }}</li>
+        </ol>
+      </nav>
+
+      <p class="nf__code">{{ '404.title' | t }}</p>
+
+      <span class="nf__divider" aria-hidden="true"><i class="nf__diamond"></i></span>
+
+      <h1 class="nf__title">{{ '404.heading' | t }}</h1>
+
+      <p class="nf__desc">{{ '404.description' | t }}</p>
+
+      <div class="nf__actions">
+        <a class="nf__btn nf__btn--primary" href="{{ home_url }}">{{ '404.return_home' | t }}</a>
+        <a class="nf__btn nf__btn--outline" href="{{ shop_url }}">{{ '404.shop_collection' | t }}</a>
+      </div>
+
+      <button
+        type="button"
+        class="nf__back"
+        onclick="if (document.referrer) { history.back(); } else { window.location.href = '{{ home_url }}'; }"
+      >
+        <span class="nf__back-arrow" aria-hidden="true">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.75"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <line x1="20" y1="12" x2="4" y2="12"/><polyline points="11 5 4 12 11 19"/>
+          </svg>
+        </span>
+        {{ '404.back' | t }}
+      </button>
+    </div>
+
+    <div class="nf__media">
+      {% if nf_image != blank %}
+        {{
+          nf_image
+          | image_url: width: 1600
+          | image_tag:
+            class: 'nf__img',
+            loading: 'eager',
+            fetchpriority: 'high',
+            widths: '640, 960, 1280, 1600',
+            sizes: '(min-width: 1025px) 50vw, 100vw',
+            alt: nf_image.alt
+          | default: '404'
+        }}
+      {% else %}
+        <img
+          class="nf__img"
+          src="{{ '404-photo.png' | asset_url }}"
+          alt=""
+          loading="eager"
+          fetchpriority="high"
+          width="1448"
+          height="1086"
+        >
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="nf__cards">
+    <a class="nf__card" href="{{ routes.collections_url }}">
+      <span class="nf__card-icon">{{ nf_ico_chair }}</span>
+      <span class="nf__card-body">
+        <span class="nf__card-title">{{ '404.collections_title' | t }}</span>
+        <span class="nf__card-desc">{{ '404.collections_desc' | t }}</span>
+        <span class="nf__card-link">
+          {{- '404.collections_link' | t -}}
+          <span class="nf__card-arrow">{{ nf_arrow }}</span></span
+        >
+      </span>
+    </a>
+
+    <a class="nf__card" href="{{ home_url }}pages/about-us">
+      <span class="nf__card-icon">{{ nf_ico_maker }}</span>
+      <span class="nf__card-body">
+        <span class="nf__card-title">{{ '404.makers_title' | t }}</span>
+        <span class="nf__card-desc">{{ '404.makers_desc' | t }}</span>
+        <span class="nf__card-link">
+          {{- '404.makers_link' | t -}}
+          <span class="nf__card-arrow">{{ nf_arrow }}</span></span
+        >
+      </span>
+    </a>
+
+    <a class="nf__card" href="{{ home_url }}pages/contact">
+      <span class="nf__card-icon">{{ nf_ico_rings }}</span>
+      <span class="nf__card-body">
+        <span class="nf__card-title">{{ '404.consult_title' | t }}</span>
+        <span class="nf__card-desc">{{ '404.consult_desc' | t }}</span>
+        <span class="nf__card-link">
+          {{- '404.consult_link' | t -}}
+          <span class="nf__card-arrow">{{ nf_arrow }}</span></span
+        >
+      </span>
+    </a>
+  </div>
+</section>
+
+<script>
+  const mainProductSection = document.getElementById('NotFound-{{ section.id }}');
+  if (mainProductSection) {
+    mainProductSection.closest('body').querySelector('.header__icon--search').style.color = 'var(--color-earth-brown)';
+    mainProductSection.closest('body').querySelector('.header__icon--cart').style.color = 'var(--color-earth-brown)';
+    mainProductSection.closest('body').querySelector('.header').style.border = '1px solid #cfcbc7b4';
+  }
+</script>
+
+{% stylesheet %}
+  .nf {
+    box-sizing: border-box;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    /* Clear the fixed transparent header at the top. */
+    padding: clamp(var(--sp-8), 11vh, 104px) var(--layout-padding-desktop) clamp(var(--sp-5), 3vh, var(--sp-7));
+    background-color: var(--color-cream);
+    font-family: var(--font-body);
+  }
+
+  /* Hero */
+  .nf__hero {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 1fr 1.05fr;
+    gap: clamp(var(--sp-6), 4vw, var(--sp-8));
+    align-items: stretch;
+    margin-top: var(--sp-6);
+  }
+  .nf__content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+    position: relative;
+    padding: 40px 0;
+    width: fit-content;
+    margin: 0 auto;
+  }
+
+  .nf__crumbs {
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+  .nf__crumbs-list {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    margin: 0 0 clamp(var(--sp-4), 3vh, var(--sp-6));
+    padding: 0;
+    list-style: none;
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+  .nf__crumbs-list a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: color var(--timing-short) var(--ease-standard);
+    font-weight: var(--font-weight-bold);
+  }
+  .nf__crumbs-list a:hover {
+    color: var(--color-earth-brown);
+  }
+  .nf__crumb-sep {
+    color: var(--border-default);
+  }
+  .nf__crumb--current {
+    color: var(--text-primary);
+  }
+
+  .nf__code {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: clamp(4rem, 15vh, 9.5rem);
+    font-weight: var(--font-weight-regular);
+    line-height: 0.9;
+    letter-spacing: 0.02em;
+    color: var(--color-earth-brown);
+  }
+
+  .nf__divider {
+    display: flex;
+    align-items: center;
+    width: min(300px, 60%);
+    margin: clamp(var(--sp-3), 2vh, var(--sp-5)) 0;
+    margin-top: 40px;
+  }
+  .nf__divider::before,
+  .nf__divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background-color: var(--border-default);
+  }
+  .nf__diamond {
+    width: 7px;
+    height: 7px;
+    margin: 0 var(--sp-3);
+    background-color: var(--color-clay);
+    transform: rotate(45deg);
+  }
+
+  .nf__title {
+    margin: 0;
+    max-width: 24ch;
+    font-family: var(--font-display);
+    font-size: clamp(1.9rem, 5vh, 3.25rem);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-tight);
+    letter-spacing: var(--letter-spacing-tight);
+    color: var(--text-primary);
+  }
+
+  .nf__desc {
+    max-width: 52ch;
+    margin: clamp(var(--sp-4), 2.4vh, var(--sp-5)) 0 0;
+    font-size: var(--font-size-body-md);
+    line-height: var(--line-height-generous);
+    color: var(--text-secondary);
+  }
+
+  .nf__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-4);
+    margin-top: clamp(var(--sp-5), 3.2vh, var(--sp-7));
+  }
+  .nf__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(var(--sp-3), 1.6vh, var(--sp-4)) var(--sp-6);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-decoration: none;
+    border-radius: var(--radius-sm);
+    transition: background-color var(--timing-short) var(--ease-standard),
+      color var(--timing-short) var(--ease-standard);
+  }
+  .nf__btn--primary {
+    background-color: var(--color-earth-brown);
+    color: var(--color-cream);
+    border: 1px solid var(--color-earth-brown);
+  }
+  .nf__btn--primary:hover {
+    background-color: var(--text-primary);
+  }
+  .nf__btn--primary a:hover {
+    color: var(--color-cream) !important;
+  }
+  .nf__btn--outline {
+    background-color: transparent;
+    color: var(--text-primary);
+    border: 1px solid var(--border-default);
+  }
+  .nf__btn--outline:hover {
+    border-color: var(--color-earth-brown);
+    color: var(--color-earth-brown);
+  }
+
+  .nf__back {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-3);
+    align-self: flex-start;
+    margin-top: clamp(var(--sp-4), 2.6vh, var(--sp-6));
+    padding: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-sm);
+    color: var(--color-earth-brown);
+    transition: gap var(--timing-short) var(--ease-standard);
+  }
+  .nf__back:hover {
+    gap: var(--sp-2);
+  }
+  .nf__back-arrow svg {
+    width: 18px;
+    height: 18px;
+    display: block;
+  }
+
+  /* Media */
+  .nf__media {
+    position: relative;
+    overflow: hidden;
+    border-radius: 0 clamp(70px, 11vw, 165px) 0 0;
+    background-color: var(--bg-secondary);
+  }
+  .nf__img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  /* Bottom helpful-links row */
+  .nf__cards {
+    flex: 0 0 auto;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    background-color: var(--color-milk);
+    margin-block: 60px 30px;
+  }
+  .nf__card {
+    display: flex;
+    align-items: center;
+    gap: clamp(var(--sp-3), 1.4vw, var(--sp-5));
+    padding: clamp(var(--sp-4), 2.4vh, var(--sp-6)) clamp(var(--sp-4), 1.8vw, var(--sp-6));
+    border-left: 1px solid var(--border-light);
+    text-decoration: none;
+    color: inherit;
+  }
+  .nf__card:first-child {
+    border-left: none;
+  }
+  .nf__card-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: clamp(48px, 5vh, 64px);
+    height: clamp(48px, 5vh, 64px);
+    border-radius: var(--radius-full);
+    background-color: var(--bg-secondary);
+    color: var(--color-earth-brown);
+  }
+  .nf__card-icon svg {
+    width: 46%;
+    height: 46%;
+  }
+  .nf__card-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-1);
+    min-width: 0;
+  }
+  .nf__card-title {
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-lg);
+    font-weight: var(--font-weight-regular);
+    color: var(--text-primary);
+  }
+  .nf__card-desc {
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-normal);
+    color: var(--text-secondary);
+  }
+  .nf__card-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    margin-top: var(--sp-2);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-clay);
+  }
+  .nf__card-arrow {
+    display: inline-flex;
+  }
+  .nf__card-arrow svg {
+    width: 16px;
+    height: 16px;
+    transition: transform var(--timing-short) var(--ease-standard);
+  }
+  .nf__card:hover .nf__card-arrow svg {
+    transform: translateX(3px);
+  }
+
+  /* Shorter desktop viewports: tighten vertical rhythm so it still fits one screen */
+  @media screen and (min-width: 1025px) and (max-height: 860px) {
+    .nf {
+      padding-top: clamp(var(--sp-7), 9.5vh, 88px);
+    }
+    .nf__divider {
+      margin-block: 32px var(--sp-4);
+    }
+    .nf__desc {
+      margin-top: var(--sp-3);
+    }
+    .nf__actions {
+      margin-top: var(--sp-4);
+    }
+    .nf__back {
+      margin-top: var(--sp-5);
+    }
+  }
+
+  /* Tablet: stack hero, drop the image; keep everything readable */
+  @media screen and (max-width: 1024px) {
+    .nf {
+      min-height: 0;
+      padding-inline: var(--layout-padding-mobile);
+    }
+    .nf__hero {
+      grid-template-columns: 1fr;
+      gap: var(--sp-6);
+    }
+    .nf__content {
+      padding-left: 0;
+    }
+    .nf__media {
+      min-height: 320px;
+      border-radius: 0 90px 0 0;
+    }
+    .nf__code {
+      font-size: clamp(4rem, 22vw, 8rem);
+    }
+    .nf__title {
+      font-size: clamp(1.6rem, 6vw, 2.5rem);
+    }
+    .nf__cards {
+      grid-template-columns: 1fr;
+    }
+    .nf__card {
+      border-left: none;
+      border-top: 1px solid var(--border-light);
+    }
+    .nf__card:first-child {
+      border-top: none;
+    }
+  }
+
+  @media screen and (max-width: 600px) {
+    .nf__actions {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .nf__btn {
+      width: 100%;
+    }
+  }
+{% endstylesheet %}
 
 {% schema %}
 {
   "name": "t:general.404",
-  "settings": []
+  "settings": [
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "t:labels.background"
+    }
+  ]
 }
 {% endschema %}

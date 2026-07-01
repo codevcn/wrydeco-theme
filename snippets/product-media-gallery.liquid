@@ -144,6 +144,34 @@
     }
   }
 
+  @media (hover: hover) and (pointer: fine) and (min-width: 990px) {
+    .product-gallery__zoom-popup {
+      position: fixed;
+      top: 50%;
+      transform: translateY(-50%);
+      left: calc(50% + (var(--sp-8, 40px) / 2));
+      right: 64px;
+      height: 85vh;
+      background-color: var(--bg-primary, #fff);
+      z-index: 1000;
+      border-radius: var(--radius-lg, 12px);
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+      overflow: hidden;
+      background-repeat: no-repeat;
+      pointer-events: none;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.2s ease, visibility 0.2s ease;
+    }
+    .product-gallery__zoom-popup.is-active {
+      opacity: 1;
+      visibility: visible;
+    }
+    .product-gallery__main:hover {
+      cursor: crosshair;
+    }
+  }
+
   .product-lightbox {
     position: fixed;
     inset: 0;
@@ -160,8 +188,8 @@
     display: none;
   }
   .product-lightbox__img {
-    max-width: 92vw;
-    max-height: 88vh;
+    max-width: 95vw;
+    max-height: 90vh;
     width: auto;
     height: auto;
     border-radius: var(--radius-lg);
@@ -229,6 +257,7 @@
         {% case media.media_type %}
           {% when 'image' %}
             {% if is_active_media %}
+              {% assign zoom_url = media | image_url: width: 2400 %}
               {{
                 media
                 | image_url: width: 1200
@@ -238,9 +267,11 @@
                   fetchpriority: 'high',
                   widths: '360, 540, 720, 900, 1200',
                   sizes: '(min-width: 1024px) 56vw, (min-width: 720px) 58vw, 100vw',
-                  alt: media_alt
+                  alt: media_alt,
+                  data-zoom-src: zoom_url
               }}
             {% else %}
+              {% assign zoom_url = media | image_url: width: 2400 %}
               {{
                 media
                 | image_url: width: 1200
@@ -249,7 +280,8 @@
                   loading: 'lazy',
                   widths: '360, 540, 720, 900, 1200',
                   sizes: '(min-width: 1024px) 56vw, (min-width: 720px) 58vw, 100vw',
-                  alt: media_alt
+                  alt: media_alt,
+                  data-zoom-src: zoom_url
               }}
             {% endif %}
           {% when 'external_video' %}
@@ -326,6 +358,8 @@
     <img class="product-lightbox__img" data-lightbox-img src="" alt="">
     {% # theme-check-enable ImgWidthAndHeight,RemoteAsset %}
   </div>
+
+  <div class="product-gallery__zoom-popup" data-zoom-popup></div>
 </div>
 
 <script>
@@ -415,10 +449,59 @@
       });
     }
 
+    function initGalleryZoom() {
+      if (!window.matchMedia('(hover: hover) and (pointer: fine) and (min-width: 990px)').matches) return;
+
+      document.querySelectorAll('[data-product-gallery]').forEach(function (gallery) {
+        if (gallery.dataset.zoomInit === 'true') return;
+        gallery.dataset.zoomInit = 'true';
+
+        var mainContainer = gallery.querySelector('.product-gallery__main');
+        var zoomPopup = gallery.querySelector('[data-zoom-popup]');
+        if (!mainContainer || !zoomPopup) return;
+
+        mainContainer.addEventListener('mouseenter', function () {
+          var activeItem = gallery.querySelector('.product-gallery__main-item.is-active');
+          if (!activeItem) return;
+          var img = activeItem.querySelector('img.product-gallery__main-media');
+          if (!img) return;
+
+          var zoomSrc = img.getAttribute('data-zoom-src');
+          if (zoomSrc) {
+            zoomPopup.style.backgroundImage = 'url(' + zoomSrc + ')';
+            zoomPopup.classList.add('is-active');
+          }
+        });
+
+        mainContainer.addEventListener('mousemove', function (e) {
+          if (!zoomPopup.classList.contains('is-active')) return;
+          
+          var rect = mainContainer.getBoundingClientRect();
+          var x = e.clientX - rect.left;
+          var y = e.clientY - rect.top;
+          
+          var xPercent = Math.max(0, Math.min(100, (x / rect.width) * 100));
+          var yPercent = Math.max(0, Math.min(100, (y / rect.height) * 100));
+          
+          zoomPopup.style.backgroundPosition = xPercent + '% ' + yPercent + '%';
+          zoomPopup.style.backgroundSize = '200%';
+        });
+
+        mainContainer.addEventListener('mouseleave', function () {
+          zoomPopup.classList.remove('is-active');
+          zoomPopup.style.backgroundImage = 'none';
+        });
+      });
+    }
+
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initGalleryLightbox);
+      document.addEventListener('DOMContentLoaded', function() {
+        initGalleryLightbox();
+        initGalleryZoom();
+      });
     } else {
       initGalleryLightbox();
+      initGalleryZoom();
     }
   })();
 </script>
