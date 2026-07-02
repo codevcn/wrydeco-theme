@@ -1,0 +1,486 @@
+{% comment %}
+  Renders the opening hero for the custom design service page.
+  All primary content and links are server-rendered.
+{% endcomment %}
+
+{% liquid
+  assign consultation_url = section.settings.consultation_url | default: '#custom-inquiry'
+  assign process_url = section.settings.process_url | default: '#custom-process'
+%}
+
+<main class="customization-hero" id="CustomizationHero-{{ section.id }}">
+  <div class="customization-hero__media">
+    <img
+      src="{{ 'hero-background.png' | asset_url }}"
+      alt="Sculptural solid wood furniture arranged in a warm custom interior"
+      width="1740"
+      height="904"
+      loading="eager"
+      fetchpriority="high"
+    >
+  </div>
+
+  <div class="customization-hero__inner">
+    <div class="customization-hero__copy">
+      <p class="customization-hero__eyebrow">
+        <span aria-hidden="true">&#10022;</span>
+        {{ section.settings.eyebrow | escape }}
+      </p>
+
+      <h1 class="customization-hero__title">
+        <span>{{ section.settings.heading_first_line | escape }}</span>
+        <span>{{ section.settings.heading_second_line | escape }}</span>
+      </h1>
+
+      <div class="customization-hero__ornament" aria-hidden="true">
+        <span></span><b>&#10022;</b><span></span>
+      </div>
+
+      <p class="customization-hero__description">{{ section.settings.description | escape }}</p>
+
+      <div class="customization-hero__actions">
+        <a class="customization-hero__button customization-hero__button--primary" href="{{ consultation_url }}">
+          <span>{{ section.settings.primary_label | escape }}</span>
+          <span aria-hidden="true">&rarr;</span>
+        </a>
+        <a class="customization-hero__button customization-hero__button--secondary" href="{{ process_url }}">
+          <span>{{ section.settings.secondary_label | escape }}</span>
+          <span aria-hidden="true">&rarr;</span>
+        </a>
+      </div>
+
+      <div class="customization-hero__note">
+        <span class="customization-hero__note-mark" aria-hidden="true">&#9671;</span>
+        <span>{{ section.settings.note_first | escape }}</span>
+        <i aria-hidden="true"></i>
+        <span>{{ section.settings.note_second | escape }}</span>
+      </div>
+    </div>
+  </div>
+
+  <section class="customization-hero__services" aria-label="Custom design service benefits">
+    <div class="customization-hero__service">
+      <span class="customization-hero__service-icon" aria-hidden="true">
+        {% render 'icon-artist-recognition', icon: 'hand' %}
+      </span>
+      <span>
+        <strong>{{ section.settings.service_one_title | escape }}</strong>
+        <small>{{ section.settings.service_one_text | escape }}</small>
+      </span>
+    </div>
+
+    <div class="customization-hero__service">
+      <span class="customization-hero__service-icon" aria-hidden="true">
+        <img src="{{ 'icon-plain-variation.svg' | asset_url }}" alt="" width="48" height="48">
+      </span>
+      <span>
+        <strong>{{ section.settings.service_two_title | escape }}</strong>
+        <small>{{ section.settings.service_two_text | escape }}</small>
+      </span>
+    </div>
+
+    <div class="customization-hero__service">
+      <span class="customization-hero__service-icon" aria-hidden="true">
+        <img src="{{ 'icon-fix.svg' | asset_url }}" alt="" width="48" height="48">
+      </span>
+      <span>
+        <strong>{{ section.settings.service_three_title | escape }}</strong>
+        <small>{{ section.settings.service_three_text | escape }}</small>
+      </span>
+    </div>
+
+    <div class="customization-hero__service">
+      <span class="customization-hero__service-icon" aria-hidden="true">
+        <img src="{{ 'icon-truck.svg' | asset_url }}" alt="" width="48" height="48">
+      </span>
+      <span>
+        <strong>{{ section.settings.service_four_title | escape }}</strong>
+        <small>{{ section.settings.service_four_text | escape }}</small>
+      </span>
+    </div>
+  </section>
+</main>
+
+{% stylesheet %}
+  .customization-hero {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background: var(--color-cream);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    height: 100vh;
+  }
+
+  .customization-hero__media {
+    position: absolute;
+    inset: var(--sp-0);
+    z-index: -2;
+  }
+
+  .customization-hero__media img {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+    object-position: center;
+  }
+
+  .customization-hero__media::after {
+    position: absolute;
+    inset: var(--sp-0);
+    background: linear-gradient(to right, color-mix(in srgb, var(--color-cream) 98%, transparent) 0%, color-mix(in srgb, var(--color-cream) 76%, transparent) 38%, transparent 62%);
+    content: '';
+  }
+
+  .customization-hero__inner {
+    inline-size: min(calc(100% - (var(--layout-padding-desktop) * 2)), calc(var(--layout-showcase-max-width) + (var(--sp-12) * 2)));
+    margin-inline: auto;
+    padding-block: 104px;
+    padding-inline: var(--sp-4);
+  }
+
+  .customization-hero__copy {
+    max-inline-size: calc(var(--layout-max-width) * 0.56);
+  }
+
+  .customization-hero__eyebrow {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-4);
+    margin: var(--sp-0) var(--sp-0) var(--sp-5);
+    color: var(--color-earth-brown);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: calc(var(--letter-spacing-wide) * 5);
+    line-height: var(--line-height-normal);
+    text-transform: uppercase;
+  }
+
+  .customization-hero__eyebrow > span {
+    display: grid;
+    place-items: center;
+    inline-size: var(--sp-7);
+    block-size: var(--sp-7);
+    color: var(--color-clay);
+    font-size: var(--font-size-display-sm);
+  }
+
+  .customization-hero__title {
+    display: flex;
+    flex-direction: column;
+    margin: var(--sp-0);
+    color: var(--color-earth-brown);
+    font-family: var(--font-display-light);
+    font-size: clamp(var(--font-size-display-lg), 3.5vw, calc(var(--font-size-display-xl) + var(--sp-2)));
+    font-weight: var(--font-weight-light);
+    letter-spacing: var(--letter-spacing-tight);
+    line-height: var(--line-height-display);
+    text-transform: uppercase;
+  }
+
+  .customization-hero__title span {
+    white-space: nowrap;
+  }
+
+  .customization-hero__ornament {
+    display: grid;
+    grid-template-columns: minmax(var(--sp-8), var(--sp-12)) auto minmax(var(--sp-8), var(--sp-12));
+    align-items: center;
+    gap: var(--sp-2);
+    inline-size: fit-content;
+    margin-block: var(--sp-5);
+    color: var(--color-clay);
+  }
+
+  .customization-hero__ornament span {
+    block-size: var(--border-width);
+    background: currentcolor;
+  }
+
+  .customization-hero__ornament b {
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-regular);
+  }
+
+  .customization-hero__description {
+    max-inline-size: 52ch;
+    margin: var(--sp-0);
+    color: var(--text-secondary);
+    font-size: var(--font-size-body-md);
+    line-height: var(--line-height-generous);
+  }
+
+  .customization-hero__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-4);
+    margin-block-start: var(--sp-6);
+  }
+
+  .customization-hero__button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-5);
+    min-block-size: calc(var(--sp-7) + var(--sp-3));
+    min-inline-size: calc(var(--sp-12) * 2);
+    padding-inline: var(--sp-5);
+    border: var(--border-width) solid var(--color-earth-brown);
+    border-radius: var(--radius-md);
+    font-family: var(--font-display);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--letter-spacing-wide);
+    text-transform: uppercase;
+    transition: background-color var(--timing-short) var(--ease-standard), color var(--timing-short) var(--ease-standard), transform var(--timing-short) var(--ease-standard);
+  }
+
+  .customization-hero__button--primary {
+    background: var(--color-earth-brown);
+    color: var(--text-inverse);
+  }
+
+  .customization-hero__button--primary:hover {
+    background: var(--color-charcoal);
+  }
+
+  .customization-hero__button--secondary {
+    background: color-mix(in srgb, var(--bg-tertiary) 54%, transparent);
+    color: var(--color-earth-brown);
+  }
+
+  .customization-hero__button--secondary:hover {
+    background: var(--bg-tertiary);
+  }
+
+  .customization-hero__button:active {
+    transform: translateY(var(--border-width));
+  }
+
+  .customization-hero__button:focus-visible {
+    outline: calc(var(--border-width) * 2) solid var(--color-sage);
+    outline-offset: var(--sp-1);
+  }
+
+  .customization-hero__note {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--sp-3);
+    margin-block-start: var(--sp-3);
+    color: var(--text-secondary);
+    font-size: var(--font-size-body-sm);
+  }
+
+  .customization-hero__note-mark {
+    color: var(--color-clay);
+    font-size: var(--font-size-body-lg);
+  }
+
+  .customization-hero__note i {
+    inline-size: var(--border-width);
+    block-size: var(--sp-4);
+    background: var(--border-dark);
+  }
+
+  .customization-hero__services {
+    position: absolute;
+    right: var(--layout-padding-desktop);
+    bottom: var(--sp-5);
+    left: var(--layout-padding-desktop);
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    max-inline-size: calc(var(--layout-showcase-max-width) + (var(--sp-12) * 2));
+    margin-inline: auto;
+    padding: var(--sp-3) var(--sp-5);
+    border: var(--border-width) solid var(--color-clay);
+    border-radius: var(--radius-lg);
+    background: color-mix(in srgb, var(--color-milk) 88%, transparent);
+    box-shadow: var(--shadow-elevation-1);
+    backdrop-filter: blur(var(--sp-2));
+  }
+
+  .customization-hero__service {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-2);
+    min-inline-size: 0;
+    padding-inline: var(--sp-5);
+    border-inline-start: var(--border-width) solid var(--border-default);
+    text-align: center;
+  }
+
+  .customization-hero__service:first-child {
+    border-inline-start: 0;
+  }
+
+  .customization-hero__service-icon {
+    display: grid;
+    place-items: center;
+    inline-size: var(--sp-7);
+    block-size: var(--sp-7);
+    color: var(--color-clay);
+  }
+
+  .customization-hero__service-icon svg,
+  .customization-hero__service-icon img {
+    inline-size: 100%;
+    block-size: 100%;
+    height: 32px;
+    object-fit: contain;
+  }
+
+  .customization-hero__service > span:last-child {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-1);
+  }
+
+  .customization-hero__service strong {
+    color: var(--color-earth-brown);
+    font-family: var(--font-display);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: calc(var(--letter-spacing-wide) * 2);
+    text-transform: uppercase;
+  }
+
+  .customization-hero__service small {
+    color: var(--text-secondary);
+    font-size: var(--font-size-caption);
+  }
+
+  @media screen and (max-width: 75rem) {
+    .customization-hero__inner {
+      inline-size: min(calc(100% - (var(--layout-padding-tablet) * 2)), var(--layout-showcase-max-width));
+      padding-block-start: calc(var(--sp-12) + var(--sp-8));
+    }
+
+    .customization-hero__copy {
+      max-inline-size: 58%;
+    }
+
+    .customization-hero__title {
+      font-size: var(--font-size-display-xl);
+    }
+
+    .customization-hero__services {
+      right: var(--layout-padding-tablet);
+      left: var(--layout-padding-tablet);
+    }
+  }
+
+  @media screen and (max-width: 48rem) {
+    .customization-hero {
+      min-block-size: auto;
+    }
+
+    .customization-hero__media::after {
+      background: color-mix(in srgb, var(--color-cream) 82%, transparent);
+    }
+
+    .customization-hero__media img {
+      object-position: 68% center;
+    }
+
+    .customization-hero__inner {
+      inline-size: min(calc(100% - (var(--layout-padding-mobile) * 2)), var(--layout-showcase-max-width));
+      padding-block: calc(var(--sp-12) + var(--sp-7)) var(--sp-7);
+    }
+
+    .customization-hero__copy {
+      max-inline-size: none;
+    }
+
+    .customization-hero__eyebrow {
+      margin-block-end: var(--sp-4);
+    }
+
+    .customization-hero__title {
+      font-size: var(--font-size-display-lg);
+    }
+
+    .customization-hero__title span {
+      white-space: normal;
+    }
+
+    .customization-hero__description {
+      max-inline-size: 40ch;
+      font-size: var(--font-size-body-sm);
+    }
+
+    .customization-hero__actions {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .customization-hero__button {
+      inline-size: 100%;
+      min-inline-size: 0;
+    }
+
+    .customization-hero__note i {
+      display: none;
+    }
+
+    .customization-hero__note > span:not(.customization-hero__note-mark) {
+      flex-basis: calc(100% - var(--sp-8));
+    }
+
+    .customization-hero__services {
+      position: relative;
+      right: auto;
+      bottom: auto;
+      left: auto;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--sp-5) var(--sp-0);
+      margin: var(--sp-0) var(--layout-padding-mobile) var(--sp-5);
+      padding: var(--sp-5) var(--sp-3);
+    }
+
+    .customization-hero__service {
+      padding-inline: var(--sp-3);
+    }
+
+    .customization-hero__service:nth-child(odd) {
+      border-inline-start: 0;
+    }
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .customization-hero__services {
+      background: var(--color-milk);
+      backdrop-filter: none;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Customization hero",
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "Custom design service" },
+    { "type": "text", "id": "heading_first_line", "label": "Heading first line", "default": "Bespoke design." },
+    { "type": "text", "id": "heading_second_line", "label": "Heading second line", "default": "Made for your space." },
+    { "type": "textarea", "id": "description", "label": "Description", "default": "Every WRYDECO piece is thoughtfully designed around you. Tailored dimensions, handpicked solid woods, refined finishes, and personal guidance bring your vision to life." },
+    { "type": "text", "id": "primary_label", "label": "Primary button label", "default": "Request a consultation" },
+    { "type": "url", "id": "consultation_url", "label": "Consultation link" },
+    { "type": "text", "id": "secondary_label", "label": "Secondary button label", "default": "View custom process" },
+    { "type": "url", "id": "process_url", "label": "Custom process link" },
+    { "type": "text", "id": "note_first", "label": "First note", "default": "Private design consultation with our specialists" },
+    { "type": "text", "id": "note_second", "label": "Second note", "default": "By appointment only" },
+    { "type": "text", "id": "badge_text", "label": "Badge text", "default": "Tailored to you. Crafted to last." },
+    { "type": "header", "content": "Service benefits" },
+    { "type": "text", "id": "service_one_title", "label": "Benefit one title", "default": "Handcrafted" },
+    { "type": "text", "id": "service_one_text", "label": "Benefit one text", "default": "By master artisans" },
+    { "type": "text", "id": "service_two_title", "label": "Benefit two title", "default": "Made to order" },
+    { "type": "text", "id": "service_two_text", "label": "Benefit two text", "default": "Built around your needs" },
+    { "type": "text", "id": "service_three_title", "label": "Benefit three title", "default": "Design consultation" },
+    { "type": "text", "id": "service_three_text", "label": "Benefit three text", "default": "Personalized guidance" },
+    { "type": "text", "id": "service_four_title", "label": "Benefit four title", "default": "White glove delivery" },
+    { "type": "text", "id": "service_four_text", "label": "Benefit four text", "default": "Care to your doorstep" }
+  ],
+  "presets": [{ "name": "Customization hero" }]
+}
+{% endschema %}

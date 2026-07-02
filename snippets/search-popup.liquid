@@ -1,4 +1,3 @@
-
 {% doc %}
   Renders the global product search dialog with recent searches and predictive results.
 {% enddoc %}
@@ -8,7 +7,9 @@
     <div class="search-popup__content" role="dialog" aria-modal="true" aria-labelledby="SearchPopupTitle">
       <div class="search-popup__header">
         <h2 class="search-popup__heading" id="SearchPopupTitle">Search the Collection</h2>
-        <p class="search-popup__subtitle">Discover handcrafted pieces crafted by nature, designed to last for generations.</p>
+        <p class="search-popup__subtitle">
+          Discover handcrafted pieces crafted by nature, designed to last for generations.
+        </p>
         <form
           action="{{ routes.search_url }}"
           method="get"
@@ -85,12 +86,28 @@
           </div>
           <div class="search-popup__predictive-list search-popup__grid">
             {% for default_product in collections.all.products limit: 4 %}
-              <a href="{{ default_product.url }}" class="search-product-card" data-title="{{ default_product.title | escape }}" data-url="{{ default_product.url }}" data-image="{{ default_product.featured_image | image_url: width: 480 }}">
+              <a
+                href="{{ default_product.url }}"
+                class="search-product-card"
+                data-title="{{ default_product.title | escape }}"
+                data-url="{{ default_product.url }}"
+                data-image="{{ default_product.featured_image | image_url: width: 480 }}"
+              >
                 <div class="search-product-card__image">
-                  {{ default_product.featured_image | image_url: width: 480 | image_tag: loading: 'lazy', widths: '240,360,480', sizes: '(min-width: 769px) 190px, 44vw', alt: default_product.title }}
+                  {{
+                    default_product.featured_image
+                    | image_url: width: 480
+                    | image_tag:
+                      loading: 'lazy',
+                      widths: '240,360,480',
+                      sizes: '(min-width: 769px) 190px, 44vw',
+                      alt: default_product.title
+                  }}
                 </div>
                 <div class="search-product-card__info">
-                  <span class="search-product-card__type">{{ default_product.type | default: 'Handcrafted furniture' | escape }}</span>
+                  <span class="search-product-card__type">
+                    {{- default_product.type | default: 'Handcrafted furniture' | escape -}}
+                  </span>
                   <span class="search-product-card__title">{{ default_product.title | escape }}</span>
                   <span class="search-product-card__price">{{ default_product.price | money }}</span>
                 </div>
@@ -103,7 +120,7 @@
           <div class="search-popup__spinner"></div>
         </div>
 
-        <div class="search-popup__empty" style="display: none;">
+        <div class="search-popup__empty">
           <svg
             viewBox="0 0 24 24"
             fill="none"
@@ -465,6 +482,11 @@
     text-align: center;
   }
 
+  .search-popup__empty {
+    display: flex !important;
+    height: 100%;
+  }
+
   .search-popup__spinner {
     width: var(--sp-5);
     height: var(--sp-5);
@@ -475,11 +497,14 @@
   }
 
   @keyframes search-popup-spin {
-    to { transform: rotate(360deg); }
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   .search-popup__empty-icon,
   .search-popup__initial-icon {
+    margin-inline: auto;
     width: var(--sp-7);
     height: var(--sp-7);
     margin-bottom: var(--sp-4);

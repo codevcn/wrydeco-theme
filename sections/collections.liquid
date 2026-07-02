@@ -1,87 +1,671 @@
 {% comment %}
-  This section is used in the list-collections template to render a list of
-  collections.
-
-  https://shopify.dev/docs/storefronts/themes/architecture/templates/collection
+  Renders the editorial collection index at /collections.
+  Collection content and links are server-rendered for crawlability.
 {% endcomment %}
 
-<h1>{{ 'collections.title' | t }}</h1>
+{% liquid
+  assign consultation_url = section.settings.consultation_url | default: pages.customization.url | default: routes.root_url
+  assign room_handles = 'living-room-furniture,dining-room-furniture,bedroom-furniture,home-office' | split: ','
+  assign room_labels = 'Living Room,Dining Room,Bedroom,Home Office' | split: ','
+%}
 
-<div
-  class="collections {{ section.settings.grid_item_width }}"
-  style="--grid-gap: {{ section.settings.grid_gap }}px"
->
-  {% for collection in collections %}
-    <a class="collection-card" href="{{ collection.url }}">
-      {% if collection.featured_image %}
-        {% render 'image',
-          class: 'collection-card__image',
-          image: collection.featured_image,
-          width: 600,
-          height: 600,
-          crop: 'center'
-        %}
-      {% endif %}
+<div class="collections-page" id="CollectionsPage-{{ section.id }}">
+  <section class="collections-page__hero" aria-labelledby="CollectionsTitle-{{ section.id }}">
+    <img
+      class="collections-page__hero-image"
+      src="{{ 'collections-page-banner.png' | asset_url }}"
+      alt="Sculptural solid wood table in a softly lit interior"
+      width="1672"
+      height="941"
+      loading="eager"
+      fetchpriority="high"
+    >
+    <div class="collections-page__hero-copy">
+      <p class="collections-page__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+      <h1 id="CollectionsTitle-{{ section.id }}" class="collections-page__title">
+        <span>{{ section.settings.heading_first_line | escape }}</span>
+        <span>{{ section.settings.heading_second_line | escape }}</span>
+      </h1>
+      <p class="collections-page__intro">{{ section.settings.intro | escape }}</p>
+    </div>
+  </section>
 
-      <div class="collection-card__content">
-        <p>{{ collection.title }}</p>
+  <div class="collections-page__mantra" aria-hidden="true">
+    <span></span>
+    <p>The collections made your day.</p>
+    <span></span>
+  </div>
 
-        {% if collection.description %}
-          <p>{{ collection.description | strip_html | truncatewords: 15 }}</p>
-        {% endif %}
+  <main class="collections-page__main">
+    <section class="collections-page__featured" aria-labelledby="FeaturedCollections-{{ section.id }}">
+      <h2 id="FeaturedCollections-{{ section.id }}" class="collections-page__visually-hidden">Featured collections</h2>
+      <div class="collections-page__grid">
+        {% assign featured_count = 0 %}
+        {% for collection in collections %}
+          {% if collection.featured_image == blank %}
+            {% continue %}
+          {% endif %}
+
+          {% assign featured_count = featured_count | plus: 1 %}
+          {% if featured_count > 6 %}
+            {% break %}
+          {% endif %}
+
+          <a class="collections-page__card collections-page__card--{{ featured_count }}" href="{{ collection.url }}">
+            {{
+              collection.featured_image
+              | image_url: width: 1200
+              | image_tag:
+                class: 'collections-page__card-image',
+                loading: 'lazy',
+                widths: '420, 640, 900, 1200',
+                sizes: '(max-width: 767px) 100vw, (max-width: 1200px) 50vw, 34vw',
+                alt: collection.featured_image.alt
+              | default: collection.title
+            }}
+            <span class="collections-page__card-shade" aria-hidden="true"></span>
+            <span class="collections-page__card-content">
+              <span class="collections-page__card-title">{{ collection.title | escape }}</span>
+              {% if collection.description != blank %}
+                <span class="collections-page__card-description">
+                  {{- collection.description | strip_html | truncatewords: 11 -}}
+                </span>
+              {% endif %}
+            </span>
+            <span class="collections-page__arrow" aria-hidden="true">&#8594;</span>
+          </a>
+        {% endfor %}
       </div>
-    </a>
-  {% endfor %}
+    </section>
+
+    <div class="collections-page__mantra" aria-hidden="true">
+      <span></span>
+      <p>Crafted by nature. Designed to endure.</p>
+      <span></span>
+    </div>
+
+    <section class="collections-page__rooms" aria-labelledby="BrowseRooms-{{ section.id }}">
+      <div class="collections-page__rooms-intro">
+        <h2 id="BrowseRooms-{{ section.id }}">Browse by Room</h2>
+        <span class="collections-page__short-rule" aria-hidden="true"></span>
+        <p>Discover pieces thoughtfully designed for how you live.</p>
+      </div>
+
+      {% for room_handle in room_handles %}
+        {% assign room_collection = collections[room_handle] %}
+        {% assign room_label = room_labels[forloop.index0] %}
+        {% assign room_url = room_collection.url | default: routes.collections_url %}
+        <a class="collections-page__room" href="{{ room_url }}">
+          {% if room_collection.featured_image != blank %}
+            {{
+              room_collection.featured_image
+              | image_url: width: 720
+              | image_tag:
+                class: 'collections-page__room-image',
+                loading: 'lazy',
+                widths: '360, 540, 720',
+                sizes: '(max-width: 767px) 100vw, (max-width: 1200px) 25vw, 16vw',
+                alt: room_collection.featured_image.alt
+              | default: room_label
+            }}
+          {% else %}
+            {% case forloop.index %}
+              {% when 1 %}
+                <img
+                  class="collections-page__room-image"
+                  src="{{ 'curated-collections-img-1.png' | asset_url }}"
+                  alt="Sculptural wood furniture for the living room"
+                  width="1448"
+                  height="1086"
+                  loading="lazy"
+                >
+              {% when 2 %}
+                <img
+                  class="collections-page__room-image"
+                  src="{{ 'curated-collections-img-2.png' | asset_url }}"
+                  alt="Sculptural wood furniture for the dining room"
+                  width="941"
+                  height="1672"
+                  loading="lazy"
+                >
+              {% when 3 %}
+                <img
+                  class="collections-page__room-image"
+                  src="{{ 'curated-collections-img-3.png' | asset_url }}"
+                  alt="Sculptural wood furniture for the bedroom"
+                  width="941"
+                  height="1672"
+                  loading="lazy"
+                >
+              {% else %}
+                <img
+                  class="collections-page__room-image"
+                  src="{{ 'curated-collections-img-4.png' | asset_url }}"
+                  alt="Sculptural wood furniture for the home office"
+                  width="941"
+                  height="1672"
+                  loading="lazy"
+                >
+            {% endcase %}
+          {% endif %}
+          <span class="collections-page__room-shade" aria-hidden="true"></span>
+          <span class="collections-page__room-label">{{ room_label | escape }}</span>
+        </a>
+      {% endfor %}
+
+      <aside class="collections-page__consultation" aria-labelledby="ConsultationTitle-{{ section.id }}">
+        <span class="collections-page__consultation-mark" aria-hidden="true">&#9671;</span>
+        <div>
+          <h2 id="ConsultationTitle-{{ section.id }}">{{ section.settings.consultation_heading | escape }}</h2>
+          <p>{{ section.settings.consultation_text | escape }}</p>
+        </div>
+        <a href="{{ consultation_url }}">
+          <span>{{ section.settings.consultation_label | escape }}</span>
+          <span aria-hidden="true">&#8594;</span>
+        </a>
+      </aside>
+    </section>
+  </main>
+
+  {% if section.settings.show_trust_bar %}
+    <section class="collections-page__trust" aria-label="Our craft commitments">
+      <div class="collections-page__trust-item">
+        <span class="collections-page__trust-mark" aria-hidden="true">&#9678;</span>
+        <span><strong>Solid wood only</strong><small>Natural materials. Honest craftsmanship.</small></span>
+      </div>
+      <div class="collections-page__trust-item">
+        <span class="collections-page__trust-mark" aria-hidden="true">&#9826;</span>
+        <span><strong>Master craftsmanship</strong><small>Built with integrity for generations.</small></span>
+      </div>
+      <div class="collections-page__trust-item">
+        <span class="collections-page__trust-mark" aria-hidden="true">&#9671;</span>
+        <span><strong>Bespoke and custom</strong><small>Made to fit your vision and space.</small></span>
+      </div>
+    </section>
+  {% endif %}
 </div>
 
+<script>
+  const mainProductSection = document.getElementById('CollectionsPage-{{ section.id }}');
+  if (mainProductSection) {
+    mainProductSection.closest('body').querySelector('.header__icon--search').style.color = 'var(--color-earth-brown)';
+    mainProductSection.closest('body').querySelector('.header__icon--cart').style.color = 'var(--color-earth-brown)';
+  }
+</script>
 {% stylesheet %}
-  h1 {
-    font-size: var(--section-title-size);
-    letter-spacing: var(--letter-spacing-tight);
+  .collections-page {
+    overflow: hidden;
+    background: var(--color-cream);
+    color: var(--text-primary);
+    font-family: var(--font-body);
   }
-  .collections {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(var(--collection-card-size), 100%), 1fr));
-    gap: var(--grid-gap);
+
+  .collections-page__visually-hidden {
+    position: absolute;
+    width: var(--border-width);
+    height: var(--border-width);
+    padding: 0;
+    margin: calc(var(--border-width) * -1);
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
   }
-  .collections--compact {
-    --collection-card-size: 160px;
+
+  .collections-page__hero {
+    position: relative;
+    max-height: clamp(calc(var(--sp-12) * 4), 52vw, calc(var(--sp-12) * 6));
+    height: 100vh;
+    overflow: hidden;
   }
-  .collections--full {
-    --collection-card-size: 280px;
+
+  .collections-page__hero-image {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
   }
-  .collection-card {
+
+  .collections-page__hero-copy {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1;
     display: flex;
     flex-direction: column;
+    justify-content: center;
+    width: min(48%, calc(var(--layout-max-width) / 2));
+    min-height: inherit;
+    padding-left: 82px;
+  }
+
+  .collections-page__eyebrow {
+    margin: 0 0 var(--sp-5);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+  }
+
+  .collections-page__title {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: clamp(var(--font-size-display-xl), 5vw, var(--font-size-display-2xl));
+    font-weight: var(--font-weight-light);
+    line-height: var(--line-height-display);
+    letter-spacing: var(--letter-spacing-tight);
+  }
+
+  .collections-page__intro {
+    max-width: 48ch;
+    margin: var(--sp-5) 0 0;
+    color: var(--text-earth-brown);
+    font-size: var(--font-size-body-md);
+    line-height: var(--line-height-generous);
+  }
+
+  .collections-page__main {
+    width: min(calc(100% - (var(--layout-padding-desktop) * 2)), var(--layout-showcase-max-width));
+    margin-inline: auto;
+    padding-block: var(--sp-1) var(--sp-8);
+  }
+
+  .collections-page__grid {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    grid-auto-rows: calc(var(--sp-12) * 2);
+    gap: var(--sp-3);
+  }
+
+  .collections-page__card {
+    position: relative;
+    grid-column: span 4;
+    overflow: hidden;
+    border-radius: var(--radius-lg);
+    background: var(--bg-secondary);
+    color: var(--text-inverse);
+  }
+
+  .collections-page__card--4 {
+    grid-column: span 3;
+  }
+  .collections-page__card--5 {
+    grid-column: span 5;
+  }
+
+  .collections-page__card-image,
+  .collections-page__room-image {
     width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform var(--timing-long) var(--ease-out);
+  }
+
+  .collections-page__card-shade,
+  .collections-page__room-shade {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, var(--bg-overlay), transparent 72%);
+  }
+
+  .collections-page__card-content {
+    position: absolute;
+    right: var(--sp-5);
+    bottom: var(--sp-5);
+    left: var(--sp-5);
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+    padding-right: var(--sp-7);
+  }
+
+  .collections-page__card-title {
+    font-family: var(--font-display);
+    font-size: var(--font-size-display-sm);
+    line-height: var(--line-height-tight);
+  }
+
+  .collections-page__card-description {
+    max-width: 34ch;
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-normal);
+  }
+
+  .collections-page__arrow {
+    position: absolute;
+    right: var(--sp-5);
+    bottom: var(--sp-5);
+    display: grid;
+    place-items: center;
+    width: var(--sp-7);
+    height: var(--sp-7);
+    border: var(--border-width) solid currentColor;
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-body-lg);
+  }
+
+  .collections-page__card:hover .collections-page__card-image,
+  .collections-page__room:hover .collections-page__room-image {
+    transform: scale(1.025);
+  }
+
+  .collections-page__card:focus-visible,
+  .collections-page__room:focus-visible,
+  .collections-page__consultation a:focus-visible {
+    outline: calc(var(--border-width) * 2) solid var(--color-sage);
+    outline-offset: var(--sp-1);
+  }
+
+  .collections-page__mantra {
+    display: grid;
+    grid-template-columns: minmax(var(--sp-8), 1fr) auto minmax(var(--sp-8), 1fr);
+    align-items: center;
+    gap: var(--sp-5);
+    max-width: calc(var(--layout-max-width) / 2);
+    margin: var(--sp-5) auto;
+    color: var(--text-secondary);
+  }
+
+  .collections-page__mantra span {
+    height: var(--border-width);
+    background: var(--border-default);
+  }
+
+  .collections-page__mantra p {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-lg);
+  }
+
+  .collections-page__rooms {
+    display: grid;
+    grid-template-columns: 1.05fr repeat(4, minmax(0, 1fr)) 1.4fr;
+    gap: var(--sp-3);
+    align-items: stretch;
+    pointer-events: none;
+  }
+
+  .collections-page__rooms-intro {
+    align-self: center;
+    padding-right: var(--sp-4);
+  }
+
+  .collections-page__rooms-intro h2,
+  .collections-page__consultation h2 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-xl);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-tight);
+  }
+
+  .collections-page__short-rule {
+    display: block;
+    width: var(--sp-5);
+    height: var(--border-width);
+    margin-block: var(--sp-4);
+    background: var(--color-clay);
+  }
+
+  .collections-page__rooms-intro p,
+  .collections-page__consultation p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: var(--font-size-caption);
+    line-height: var(--line-height-generous);
+  }
+
+  .collections-page__room {
+    position: relative;
+    min-height: calc(var(--sp-12) + var(--sp-7));
+    overflow: hidden;
+    border-radius: var(--radius-lg);
+    color: var(--text-inverse);
+  }
+
+  .collections-page__room-label {
+    position: absolute;
+    bottom: var(--sp-4);
+    left: var(--sp-4);
+    padding-right: var(--sp-6);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-medium);
+  }
+
+  .collections-page__consultation {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-4);
+    padding: var(--sp-5);
+    background: var(--color-milk);
+  }
+
+  .collections-page__consultation-mark {
+    display: grid;
+    place-items: center;
+    width: var(--sp-7);
+    height: var(--sp-7);
+    border: var(--border-width) solid var(--border-default);
+    border-radius: var(--radius-full);
+    color: var(--color-clay);
+  }
+
+  .collections-page__consultation a {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-height: fit-content;
+    padding-inline: var(--sp-4);
+    padding-block: var(--sp-3);
+    border-radius: var(--radius-md);
+    background: var(--color-earth-brown);
+    color: var(--text-inverse);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--letter-spacing-wide);
+    text-transform: uppercase;
+  }
+
+  .collections-page__consultation a:active {
+    transform: translateY(var(--border-width));
+  }
+
+  .collections-page__trust {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: min(calc(100% - (var(--layout-padding-desktop) * 2)), var(--layout-max-width));
+    margin-inline: auto;
+    padding-block: var(--sp-5);
+    border-top: var(--border-width) solid var(--border-default);
+  }
+
+  .collections-page__trust-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-4);
+    padding-inline: var(--sp-5);
+    border-left: var(--border-width) solid var(--border-default);
+  }
+
+  .collections-page__trust-item:first-child {
+    border-left: 0;
+  }
+
+  .collections-page__trust-mark {
+    color: var(--color-earth-brown);
+    font-size: var(--font-size-display-sm);
+  }
+
+  .collections-page__trust-item > span:last-child {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-1);
+  }
+
+  .collections-page__trust strong {
+    font-size: var(--font-size-caption);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  .collections-page__trust small {
+    color: var(--text-secondary);
+    font-size: var(--font-size-caption);
+  }
+
+  @media screen and (max-width: 1200px) {
+    .collections-page__rooms {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .collections-page__rooms-intro,
+    .collections-page__consultation {
+      grid-column: span 2;
+    }
+
+    .collections-page__rooms-intro {
+      padding: var(--sp-5);
+    }
+  }
+
+  @media screen and (max-width: 900px) {
+    .collections-page__hero-copy {
+      width: 62%;
+      padding-left: var(--layout-padding-tablet);
+    }
+
+    .collections-page__grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-auto-rows: calc(var(--sp-12) * 2);
+    }
+
+    .collections-page__card,
+    .collections-page__card--4,
+    .collections-page__card--5 {
+      grid-column: span 1;
+    }
+  }
+
+  @media screen and (max-width: 768px) {
+    .collections-page__hero {
+      min-height: calc(var(--sp-12) * 4);
+    }
+
+    .collections-page__hero-image {
+      object-position: 62% center;
+    }
+
+    .collections-page__hero::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to right, var(--color-cream), transparent 105%);
+    }
+
+    .collections-page__hero-copy {
+      width: 100%;
+      padding: calc(var(--sp-12) + var(--sp-7)) var(--layout-padding-mobile) var(--sp-7);
+    }
+
+    .collections-page__title {
+      font-size: var(--font-size-display-xl);
+    }
+
+    .collections-page__main {
+      width: min(calc(100% - (var(--layout-padding-mobile) * 2)), var(--layout-showcase-max-width));
+      padding-top: var(--sp-5);
+    }
+
+    .collections-page__grid,
+    .collections-page__rooms,
+    .collections-page__trust {
+      grid-template-columns: 1fr;
+    }
+
+    .collections-page__grid {
+      grid-auto-rows: calc(var(--sp-12) * 2);
+    }
+
+    .collections-page__rooms-intro,
+    .collections-page__consultation {
+      grid-column: auto;
+    }
+
+    .collections-page__rooms-intro {
+      padding: var(--sp-5) 0;
+    }
+
+    .collections-page__room {
+      min-height: calc(var(--sp-12) * 2);
+    }
+
+    .collections-page__mantra {
+      grid-template-columns: minmax(var(--sp-5), 1fr) auto minmax(var(--sp-5), 1fr);
+      gap: var(--sp-3);
+    }
+
+    .collections-page__mantra p {
+      font-size: var(--font-size-body-sm);
+      text-align: center;
+    }
+
+    .collections-page__trust {
+      width: min(calc(100% - (var(--layout-padding-mobile) * 2)), var(--layout-max-width));
+    }
+
+    .collections-page__trust-item {
+      justify-content: flex-start;
+      padding-block: var(--sp-4);
+      border-left: 0;
+      border-top: var(--border-width) solid var(--border-default);
+    }
+
+    .collections-page__trust-item:first-child {
+      border-top: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .collections-page__card-image,
+    .collections-page__room-image {
+      transition: none;
+    }
   }
 {% endstylesheet %}
 
 {% schema %}
 {
-  "name": "t:general.collections_grid",
+  "name": "Collections editorial",
   "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "Crafted by nature. Designed to endure." },
+    { "type": "text", "id": "heading_first_line", "label": "Heading first line", "default": "Collections" },
+    { "type": "text", "id": "heading_second_line", "label": "Heading second line", "default": "Crafted by Nature" },
     {
-      "type": "select",
-      "id": "grid_item_width",
-      "label": "t:labels.grid_item_width",
-      "options": [
-        { "value": "collections--compact", "label": "t:options.size.small" },
-        { "value": "collections--full", "label": "t:options.size.large" }
-      ],
-      "default": "collections--full"
+      "type": "textarea",
+      "id": "intro",
+      "label": "Introduction",
+      "default": "Timeless solid-wood furniture, handcrafted by master artisans. Each collection celebrates natural form, honest materials, and spaces that inspire and endure."
     },
+    { "type": "header", "content": "Private consultation" },
+    { "type": "text", "id": "consultation_heading", "label": "Heading", "default": "Need help curating your space?" },
     {
-      "type": "range",
-      "id": "grid_gap",
-      "label": "t:labels.grid_gap",
-      "min": 0,
-      "max": 50,
-      "step": 5,
-      "unit": "px",
-      "default": 10
-    }
+      "type": "textarea",
+      "id": "consultation_text",
+      "label": "Text",
+      "default": "Our design advisors are here to help you find the right pieces."
+    },
+    { "type": "text", "id": "consultation_label", "label": "Button label", "default": "Book a private consultation" },
+    { "type": "url", "id": "consultation_url", "label": "Consultation page" },
+    { "type": "checkbox", "id": "show_trust_bar", "label": "Show craft commitments", "default": true }
   ],
-  "presets": [{ "name": "t:general.collections_grid" }]
+  "presets": [{ "name": "Collections editorial" }]
 }
 {% endschema %}

@@ -21,11 +21,12 @@
     data-cart-drawer-panel
   >
     <header class="cart-drawer__header">
-      <div>
+      <div class="cart-drawer__header-title-wrapper">
         <h2 id="CartDrawerTitle" class="cart-drawer__title">Your Cart</h2>
         <p class="cart-drawer__count" data-cart-drawer-count>
-          {{ cart.item_count }}
+          <span>(</span>{{ cart.item_count }}
           {% if cart.item_count == 1 %}piece{% else %}pieces{% endif %} selected
+          <span>)</span>
         </p>
       </div>
       <button
@@ -197,12 +198,13 @@
     inset: var(--sp-0);
     z-index: var(--z-overlay);
     pointer-events: none;
-    visibility: hidden;
+    opacity: 0;
+    transition: opacity var(--timing-base) var(--ease-standard);
   }
 
   .cart-drawer.is-open {
     pointer-events: auto;
-    visibility: visible;
+    opacity: 1;
   }
 
   .cart-drawer__overlay {
@@ -249,9 +251,14 @@
     align-items: flex-start;
     justify-content: space-between;
     flex: none;
-    margin-inline: var(--sp-7);
+    margin-inline: var(--sp-6);
     padding-block: var(--sp-4) var(--sp-3);
     border-block-end: var(--border-width) solid var(--border-light);
+  }
+  .cart-drawer__header-title-wrapper {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-4);
   }
 
   .cart-drawer__title,
@@ -293,7 +300,7 @@
     flex: 1 1 auto;
     min-block-size: var(--sp-0);
     overflow-y: auto;
-    padding-inline: var(--sp-7);
+    padding-inline: var(--sp-6);
   }
 
   .cart-drawer__items {
@@ -435,7 +442,7 @@
 
   .cart-drawer__footer {
     flex: none;
-    padding: var(--sp-4) var(--sp-7) var(--sp-5);
+    padding: var(--sp-4) var(--sp-6) var(--sp-5);
     background: var(--surface-elevated);
     box-shadow: var(--cart-drawer-footer-shadow);
   }
@@ -460,6 +467,7 @@
   .cart-drawer__summary-row--total {
     color: var(--text-primary);
     font: var(--type-body-small);
+    font-size: var(--font-size-body-lg);
   }
 
   .cart-drawer__shipping-label {

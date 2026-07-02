@@ -1,0 +1,509 @@
+{%- liquid
+  assign title_id = 'custom-faq-title-' | append: section.id
+  assign accordion_name = 'custom-faq-' | append: section.id
+  assign guidance_url = section.settings.guidance_url | default: '#custom-inquiry'
+  assign guidance_alt = section.settings.guidance_image.alt | default: section.settings.guidance_heading
+-%}
+
+<section class="custom-faq" aria-labelledby="{{ title_id }}">
+  <div class="custom-faq__inner">
+    <div class="custom-faq__main">
+      <header class="custom-faq__header">
+        <p class="custom-faq__eyebrow"><span aria-hidden="true">&#10022;</span>{{ section.settings.eyebrow | escape }}</p>
+        <h2 id="{{ title_id }}">{{ section.settings.heading | newline_to_br }}</h2>
+        <div class="custom-faq__rule" aria-hidden="true"><span></span><b>&#10022;</b><span></span></div>
+        <p class="custom-faq__intro">{{ section.settings.description | escape }}</p>
+      </header>
+
+      <div class="custom-faq__questions">
+        {%- for block in section.blocks -%}
+          {%- assign item_number = forloop.index | prepend: '0' | slice: -2, 2 -%}
+          <details class="custom-faq__item" name="{{ accordion_name }}" {% if block.settings.open_by_default %}open{% endif %} {{ block.shopify_attributes }}>
+            <summary class="custom-faq__summary">
+              <span class="custom-faq__number">{{ item_number }}</span>
+              <span class="custom-faq__question">{{ block.settings.question | escape }}</span>
+              <span class="custom-faq__toggle" aria-hidden="true"></span>
+            </summary>
+            <div class="custom-faq__answer rte">
+              {{ block.settings.answer }}
+            </div>
+          </details>
+        {%- else -%}
+          <p class="custom-faq__empty">Add customization questions in the theme editor.</p>
+        {%- endfor -%}
+      </div>
+    </div>
+
+    <aside class="custom-faq__guidance" aria-labelledby="custom-faq-guidance-{{ section.id }}">
+      <div class="custom-faq__guidance-media">
+        {%- if section.settings.guidance_image != blank -%}
+          {{ section.settings.guidance_image | image_url: width: 1200 | image_tag: widths: '480, 720, 960, 1200', sizes: '(max-width: 48rem) calc(100vw - 32px), 32vw', loading: 'lazy', alt: guidance_alt }}
+        {%- else -%}
+          <img src="{{ 'book-consultation-after-2.png' | asset_url }}" width="1448" height="1086" loading="lazy" alt="{{ guidance_alt | escape }}">
+        {%- endif -%}
+      </div>
+
+      <div class="custom-faq__guidance-content">
+        <span class="custom-faq__guidance-mark" aria-hidden="true">&#10022;</span>
+        <h3 id="custom-faq-guidance-{{ section.id }}">{{ section.settings.guidance_heading | newline_to_br }}</h3>
+        <div class="custom-faq__guidance-rule" aria-hidden="true"><span></span><b>&#10022;</b><span></span></div>
+        <p>{{ section.settings.guidance_text | escape }}</p>
+        <a class="custom-faq__button" href="{{ guidance_url }}">
+          <span>{{ section.settings.button_label | escape }}</span>
+          <span aria-hidden="true">&#8594;</span>
+        </a>
+        <p class="custom-faq__support"><span aria-hidden="true">&#9671;</span>{{ section.settings.support_text | escape }}</p>
+      </div>
+    </aside>
+  </div>
+</section>
+
+{%- if section.blocks.size > 0 -%}
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {%- for block in section.blocks -%}
+          {
+            "@type": "Question",
+            "name": {{ block.settings.question | json }},
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": {{ block.settings.answer | strip_html | strip | json }}
+            }
+          }{% unless forloop.last %},{% endunless %}
+        {%- endfor -%}
+      ]
+    }
+  </script>
+{%- endif -%}
+
+{% stylesheet %}
+  .custom-faq {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+  }
+
+  .custom-faq__inner {
+    display: grid;
+    grid-template-columns: minmax(0, 1.72fr) minmax(0, 0.88fr);
+    gap: var(--sp-8);
+    inline-size: min(calc(100% - (var(--layout-padding-desktop) * 2)), var(--layout-showcase-max-width));
+    margin-inline: auto;
+    padding-block: var(--sp-10);
+  }
+
+  .custom-faq__main {
+    min-inline-size: var(--sp-0);
+  }
+
+  .custom-faq__header {
+    max-inline-size: var(--layout-hero-copy-width);
+  }
+
+  .custom-faq__eyebrow {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-4);
+    margin: var(--sp-0) var(--sp-0) var(--sp-6);
+    color: var(--color-earth-brown);
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: calc(var(--letter-spacing-wide) * 5);
+    text-transform: uppercase;
+  }
+
+  .custom-faq__eyebrow span,
+  .custom-faq__guidance-mark {
+    color: var(--color-clay);
+    font-size: var(--font-size-display-sm);
+  }
+
+  .custom-faq__header h2 {
+    margin: var(--sp-0);
+    font-family: var(--font-display-light);
+    font-size: var(--font-size-display-xl);
+    font-weight: var(--font-weight-light);
+    letter-spacing: var(--letter-spacing-tight);
+    line-height: var(--line-height-display);
+    text-transform: uppercase;
+  }
+
+  .custom-faq__rule,
+  .custom-faq__guidance-rule {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    gap: var(--sp-3);
+    color: var(--color-clay);
+  }
+
+  .custom-faq__rule {
+    inline-size: min(100%, calc(var(--sp-12) * 2));
+    margin-block: var(--sp-6) var(--sp-5);
+  }
+
+  .custom-faq__rule span,
+  .custom-faq__guidance-rule span {
+    block-size: var(--border-width);
+    background: var(--color-clay);
+  }
+
+  .custom-faq__rule b,
+  .custom-faq__guidance-rule b {
+    font-weight: var(--font-weight-regular);
+  }
+
+  .custom-faq__intro {
+    max-inline-size: calc(var(--layout-hero-copy-width) - var(--sp-10));
+    margin: var(--sp-0);
+    color: var(--text-secondary);
+    font-size: var(--font-size-body-md);
+    line-height: var(--line-height-generous);
+  }
+
+  .custom-faq__questions {
+    margin-block-start: var(--sp-7);
+  }
+
+  .custom-faq__item {
+    margin-block-start: var(--sp-3);
+    overflow: hidden;
+    border: var(--border-width) solid var(--border-default);
+    border-radius: var(--radius-lg);
+    background: color-mix(in srgb, var(--bg-tertiary) 38%, transparent);
+    transition: border-color var(--timing-short) var(--ease-standard), box-shadow var(--timing-short) var(--ease-standard);
+  }
+
+  .custom-faq__item:first-child {
+    margin-block-start: var(--sp-0);
+  }
+
+  .custom-faq__item[open] {
+    border-color: var(--color-clay);
+    box-shadow: var(--shadow-card);
+  }
+
+  .custom-faq__summary {
+    display: grid;
+    grid-template-columns: var(--sp-9) minmax(0, 1fr) var(--sp-7);
+    align-items: center;
+    min-block-size: var(--sp-8);
+    padding-inline: var(--sp-5);
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .custom-faq__summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .custom-faq__summary:focus-visible {
+    outline: calc(var(--border-width) * 2) solid var(--color-sage);
+    outline-offset: calc(var(--border-width) * -2);
+  }
+
+  .custom-faq__number {
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    border-inline-end: var(--border-width) solid var(--border-default);
+    color: var(--color-clay);
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-lg);
+  }
+
+  .custom-faq__question {
+    padding-inline: var(--sp-5);
+    color: var(--text-secondary);
+    font-size: var(--font-size-body-md);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--line-height-snug);
+  }
+
+  .custom-faq__toggle {
+    position: relative;
+    inline-size: var(--sp-5);
+    block-size: var(--sp-5);
+    justify-self: end;
+  }
+
+  .custom-faq__toggle::before,
+  .custom-faq__toggle::after {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    inline-size: var(--sp-4);
+    block-size: var(--border-width);
+    background: var(--color-clay);
+    content: '';
+    transform: translate(-50%, -50%);
+    transition: transform var(--timing-short) var(--ease-standard);
+  }
+
+  .custom-faq__toggle::after {
+    transform: translate(-50%, -50%) rotate(90deg);
+  }
+
+  .custom-faq__item[open] .custom-faq__toggle::after {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+
+  .custom-faq__answer {
+    padding: var(--sp-0) var(--sp-7) var(--sp-5) calc(var(--sp-9) + var(--sp-10));
+    border-block-start: var(--border-width) solid var(--border-default);
+    color: var(--text-secondary);
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-generous);
+  }
+
+  .custom-faq__answer p {
+    margin: var(--sp-5) var(--sp-0) var(--sp-0);
+  }
+
+  .custom-faq__empty {
+    color: var(--text-secondary);
+  }
+
+  .custom-faq__guidance {
+    align-self: start;
+    overflow: hidden;
+    border: var(--border-width) solid var(--color-clay);
+    border-radius: var(--radius-xl);
+    background: color-mix(in srgb, var(--bg-tertiary) 42%, transparent);
+    box-shadow: var(--shadow-card);
+  }
+
+  .custom-faq__guidance-media {
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+  }
+
+  .custom-faq__guidance-media img {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  .custom-faq__guidance-content {
+    padding: var(--sp-6);
+  }
+
+  .custom-faq__guidance-content h3 {
+    margin: var(--sp-3) var(--sp-0) var(--sp-0);
+    font-family: var(--font-display);
+    font-size: var(--font-size-display-sm);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-snug);
+    text-transform: uppercase;
+  }
+
+  .custom-faq__guidance-rule {
+    margin-block: var(--sp-5);
+  }
+
+  .custom-faq__guidance-content > p:not(.custom-faq__support) {
+    margin: var(--sp-0);
+    color: var(--text-secondary);
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-generous);
+  }
+
+  .custom-faq__button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-4);
+    min-block-size: var(--sp-8);
+    margin-block-start: var(--sp-5);
+    padding-inline: var(--sp-5);
+    border-radius: var(--radius-md);
+    background: var(--color-earth-brown);
+    color: var(--text-inverse);
+    font-family: var(--font-display);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: calc(var(--letter-spacing-wide) * 2);
+    text-decoration: none;
+    text-transform: uppercase;
+    transition: var(--transition-fast);
+  }
+
+  .custom-faq__button:hover {
+    background: var(--color-charcoal);
+  }
+
+  .custom-faq__button:focus-visible {
+    outline: calc(var(--border-width) * 2) solid var(--color-sage);
+    outline-offset: var(--sp-1);
+  }
+
+  .custom-faq__support {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    margin: var(--sp-5) var(--sp-0) var(--sp-0);
+    color: var(--text-secondary);
+    font-size: var(--font-size-caption);
+    line-height: var(--line-height-generous);
+  }
+
+  .custom-faq__support span {
+    color: var(--color-clay);
+    font-size: var(--font-size-body-xl);
+  }
+
+  @media screen and (max-width: 64rem) {
+    .custom-faq__inner {
+      grid-template-columns: minmax(0, 1.45fr) minmax(0, 0.75fr);
+      gap: var(--sp-5);
+      inline-size: min(calc(100% - (var(--layout-padding-tablet) * 2)), var(--layout-showcase-max-width));
+      padding-block: var(--sp-8);
+    }
+
+    .custom-faq__header h2 {
+      font-size: var(--font-size-display-xl);
+    }
+
+    .custom-faq__summary {
+      grid-template-columns: var(--sp-8) minmax(0, 1fr) var(--sp-6);
+      padding-inline: var(--sp-4);
+    }
+
+    .custom-faq__question {
+      padding-inline: var(--sp-4);
+      font-size: var(--font-size-body-sm);
+    }
+
+    .custom-faq__answer {
+      padding-inline: calc(var(--sp-8) + var(--sp-8)) var(--sp-5);
+    }
+
+    .custom-faq__guidance-content {
+      padding: var(--sp-5);
+    }
+
+    .custom-faq__guidance-content h3 {
+      font-size: var(--font-size-body-3xl);
+    }
+  }
+
+  @media screen and (max-width: 48rem) {
+    .custom-faq__inner {
+      grid-template-columns: minmax(0, 1fr);
+      inline-size: min(calc(100% - (var(--layout-padding-mobile) * 2)), var(--layout-showcase-max-width));
+      padding-block: var(--sp-8);
+    }
+
+    .custom-faq__eyebrow {
+      margin-block-end: var(--sp-5);
+      font-size: var(--font-size-caption);
+      letter-spacing: calc(var(--letter-spacing-wide) * 3);
+    }
+
+    .custom-faq__header h2 {
+      font-size: var(--font-size-display-lg);
+    }
+
+    .custom-faq__intro {
+      font-size: var(--font-size-body-sm);
+    }
+
+    .custom-faq__questions {
+      margin-block-start: var(--sp-6);
+    }
+
+    .custom-faq__guidance {
+      display: grid;
+      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    }
+
+    .custom-faq__guidance-media {
+      aspect-ratio: auto;
+    }
+  }
+
+  @media screen and (max-width: 30rem) {
+    .custom-faq__header h2 {
+      font-size: var(--font-size-display-md);
+    }
+
+    .custom-faq__summary {
+      grid-template-columns: var(--sp-7) minmax(0, 1fr) var(--sp-5);
+      min-block-size: calc(var(--sp-8) + var(--sp-3));
+      padding-inline: var(--sp-3);
+    }
+
+    .custom-faq__number {
+      font-size: var(--font-size-body-md);
+    }
+
+    .custom-faq__question {
+      padding-inline: var(--sp-3);
+    }
+
+    .custom-faq__answer {
+      padding: var(--sp-0) var(--sp-4) var(--sp-4);
+    }
+
+    .custom-faq__answer p {
+      margin-block-start: var(--sp-4);
+    }
+
+    .custom-faq__guidance {
+      display: block;
+    }
+
+    .custom-faq__guidance-media {
+      aspect-ratio: 4 / 3;
+    }
+
+    .custom-faq__button {
+      padding-inline: var(--sp-4);
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Customization FAQ",
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "Customization FAQ" },
+    { "type": "textarea", "id": "heading", "label": "Heading", "default": "Your questions.\nCrafted answers." },
+    { "type": "textarea", "id": "description", "label": "Description", "default": "Clarity builds confidence. Explore answers to the most common questions about commissioning handcrafted furniture for your space." },
+    { "type": "header", "content": "Guidance card" },
+    { "type": "image_picker", "id": "guidance_image", "label": "Image" },
+    { "type": "textarea", "id": "guidance_heading", "label": "Heading", "default": "Need personal\nguidance?" },
+    { "type": "textarea", "id": "guidance_text", "label": "Description", "default": "Our design specialists can help refine your ideas, explore materials, and shape a piece made for your space." },
+    { "type": "url", "id": "guidance_url", "label": "Button link" },
+    { "type": "text", "id": "button_label", "label": "Button label", "default": "Schedule a consultation" },
+    { "type": "text", "id": "support_text", "label": "Support text", "default": "Private design guidance for your project." }
+  ],
+  "blocks": [
+    {
+      "type": "question",
+      "name": "Question",
+      "settings": [
+        { "type": "text", "id": "question", "label": "Question", "default": "What can be customized?" },
+        { "type": "richtext", "id": "answer", "label": "Answer", "default": "<p>Custom commissions may include adjusted dimensions, finish changes, wood selection, custom forms, and project-specific design details. The final direction is shaped around your space while respecting the natural grain and character of solid wood.</p>" },
+        { "type": "checkbox", "id": "open_by_default", "label": "Open by default", "default": false }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Customization FAQ",
+      "blocks": [
+        { "type": "question" },
+        { "type": "question" },
+        { "type": "question" },
+        { "type": "question" },
+        { "type": "question" }
+      ]
+    }
+  ]
+}
+{% endschema %}

@@ -1,70 +1,862 @@
 {% comment %}
-  This section is used in the search template to render search results for
-  products, articles, and pages.
+  Search results page.
+
+  Hero (eyebrow + heading + search field) over a lifestyle background image,
+  a sort/view toolbar, a 4-column product grid (flat cards, no border/shadow)
+  and pill pagination reusing the same paginate logic as the collection page.
 
   https://shopify.dev/docs/storefronts/themes/architecture/templates/search
 {% endcomment %}
 
-<h1>{{ 'search.title' | t }}</h1>
+{% liquid
+  assign per_page = 24
+  assign q_param = search.terms | url_param_escape
+  assign current_sort = search.sort_by | default: 'relevance'
+  capture search_base_url
+    echo routes.search_url | append: '?q=' | append: q_param | append: '&type=product'
+  endcapture
+%}
 
-<form action="{{ routes.search_url }}" method="get" role="search">
-  <input
-    type="search"
-    size="50"
-    name="q"
-    value="{{ search.terms | escape }}"
-    placeholder="{{ 'search.placeholder' | t }}"
-  >
-  <button type="submit">{{ 'search.submit' | t }}</button>
-</form>
+<section class="srp" id="Search-{{ section.id }}">
+  <div class="srp-hero">
+    <div class="srp-hero__media">
+      <img
+        class="srp-hero__bg"
+        src="{{ 'collection-top-banner.png' | asset_url }}"
+        alt=""
+        width="2169"
+        height="725"
+        loading="eager"
+        fetchpriority="high"
+      >
+    </div>
 
-{% if search.performed %}
-  {% if search.results_count == 0 %}
-    <p>{{ 'search.no_results_html' | t: terms: search.terms }}</p>
+    <div class="srp-hero__inner">
+      <p class="srp-hero__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+      <h1 class="srp-hero__title">{{ section.settings.heading | escape }}</h1>
+
+      <form action="{{ routes.search_url }}" method="get" role="search" class="srp-hero__form">
+        <input type="hidden" name="type" value="product">
+        <div class="srp-hero__input-group">
+          <svg
+            class="srp-hero__icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input
+            type="search"
+            name="q"
+            value="{{ search.terms | escape }}"
+            placeholder="{{ 'search.search_placeholder' | t }}"
+            class="srp-hero__input"
+            aria-label="{{ 'search.title' | t }}"
+            autocomplete="off"
+          >
+          {% if search.terms != blank %}
+            <a href="{{ routes.search_url }}?type=product" class="srp-hero__clear" aria-label="{{ 'search.clear' | t }}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </a>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {% if search.performed == false or search.terms == blank %}
+    <div class="srp-state">
+      <svg class="srp-state__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="11" cy="11" r="8"></circle>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+      </svg>
+      <h2 class="srp-state__heading">{{ 'search.initial_heading' | t }}</h2>
+      <p class="srp-state__text">{{ 'search.initial_text' | t }}</p>
+    </div>
+  {% elsif search.results_count == 0 %}
+    <div class="srp-state">
+      <svg class="srp-state__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="11" cy="11" r="8"></circle>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+      </svg>
+      <h2 class="srp-state__heading">{{ 'search.no_results_heading' | t }}</h2>
+      <p class="srp-state__text">{{ 'search.no_results_text_html' | t: terms: search.terms }}</p>
+    </div>
   {% else %}
-    <p>{{ 'search.results_for_html' | t: terms: search.terms, count: search.results_count }}</p>
+    <div class="srp-toolbar">
+      <div class="srp-sort">
+        <span class="srp-sort__label">{{ 'search.sort_label' | t }}</span>
+        <div class="srp-sort__list" data-sort-pills>
+          <a href="{{ search_base_url }}" data-sort="relevance" class="srp-sort__pill{% if current_sort == 'relevance' %} is-active{% endif %}">
+            {{- 'search.sort_relevance' | t -}}
+          </a>
+          <a href="{{ search_base_url }}&sort_by=created-descending" data-sort="created-descending" class="srp-sort__pill{% if current_sort == 'created-descending' %} is-active{% endif %}">
+            {{- 'search.sort_newest' | t -}}
+          </a>
+          <a href="{{ search_base_url }}&sort_by=price-ascending" data-sort="price-ascending" class="srp-sort__pill{% if current_sort == 'price-ascending' %} is-active{% endif %}">
+            {{- 'search.sort_price_low_high' | t -}}
+          </a>
+          <a href="{{ search_base_url }}&sort_by=price-descending" data-sort="price-descending" class="srp-sort__pill{% if current_sort == 'price-descending' %} is-active{% endif %}">
+            {{- 'search.sort_price_high_low' | t -}}
+          </a>
+          <a href="{{ search_base_url }}&sort_by=best-selling" data-sort="best-selling" class="srp-sort__pill{% if current_sort == 'best-selling' %} is-active{% endif %}">
+            {{- 'search.sort_best_selling' | t -}}
+          </a>
+        </div>
+      </div>
 
-    <div class="search-results">
-      {% paginate search.results by 20 %}
-        {% # Search result items may be an article, a page, or a product. %}
-        {% for result in search.results %}
-          <div class="search-result">
-            {% assign featured_image = result.featured_image | default: result.image %}
-            {% if featured_image %}
-              {% render 'image', class: 'search-result__image', image: featured_image, url: result.url, width: 400 %}
+      <div class="srp-meta">
+        <span class="srp-meta__count">{{ 'search.results_count' | t: count: search.results_count }}</span>
+        <div class="srp-view" data-view-toggle role="group" aria-label="{{ 'search.grid_view' | t }} / {{ 'search.list_view' | t }}">
+          <button type="button" class="srp-view__btn is-active" data-view="grid" aria-pressed="true" aria-label="{{ 'search.grid_view' | t }}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect>
+              <rect x="14" y="14" width="7" height="7"></rect>
+            </svg>
+          </button>
+          <button type="button" class="srp-view__btn" data-view="list" aria-pressed="false" aria-label="{{ 'search.list_view' | t }}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="srp-grid-wrap">
+      {% paginate search.results by per_page %}
+        <div class="srp-grid" data-srp-grid>
+          {% for result in search.results %}
+            {% if result.object_type != 'product' %}
+              {% continue %}
             {% endif %}
-            <div class="search-result__content">
-              <p>
-                {{ result.title | link_to: result.url }}
-                {% if result.price %}
-                  {{ result.price | money_with_currency }}
+            {% liquid
+              assign artist = ''
+              assign author = result.metafields.custom.author_info.value | first
+              if author != blank and author.author_name.value != blank
+                assign artist = author.author_name.value
+              elsif result.vendor != blank
+                assign artist = result.vendor
+              endif
+              assign ptype = result.type
+            %}
+            <article class="srp-card" data-created="{{ result.created_at | date: '%s' }}">
+              <a class="srp-card__media" href="{{ result.url }}" aria-label="{{ result.title | escape }}">
+                {% if result.featured_image %}
+                  {{
+                    result.featured_image
+                    | image_url: width: 720
+                    | image_tag:
+                      loading: 'lazy',
+                      widths: '280, 420, 560, 720',
+                      sizes: '(min-width: 1024px) 24vw, (min-width: 768px) 33vw, 90vw',
+                      alt: result.featured_image.alt
+                    | default: result.title
+                  }}
+                {% else %}
+                  {{ 'product-1' | placeholder_svg_tag: 'placeholder-svg' }}
                 {% endif %}
-              </p>
-            </div>
-          </div>
-        {% endfor %}
+              </a>
 
-        {{ paginate | default_pagination }}
+              <div class="srp-card__info">
+                {% if ptype != blank %}
+                  <span class="srp-card__pill">{{ ptype | escape }}</span>
+                {% endif %}
+
+                <h2 class="srp-card__title">
+                  <a href="{{ result.url }}">
+                    {{- result.title | split: ',' | first | split: ' - ' | first | strip | escape -}}
+                  </a>
+                </h2>
+
+                <hr class="srp-card__divider">
+
+                {% if artist != blank %}
+                  <p class="srp-card__artist">{{ 'search.crafted_by' | t: artist: artist }}</p>
+                {% endif %}
+
+                <p class="srp-card__price">
+                  <span class="srp-card__price-label">{{ 'search.from_price' | t }}</span> {{ result.price | money }}
+                </p>
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+
+        {% if paginate.pages > 1 %}
+          <nav class="srp-pagination" role="navigation" aria-label="Pagination">
+            <div class="srp-pagination__inner">
+              {% if paginate.previous %}
+                <a href="{{ paginate.previous.url }}" class="srp-pagination__prev" aria-label="{{ 'search.pagination_previous' | t }}">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                  </svg>
+                  <span>{{ 'search.pagination_previous' | t }}</span>
+                </a>
+              {% else %}
+                <span class="srp-pagination__prev is-disabled">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                  </svg>
+                  <span>{{ 'search.pagination_previous' | t }}</span>
+                </span>
+              {% endif %}
+
+              <div class="srp-pagination__sep"></div>
+
+              <div class="srp-pagination__numbers">
+                {% for part in paginate.parts %}
+                  {% if part.is_link %}
+                    <a href="{{ part.url }}" class="srp-pagination__num" aria-label="Page {{ part.title }}">
+                      {{- part.title -}}
+                    </a>
+                  {% else %}
+                    {% if part.title == paginate.current_page %}
+                      <span class="srp-pagination__num is-current" aria-current="page">{{ part.title }}</span>
+                    {% else %}
+                      <span class="srp-pagination__num is-deco">{{ part.title }}</span>
+                    {% endif %}
+                  {% endif %}
+                {% endfor %}
+              </div>
+
+              <div class="srp-pagination__sep"></div>
+
+              {% if paginate.next %}
+                <a href="{{ paginate.next.url }}" class="srp-pagination__next" aria-label="{{ 'search.pagination_next' | t }}">
+                  <span>{{ 'search.pagination_next' | t }}</span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </a>
+              {% else %}
+                <span class="srp-pagination__next is-disabled">
+                  <span>{{ 'search.pagination_next' | t }}</span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </span>
+              {% endif %}
+            </div>
+          </nav>
+        {% endif %}
       {% endpaginate %}
     </div>
   {% endif %}
-{% endif %}
+</section>
 
 {% stylesheet %}
-  .search-results {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  .srp {
+    width: 100%;
+    background-color: var(--color-cream);
+    font-family: var(--font-body);
   }
-  .search-results .prev,
-  .search-results .page,
-  .search-results .next {
-    grid-column: 1 / -1;
+
+  /* Hero */
+  .srp-hero {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-height: clamp(420px, 50vh, 640px);
+    overflow: hidden;
+    background-color: var(--color-cream);
+  }
+  .srp-hero__media {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+  }
+  .srp-hero__bg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: right center;
+    display: block;
+  }
+  .srp-hero__media::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      var(--color-cream) 0%,
+      rgba(245, 241, 237, 0.88) 32%,
+      rgba(245, 241, 237, 0) 62%
+    );
+  }
+  .srp-hero__inner {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-4);
+    width: 100%;
+    max-width: 620px;
+    padding: var(--sp-7) var(--sp-6) var(--sp-7) 72px;
+  }
+  .srp-hero__eyebrow {
+    margin: 0;
+    font-family: var(--font-roboto);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+  .srp-hero__title {
+    margin: 0;
+    font-family: var(--font-display-light);
+    font-size: clamp(32px, 3.2vw, var(--font-size-display-lg));
+    font-weight: 500;
+    line-height: var(--line-height-display);
+    color: var(--text-primary);
+  }
+  .srp-hero__form {
+    margin-top: var(--sp-2);
+  }
+  .srp-hero__input-group {
+    position: relative;
+    display: flex;
+    align-items: center;
+    max-width: 460px;
+  }
+  .srp-hero__icon {
+    position: absolute;
+    left: var(--sp-4);
+    width: 18px;
+    height: 18px;
+    color: var(--text-secondary);
+    pointer-events: none;
+  }
+  .srp-hero__input {
+    width: 100%;
+    height: 52px;
+    padding: 0 var(--sp-7) 0 calc(var(--sp-6) + var(--sp-2));
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-elevated);
+    outline: none;
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-md);
+    color: var(--text-primary);
+    transition: border-color var(--timing-fast) var(--ease-standard);
+  }
+  .srp-hero__input:focus {
+    border-color: var(--color-earth-brown);
+    box-shadow: var(--shadow-focus);
+  }
+  .srp-hero__input::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+  }
+  .srp-hero__clear {
+    position: absolute;
+    right: var(--sp-4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: color var(--timing-fast) var(--ease-standard);
+  }
+  .srp-hero__clear:hover {
+    color: var(--color-earth-brown);
+  }
+  .srp-hero__clear svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Empty / no-results state */
+  .srp-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-4);
+    padding: var(--sp-9) var(--sp-5);
+    text-align: center;
+    color: var(--text-secondary);
+  }
+  .srp-state__icon {
+    width: var(--sp-8);
+    height: var(--sp-8);
+    color: var(--text-tertiary);
+  }
+  .srp-state__heading {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--font-size-display-sm);
+    font-weight: var(--font-weight-regular);
+    color: var(--text-primary);
+  }
+  .srp-state__text {
+    margin: 0;
+    max-width: 48ch;
+    font-size: var(--font-size-body-md);
+    line-height: var(--line-height-generous);
+  }
+
+  /* Toolbar */
+  .srp-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--sp-4);
+    padding: var(--sp-4) 64px;
+    border-top: 1px solid var(--border-light);
+    border-bottom: 1px solid var(--border-light);
+  }
+  .srp-sort {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    flex-wrap: wrap;
+  }
+  .srp-sort__label {
+    font-family: var(--font-roboto);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+  .srp-sort__list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-2);
+  }
+  .srp-sort__pill {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--sp-2) var(--sp-4);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-full);
+    background-color: var(--surface-elevated);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-medium);
+    color: var(--text-primary);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: var(--transition-fast);
+  }
+  .srp-sort__pill:hover {
+    border-color: var(--color-earth-brown);
+    color: var(--color-earth-brown);
+  }
+  .srp-sort__pill.is-active {
+    background-color: var(--color-ebony);
+    border-color: var(--color-ebony);
+    color: var(--text-inverse);
+  }
+  .srp-sort__pill.is-active:hover {
+    color: var(--text-inverse);
+  }
+
+  .srp-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-4);
+  }
+  .srp-meta__count {
+    font-family: var(--font-roboto);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+  .srp-view {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+  .srp-view__btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: none;
+    background-color: var(--surface-elevated);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: var(--transition-fast);
+  }
+  .srp-view__btn + .srp-view__btn {
+    border-left: 1px solid var(--border-default);
+  }
+  .srp-view__btn svg {
+    width: 16px;
+    height: 16px;
+  }
+  .srp-view__btn.is-active {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+  }
+
+  /* Grid */
+  .srp-grid-wrap {
+    padding: var(--sp-6) 64px var(--section-spacing-desktop);
+  }
+  .srp-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    column-gap: var(--sp-5);
+    row-gap: var(--sp-7);
+  }
+  .srp-card {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .srp-card__media {
+    display: block;
+    aspect-ratio: 6 / 5;
+    overflow: hidden;
+    border-radius: var(--radius-md);
+    background-color: var(--bg-secondary);
+  }
+  .srp-card__media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform var(--timing-long) var(--ease-standard);
+  }
+  .srp-card__media:hover img {
+    transform: scale(1.03);
+  }
+  .srp-card__info {
+    display: flex;
+    flex-direction: column;
+    padding: var(--sp-4) 0 0;
+  }
+  .srp-card__pill {
+    align-self: flex-start;
+    font-family: var(--font-roboto);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-clay);
+  }
+  .srp-card__title {
+    margin: var(--sp-3) 0 0;
+    min-width: 0;
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-lg);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--line-height-tight);
+    color: var(--text-primary);
+    letter-spacing: 0.01em;
+  }
+  .srp-card__title a {
+    color: inherit;
+    text-decoration: none;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .srp-card__divider {
+    width: 20px;
+    height: 2px;
+    margin: var(--sp-3) 0 0;
+    border: none;
+    background-color: var(--color-orange);
+  }
+  .srp-card__artist {
+    margin: var(--sp-3) 0 0;
+    font-family: var(--font-roboto);
+    font-size: var(--font-size-body-sm);
+    color: var(--color-clay);
+  }
+  .srp-card__price {
+    margin: var(--sp-3) 0 0;
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-lg);
+    font-weight: var(--font-weight-bold);
+    color: var(--text-primary);
+  }
+  .srp-card__price-label {
+    font-weight: var(--font-weight-light);
+  }
+
+  /* List view */
+  .srp-grid.is-list {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: var(--sp-5);
+  }
+  .srp-grid.is-list .srp-card {
+    flex-direction: row;
+    gap: var(--sp-5);
+    align-items: flex-start;
+  }
+  .srp-grid.is-list .srp-card__media {
+    flex: 0 0 220px;
+    width: 220px;
+  }
+  .srp-grid.is-list .srp-card__info {
+    flex: 1 1 auto;
+    padding-top: 0;
+  }
+
+  /* Pagination (same logic/markup pattern as the collection page) */
+  .srp-pagination {
+    margin-top: var(--sp-8);
+    display: flex;
+    justify-content: center;
+  }
+  .srp-pagination__inner {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-full);
+    height: 52px;
+    background-color: transparent;
+  }
+  .srp-pagination__prev,
+  .srp-pagination__next {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: 0 var(--sp-5);
+    font-family: var(--font-body);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: var(--transition-fast);
+  }
+  .srp-pagination__prev:not(.is-disabled):hover,
+  .srp-pagination__next:not(.is-disabled):hover {
+    color: var(--color-earth-brown);
+  }
+  .srp-pagination__prev svg,
+  .srp-pagination__next svg {
+    width: 14px;
+    height: 14px;
+  }
+  .srp-pagination__prev.is-disabled,
+  .srp-pagination__next.is-disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .srp-pagination__sep {
+    width: 1px;
+    height: 24px;
+    background-color: var(--border-default);
+  }
+  .srp-pagination__numbers {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: 0 var(--sp-4);
+  }
+  .srp-pagination__num {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    height: 36px;
+    padding: 0 var(--sp-2);
+    border-radius: var(--radius-lg);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+    text-decoration: none;
+    border: 1px solid var(--border-default);
+    background-color: transparent;
+    transition: var(--transition-fast);
+  }
+  .srp-pagination__num:not(.is-current):not(.is-deco):hover {
+    background-color: var(--bg-secondary);
+  }
+  .srp-pagination__num.is-current {
+    background-color: var(--color-earth-brown);
+    color: var(--color-milk);
+    border-color: var(--color-earth-brown);
+  }
+  .srp-pagination__num.is-deco {
+    border-color: transparent;
+  }
+
+  @media screen and (max-width: 1024px) {
+    .srp-grid,
+    .srp-grid.is-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .srp-grid.is-list .srp-card {
+      flex-direction: column;
+    }
+    .srp-grid.is-list .srp-card__media {
+      width: 100%;
+    }
+  }
+
+  @media screen and (max-width: 900px) {
+    .srp-hero__inner {
+      width: 62%;
+      padding-left: var(--layout-padding-tablet);
+    }
+  }
+
+  @media screen and (max-width: 768px) {
+    .srp-hero {
+      min-height: 260px;
+    }
+    .srp-hero__media::after {
+      background: linear-gradient(
+        90deg,
+        var(--color-cream) 0%,
+        rgba(245, 241, 237, 0.92) 55%,
+        rgba(245, 241, 237, 0.6) 100%
+      );
+    }
+    .srp-hero__inner {
+      width: 100%;
+      max-width: 100%;
+      padding: var(--sp-6) var(--layout-padding-mobile);
+    }
+    .srp-hero__input-group {
+      max-width: 100%;
+    }
+    .srp-toolbar {
+      flex-direction: column;
+      align-items: flex-start;
+      padding: var(--sp-4) var(--layout-padding-mobile);
+    }
+    .srp-meta {
+      width: 100%;
+      justify-content: space-between;
+    }
+    .srp-grid-wrap {
+      padding: var(--sp-5) var(--layout-padding-mobile) var(--section-spacing-mobile);
+    }
+    .srp-grid {
+      column-gap: var(--sp-4);
+      row-gap: var(--sp-6);
+    }
+  }
+
+  @media screen and (max-width: 480px) {
+    .srp-grid,
+    .srp-grid.is-list {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .srp-sort__list {
+      gap: var(--sp-2);
+    }
   }
 {% endstylesheet %}
+
+<script>
+  (function () {
+    // Shopify's native search sort_by only recognizes relevance/price-ascending/
+    // price-descending. "Newest" is reproduced client-side (re-sorts the cards on
+    // the current page by their rendered created date) so the pill still works;
+    // "Best Selling" has no sales-rank data available in storefront Liquid, so it
+    // only gets its active state synced and otherwise behaves like Relevance.
+    function syncSortPills() {
+      var pills = document.querySelectorAll('[data-sort-pills] [data-sort]');
+      if (!pills.length) return;
+      var params = new URLSearchParams(window.location.search);
+      var sortBy = params.get('sort_by') || 'relevance';
+
+      pills.forEach(function (pill) {
+        pill.classList.toggle('is-active', pill.dataset.sort === sortBy);
+      });
+
+      if (sortBy === 'created-descending') {
+        var grid = document.querySelector('[data-srp-grid]');
+        if (!grid) return;
+        var cards = Array.prototype.slice.call(grid.querySelectorAll('.srp-card'));
+        cards
+          .sort(function (a, b) {
+            return Number(b.dataset.created) - Number(a.dataset.created);
+          })
+          .forEach(function (card) {
+            grid.appendChild(card);
+          });
+      }
+    }
+
+    function initSearchPage() {
+      syncSortPills();
+
+      document.querySelectorAll('[data-view-toggle]').forEach(function (toggle) {
+        if (toggle.dataset.init === 'true') return;
+        toggle.dataset.init = 'true';
+
+        var grid = toggle.closest('.srp').querySelector('[data-srp-grid]');
+        if (!grid) return;
+        var buttons = toggle.querySelectorAll('[data-view]');
+
+        function setView(view) {
+          grid.classList.toggle('is-list', view === 'list');
+          buttons.forEach(function (btn) {
+            var active = btn.dataset.view === view;
+            btn.classList.toggle('is-active', active);
+            btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+          });
+          try {
+            window.localStorage.setItem('srpView', view);
+          } catch (e) {}
+        }
+
+        var stored = null;
+        try {
+          stored = window.localStorage.getItem('srpView');
+        } catch (e) {}
+        if (stored === 'list') setView('list');
+
+        buttons.forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            setView(btn.dataset.view);
+          });
+        });
+      });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initSearchPage);
+    } else {
+      initSearchPage();
+    }
+  })();
+</script>
 
 {% schema %}
 {
   "name": "t:general.search",
-  "settings": []
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "Search Results" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Find What Inspires You" }
+  ]
 }
 {% endschema %}

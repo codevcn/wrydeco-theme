@@ -1,0 +1,507 @@
+{% comment %}
+  Renders the three-step custom design process below the customization hero.
+  All process content and calls to action are server-rendered.
+{% endcomment %}
+
+{% liquid
+  assign journey_url = section.settings.journey_url | default: '#custom-inquiry'
+%}
+
+<section class="custom-process" id="custom-process" aria-labelledby="CustomProcessTitle-{{ section.id }}">
+  <div class="custom-process__media" aria-hidden="true">
+    <img
+      src="{{ 'collections-page-banner.png' | asset_url }}"
+      alt=""
+      width="1672"
+      height="941"
+      loading="lazy"
+    >
+  </div>
+
+  <div class="custom-process__inner">
+    <header class="custom-process__header">
+      <p class="custom-process__eyebrow">
+        <span aria-hidden="true">&#10022;</span>
+        {{ section.settings.eyebrow | escape }}
+      </p>
+      <h2 id="CustomProcessTitle-{{ section.id }}">
+        <span>{{ section.settings.heading_first_line | escape }}</span>
+        <span>{{ section.settings.heading_second_line | escape }}</span>
+      </h2>
+      <div class="custom-process__heading-rule" aria-hidden="true">
+        <span></span><b>&#10022;</b><span></span>
+      </div>
+      <p class="custom-process__intro">{{ section.settings.intro | escape }}</p>
+    </header>
+
+    <div class="custom-process__steps">
+      <article class="custom-process__step">
+        <span class="custom-process__step-icon" aria-hidden="true">
+          {% render 'faq-category-icon', icon: 'consultation' %}
+        </span>
+        <span class="custom-process__step-number"><i></i>01<i></i></span>
+        <h3>{{ section.settings.step_one_title | escape }}</h3>
+        <span class="custom-process__step-ornament" aria-hidden="true"><i></i>&#10022;<i></i></span>
+        <p>{{ section.settings.step_one_text | escape }}</p>
+        <span class="custom-process__connector" aria-hidden="true">&rarr;</span>
+      </article>
+
+      <article class="custom-process__step">
+        <span class="custom-process__step-icon" aria-hidden="true">
+          <img src="{{ 'icon-fix.svg' | asset_url }}" alt="" width="56" height="56">
+        </span>
+        <span class="custom-process__step-number"><i></i>02<i></i></span>
+        <h3>{{ section.settings.step_two_title | escape }}</h3>
+        <span class="custom-process__step-ornament" aria-hidden="true"><i></i>&#10022;<i></i></span>
+        <p>{{ section.settings.step_two_text | escape }}</p>
+        <span class="custom-process__connector" aria-hidden="true">&rarr;</span>
+      </article>
+
+      <article class="custom-process__step">
+        <span class="custom-process__step-icon" aria-hidden="true">
+          <img src="{{ 'icon-truck.svg' | asset_url }}" alt="" width="56" height="56">
+        </span>
+        <span class="custom-process__step-number"><i></i>03<i></i></span>
+        <h3>{{ section.settings.step_three_title | escape }}</h3>
+        <span class="custom-process__step-ornament" aria-hidden="true"><i></i>&#10022;<i></i></span>
+        <p>{{ section.settings.step_three_text | escape }}</p>
+      </article>
+    </div>
+
+    <aside class="custom-process__assurance" aria-labelledby="CustomAssuranceTitle-{{ section.id }}">
+      <span class="custom-process__assurance-icon" aria-hidden="true">
+        {% render 'icon-artist-recognition', icon: 'check' %}
+      </span>
+      <h3 id="CustomAssuranceTitle-{{ section.id }}">{{ section.settings.assurance_heading | escape }}</h3>
+      <p>{{ section.settings.assurance_text | escape }}</p>
+      <a href="{{ journey_url }}">
+        <span>{{ section.settings.journey_label | escape }}</span>
+        <span aria-hidden="true">&rarr;</span>
+      </a>
+    </aside>
+  </div>
+</section>
+
+{% stylesheet %}
+  .custom-process {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border-block-start: var(--border-width) solid var(--border-default);
+    background: var(--color-cream);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+  }
+
+  .custom-process__media {
+    position: absolute;
+    inset-block-start: var(--sp-0);
+    inset-inline-end: var(--sp-0);
+    z-index: -1;
+    inline-size: 58%;
+    block-size: calc(var(--sp-12) * 4);
+  }
+
+  .custom-process__media img {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+    object-position: right center;
+  }
+
+  .custom-process__media::before,
+  .custom-process__media::after {
+    position: absolute;
+    content: '';
+    pointer-events: none;
+  }
+
+  .custom-process__media::before {
+    inset: var(--sp-0);
+    background: linear-gradient(to right, var(--color-cream), transparent 45%);
+  }
+
+  .custom-process__media::after {
+    right: var(--sp-0);
+    bottom: var(--sp-0);
+    left: var(--sp-0);
+    block-size: 42%;
+    background: linear-gradient(to bottom, transparent, var(--color-cream));
+  }
+
+  .custom-process__inner {
+    inline-size: min(calc(100% - (var(--layout-padding-desktop) * 2)), calc(var(--layout-showcase-max-width) + (var(--sp-12) * 2)));
+    margin-inline: auto;
+    padding-block: var(--sp-11) var(--sp-9);
+  }
+
+  .custom-process__header {
+    position: relative;
+    z-index: 1;
+    max-inline-size: calc(var(--layout-max-width) * 0.62);
+  }
+
+  .custom-process__eyebrow {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-4);
+    margin: var(--sp-0) var(--sp-0) var(--sp-4);
+    color: var(--color-earth-brown);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: calc(var(--letter-spacing-wide) * 5);
+    line-height: var(--line-height-normal);
+    text-transform: uppercase;
+  }
+
+  .custom-process__eyebrow > span {
+    display: grid;
+    place-items: center;
+    inline-size: var(--sp-7);
+    block-size: var(--sp-7);
+    color: var(--color-clay);
+    font-size: var(--font-size-display-sm);
+  }
+
+  .custom-process__header h2 {
+    display: flex;
+    flex-direction: column;
+    margin: var(--sp-0);
+    color: var(--color-earth-brown);
+    font-family: var(--font-display-light);
+    font-size: clamp(var(--font-size-display-lg), 4vw, calc(var(--font-size-display-xl) + var(--sp-2)));
+    font-weight: var(--font-weight-light);
+    letter-spacing: var(--letter-spacing-tight);
+    line-height: var(--line-height-display);
+  }
+
+  .custom-process__header h2 span {
+    white-space: nowrap;
+  }
+
+  .custom-process__heading-rule {
+    display: grid;
+    grid-template-columns: minmax(var(--sp-8), var(--sp-12)) auto minmax(var(--sp-8), var(--sp-12));
+    align-items: center;
+    gap: var(--sp-2);
+    inline-size: fit-content;
+    margin-block: var(--sp-5);
+    color: var(--color-clay);
+  }
+
+  .custom-process__heading-rule span,
+  .custom-process__step-number i,
+  .custom-process__step-ornament i {
+    block-size: var(--border-width);
+    background: currentcolor;
+  }
+
+  .custom-process__heading-rule b {
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-regular);
+  }
+
+  .custom-process__intro {
+    max-inline-size: 48ch;
+    margin: var(--sp-0);
+    color: var(--text-secondary);
+    font-size: var(--font-size-body-md);
+    line-height: var(--line-height-generous);
+  }
+
+  .custom-process__steps {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--sp-4);
+    margin-block-start: var(--sp-8);
+  }
+
+  .custom-process__step {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-block-size: calc(var(--sp-12) * 3);
+    padding: var(--sp-5) var(--sp-7) var(--sp-7);
+    border: var(--border-width) solid var(--border-default);
+    border-radius: var(--radius-lg);
+    background: color-mix(in srgb, var(--color-milk) 82%, transparent);
+    text-align: center;
+  }
+
+  .custom-process__step-icon {
+    display: grid;
+    place-items: center;
+    inline-size: calc(var(--sp-9) + var(--sp-6));
+    block-size: calc(var(--sp-9) + var(--sp-6));
+    border: var(--border-width) solid var(--border-default);
+    border-radius: var(--radius-full);
+    background: color-mix(in srgb, var(--bg-tertiary) 58%, transparent);
+    color: var(--color-clay);
+  }
+
+  .custom-process__step-icon svg,
+  .custom-process__step-icon img {
+    inline-size: var(--sp-8);
+    block-size: var(--sp-8);
+    object-fit: contain;
+  }
+
+  .custom-process__step-number {
+    display: grid;
+    grid-template-columns: var(--sp-5) auto var(--sp-5);
+    align-items: center;
+    gap: var(--sp-3);
+    margin-block-start: var(--sp-4);
+    color: var(--color-clay);
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-lg);
+  }
+
+  .custom-process__step h3 {
+    margin: var(--sp-2) var(--sp-0) var(--sp-3);
+    color: var(--color-earth-brown);
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-xl);
+    font-weight: var(--font-weight-regular);
+    letter-spacing: var(--letter-spacing-wide);
+    line-height: var(--line-height-tight);
+    text-transform: uppercase;
+  }
+
+  .custom-process__step-ornament {
+    display: grid;
+    grid-template-columns: var(--sp-5) auto var(--sp-5);
+    align-items: center;
+    gap: var(--sp-2);
+    color: var(--color-clay);
+    font-size: var(--font-size-caption);
+  }
+
+  .custom-process__step p {
+    max-inline-size: 34ch;
+    margin: var(--sp-4) var(--sp-0) var(--sp-0);
+    color: var(--text-secondary);
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-generous);
+  }
+
+  .custom-process__connector {
+    position: absolute;
+    top: 44%;
+    right: calc((var(--sp-4) + (var(--sp-7) / 2)) * -1);
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    inline-size: var(--sp-7);
+    block-size: var(--sp-7);
+    border: var(--border-width) solid var(--color-clay);
+    border-radius: var(--radius-full);
+    background: var(--color-milk);
+    color: var(--color-earth-brown);
+    font-size: var(--font-size-body-lg);
+  }
+
+  .custom-process__assurance {
+    display: grid;
+    grid-template-columns: auto minmax(calc(var(--sp-12) + var(--sp-5)), 0.7fr) minmax(calc(var(--sp-12) * 2), 1.3fr) minmax(calc(var(--sp-12) * 2), 0.9fr);
+    align-items: center;
+    gap: var(--sp-5);
+    margin-block-start: var(--sp-5);
+    padding: var(--sp-5) var(--sp-6);
+    border: var(--border-width) solid var(--border-default);
+    border-radius: var(--radius-lg);
+    background: color-mix(in srgb, var(--color-milk) 86%, transparent);
+  }
+
+  .custom-process__assurance-icon {
+    display: grid;
+    place-items: center;
+    inline-size: var(--sp-8);
+    block-size: var(--sp-8);
+    color: var(--color-clay);
+  }
+
+  .custom-process__assurance-icon svg {
+    inline-size: 100%;
+    block-size: 100%;
+  }
+
+  .custom-process__assurance h3 {
+    margin: var(--sp-0);
+    color: var(--color-earth-brown);
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-md);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: calc(var(--letter-spacing-wide) * 3);
+    line-height: var(--line-height-generous);
+    text-transform: uppercase;
+  }
+
+  .custom-process__assurance p {
+    margin: var(--sp-0);
+    padding-inline-start: var(--sp-5);
+    border-inline-start: var(--border-width) solid var(--border-default);
+    color: var(--text-secondary);
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-generous);
+  }
+
+  .custom-process__assurance a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-5);
+    min-block-size: calc(var(--sp-7) + var(--sp-3));
+    padding-inline: var(--sp-5);
+    border-radius: var(--radius-md);
+    background: var(--color-earth-brown);
+    color: var(--text-inverse);
+    font-family: var(--font-display);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--letter-spacing-wide);
+    text-transform: uppercase;
+    transition: background-color var(--timing-short) var(--ease-standard), transform var(--timing-short) var(--ease-standard);
+  }
+
+  .custom-process__assurance a:hover {
+    background: var(--color-charcoal);
+  }
+
+  .custom-process__assurance a:active {
+    transform: translateY(var(--border-width));
+  }
+
+  .custom-process__assurance a:focus-visible {
+    outline: calc(var(--border-width) * 2) solid var(--color-sage);
+    outline-offset: var(--sp-1);
+  }
+
+  @media screen and (max-width: 64rem) {
+    .custom-process__inner {
+      inline-size: min(calc(100% - (var(--layout-padding-tablet) * 2)), var(--layout-showcase-max-width));
+      padding-block: var(--sp-9) var(--sp-8);
+    }
+
+    .custom-process__media {
+      inline-size: 62%;
+    }
+
+    .custom-process__step {
+      min-block-size: calc(var(--sp-12) * 3.25);
+      padding-inline: var(--sp-4);
+    }
+
+    .custom-process__assurance {
+      grid-template-columns: auto minmax(0, 1fr) minmax(0, 1.4fr);
+    }
+
+    .custom-process__assurance a {
+      grid-column: 2 / -1;
+    }
+  }
+
+  @media screen and (max-width: 48rem) {
+    .custom-process__media {
+      inline-size: 100%;
+      block-size: calc(var(--sp-12) * 3);
+      opacity: 0.42;
+    }
+
+    .custom-process__media::before {
+      background: color-mix(in srgb, var(--color-cream) 72%, transparent);
+    }
+
+    .custom-process__inner {
+      inline-size: min(calc(100% - (var(--layout-padding-mobile) * 2)), var(--layout-showcase-max-width));
+      padding-block: var(--sp-8);
+    }
+
+    .custom-process__header {
+      max-inline-size: none;
+    }
+
+    .custom-process__header h2 {
+      font-size: var(--font-size-display-lg);
+    }
+
+    .custom-process__header h2 span {
+      white-space: normal;
+    }
+
+    .custom-process__intro {
+      font-size: var(--font-size-body-sm);
+    }
+
+    .custom-process__steps {
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--sp-6);
+      margin-block-start: var(--sp-7);
+    }
+
+    .custom-process__step {
+      min-block-size: auto;
+      padding: var(--sp-5) var(--sp-5) var(--sp-6);
+    }
+
+    .custom-process__connector {
+      top: auto;
+      right: 50%;
+      bottom: calc((var(--sp-6) + (var(--sp-7) / 2)) * -1);
+      transform: translateX(50%) rotate(90deg);
+    }
+
+    .custom-process__assurance {
+      grid-template-columns: auto minmax(0, 1fr);
+      padding: var(--sp-5);
+    }
+
+    .custom-process__assurance p,
+    .custom-process__assurance a {
+      grid-column: 1 / -1;
+    }
+
+    .custom-process__assurance p {
+      padding: var(--sp-4) var(--sp-0) var(--sp-0);
+      border-inline-start: 0;
+      border-block-start: var(--border-width) solid var(--border-default);
+    }
+
+    .custom-process__assurance a {
+      gap: var(--sp-3);
+      padding-inline: var(--sp-4);
+    }
+
+    .custom-process__assurance a span:first-child {
+      white-space: nowrap;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Customization process",
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "The custom process" },
+    { "type": "text", "id": "heading_first_line", "label": "Heading first line", "default": "Crafted around you." },
+    { "type": "text", "id": "heading_second_line", "label": "Heading second line", "default": "Perfected in three steps." },
+    { "type": "textarea", "id": "intro", "label": "Introduction", "default": "From the first conversation to final placement, every detail is handled with care, precision, and an unwavering commitment to quality." },
+    { "type": "header", "content": "Consultation" },
+    { "type": "text", "id": "step_one_title", "label": "Title", "default": "Consultation" },
+    { "type": "textarea", "id": "step_one_text", "label": "Text", "default": "We begin with a personal consultation to understand your vision, space, and lifestyle. Together, we shape the right design direction." },
+    { "type": "header", "content": "Production" },
+    { "type": "text", "id": "step_two_title", "label": "Title", "default": "Production" },
+    { "type": "textarea", "id": "step_two_text", "label": "Text", "default": "Our master artisans bring your piece to life using premium solid woods and time-honored techniques, with precision in every detail." },
+    { "type": "header", "content": "Delivery and installation" },
+    { "type": "text", "id": "step_three_title", "label": "Title", "default": "Delivery & installation" },
+    { "type": "textarea", "id": "step_three_text", "label": "Text", "default": "We deliver with white-glove care and install with precision, ensuring your piece is perfectly placed and ready to be enjoyed." },
+    { "type": "header", "content": "Assurance" },
+    { "type": "text", "id": "assurance_heading", "label": "Heading", "default": "Built to last. Backed by trust." },
+    { "type": "textarea", "id": "assurance_text", "label": "Text", "default": "Every WRYDECO piece is crafted with premium materials, expert craftsmanship, and a commitment to enduring quality." },
+    { "type": "text", "id": "journey_label", "label": "Button label", "default": "Start your custom journey" },
+    { "type": "url", "id": "journey_url", "label": "Button link" }
+  ],
+  "presets": [{ "name": "Customization process" }]
+}
+{% endschema %}

@@ -78,13 +78,6 @@
                 {{ author_bio | escape | newline_to_br }}
               </div>
             {% endif %}
-
-            {% if section.settings.show_view_profile and section.settings.view_profile_link != blank %}
-              <a class="product-artist__profile-link" href="{{ section.settings.view_profile_link }}">
-                <span>{{ section.settings.view_profile_label | default: 'View profile' | escape }}</span>
-                <span aria-hidden="true">&rarr;</span>
-              </a>
-            {% endif %}
           </div>
 
           {% if author_name != blank %}
@@ -92,6 +85,22 @@
               <span class="product-artist__signature-mark">&ldquo;</span>
               <span>{{ author_name | escape }}</span>
             </div>
+          {% endif %}
+
+          {% if section.settings.show_view_profile %}
+            {%- assign author_handle = author_name | handleize -%}
+            {%- assign default_profile_link = '/pages/product-author/' | append: author_handle -%}
+            {%- assign final_profile_link = default_profile_link -%}
+            {%- if section.settings.view_profile_link != blank and section.settings.view_profile_link != '#' -%}
+              {%- assign final_profile_link = section.settings.view_profile_link -%}
+            {%- endif -%}
+
+            {% if final_profile_link != '/pages/product-author/' %}
+              <a class="product-artist__profile-link" href="{{ final_profile_link }}">
+                <span>{{ section.settings.view_profile_label | default: 'View profile' | escape }}</span>
+                <span aria-hidden="true">&rarr;</span>
+              </a>
+            {% endif %}
           {% endif %}
         </div>
 
@@ -143,7 +152,7 @@
         {% endif %}
       </section>
     {% else %}
-      <p class="product-artist__empty" data-product-author-empty>ChÆ°a cÃ³ thÃ´ng tin tÃ¡c giáº£ cho sáº£n pháº©m nÃ y</p>
+      <p class="product-artist__empty" data-product-author-empty>No author information is available for this product</p>
     {% endif %}
   </div>
 </div>
@@ -166,12 +175,8 @@
   .product-artist__inner {
     display: grid;
     grid-template-columns: minmax(0, 4.2fr) minmax(0, 4.8fr) minmax(0, 6.5fr);
-    height: clamp(
-      calc(var(--sp-8) * 7),
-      calc(100dvh - (var(--section-spacing-desktop) * 2)),
-      calc(var(--sp-8) * 12)
-    );
-    min-height: 0;
+    min-height: clamp(calc(var(--sp-8) * 7), calc(100dvh - (var(--section-spacing-desktop) * 2)), calc(var(--sp-8) * 12));
+    height: auto;
   }
 
   .product-artist__inner--no-media {
@@ -342,9 +347,7 @@
     border-radius: var(--radius-full);
     border: 1px solid var(--border-dark);
     color: var(--color-bark);
-    transition:
-      border-color var(--timing-short) var(--ease-standard),
-      color var(--timing-short) var(--ease-standard);
+    transition: border-color var(--timing-short) var(--ease-standard), color var(--timing-short) var(--ease-standard);
   }
 
   .product-artist__recognition-item:hover .product-artist__recognition-icon {
@@ -446,11 +449,8 @@
 
     .product-artist__inner {
       grid-template-columns: minmax(0, 4.2fr) minmax(0, 4.8fr) minmax(0, 6.5fr);
-      height: clamp(
-        calc(var(--sp-8) * 7),
-        calc(100dvh - (var(--section-spacing-tablet) * 2)),
-        calc(var(--sp-8) * 11)
-      );
+      min-height: clamp(calc(var(--sp-8) * 7), calc(100dvh - (var(--section-spacing-tablet) * 2)), calc(var(--sp-8) * 11));
+      height: auto;
     }
 
     .product-artist__media {
@@ -581,7 +581,7 @@
       "type": "url",
       "id": "view_profile_link",
       "label": "Button link",
-      "info": "Button is hidden until a link is set."
+      "info": "Leave empty to automatically link to the artist's profile page."
     },
     {
       "type": "header",
