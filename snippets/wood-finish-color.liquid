@@ -1,0 +1,34 @@
+{% doc %}
+  Echoes a hex color for a wood finish/color option value. Falls back to a
+  mid oak tone for unknown values. Used by finish swatches and product cards.
+
+  @param {string} value - The finish/color option value (e.g. "Dark Walnut")
+
+  @example
+  <span style="background: {% render 'wood-finish-color', value: 'Walnut' %}"></span>
+{% enddoc %}
+{%- liquid
+  assign v = value | downcase | strip
+  case v
+    when 'natural', 'natural oil', 'natural wood'
+      echo '#d8b78a'
+    when 'light oak', 'oak'
+      echo '#c8a165'
+    when 'ash'
+      echo '#d9cbb3'
+    when 'maple'
+      echo '#e3c795'
+    when 'cherry'
+      echo '#8a4b32'
+    when 'walnut'
+      echo '#5c3a21'
+    when 'dark walnut', 'dark brown', 'smoked', 'espresso'
+      echo '#3d2817'
+    when 'matte black', 'black', 'ebony'
+      echo '#1a1815'
+    when 'white', 'warm white', 'whitewash'
+      echo '#efe9df'
+    else
+      echo '#c8a165'
+  endcase
+-%}

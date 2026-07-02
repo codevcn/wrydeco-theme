@@ -1,202 +1,283 @@
-<div class="signature-pieces page-width">
-  <header class="signature-pieces__header">
-    <p class="signature-pieces__eyebrow">{{ section.settings.eyebrow | upcase }}</p>
-    <h2 class="signature-pieces__heading">{{ section.settings.heading }}</h2>
-    <p class="signature-pieces__subtitle">{{ section.settings.subtitle | newline_to_br }}</p>
-  </header>
+<section class="signature-pieces" aria-labelledby="SignaturePiecesHeading-{{ section.id }}">
+  <div class="signature-pieces__inner">
+    <header class="signature-pieces__header">
+      {%- if section.settings.eyebrow != blank -%}
+        <p class="signature-pieces__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+      {%- endif -%}
+      <h2 class="signature-pieces__heading" id="SignaturePiecesHeading-{{ section.id }}">
+        {{ section.settings.heading | escape }}
+      </h2>
+      {%- if section.settings.subtitle != blank -%}
+        <p class="signature-pieces__subtitle">{{ section.settings.subtitle | newline_to_br }}</p>
+      {%- endif -%}
+    </header>
 
-  {%- assign collection = section.settings.collection -%}
-  {%- if collection == blank -%}
-    {%- assign collection = collections['signature-pieces'] -%}
-  {%- endif -%}
+    {%- assign collection = section.settings.collection -%}
+    {%- if collection == blank -%}
+      {%- assign collection = collections['signature-pieces'] -%}
+    {%- endif -%}
 
-  <div class="signature-pieces__carousel" data-signature-slider>
-    <button
-      class="signature-pieces__nav signature-pieces__nav--prev"
-      type="button"
-      aria-label="Previous products"
-      aria-controls="SignaturePiecesTrack-{{ section.id }}"
-      data-signature-prev
-    >
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
-        <path d="M15 18 9 12l6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </button>
+    <div class="signature-pieces__grid" role="list">
+      {%- for product in collection.products limit: 4 -%}
+        {%- assign display_title = product.metafields.custom.artwork_name.value | default: product.title -%}
+        {%- liquid
+          assign artist = ''
+          assign author = product.metafields.custom.author_info.value | first
+          if author != blank and author.author_name.value != blank
+            assign artist = author.author_name.value
+          elsif product.vendor != blank and product.vendor != shop.name
+            assign artist = product.vendor
+          endif
+        -%}
+        {%- assign lead = product.metafields.custom.lead_time_weeks.value
+          | default: section.settings.lead_time_default
+        -%}
+        {%- assign material = product.metafields.custom.material.value | default: section.settings.material_default -%}
+        {%- assign finish = product.metafields.custom.finish.value | default: section.settings.finish_default -%}
+        {%- assign badge_label = section.settings.made_to_order_badge -%}
+        {%- assign badge_icon = 'clock' -%}
+        {%- if forloop.index == 1 or forloop.index == 4 -%}
+          {%- assign badge_label = section.settings.best_seller_badge -%}
+          {%- assign badge_icon = 'star' -%}
+        {%- endif -%}
 
-    <div
-      class="signature-pieces__grid"
-      id="SignaturePiecesTrack-{{ section.id }}"
-      role="list"
-      data-signature-track
-      tabindex="0"
-    >
-
-    {%- for product in collection.products limit: 10 -%}
-      {%- assign display_title = product.metafields.custom.artwork_name.value | default: product.title -%}
-      <article class="signature-pieces__card" role="listitem">
-        <div class="signature-pieces__image-wrapper">
-          <a href="{{ product.url }}" class="signature-pieces__image-link" tabindex="-1">
-            {%- if product.featured_media != blank -%}
-              {{
-                product.featured_media.preview_image
-                | image_url: width: 900
-                | image_tag:
-                  class: 'signature-pieces__img',
-                  loading: 'lazy',
-                  widths: '320, 480, 640, 900',
-                  sizes: '(min-width: 64rem) 25vw, (min-width: 48rem) 50vw, 82vw'
-              }}
-            {%- else -%}
-              {{ 'product-' | append: forloop.index | placeholder_svg_tag: 'signature-pieces__img placeholder-svg' }}
-            {%- endif -%}
-          </a>
-
-        </div>
-
-        <div class="signature-pieces__content">
-          <h3 class="signature-pieces__title">
-            <a href="{{ product.url }}">{{ display_title }}</a>
-          </h3>
-          <p class="signature-pieces__price">From {{ product.price | money_without_trailing_zeros }}</p>
-
-          <hr class="signature-pieces__divider">
-
-          <p class="signature-pieces__meta">
-            {%- assign tag_count = product.tags.size -%}
-            {%- if tag_count > 0 -%}
-              {%- assign tag_1 = product.tags[0] -%}
-              {%- if tag_count > 1 -%}
-                {%- assign tag_2 = product.tags[1] -%}
-                {{ tag_1 }} &bull; {{ tag_2 }}
-              {%- else -%}
-                {{ tag_1 }} &bull; Made to order
-              {%- endif -%}
-            {%- else -%}
-              Solid walnut &bull; Made to order
-            {%- endif -%}
-          </p>
-        </div>
-      </article>
-    {%- else -%}
-      {%- for i in (1..10) -%}
-        {%- assign placeholder_index = i | minus: 1 | modulo: 6 | plus: 1 -%}
         <article class="signature-pieces__card" role="listitem">
-          <div class="signature-pieces__image-wrapper">
-            <div class="signature-pieces__image-link">
-              {{ 'product-' | append: placeholder_index | placeholder_svg_tag: 'signature-pieces__img placeholder-svg' }}
-            </div>
+          <div class="signature-pieces__media">
+            <a class="signature-pieces__image-link" href="{{ product.url }}" aria-label="{{ display_title | escape }}">
+              {%- if product.featured_media != blank -%}
+                {{
+                  product.featured_media.preview_image
+                  | image_url: width: 900
+                  | image_tag:
+                    class: 'signature-pieces__image',
+                    loading: 'lazy',
+                    widths: '360, 540, 720, 900',
+                    sizes: '(min-width: 80rem) 23vw, (min-width: 48rem) 46vw, 88vw'
+                }}
+              {%- else -%}
+                {%- assign fallback_asset = 'sli-' | append: forloop.index | append: '.webp' -%}
+                <img
+                  class="signature-pieces__image"
+                  src="{{ fallback_asset | asset_url }}"
+                  alt="{{ display_title | escape }}"
+                  width="900"
+                  height="1080"
+                  loading="lazy"
+                >
+              {%- endif -%}
+            </a>
+
+            {%- if badge_label != blank -%}
+              <span class="signature-pieces__badge">
+                {%- if badge_icon == 'star' -%}
+                  <svg aria-hidden="true" viewBox="0 0 16 16">
+                    <path d="m8 1.7 1.7 3.5 3.9.6-2.8 2.7.7 3.9L8 10.6l-3.5 1.8.7-3.9-2.8-2.7 3.9-.6L8 1.7Z"/>
+                  </svg>
+                {%- else -%}
+                  <svg aria-hidden="true" viewBox="0 0 16 16" fill="none">
+                    <circle cx="8" cy="8" r="5.6" stroke="currentColor" stroke-width="1.2"/>
+                    <path d="M8 4.8v3.4l2.2 1.2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                {%- endif -%}
+                {{ badge_label | escape }}
+              </span>
+            {%- endif -%}
+
+            {%- if product.available -%}
+              <button class="signature-pieces__quick" data-add-to-cart-signature data-variant-id="{{ product.variants.first.id }}" aria-label="Add {{ display_title | escape }} to cart" type="button">
+                {{ 'icon-cart.svg' | inline_asset_content }}
+              </button>
+            {%- else -%}
+              <span class="signature-pieces__quick" aria-hidden="true">
+                {{ 'icon-cart.svg' | inline_asset_content }}
+              </span>
+            {%- endif -%}
           </div>
+
           <div class="signature-pieces__content">
             <h3 class="signature-pieces__title">
-              <a href="#">Example Signature Piece</a>
+              <a href="{{ product.url }}">{{ display_title | escape }}</a>
             </h3>
-            <p class="signature-pieces__price">From $2,450</p>
-            <hr class="signature-pieces__divider">
-            <p class="signature-pieces__meta">Solid walnut &bull; Made to order</p>
+            {%- if artist != blank -%}
+              <p class="signature-pieces__artist">by {{ artist | escape }}</p>
+            {%- endif -%}
+            <p class="signature-pieces__meta">
+              {{ material | escape }}
+              <span aria-hidden="true">·</span> {{ finish | escape }}
+            </p>
+            <p class="signature-pieces__price">
+              {{ section.settings.price_prefix | escape }}
+              {{ product.price | money_without_trailing_zeros }}
+              {%- if lead != blank -%}
+                <span aria-hidden="true">·</span> {{ lead | escape }}
+              {%- endif -%}
+            </p>
+            <div class="signature-pieces__actions">
+              <a class="signature-pieces__primary" href="{{ product.url }}">
+                {{- section.settings.customize_label | escape -}}
+              </a>
+              <a class="signature-pieces__secondary" href="{{ product.url }}">
+                {{- section.settings.details_label | escape -}}
+              </a>
+            </div>
           </div>
         </article>
+      {%- else -%}
+        {%- for i in (1..4) -%}
+          {%- case i -%}
+            {%- when 1 -%}
+              {%- assign card_title = 'Walnut Lounge Chair' -%}
+              {%- assign card_artist = 'Huan Ngo' -%}
+              {%- assign card_price = '$2,650' -%}
+              {%- assign card_lead = '8-10 weeks' -%}
+              {%- assign card_badge = section.settings.best_seller_badge -%}
+            {%- when 2 -%}
+              {%- assign card_title = 'Live Edge Dining Table' -%}
+              {%- assign card_artist = 'Trung Le' -%}
+              {%- assign card_price = '$5,900' -%}
+              {%- assign card_lead = '10-12 weeks' -%}
+              {%- assign card_badge = section.settings.made_to_order_badge -%}
+            {%- when 3 -%}
+              {%- assign card_title = 'Sculpted Console Table' -%}
+              {%- assign card_artist = 'Alex Nguyen' -%}
+              {%- assign card_price = '$3,250' -%}
+              {%- assign card_lead = '8-10 weeks' -%}
+              {%- assign card_badge = blank -%}
+            {%- else -%}
+              {%- assign card_title = 'Treeform Bookshelf' -%}
+              {%- assign card_artist = 'Dien Luc' -%}
+              {%- assign card_price = '$3,850' -%}
+              {%- assign card_lead = '10-12 weeks' -%}
+              {%- assign card_badge = section.settings.best_seller_badge -%}
+          {%- endcase -%}
+
+          <article class="signature-pieces__card" role="listitem">
+            <div class="signature-pieces__media">
+              <span class="signature-pieces__image-link">
+                <img
+                  class="signature-pieces__image"
+                  src="{{ 'sli-' | append: i | append: '.webp' | asset_url }}"
+                  alt="{{ card_title | escape }}"
+                  width="900"
+                  height="1080"
+                  loading="lazy"
+                >
+              </span>
+
+              {%- if card_badge != blank -%}
+                <span class="signature-pieces__badge">
+                  <svg aria-hidden="true" viewBox="0 0 16 16">
+                    <path d="m8 1.7 1.7 3.5 3.9.6-2.8 2.7.7 3.9L8 10.6l-3.5 1.8.7-3.9-2.8-2.7 3.9-.6L8 1.7Z"/>
+                  </svg>
+                  {{ card_badge | escape }}
+                </span>
+              {%- endif -%}
+
+              <span class="signature-pieces__quick" aria-hidden="true">
+                {{ 'icon-cart.svg' | inline_asset_content }}
+              </span>
+            </div>
+
+            <div class="signature-pieces__content">
+              <h3 class="signature-pieces__title">{{ card_title }}</h3>
+              <p class="signature-pieces__artist">by {{ card_artist }}</p>
+              <p class="signature-pieces__meta">
+                {{ section.settings.material_default | escape }}
+                <span aria-hidden="true">·</span> {{ section.settings.finish_default | escape }}
+              </p>
+              <p class="signature-pieces__price">
+                {{ section.settings.price_prefix | escape }}
+                {{ card_price }}
+                <span aria-hidden="true">·</span> {{ card_lead }}
+              </p>
+              <div class="signature-pieces__actions">
+                <span class="signature-pieces__primary">{{ section.settings.customize_label | escape }}</span>
+                <span class="signature-pieces__secondary">{{ section.settings.details_label | escape }}</span>
+              </div>
+            </div>
+          </article>
+        {%- endfor -%}
       {%- endfor -%}
-    {%- endfor -%}
     </div>
 
-    <button
-      class="signature-pieces__nav signature-pieces__nav--next"
-      type="button"
-      aria-label="Next products"
-      aria-controls="SignaturePiecesTrack-{{ section.id }}"
-      data-signature-next
-    >
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
-        <path d="m9 18 6-6-6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </button>
-  </div>
-
-  {%- if section.settings.button_label != blank -%}
-    <div class="signature-pieces__footer">
-      <a
-        href="{{ section.settings.button_link | default: collection.url | default: '#' }}"
-        class="signature-pieces__btn"
-      >
-        {{ section.settings.button_label }}
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          class="signature-pieces__btn-icon"
+    {%- if section.settings.button_label != blank -%}
+      <div class="signature-pieces__footer">
+        <a
+          class="signature-pieces__button"
+          href="{{ section.settings.button_link | default: collection.url | default: routes.collections_url }}"
         >
-          <line x1="5" y1="12" x2="19" y2="12"></line>
-          <polyline points="12 5 19 12 12 19"></polyline>
-        </svg>
-      </a>
-    </div>
-  {%- endif -%}
-</div>
+          <span>{{ section.settings.button_label | escape }}</span>
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+            <path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </a>
+      </div>
+    {%- endif -%}
+  </div>
+</section>
 
 {% stylesheet %}
   .signature-pieces {
-    width: min(calc(100% - (var(--layout-padding-mobile) * 2)), var(--layout-max-width));
-    margin-inline: auto;
-    padding-block: var(--sp-6);
-    background-color: var(--bg-primary);
+    width: 100%;
+    padding: var(--section-padding-y, 80px) 16px;
+    background: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0) 42%),
+      linear-gradient(180deg, #f7f3ee 0%, #f5f1ed 100%);
     color: var(--text-primary);
-    margin-bottom: var(--sp-4);
-    margin-top: var(--sp-4);
+    overflow: hidden;
+  }
+
+  .signature-pieces__inner {
+    /* Match the visible content width of sections that carry their padding
+       inside a page-max-width box (collections, projects, FAQ). */
+    width: min(100%, calc(var(--page-max-width, 1440px) - var(--container-padding-x, 48px) * 2));
+    margin-inline: auto;
   }
 
   .signature-pieces__header {
+    max-width: 660px;
+    margin: 0 auto clamp(32px, 3.5vw, 48px);
     text-align: center;
-    margin-bottom: var(--sp-6);
   }
 
   .signature-pieces__eyebrow {
+    margin: 0 0 14px;
     font-family: var(--font-body);
-    font-size: var(--font-size-caption);
-    letter-spacing: calc(var(--letter-spacing-wide) * 5);
-    color: var(--text-secondary);
-    margin: 0 0 var(--sp-3);
-    font-weight: var(--font-weight-medium);
+    font-size: var(--eyebrow-size, 12px);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--eyebrow-tracking, 0.3em);
+    text-transform: uppercase;
+    color: var(--color-brown);
   }
 
   .signature-pieces__heading {
-    font-family: var(--font-display);
-    font-size: var(--font-size-display-md);
-    font-weight: var(--font-weight-regular);
-    line-height: var(--line-height-tight);
-    color: var(--text-primary);
-    margin: 0 0 var(--sp-4);
-    letter-spacing: var(--letter-spacing-tight);
+    margin: 0 0 18px;
+    font-family: var(--font-heading);
+    font-size: var(--section-heading-size, 48px);
+    font-weight: var(--font-weight-light);
+    line-height: var(--section-heading-line, 1.02);
+    letter-spacing: var(--section-heading-tracking, -0.02em);
+    color: var(--color-text, #2e1d14);
     text-wrap: balance;
   }
 
   .signature-pieces__subtitle {
+    margin: 0;
     font-family: var(--font-body);
-    font-size: var(--font-size-body-sm);
-    color: var(--text-secondary);
-    line-height: var(--line-height-relaxed);
-    margin: 0 auto;
-    max-width: calc(var(--layout-max-width) / 2);
+    font-size: var(--section-subtitle-size, 16px);
+    line-height: 1.6;
+    color: var(--color-muted, #635d58);
     text-wrap: balance;
   }
 
-  .signature-pieces__carousel {
-    position: relative;
-  }
-
   .signature-pieces__grid {
-    display: flex;
-    gap: var(--sp-4);
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(292px, 84vw);
+    gap: 14px;
     overflow-x: auto;
-    padding-bottom: var(--sp-3);
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
+    padding: 0 0 12px;
     scroll-snap-type: x mandatory;
-    overscroll-behavior-inline: contain;
+    scrollbar-width: none;
   }
 
   .signature-pieces__grid::-webkit-scrollbar {
@@ -206,23 +287,22 @@
   .signature-pieces__card {
     display: flex;
     flex-direction: column;
-    flex: 0 0 82%;
     min-width: 0;
-    border: 1px solid color-mix(in srgb, var(--color-linen) 48%, transparent);
-    border-radius: var(--radius-lg);
     overflow: hidden;
     scroll-snap-align: start;
-    background-color: var(--bg-primary);
-    transition: box-shadow var(--timing-base) var(--ease-standard),
-      transform var(--timing-base) var(--ease-standard);
+    border: 1px solid var(--color-border, rgba(76, 48, 30, 0.14));
+    border-radius: var(--card-radius, 6px);
+    background: rgba(255, 252, 248, 0.72);
+    box-shadow: 0 18px 42px rgba(62, 39, 25, 0.05);
+    transition: transform var(--timing-base) var(--ease-standard), box-shadow var(--timing-base) var(--ease-standard),
+      border-color var(--timing-base) var(--ease-standard);
   }
 
-  .signature-pieces__image-wrapper {
+  .signature-pieces__media {
     position: relative;
-    width: 100%;
-    aspect-ratio: 1 / 1.04;
+    aspect-ratio: 1 / 1.08;
     overflow: hidden;
-    background-color: var(--bg-secondary);
+    background: #e5dbd0;
   }
 
   .signature-pieces__image-link {
@@ -231,381 +311,342 @@
     height: 100%;
   }
 
-  .signature-pieces__img {
+  .signature-pieces__image {
+    display: block;
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform var(--timing-extra-long) var(--ease-standard);
-    -webkit-user-drag: none;
+    transition: transform 700ms var(--ease-standard);
+  }
+
+  .signature-pieces__badge {
+    position: absolute;
+    top: 13px;
+    left: 13px;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 31px;
+    padding: 0 13px;
+    border: 1px solid rgba(74, 44, 24, 0.1);
+    border-radius: 999px;
+    background: rgba(255, 252, 247, 0.9);
+    box-shadow: 0 8px 22px rgba(42, 28, 18, 0.08);
+    color: #4a2c18;
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: var(--font-weight-medium);
+    line-height: 1;
+    backdrop-filter: blur(8px);
+  }
+
+  .signature-pieces__badge svg {
+    width: 13px;
+    height: 13px;
+    fill: currentColor;
+    flex: 0 0 auto;
+  }
+
+  .signature-pieces__quick {
+    position: absolute;
+    top: 13px;
+    right: 13px;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    background: rgba(255, 252, 247, 0.94);
+    color: #4a2c18;
+    text-decoration: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: background-color var(--timing-short) var(--ease-standard),
+      color var(--timing-short) var(--ease-standard), transform var(--timing-short) var(--ease-standard);
+  }
+
+  .signature-pieces__quick.is-loading {
+    pointer-events: none;
+    opacity: 0.7;
+  }
+
+  .signature-pieces__quick svg {
+    width: 18px;
+    height: 18px;
   }
 
   .signature-pieces__content {
-    padding: var(--sp-3);
     display: flex;
+    flex: 1 1 auto;
     flex-direction: column;
-    flex-grow: 1;
+    padding: 20px var(--card-padding, 24px) 20px;
   }
 
   .signature-pieces__title {
-    font-family: var(--font-display);
-    font-size: var(--font-size-body-2xl);
+    margin: 0 0 8px;
+    font-family: var(--font-heading);
+    font-size: clamp(20px, 1.5vw, 24px);
     font-weight: var(--font-weight-regular);
-    line-height: var(--line-height-normal);
-    margin: 0 0 var(--sp-2);
-    white-space: nowrap;
+    line-height: 1.12;
+    letter-spacing: 0;
+    color: var(--color-text, #352117);
+    text-wrap: pretty;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
     overflow: hidden;
-    text-overflow: ellipsis;
   }
 
   .signature-pieces__title a {
-    color: var(--text-primary);
+    color: inherit;
     text-decoration: none;
     font-size: 20px;
   }
 
-  .signature-pieces__title a:hover {
-    color: var(--color-earth-brown);
-  }
-
-  .signature-pieces__price {
-    font-family: var(--font-body);
-    font-size: var(--font-size-body-md);
-    font-weight: var(--font-weight-medium);
-    color: var(--color-clay);
-    margin: 0 0 var(--sp-4);
-    font-variant-numeric: tabular-nums;
-  }
-
-  .signature-pieces__divider {
-    border: none;
-    border-top: 1px solid color-mix(in srgb, var(--color-linen) 48%, transparent);
-    margin: auto 0 var(--sp-4);
+  .signature-pieces__artist {
+    margin: 0 0 10px;
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 13px;
+    font-weight: var(--font-weight-regular);
+    line-height: 1.2;
+    color: var(--color-muted, #6a625c);
   }
 
   .signature-pieces__meta {
-    font-family: var(--font-body);
-    font-size: var(--font-size-body-sm);
-    line-height: var(--line-height-normal);
-    color: var(--text-secondary);
     margin: 0;
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.45;
+    color: #6a625c;
+  }
+
+  .signature-pieces__price {
+    margin: 16px 0 0;
+    padding-top: 14px;
+    border-top: 1px solid var(--color-border, rgba(74, 44, 24, 0.16));
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: var(--font-weight-medium);
+    line-height: 1.4;
+    color: #352117;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .signature-pieces__actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 16px;
+    margin-top: 18px;
+  }
+
+  .signature-pieces__primary,
+  .signature-pieces__secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 38px;
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: var(--font-weight-medium);
+    line-height: 1;
+    text-decoration: none;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    transition: background-color var(--timing-short) var(--ease-standard),
+      color var(--timing-short) var(--ease-standard), border-color var(--timing-short) var(--ease-standard),
+      transform var(--timing-short) var(--ease-standard);
+  }
+
+  .signature-pieces__primary {
+    padding: 0 18px;
+    border: 1px solid #4a2c18;
+    border-radius: 3px;
+    background: #4a2c18;
+    color: #fff8f0;
+  }
+
+  .signature-pieces__secondary {
+    min-height: 30px;
+    border-bottom: 1px solid currentColor;
+    color: #352117;
   }
 
   .signature-pieces__footer {
     display: flex;
     justify-content: center;
-    margin-top: var(--sp-5);
+    margin-top: 36px;
   }
 
-  .signature-pieces__nav {
-    position: absolute;
-    top: 50%;
-    z-index: 2;
+  .signature-pieces__button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: var(--sp-7);
-    height: var(--sp-7);
-    padding: 0;
-    border: 1px solid var(--border-light);
-    border-radius: var(--radius-full);
-    background-color: var(--bg-primary);
-    color: var(--text-primary);
-    box-shadow: var(--shadow-card);
-    cursor: pointer;
-    transform: translateY(-50%);
-    transition: color var(--timing-short) var(--ease-standard),
-      background-color var(--timing-short) var(--ease-standard),
-      opacity var(--timing-short) var(--ease-standard);
-  }
-
-  .signature-pieces__nav svg {
-    width: var(--sp-5);
-    height: var(--sp-5);
-  }
-
-  .signature-pieces__nav--prev {
-    left: var(--sp-2);
-  }
-
-  .signature-pieces__nav--next {
-    right: var(--sp-2);
-  }
-
-  .signature-pieces__nav:hover:not(:disabled) {
-    background-color: var(--color-earth-brown);
-    color: var(--text-inverse);
-  }
-
-  .signature-pieces__nav:disabled {
-    opacity: 0.35;
-    cursor: default;
-    pointer-events: none;
-  }
-
-  .signature-pieces__btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: var(--sp-7);
-    background-color: var(--color-earth-brown);
-    color: var(--text-inverse);
-    padding-inline: var(--sp-8);
+    gap: 16px;
+    min-width: 260px;
+    min-height: var(--btn-height, 52px);
+    padding: 0 var(--btn-padding-x, 32px);
+    border-radius: var(--btn-radius, 4px);
+    background: var(--color-brown, #4a2c18);
+    color: #fff8f0;
     font-family: var(--font-body);
-    font-size: var(--font-size-body-sm);
+    font-size: var(--btn-font-size, 14px);
     font-weight: var(--font-weight-medium);
     text-decoration: none;
-    transition: background-color var(--timing-short) var(--ease-standard),
-      transform var(--timing-short) var(--ease-standard);
-    border-radius: var(--radius-sm);
+    box-shadow: 0 14px 30px rgba(59, 31, 15, 0.13);
+    transition: transform var(--timing-short) var(--ease-standard),
+      background-color var(--timing-short) var(--ease-standard), box-shadow var(--timing-short) var(--ease-standard);
   }
 
-  .signature-pieces__btn:hover {
-    color: var(--text-inverse);
-    background-color: var(--color-ebony);
-    transform: translateY(calc(var(--sp-1) * -0.5));
-  }
-
-  .signature-pieces__btn:active {
-    transform: translateY(0);
-  }
-
-  .signature-pieces__btn-icon {
-    margin-left: var(--sp-2);
+  .signature-pieces__button svg {
+    width: 20px;
+    height: 20px;
     transition: transform var(--timing-short) var(--ease-standard);
   }
 
-  .signature-pieces__btn:hover .signature-pieces__btn-icon {
-    transform: translateX(var(--sp-1));
+  .signature-pieces :is(a, button):focus-visible {
+    outline: 3px solid rgba(122, 137, 104, 0.38);
+    outline-offset: 4px;
   }
 
-  .signature-pieces :is(a, button):focus-visible {
-    outline: var(--radius-sm) solid var(--color-sage);
-    outline-offset: var(--sp-1);
+  @media (hover: hover) {
+    .signature-pieces__card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(74, 44, 24, 0.24);
+      box-shadow: 0 22px 54px rgba(62, 39, 25, 0.11);
+    }
+
+    .signature-pieces__card:hover .signature-pieces__image {
+      transform: scale(1.025);
+    }
+
+    .signature-pieces__quick:hover {
+      transform: scale(1.04);
+      background: #4a2c18;
+      color: #fff8f0;
+    }
+
+    .signature-pieces__primary:hover,
+    .signature-pieces__button:hover {
+      transform: translateY(-2px);
+    }
+
+    .signature-pieces__primary:hover {
+      background: #2f1a0d;
+      border-color: #2f1a0d;
+      color: #fff8f0;
+    }
+
+    .signature-pieces__secondary:hover {
+      color: #8a5d37;
+    }
+
+    .signature-pieces__button:hover {
+      color: #fff8f0;
+      background: var(--color-brown-dark, #2f1a0d);
+      box-shadow: 0 18px 34px rgba(59, 31, 15, 0.18);
+    }
+
+    .signature-pieces__button:hover svg {
+      transform: translateX(4px);
+    }
   }
 
   @media screen and (min-width: 48rem) {
     .signature-pieces {
-      width: min(calc(100% - (var(--layout-padding-tablet) * 2)), var(--layout-max-width));
-      padding-block: var(--sp-6);
-    }
-
-    .signature-pieces__heading {
-      font-size: var(--font-size-display-lg);
-    }
-
-    .signature-pieces__subtitle {
-      font-size: var(--font-size-body-md);
-    }
-
-    .signature-pieces__card {
-      flex-basis: calc((100% - var(--sp-4)) / 2);
-    }
-
-    .signature-pieces__content {
-      padding: var(--sp-4);
-    }
-  }
-
-  @media screen and (min-width: 64rem) {
-    .signature-pieces {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr);
-      grid-template-rows: auto minmax(0, 1fr) auto;
-      width: min(calc(100% - (var(--sp-8) * 2)), var(--layout-showcase-max-width));
-      height: 100svh;
-      min-height: 0;
-      padding-block: var(--sp-7);
-    }
-
-    .signature-pieces__header {
-      margin-bottom: var(--sp-7);
-    }
-
-    .signature-pieces__heading {
-      font-size: var(--font-size-display-xl);
-    }
-
-    .signature-pieces__carousel {
-      width: 100%;
-      min-height: 0;
-      min-width: 0;
+      padding-inline: 32px;
     }
 
     .signature-pieces__grid {
-      height: 100%;
-      min-height: 0;
+      grid-auto-columns: calc((100% - 16px) / 2);
+      gap: 16px;
+    }
+  }
+
+  @media screen and (min-width: 75rem) {
+    .signature-pieces {
+      padding-inline: var(--container-padding-x, 64px);
+    }
+
+    .signature-pieces__grid {
+      grid-auto-flow: initial;
+      grid-auto-columns: initial;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      overflow: visible;
       padding-bottom: 0;
     }
-
-    .signature-pieces__card {
-      flex-basis: calc((100% - (var(--sp-4) * 3)) / 4);
-      height: 100%;
-    }
-
-    .signature-pieces__content {
-      padding-block: var(--sp-4);
-      padding-inline: var(--sp-5);
-    }
-
-    .signature-pieces__title {
-      font-size: var(--font-size-display-sm);
-      line-height: var(--line-height-tight);
-    }
-
-    .signature-pieces__image-wrapper {
-      flex: 1 1 auto;
-      min-height: 0;
-    }
-
-    .signature-pieces__nav--prev {
-      left: calc(var(--sp-7) * -0.5);
-    }
-
-    .signature-pieces__nav--next {
-      right: calc(var(--sp-7) * -0.5);
-    }
-
-    .signature-pieces__carousel .signature-pieces__nav {
-      opacity: 0;
-      pointer-events: none;
-    }
-
-    .signature-pieces__carousel:hover .signature-pieces__nav:not(:disabled),
-    .signature-pieces__carousel:focus-within .signature-pieces__nav:not(:disabled) {
-      opacity: 1;
-      pointer-events: auto;
-    }
-
-    .signature-pieces__card:hover {
-      box-shadow: var(--shadow-card);
-      transform: translateY(calc(var(--sp-1) * -1));
-    }
-
-    .signature-pieces__card:hover .signature-pieces__img {
-      transform: scale(1.025);
-    }
-
-    .signature-pieces__btn {
-      min-width: calc(var(--sp-8) * 4);
-    }
   }
 
-  @media screen and (min-width: 64rem) and (max-height: 51.25rem) {
-    .signature-pieces {
-      padding-block: var(--sp-5);
+  @media screen and (max-width: 28rem) {
+    .signature-pieces__actions {
+      grid-template-columns: 1fr;
+      gap: 12px;
     }
 
-    .signature-pieces__header {
-      margin-bottom: var(--sp-5);
+    .signature-pieces__secondary {
+      justify-self: start;
     }
 
-    .signature-pieces__heading {
-      font-size: var(--font-size-display-lg);
-    }
-
-    .signature-pieces__footer {
-      margin-top: var(--sp-5);
-    }
-  }
-
-  @media screen and (min-width: 100rem) {
-    .signature-pieces {
-      width: min(calc(100% - (var(--sp-8) * 2)), var(--layout-showcase-max-width));
-    }
-
-    .signature-pieces__header {
-      margin-bottom: var(--sp-7);
-    }
-
-    .signature-pieces__grid {
-      gap: var(--sp-4);
-    }
-
-    .signature-pieces__card {
-      flex-basis: calc((100% - (var(--sp-4) * 3)) / 4);
-    }
-
-    .signature-pieces__footer {
-      margin-top: var(--sp-6);
+    .signature-pieces__button {
+      width: 100%;
+      min-width: 0;
     }
   }
 
   @media (prefers-reduced-motion: reduce) {
     .signature-pieces__card,
-    .signature-pieces__img,
-    .signature-pieces__btn,
-    .signature-pieces__btn-icon,
-    .signature-pieces__nav {
+    .signature-pieces__image,
+    .signature-pieces__quick,
+    .signature-pieces__primary,
+    .signature-pieces__secondary,
+    .signature-pieces__button,
+    .signature-pieces__button svg {
       transition-duration: 0s;
     }
   }
 {% endstylesheet %}
 
 {% javascript %}
-  const initializeSignaturePieces = (root = document) => {
-    root.querySelectorAll('[data-signature-slider]:not([data-signature-ready])').forEach((slider) => {
-      const track = slider.querySelector('[data-signature-track]');
-      const previousButton = slider.querySelector('[data-signature-prev]');
-      const nextButton = slider.querySelector('[data-signature-next]');
+  document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('[data-add-to-cart-signature]').forEach(function(btn) {
+      if (btn.dataset.init === 'true') return;
+      btn.dataset.init = 'true';
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        if (btn.disabled || btn.classList.contains('is-loading')) return;
+        var variantId = btn.dataset.variantId;
+        if (!variantId) return;
 
-      if (!track || !previousButton || !nextButton) return;
-
-      slider.dataset.signatureReady = 'true';
-
-      const updateNavigation = () => {
-        const maximumScroll = track.scrollWidth - track.clientWidth;
-        const hasOverflow = maximumScroll > 1;
-
-        previousButton.hidden = !hasOverflow;
-        nextButton.hidden = !hasOverflow;
-        previousButton.disabled = track.scrollLeft <= 1;
-        nextButton.disabled = track.scrollLeft >= maximumScroll - 1;
-      };
-
-      const scrollPage = (direction) => {
-        const card = track.querySelector('.signature-pieces__card');
-        if (!card) return;
-
-        const styles = window.getComputedStyle(track);
-        const gap = Number.parseFloat(styles.columnGap || styles.gap) || 0;
-        const cardStep = card.getBoundingClientRect().width + gap;
-        const visibleCards = Math.max(1, Math.round(track.clientWidth / cardStep));
-
-        track.scrollBy({
-          left: direction * cardStep * visibleCards,
-          behavior: 'smooth'
+        btn.classList.add('is-loading');
+        fetch(window.Shopify.routes.root + 'cart/add.js', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/javascript' },
+          body: JSON.stringify({ id: variantId, quantity: 1 })
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          if (data.status) throw new Error(data.description || 'Could not add to cart');
+          if (window.showToast) {
+            window.showToast({ message: 'Item added to your cart.', type: 'success', position: 'bottom-right' });
+          }
+          document.dispatchEvent(new CustomEvent('cart:updated', { detail: { open: true } }));
+        })
+        .catch(function(err) {
+          if (window.showToast) {
+            window.showToast({ message: err.message, type: 'error', position: 'bottom-right' });
+          }
+        })
+        .finally(function() {
+          btn.classList.remove('is-loading');
         });
-      };
-
-      previousButton.addEventListener('click', () => scrollPage(-1));
-      nextButton.addEventListener('click', () => scrollPage(1));
-      track.addEventListener('keydown', (event) => {
-        if (event.key === 'ArrowLeft') {
-          event.preventDefault();
-          scrollPage(-1);
-        }
-
-        if (event.key === 'ArrowRight') {
-          event.preventDefault();
-          scrollPage(1);
-        }
       });
-      track.addEventListener('scroll', updateNavigation, { passive: true });
-      window.addEventListener('resize', updateNavigation);
-      updateNavigation();
     });
-  };
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => initializeSignaturePieces());
-  } else {
-    initializeSignaturePieces();
-  }
-
-  document.addEventListener('shopify:section:load', (event) => initializeSignaturePieces(event.target));
+  });
 {% endjavascript %}
 
 {% schema %}
@@ -618,7 +659,7 @@
       "type": "text",
       "id": "eyebrow",
       "label": "Eyebrow Text",
-      "default": "SIGNATURE PIECES"
+      "default": "Crafted to last generations"
     },
     {
       "type": "text",
@@ -630,12 +671,66 @@
       "type": "textarea",
       "id": "subtitle",
       "label": "Subtitle",
-      "default": "Timeless designs, masterfully handcrafted.\nEach piece is a statement of nature, artistry, and enduring quality."
+      "default": "Timeless designs, masterfully handcrafted in solid wood.\nEach piece is made to your specifications and built to be lived with."
     },
     {
       "type": "collection",
       "id": "collection",
       "label": "Collection"
+    },
+    {
+      "type": "text",
+      "id": "material_default",
+      "label": "Default material",
+      "default": "Solid walnut"
+    },
+    {
+      "type": "text",
+      "id": "finish_default",
+      "label": "Default finish",
+      "default": "hand-rubbed oil finish"
+    },
+    {
+      "type": "text",
+      "id": "custom_line",
+      "label": "Custom line",
+      "default": "Custom size available"
+    },
+    {
+      "type": "text",
+      "id": "lead_time_default",
+      "label": "Default lead time",
+      "default": "8-10 weeks"
+    },
+    {
+      "type": "text",
+      "id": "price_prefix",
+      "label": "Price prefix",
+      "default": "From"
+    },
+    {
+      "type": "text",
+      "id": "best_seller_badge",
+      "label": "Best seller badge",
+      "default": "Best Seller"
+    },
+    {
+      "type": "text",
+      "id": "made_to_order_badge",
+      "label": "Made to order badge",
+      "default": "Made to Order"
+    },
+    {
+      "type": "text",
+      "id": "customize_label",
+      "label": "Customize button label",
+      "default": "Customize This Piece"
+    },
+    {
+      "type": "text",
+      "id": "details_label",
+      "label": "Details link label",
+      "default": "View Details"
     },
     {
       "type": "text",

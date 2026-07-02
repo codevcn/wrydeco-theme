@@ -267,7 +267,6 @@
   @media screen and (max-width: 768px) {
     .main-product {
       grid-template-columns: minmax(0, 1fr);
-      row-gap: var(--sp-6);
       padding: var(--sp-5) var(--layout-padding-mobile) var(--section-spacing-mobile);
     }
     .main-product__title {
@@ -283,16 +282,37 @@
 
     .main-product__trust-list {
       grid-template-columns: minmax(0, 1fr);
+      gap: 0;
+      padding: 0;
     }
 
     .main-product__trust-item {
-      min-height: calc(var(--sp-8) * 4);
+      min-height: 0;
+      align-items: flex-start;
+      gap: var(--sp-4);
+      padding: var(--sp-5) 0;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .main-product__trust-item:last-child {
+      border-bottom: 0;
+    }
+
+    .main-product__trust-icon,
+    .main-product__trust-icon svg {
+      width: 40px;
+      height: 40px;
+    }
+
+    .main-product__media {
+      margin-top: var(--sp-8);
     }
   }
 
   @media screen and (max-width: 480px) {
     .main-product__trust {
-      padding-block: var(--sp-7);
+      padding-block: var(--sp-0);
+      min-height: 0;
     }
 
     .main-product__trust-header {
@@ -316,12 +336,12 @@
     }
 
     .main-product__trust-item {
-      min-height: calc(var(--sp-8) * 5);
-      padding: var(--sp-6) var(--sp-5);
+      min-height: 0;
+      padding: var(--sp-3) 0;
     }
 
     .main-product__trust-title {
-      font-size: var(--font-size-body-xl);
+      font-size: var(--font-size-body-lg);
     }
   }
 
@@ -332,6 +352,216 @@
 
     .main-product__trust-item:hover {
       transform: none;
+    }
+  }
+
+  /* Sticky quick add-to-cart bar (shown when the primary button leaves view) */
+  .mp-sticky-bar {
+    position: fixed;
+    inset: auto 0 0 0;
+    z-index: var(--z-overlay);
+    background-color: var(--surface-elevated);
+    border-top: 1px solid var(--border-light);
+    box-shadow: var(--cart-drawer-footer-shadow);
+    transform: translateY(100%);
+    visibility: hidden;
+    transition: transform var(--timing-base) var(--ease-out), visibility var(--timing-base) var(--ease-out);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .mp-sticky-bar.is-visible {
+    transform: translateY(0);
+    visibility: visible;
+  }
+  .mp-sticky-bar[hidden] {
+    display: none;
+  }
+  .mp-sticky-bar__inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-5);
+    width: 100%;
+    max-width: var(--layout-max-width);
+    margin-inline: auto;
+    padding: var(--sp-3) 64px;
+  }
+  .mp-sticky-bar__product {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-4);
+    min-width: 0;
+  }
+  .mp-sticky-bar__thumb {
+    flex: 0 0 auto;
+    width: 48px;
+    height: 48px;
+    overflow: hidden;
+    border-radius: var(--radius-md);
+    background-color: var(--bg-secondary);
+  }
+  .mp-sticky-bar__thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .mp-sticky-bar__meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .mp-sticky-bar__title {
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-md);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 42ch;
+  }
+  .mp-sticky-bar__price {
+    font-family: var(--font-roboto);
+    font-size: var(--font-size-body-md);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+  }
+  .mp-sticky-bar__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-4);
+    flex: 0 0 auto;
+  }
+  .mp-sticky-bar__qty {
+    display: flex;
+    align-items: center;
+    height: 48px;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
+  }
+  .mp-sticky-bar__qty-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 100%;
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: background-color var(--timing-short) var(--ease-standard);
+  }
+  .mp-sticky-bar__qty-btn:hover {
+    background-color: var(--bg-secondary);
+  }
+  .mp-sticky-bar__qty-input {
+    width: 40px;
+    min-width: 0;
+    height: 100%;
+    text-align: center;
+    border: none;
+    background: none;
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-lg);
+    color: var(--text-primary);
+    -moz-appearance: textfield;
+  }
+  .mp-sticky-bar__qty-input::-webkit-outer-spin-button,
+  .mp-sticky-bar__qty-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  .mp-sticky-bar__add {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-3);
+    height: 48px;
+    min-width: 220px;
+    padding: 0 var(--sp-6);
+    background-color: var(--color-ebony);
+    color: var(--color-milk);
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background-color var(--timing-short) var(--ease-standard);
+  }
+  .mp-sticky-bar__add:hover {
+    background-color: var(--text-primary);
+  }
+  .mp-sticky-bar__add[disabled] {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  .mp-sticky-bar__add.is-loading {
+    pointer-events: none;
+    opacity: 0.7;
+  }
+  .mp-sticky-bar__add.is-loading .mp-sticky-bar__add-icon,
+  .mp-sticky-bar__add.is-loading .mp-sticky-bar__add-text {
+    opacity: 0;
+  }
+  .mp-sticky-bar__add.is-loading::after {
+    content: "";
+    position: absolute;
+    top: calc(50% - 10px);
+    left: calc(50% - 10px);
+    width: 20px;
+    height: 20px;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: mp-sticky-spinner 0.6s linear infinite;
+  }
+  @keyframes mp-sticky-spinner {
+    to { transform: rotate(360deg); }
+  }
+  .mp-sticky-bar__add-icon {
+    display: inline-flex;
+  }
+
+  @media screen and (max-width: 1024px) {
+    .mp-sticky-bar__inner {
+      padding-inline: var(--layout-padding-tablet);
+    }
+  }
+
+  @media screen and (max-width: 768px) {
+    .mp-sticky-bar__add-icon svg {
+      height: 24px;
+      width: 24px;
+    }
+    .mp-sticky-bar__inner {
+      gap: var(--sp-4);
+      padding: var(--sp-3) var(--layout-padding-mobile);
+      background-color: var(--color-milk);
+      box-shadow: 0 -2px 4px rgb(0 0 0 / 10%);
+    }
+    /* On phones the product summary is dropped so the controls get the space. */
+    .mp-sticky-bar__product {
+      display: none;
+    }
+    .mp-sticky-bar__actions {
+      flex: 1 1 auto;
+      justify-content: space-between;
+    }
+    .mp-sticky-bar__add {
+      flex: 1 1 auto;
+      min-width: 0;
+      padding: 0 var(--sp-3);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mp-sticky-bar {
+      transition: none;
     }
   }
 {% endstylesheet %}
@@ -525,6 +755,110 @@
   </aside>
 </section>
 
+{%- liquid
+  assign sticky_media = current_variant.featured_media | default: product.featured_media
+  assign sticky_title = product.title | split: ',' | first | split: ' - ' | first | strip
+-%}
+<div
+  class="mp-sticky-bar"
+  data-mp-sticky
+  data-form-id="{{ product_form_id }}"
+  aria-hidden="true"
+  hidden
+>
+  <div class="mp-sticky-bar__inner">
+    <div class="mp-sticky-bar__product">
+      {% if sticky_media != blank %}
+        <span class="mp-sticky-bar__thumb">
+          {{
+            sticky_media.preview_image
+            | image_url: width: 160
+            | image_tag: loading: 'lazy', widths: '80, 160', sizes: '48px', alt: sticky_title
+          }}
+        </span>
+      {% endif %}
+      <span class="mp-sticky-bar__meta">
+        <span class="mp-sticky-bar__title">{{ sticky_title | escape }}</span>
+        <span class="mp-sticky-bar__price" data-mp-sticky-price>{{ current_variant.price | money }}</span>
+      </span>
+    </div>
+
+    <div class="mp-sticky-bar__actions">
+      <div class="mp-sticky-bar__qty" data-mp-sticky-qty>
+        <button
+          type="button"
+          class="mp-sticky-bar__qty-btn"
+          data-action="decrease"
+          aria-label="{{ 'products.decrease_quantity' | t | default: 'Decrease quantity' }}"
+        >
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            aria-hidden="true"
+          >
+            <line x1="4" y1="12" x2="20" y2="12"></line>
+          </svg>
+        </button>
+        <input
+          type="number"
+          class="mp-sticky-bar__qty-input"
+          value="1"
+          min="1"
+          inputmode="numeric"
+          aria-label="{{ 'products.quantity' | t | default: 'Quantity' }}"
+          data-mp-sticky-qty-input
+        >
+        <button
+          type="button"
+          class="mp-sticky-bar__qty-btn"
+          data-action="increase"
+          aria-label="{{ 'products.increase_quantity' | t | default: 'Increase quantity' }}"
+        >
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            aria-hidden="true"
+          >
+            <line x1="12" y1="4" x2="12" y2="20"></line><line x1="4" y1="12" x2="20" y2="12"></line>
+          </svg>
+        </button>
+      </div>
+
+      <button
+        type="button"
+        class="mp-sticky-bar__add"
+        data-mp-sticky-add
+        {% if current_variant.available == false %}
+          disabled
+        {% endif %}
+      >
+        <span class="mp-sticky-bar__add-icon" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M.5 1a.5.5 0 0 0 0 1h1.11l.401 1.607 1.498 7.985A.5.5 0 0 0 4 12h1a2 2 0 1 0 0 4 2 2 0 0 0 0-4h7a2 2 0 1 0 0 4 2 2 0 0 0 0-4h1a.5.5 0 0 0 .491-.408l1.5-8A.5.5 0 0 0 14.5 3H2.89l-.405-1.621A.5.5 0 0 0 2 1zM6 14a1 1 0 1 1-2 0 1 1 0 0 1 2 0m7 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0M9 5.5V7h1.5a.5.5 0 0 1 0 1H9v1.5a.5.5 0 0 1-1 0V8H6.5a.5.5 0 0 1 0-1H8V5.5a.5.5 0 0 1 1 0"/>
+          </svg>
+        </span>
+        <span class="mp-sticky-bar__add-text" data-mp-sticky-add-text>
+          {%- if current_variant.available -%}
+            {{ 'products.add_to_cart' | t | default: 'Add to cart' }}
+          {%- else -%}
+            {{ 'products.sold_out' | t | default: 'Sold out' }}
+          {%- endif -%}
+        </span>
+      </button>
+    </div>
+  </div>
+</div>
+
 {% render 'product-consultation-popup' %}
 
 <script>
@@ -545,6 +879,129 @@
 </script>
 <script type="application/ld+json">
   {{ product | structured_data }}
+</script>
+
+<script>
+  (function () {
+    function initStickyAddToCart() {
+      var bar = document.querySelector('[data-mp-sticky]');
+      if (!bar || bar.dataset.init === 'true') return;
+
+      var formId = bar.getAttribute('data-form-id');
+      var form = document.getElementById(formId);
+      if (!form) return;
+
+      var mainBtn = form.querySelector('button[name="add"]');
+      var mainQty = form.querySelector('.quantity-input__input');
+      var mainText = form.querySelector('[data-add-to-cart-text]');
+      if (!mainBtn || !mainQty) return;
+
+      bar.dataset.init = 'true';
+      bar.hidden = false;
+
+      var stickyQtyInput = bar.querySelector('[data-mp-sticky-qty-input]');
+      var stickyQtyBtns = bar.querySelectorAll('[data-mp-sticky-qty] [data-action]');
+      var stickyAdd = bar.querySelector('[data-mp-sticky-add]');
+      var stickyAddText = bar.querySelector('[data-mp-sticky-add-text]');
+      var stickyPrice = bar.querySelector('[data-mp-sticky-price]');
+      var mainPrice = document.querySelector('[data-regular-price]');
+
+      function readQty() {
+        var v = parseInt(mainQty.value, 10);
+        if (isNaN(v) || v < 1) v = 1;
+        return v;
+      }
+
+      // Quantity is kept in sync with the main form input (single source of truth).
+      function setQty(val) {
+        if (val < 1) val = 1;
+        mainQty.value = val;
+        stickyQtyInput.value = val;
+        mainQty.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+
+      stickyQtyInput.value = readQty();
+
+      stickyQtyBtns.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var val = readQty();
+          setQty(btn.dataset.action === 'increase' ? val + 1 : val - 1);
+        });
+      });
+      stickyQtyInput.addEventListener('change', function () {
+        setQty(parseInt(stickyQtyInput.value, 10) || 1);
+      });
+
+      // Reuse the main form's add-to-cart logic (product-form.js) verbatim by
+      // pushing the chosen quantity into the main form and submitting it.
+      stickyAdd.addEventListener('click', function () {
+        if (stickyAdd.disabled || stickyAdd.classList.contains('is-loading')) return;
+        setQty(readQty());
+        stickyAdd.classList.add('is-loading');
+        if (form.requestSubmit) {
+          form.requestSubmit();
+        } else {
+          form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+        }
+        // Clear the loading state once the cart update lands (or as a fallback).
+        var clear = function () {
+          stickyAdd.classList.remove('is-loading');
+        };
+        document.addEventListener('cart:updated', clear, { once: true });
+        setTimeout(clear, 5000);
+      });
+
+      // Mirror the primary button's availability/label and the live price so the
+      // bar always reflects the current variant.
+      function syncFromMain() {
+        stickyAdd.disabled = mainBtn.hasAttribute('disabled');
+        if (mainText && stickyAddText && !mainBtn.classList.contains('loading')) {
+          stickyAddText.textContent = mainText.textContent.trim();
+        }
+        if (mainPrice && stickyPrice) {
+          stickyPrice.textContent = mainPrice.textContent.trim();
+        }
+      }
+      syncFromMain();
+      if (window.MutationObserver) {
+        new MutationObserver(syncFromMain).observe(form, {
+          subtree: true,
+          childList: true,
+          characterData: true,
+          attributes: true,
+          attributeFilter: ['disabled'],
+        });
+        if (mainPrice) {
+          new MutationObserver(syncFromMain).observe(mainPrice, {
+            childList: true,
+            characterData: true,
+            subtree: true,
+          });
+        }
+      }
+
+      // Show the bar when the primary button is more than 10px outside the
+      // viewport; hide it as soon as the button scrolls back into view.
+      if ('IntersectionObserver' in window) {
+        var io = new IntersectionObserver(
+          function (entries) {
+            entries.forEach(function (entry) {
+              bar.classList.toggle('is-visible', !entry.isIntersecting);
+              bar.setAttribute('aria-hidden', entry.isIntersecting ? 'true' : 'false');
+            });
+          },
+          { root: null, rootMargin: '10px', threshold: 0 }
+        );
+        io.observe(mainBtn);
+      }
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initStickyAddToCart);
+    } else {
+      initStickyAddToCart();
+    }
+  })();
 </script>
 
 {% schema %}

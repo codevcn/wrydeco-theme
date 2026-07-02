@@ -69,7 +69,6 @@
     display: flex;
     overflow-x: auto;
     gap: var(--sp-2);
-    padding-inline: var(--sp-2);
     scrollbar-width: none;
     -ms-overflow-style: none;
     user-select: none;
@@ -83,7 +82,7 @@
     display: none;
   }
   .product-gallery__thumbnail {
-    flex: 0 0 calc(25% - var(--sp-7));
+    flex: 0 0 calc(35% - var(--sp-7));
     aspect-ratio: 1;
     min-width: 0;
     padding: 0;
@@ -113,7 +112,19 @@
     -webkit-user-drag: none;
   }
 
+  @media screen and (max-width: 720px) {
+    .product-gallery {
+      margin-block-end: var(--sp-3);
+    }
+  }
+
   @media screen and (min-width: 720px) {
+    .product-gallery__thumbnails {
+      padding-inline: var(--sp-2);
+    }
+    .product-gallery__thumbnail {
+      flex: 0 0 calc(25% - var(--sp-7));
+    }
     .product-gallery {
       margin-block-end: 0;
       gap: var(--sp-3);
@@ -439,12 +450,16 @@
             }
             thumbnails.scrollLeft = scrollLeft - walk;
           });
-          thumbnails.addEventListener('click', function(e) {
-            if (isDragging) {
-              e.stopPropagation();
-              e.preventDefault();
-            }
-          }, true);
+          thumbnails.addEventListener(
+            'click',
+            function (e) {
+              if (isDragging) {
+                e.stopPropagation();
+                e.preventDefault();
+              }
+            },
+            true
+          );
         }
       });
     }
@@ -475,14 +490,14 @@
 
         mainContainer.addEventListener('mousemove', function (e) {
           if (!zoomPopup.classList.contains('is-active')) return;
-          
+
           var rect = mainContainer.getBoundingClientRect();
           var x = e.clientX - rect.left;
           var y = e.clientY - rect.top;
-          
+
           var xPercent = Math.max(0, Math.min(100, (x / rect.width) * 100));
           var yPercent = Math.max(0, Math.min(100, (y / rect.height) * 100));
-          
+
           zoomPopup.style.backgroundPosition = xPercent + '% ' + yPercent + '%';
           zoomPopup.style.backgroundSize = '200%';
         });
@@ -495,7 +510,7 @@
     }
 
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', function() {
+      document.addEventListener('DOMContentLoaded', function () {
         initGalleryLightbox();
         initGalleryZoom();
       });

@@ -1,5 +1,5 @@
 {%- liquid
-  assign consultation_url = section.settings.consultation_url | default: '/pages/customization'
+  assign consultation_url = section.settings.consultation_url | default: '/pages/care-guide'
   assign question_limit = section.settings.max_questions | default: 8
   assign accordion_name = 'faq-editorial-' | append: section.id
   assign displayed_questions = 0
@@ -17,7 +17,10 @@
           <div class="faq-editorial__intro rte">{{ section.settings.intro }}</div>
         </div>
 
-        <aside class="faq-editorial-consultation" aria-labelledby="faq-editorial-consultation-{{ section.id }}">
+        <aside
+          class="faq-editorial-consultation faq-editorial-guide"
+          aria-labelledby="faq-editorial-consultation-{{ section.id }}"
+        >
           <div class="faq-editorial-consultation__media">
             <img
               src="{{ 'FAQ-photo.png' | asset_img_url: '720x' }}"
@@ -35,14 +38,17 @@
           </div>
 
           <div class="faq-editorial-consultation__content">
-            <span class="faq-editorial-consultation__mark" aria-hidden="true">
-              {% render 'icon-artist-recognition', icon: 'leaf' %}
-            </span>
+            <p class="faq-editorial-guide__eyebrow">Featured Guide</p>
             <h2 id="faq-editorial-consultation-{{ section.id }}">
-              {{ section.settings.consultation_heading | escape }}
+              {{ section.settings.consultation_heading | default: 'Wood, Craft & Care' | escape }}
             </h2>
-            <p>{{ section.settings.consultation_text | escape }}</p>
-            <span class="faq-editorial-consultation__divider" aria-hidden="true"></span>
+            <p>
+              {{
+                section.settings.consultation_text
+                | default: 'A guide to our materials, finishes, and how to care for your piece for years to come.'
+                | escape
+              }}
+            </p>
             <a class="faq-editorial-consultation__button" href="{{ consultation_url }}">
               <span>{{ section.settings.consultation_link_label | escape }}</span>
               <span aria-hidden="true">→</span>
@@ -107,29 +113,38 @@
     <div class="faq-editorial-trust__inner">
       <div class="faq-editorial-trust__item">
         <span class="faq-editorial-trust__icon" aria-hidden="true">
-          {% render 'icon-artist-recognition', icon: 'leaf' %}
+          <img src="{{ 'ic-footer-1.png' | asset_img_url: '64x' }}" width="64" height="64" alt="Handcrafted Solid Wood">
         </span>
         <div class="faq-editorial-trust__item-content">
-          <h2>Handcrafted from solid wood</h2>
-          <p>Natural materials. Honest craftsmanship.</p>
+          <h2>Handcrafted Solid Wood</h2>
+          <p>Sustainably sourced, premium hardwoods built to last.</p>
         </div>
       </div>
       <div class="faq-editorial-trust__item">
         <span class="faq-editorial-trust__icon" aria-hidden="true">
-          {% render 'icon-artist-recognition', icon: 'check' %}
+          <img src="{{ 'ic-footer-2.png' | asset_img_url: '64x' }}" width="64" height="64" alt="Made to Order">
         </span>
         <div class="faq-editorial-trust__item-content">
-          <h2>Made to endure</h2>
-          <p>Built with integrity for generations.</p>
+          <h2>Made to Order</h2>
+          <p>Every piece is custom-crafted to your space and style.</p>
         </div>
       </div>
       <div class="faq-editorial-trust__item">
         <span class="faq-editorial-trust__icon" aria-hidden="true">
-          {% render 'icon-artist-recognition', icon: 'hand' %}
+          <img src="{{ 'ic-footer-3.png' | asset_img_url: '64x' }}" width="64" height="64" alt="Thoughtfully Finished">
         </span>
         <div class="faq-editorial-trust__item-content">
-          <h2>Thoughtfully guided</h2>
-          <p>Expert guidance at every step.</p>
+          <h2>Thoughtfully Finished</h2>
+          <p>Refined by hand with natural oils and lasting care.</p>
+        </div>
+      </div>
+      <div class="faq-editorial-trust__item">
+        <span class="faq-editorial-trust__icon" aria-hidden="true">
+          <img src="{{ 'ic-footer-4.png' | asset_img_url: '64x' }}" width="64" height="64" alt="White-Glove Delivery">
+        </span>
+        <div class="faq-editorial-trust__item-content">
+          <h2>White-Glove Delivery</h2>
+          <p>Carefully delivered and placed with the utmost attention.</p>
         </div>
       </div>
     </div>
@@ -896,6 +911,295 @@
     .faq-editorial-item__toggle::before,
     .faq-editorial-item__toggle::after {
       transition: none;
+    }
+  }
+
+  .faq-editorial {
+    --faq-ink: var(--color-earth-brown, #4a2c18);
+    --faq-muted: color-mix(in srgb, var(--faq-ink) 72%, #6b5d52);
+    --faq-rule: rgba(74, 44, 24, 0.18);
+    background: radial-gradient(circle at 12% 0%, rgba(255, 255, 255, 0.78), transparent 30%),
+      linear-gradient(180deg, #f8f3ed 0%, #f2ebe4 100%);
+    color: var(--faq-ink);
+  }
+
+  .faq-editorial__main {
+    background: transparent;
+  }
+
+  .faq-editorial__layout {
+    width: min(100%, var(--page-max-width, 1440px));
+    padding: var(--section-padding-y, 80px) var(--container-padding-x, 48px);
+  }
+
+  .faq-editorial__intro-panel,
+  .faq-editorial__questions-panel {
+    background: transparent;
+    padding: 0;
+  }
+
+  .faq-editorial__eyebrow {
+    margin: 0 0 14px;
+    padding: 0;
+    color: var(--color-brown, #4a2c18);
+    font-size: var(--eyebrow-size, 12px);
+    font-weight: 600;
+    letter-spacing: var(--eyebrow-tracking, 0.3em);
+  }
+
+  .faq-editorial__eyebrow::after {
+    display: none;
+  }
+
+  .faq-editorial__title {
+    max-width: 15ch;
+    color: var(--color-text, #2b1a11);
+    font-family: var(--font-heading);
+    font-size: var(--section-heading-size, 48px);
+    font-weight: 300;
+    line-height: var(--section-heading-line, 1.02);
+    letter-spacing: var(--section-heading-tracking, -0.02em);
+    word-spacing: 0;
+    text-wrap: balance;
+  }
+
+  .faq-editorial__intro {
+    max-width: 43ch;
+    margin-top: 16px;
+    color: var(--color-muted, #5f5852);
+    font-size: var(--section-subtitle-size, 16px);
+    line-height: 1.6;
+  }
+
+  .faq-editorial-guide {
+    grid-template-columns: minmax(180px, 39%) minmax(0, 61%);
+    width: min(100%, 545px);
+    margin-top: clamp(28px, 3.4vw, 44px);
+    border: 1px solid rgba(74, 44, 24, 0.16);
+    border-radius: 12px;
+    background: rgba(255, 250, 246, 0.52);
+    box-shadow: 0 16px 42px rgba(74, 44, 24, 0.08);
+  }
+
+  .faq-editorial-guide .faq-editorial-consultation__media {
+    min-height: 0;
+  }
+
+  .faq-editorial-guide .faq-editorial-consultation__media img {
+    object-position: center;
+    filter: sepia(0.08) saturate(0.9);
+  }
+
+  .faq-editorial-guide .faq-editorial-consultation__content {
+    padding: clamp(24px, 2.3vw, 34px) clamp(24px, 2.8vw, 40px);
+  }
+
+  .faq-editorial-guide__eyebrow {
+    margin: 0 0 14px;
+    color: var(--faq-ink);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+  }
+
+  .faq-editorial-guide h2 {
+    color: var(--faq-ink);
+    font-family: var(--font-display-light, var(--font-display));
+    font-size: clamp(26px, 2vw, 34px);
+    font-weight: 300;
+    line-height: 1.06;
+    letter-spacing: -0.045em;
+  }
+
+  .faq-editorial-guide .faq-editorial-consultation__content > p {
+    max-width: 28ch;
+    margin-top: 12px;
+    color: var(--faq-muted);
+    font-size: clamp(13px, 0.95vw, 15px);
+    line-height: 1.55;
+  }
+
+  .faq-editorial-guide .faq-editorial-consultation__button {
+    width: auto;
+    min-height: auto;
+    margin-top: clamp(18px, 2.2vw, 28px);
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--faq-ink);
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  .faq-editorial-guide .faq-editorial-consultation__button:hover {
+    background: transparent;
+    color: var(--color-clay, #a8845c);
+  }
+
+  .faq-editorial-item {
+    border-top: 1px solid var(--faq-rule);
+  }
+
+  .faq-editorial-item:last-of-type {
+    border-bottom: 1px solid var(--faq-rule);
+  }
+
+  .faq-editorial-item__summary {
+    grid-template-columns: minmax(0, 1fr) 34px;
+    min-height: clamp(58px, 5.15vw, 72px);
+    padding: 0 clamp(8px, 1vw, 18px) 0 clamp(14px, 2vw, 34px);
+    gap: 18px;
+  }
+
+  .faq-editorial-item__number {
+    display: none;
+  }
+
+  .faq-editorial-item__question {
+    color: var(--faq-ink);
+    font-family: var(--font-body);
+    font-size: clamp(15px, 1.18vw, 19px);
+    font-weight: 500;
+    letter-spacing: 0;
+    line-height: 1.35;
+  }
+
+  .faq-editorial-item__toggle {
+    width: 34px;
+    height: 34px;
+  }
+
+  .faq-editorial-item__toggle::before,
+  .faq-editorial-item__toggle::after {
+    width: 17px;
+    background: var(--faq-ink);
+  }
+
+  .faq-editorial-item__answer {
+    max-width: 62ch;
+    margin: -6px 58px 0 clamp(14px, 2vw, 34px);
+    padding: 0 0 22px;
+    color: var(--faq-muted);
+    font-size: 14px;
+    line-height: 1.55;
+  }
+
+  .faq-editorial-item__answer::before {
+    display: none;
+  }
+
+  .faq-editorial-trust {
+    border-top: 1px solid rgba(74, 44, 24, 0.14);
+    border-bottom: 1px solid rgba(74, 44, 24, 0.14);
+    background: rgba(245, 241, 237, 0.82);
+  }
+
+  .faq-editorial-trust__inner {
+    width: min(100%, var(--page-max-width, 1440px));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: clamp(20px, 2.8vw, 44px);
+    padding: clamp(28px, 3vw, 38px) var(--container-padding-x, 48px);
+  }
+
+  .faq-editorial-trust__item {
+    grid-template-columns: 60px minmax(0, 1fr);
+    gap: 18px;
+  }
+
+  .faq-editorial-trust__item + .faq-editorial-trust__item {
+    padding-left: clamp(18px, 2.4vw, 36px);
+    border-left: 1px solid var(--faq-rule);
+  }
+
+  .faq-editorial-trust__icon {
+    width: 60px;
+    height: 60px;
+    border-color: color-mix(in srgb, var(--faq-ink) 38%, transparent);
+    color: var(--color-clay, #a8845c);
+  }
+
+  .faq-editorial-trust__icon svg {
+    width: 30px;
+    height: 30px;
+  }
+
+  .faq-editorial-trust__item h2 {
+    color: var(--faq-ink);
+    font-family: var(--font-display-light, var(--font-display));
+    font-size: clamp(18px, 1.2vw, 23px);
+    font-weight: 300;
+    letter-spacing: -0.035em;
+    line-height: 1.1;
+    text-transform: none;
+  }
+
+  .faq-editorial-trust__item p {
+    max-width: 28ch;
+    margin-top: 8px;
+    color: var(--faq-muted);
+    font-size: clamp(12px, 0.86vw, 14px);
+    line-height: 1.42;
+  }
+
+  @media screen and (min-width: 64rem) {
+    .faq-editorial {
+      display: block;
+      block-size: auto;
+      overflow: visible;
+    }
+
+    .faq-editorial__layout {
+      grid-template-columns: minmax(0, 42%) minmax(0, 52%);
+      justify-content: space-between;
+      align-items: start;
+      block-size: auto;
+      min-block-size: 0;
+    }
+
+    .faq-editorial__questions-panel {
+      padding-top: 0;
+      overflow: visible;
+    }
+  }
+
+  @media screen and (max-width: 989px) {
+    .faq-editorial__layout {
+      padding-top: 54px;
+    }
+
+    .faq-editorial-guide {
+      grid-template-columns: 1fr;
+    }
+
+    .faq-editorial-guide .faq-editorial-consultation__media {
+      min-height: 220px;
+    }
+
+    .faq-editorial__questions-panel {
+      margin-top: 34px;
+    }
+
+    .faq-editorial-trust__inner {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .faq-editorial-trust__item + .faq-editorial-trust__item {
+      padding-left: 0;
+      border-left: 0;
+    }
+  }
+
+  @media screen and (max-width: 640px) {
+    .faq-editorial__title {
+      max-width: 13ch;
+    }
+
+    .faq-editorial-trust__inner {
+      grid-template-columns: 1fr;
     }
   }
 {% endstylesheet %}

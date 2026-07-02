@@ -1,6 +1,4 @@
-<div class="custom-section-divider"></div>
-
-<div class="client-reviews page-width">
+<div class="client-reviews">
   <div class="client-reviews__inner">
     <!-- Left Column: Fixed Text -->
     <div class="client-reviews__left">
@@ -23,23 +21,7 @@
 
       <div class="client-reviews__author-box">
         <p class="client-reviews__author-name" id="client-review-author"></p>
-        <p class="client-reviews__author-location">Hanoi, Vietnam</p>
-      </div>
-
-      <div class="client-reviews__verified">
-        <svg
-          width="22"
-          height="22"
-          viewBox="0 0 40 40"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          aria-hidden="true"
-        >
-          <circle cx="20" cy="20" r="19" stroke="currentColor" stroke-width="2" stroke-dasharray="2 2"/>
-          <circle cx="20" cy="20" r="12" stroke="currentColor" stroke-width="2"/>
-          <circle cx="20" cy="20" r="5" stroke="currentColor" stroke-width="2"/>
-        </svg>
-        <span>VERIFIED CLIENT</span>
+        <p class="client-reviews__author-location" id="client-review-location"></p>
       </div>
     </div>
 
@@ -51,6 +33,7 @@
             class="client-reviews__card"
             data-review="{{ block.settings.review_text | escape }}"
             data-author="{{ block.settings.author_name | escape }}"
+            data-location="{{ block.settings.author_location | escape }}"
             {{ block.shopify_attributes }}
           >
             {%- if block.settings.image != blank -%}
@@ -85,18 +68,19 @@
 
 {% stylesheet %}
   .client-reviews {
-    padding-top: var(--sp-12, 64px);
-    padding-bottom: var(--sp-12, 64px);
-    background-color: var(--bg-primary, #f5f1ed);
-    color: var(--text-primary, #1a1815);
-    margin-top: var(--sp-4, 64px);
-    margin-bottom: var(--sp-4, 64px);
+    padding: var(--section-padding-y, 80px) var(--container-padding-x, 48px);
+    background:
+      radial-gradient(circle at 88% 8%, rgba(255, 255, 255, 0.7), transparent 36%),
+      linear-gradient(180deg, #f5efe8 0%, #f7f3ee 100%);
+    color: var(--color-text, #1a1815);
   }
 
   .client-reviews__inner {
     display: flex;
     flex-direction: column;
-    gap: var(--sp-14, 48px);
+    gap: var(--sp-7, 48px);
+    width: min(100%, calc(var(--page-max-width, 1440px) - var(--container-padding-x, 48px) * 2));
+    margin: 0 auto;
   }
 
   @media screen and (min-width: 900px) {
@@ -111,50 +95,46 @@
   .client-reviews__left {
     display: flex;
     flex-direction: column;
-    transform: translateX(78px); /* Create a new stacking context for sticky positioning */
     max-width: 420px;
-  }
-
-  @media screen and (min-width: 900px) {
-    .client-reviews__left {
-    }
   }
 
   .client-reviews__eyebrow-wrapper {
     display: flex;
     align-items: center;
     gap: 16px;
-    margin-bottom: var(--sp-4, 16px);
+    margin-bottom: 14px;
   }
 
   .client-reviews__eyebrow-line {
     height: 1px;
     width: 24px;
-    background-color: var(--text-primary, #1a1815);
+    background-color: rgba(74, 44, 24, 0.72);
   }
 
   .client-reviews__eyebrow {
     font-family: var(--font-body);
-    font-size: 11px;
-    letter-spacing: 0.15em;
+    font-size: var(--eyebrow-size, 12px);
+    letter-spacing: var(--eyebrow-tracking, 0.3em);
     font-weight: 600;
+    color: var(--color-brown, #4a2c18);
   }
 
   .client-reviews__heading {
-    font-family: var(--font-display);
-    font-size: clamp(40px, 5vw, 64px);
-    font-weight: var(--font-weight-regular, 400);
-    line-height: 1.1;
-    margin: 0 0 var(--sp-4, 16px) 0;
-    letter-spacing: -0.02em;
+    font-family: var(--font-heading);
+    font-size: var(--section-heading-size, 48px);
+    font-weight: var(--font-weight-light, 300);
+    line-height: var(--section-heading-line, 1.02);
+    margin: 0 0 16px 0;
+    letter-spacing: var(--section-heading-tracking, -0.02em);
+    color: var(--color-text, #2b1a11);
   }
 
   .client-reviews__subtitle {
     font-family: var(--font-body);
-    font-size: 18px;
+    font-size: var(--section-subtitle-size, 16px);
     line-height: 1.6;
-    color: var(--text-secondary, #6b5d52);
-    margin: 0 0 var(--sp-8, 32px) 0;
+    color: var(--color-muted, #6b5d52);
+    margin: 0 0 var(--sp-6, 32px) 0;
   }
 
   .client-reviews__quote-mark {
@@ -188,17 +168,6 @@
     font-size: 13px;
     color: var(--text-secondary, #6b5d52);
     margin: 0 0 var(--sp-5, 20px) 0;
-  }
-
-  .client-reviews__verified {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    color: var(--color-bark, #6b5d52);
-    font-family: var(--font-body);
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.18em;
   }
 
   /* Right Column (Slider) */
@@ -285,171 +254,52 @@
     opacity: 0.8;
   }
 
-  @media screen and (min-width: 1200px) {
-    .client-reviews {
-      display: grid;
-      grid-template-rows: minmax(0, 1fr) auto;
-      width: 100%;
-      max-width: none;
-      min-height: 100svh;
-      height: 100svh;
-      padding: clamp(44px, 5.8svh, 58px) clamp(70px, 4.7vw, 78px) clamp(28px, 3.4svh, 36px);
-      overflow: hidden;
-    }
-
-    .client-reviews__inner {
-      display: grid;
-      grid-template-columns: minmax(360px, 31.8%) minmax(0, 1fr);
-      align-items: stretch;
-      gap: clamp(54px, 6.2vw, 98px);
-      min-height: 0;
-    }
-
+  @media screen and (min-width: 900px) {
     .client-reviews__left {
-      max-width: 430px;
-      min-height: 0;
-      transform: none;
-    }
-
-    .client-reviews__eyebrow-wrapper {
-      display: block;
-      margin-bottom: clamp(28px, 3.6svh, 34px);
-    }
-
-    .client-reviews__eyebrow-line {
-      width: 48px;
-      margin-top: 18px;
-      background-color: rgba(74, 44, 24, 0.72);
-    }
-
-    .client-reviews__eyebrow {
-      display: block;
-      margin-bottom: 16px;
-      color: var(--color-earth-brown, #4a2c18);
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: 0.25em;
-    }
-
-    .client-reviews__heading {
-      max-width: 380px;
-      margin-bottom: clamp(24px, 3.1svh, 32px);
-      font-size: clamp(62px, 4.6vw, 78px);
-      font-weight: 300;
-      line-height: 0.96;
-      letter-spacing: -0.055em;
-    }
-
-    .client-reviews__subtitle {
-      max-width: 330px;
-      margin-bottom: clamp(46px, 5.6svh, 58px);
-      color: var(--text-secondary, #6b5d52);
-      font-size: clamp(16px, 1vw, 18px);
-      line-height: 1.48;
-    }
-
-    .client-reviews__quote-mark {
-      margin-bottom: clamp(18px, 2.6svh, 24px);
-      color: rgba(107, 93, 82, 0.38);
-      font-size: clamp(66px, 5vw, 82px);
-      line-height: 0.35;
-      transform: none;
+      flex: 0 0 clamp(320px, 30vw, 420px);
     }
 
     .client-reviews__quote-text {
-      max-width: 375px;
-      min-height: 0;
-      margin-bottom: clamp(26px, 3.5svh, 34px);
-      font-size: clamp(28px, 1.9vw, 34px);
+      font-size: clamp(24px, 1.8vw, 30px);
       font-weight: 300;
-      line-height: 1.17;
-      letter-spacing: -0.035em;
-    }
-
-    .client-reviews__author-box {
-      margin-bottom: clamp(24px, 3.5svh, 34px);
+      line-height: 1.2;
+      letter-spacing: -0.03em;
     }
 
     .client-reviews__author-box::before {
       display: block;
       width: 38px;
       height: 1px;
-      margin-bottom: 18px;
+      margin-bottom: 16px;
       background: rgba(107, 93, 82, 0.42);
       content: '';
     }
 
     .client-reviews__author-name {
-      margin-bottom: 6px;
       font-family: var(--font-display);
-      font-size: 24px;
+      font-size: 21px;
       font-weight: 300;
       letter-spacing: -0.025em;
       line-height: 1.1;
     }
 
-    .client-reviews__author-location {
-      margin: 0;
-      font-size: 13px;
-      line-height: 1.3;
-    }
-
-    .client-reviews__right {
-      min-height: 0;
-      height: 100%;
-    }
-
-    .client-reviews__slider {
-      display: grid;
-      grid-template-columns: minmax(0, 1.46fr) minmax(280px, 1fr);
-      gap: clamp(14px, 1.1vw, 18px);
-      height: 100%;
-      min-height: 0;
-      overflow: hidden;
-      padding-bottom: 0;
-      cursor: default;
-    }
-
     .client-reviews__card {
-      display: none;
-      flex: none;
-      max-width: none;
-      width: 100%;
-      height: 100%;
-      aspect-ratio: auto;
-      border-radius: var(--radius-lg, 12px);
-      opacity: 1;
-      transition: none;
+      flex: 0 0 42%;
+      max-width: 440px;
     }
+  }
 
-    .client-reviews__card:nth-child(-n + 2) {
-      display: block;
-    }
+  .client-reviews__footer {
+    position: relative;
+    justify-content: center;
+  }
 
-    .client-reviews__card:nth-child(1) .client-reviews__img {
-      object-position: center center;
-    }
-
-    .client-reviews__card:nth-child(2) .client-reviews__img {
-      object-position: center center;
-    }
-
-    .client-reviews__img {
-      height: 100%;
-      filter: saturate(0.9) contrast(0.98);
-    }
-
-    .client-reviews__footer {
-      position: relative;
-      margin-top: 40px;
-      justify-content: center;
-    }
-
+  @media screen and (min-width: 900px) {
     .client-reviews__footer::before,
     .client-reviews__footer::after {
       position: absolute;
       top: 50%;
-      width: min(22vw, 350px);
+      width: min(20vw, 320px);
       height: 1px;
       background: rgba(107, 93, 82, 0.24);
       content: '';
@@ -463,103 +313,11 @@
       right: 0;
     }
 
-    .client-reviews__footer-content {
-      gap: clamp(18px, 1.7vw, 28px);
-      color: var(--color-bark, #6b5d52);
-    }
-
-    .client-reviews__footer-icon {
-      width: 30px;
-      height: 30px;
-      opacity: 0.78;
-    }
-
-    .client-reviews__footer-sep {
-      color: rgba(74, 44, 24, 0.72);
-      font-size: 9px;
-      opacity: 1;
-    }
-  }
-
-  @media screen and (min-width: 1200px) and (max-height: 820px) {
-    .client-reviews {
-      padding: 32px clamp(58px, 4.8vw, 70px) 24px;
-    }
-
-    .client-reviews__inner {
-      grid-template-columns: minmax(330px, 30.6%) minmax(0, 1fr);
-      gap: clamp(42px, 5vw, 72px);
-    }
-
-    .client-reviews__eyebrow-wrapper {
-      margin-bottom: 34px;
-    }
-
-    .client-reviews__eyebrow {
-      margin-bottom: 12px;
-      font-size: 11px;
-    }
-
-    .client-reviews__eyebrow-line {
-      margin-top: 14px;
-    }
-
-    .client-reviews__heading {
-      margin-bottom: 22px;
-      font-size: clamp(52px, 4.6vw, 64px);
-    }
-
-    .client-reviews__subtitle {
-      max-width: 330px;
-      margin-bottom: 38px;
-      font-size: 15px;
-      line-height: 1.42;
-    }
-
-    .client-reviews__quote-mark {
-      margin-bottom: 16px;
-      font-size: 58px;
-    }
-
-    .client-reviews__quote-text {
-      max-width: 330px;
-      margin-bottom: 22px;
-      font-size: clamp(22px, 1.85vw, 27px);
-      line-height: 1.18;
-    }
-
-    .client-reviews__author-box {
-      margin-bottom: 18px;
-    }
-
-    .client-reviews__author-box::before {
-      margin-bottom: 14px;
-    }
-
-    .client-reviews__author-name {
-      font-size: 21px;
-    }
-
-    .client-reviews__verified {
-      font-size: 10px;
-    }
-
-    .client-reviews__slider {
-      grid-template-columns: minmax(0, 1.45fr) minmax(260px, 1fr);
-      gap: 14px;
-    }
-
-    .client-reviews__footer {
-      margin-top: 40px;
-    }
-
-    .client-reviews__footer-icon {
-      width: 24px;
-      height: 24px;
-    }
-
-    .client-reviews__footer-content {
-      gap: 18px;
+    .client-reviews__footer-text {
+      color: var(--color-brown, #4a2c18);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.22em;
     }
   }
 {% endstylesheet %}
@@ -572,6 +330,7 @@
     const cards = Array.from(slider.querySelectorAll('.client-reviews__card'));
     const textEl = document.getElementById('client-review-text');
     const authorEl = document.getElementById('client-review-author');
+    const locationEl = document.getElementById('client-review-location');
 
     let isUpdating = false;
     let currentFocusedCard = null;
@@ -592,6 +351,7 @@
       setTimeout(() => {
         textEl.textContent = `“${card.dataset.review}”`;
         authorEl.textContent = card.dataset.author;
+        if (locationEl) locationEl.textContent = card.dataset.location || '';
         textEl.style.opacity = '1';
         authorEl.style.opacity = '1';
         isUpdating = false;
@@ -727,6 +487,12 @@
           "id": "author_name",
           "label": "Author Name",
           "default": "Nguyen H. Minh"
+        },
+        {
+          "type": "text",
+          "id": "author_location",
+          "label": "Author Location",
+          "default": "New York, USA"
         }
       ]
     }

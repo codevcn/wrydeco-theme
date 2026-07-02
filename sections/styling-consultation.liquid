@@ -1,13 +1,12 @@
 {%- style -%}
   .section-{{ section.id }}-padding {
-    min-height: 100vh;
-    max-height: 100vh;
+    padding-block: var(--section-padding-y-lg, 100px);
   }
 
   @media screen and (min-width: 768px) {
     .section-{{ section.id }}-padding {
-      padding-left: 140px;
-      padding-right: 140px;
+      padding-left: var(--container-padding-x, 48px);
+      padding-right: var(--container-padding-x, 48px);
     }
   }
 
@@ -39,14 +38,12 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: rgba(255, 255, 255, 0.09);
-    -webkit-backdrop-filter: blur(12px);
-    backdrop-filter: blur(1px);
+    background: linear-gradient(90deg, rgba(247, 242, 236, 0.9), rgba(247, 242, 236, 0.68) 52%, rgba(247, 242, 236, 0.18));
     pointer-events: none;
   }
 
   .styling-consultation__inner {
-    height: 559px;
+    width: min(calc(100% - 48px), var(--page-max-width, 1440px));
     position: relative;
     z-index: 1;
     display: flex;
@@ -72,35 +69,59 @@
   /* Left Column */
   .styling-consultation__left {
     flex: 1;
-    max-width: 500px;
+    max-width: 620px;
   }
 
   .styling__eyebrow {
     font-family: var(--font-body);
-    font-size: 11px;
-    letter-spacing: 0.15em;
+    font-size: var(--eyebrow-size, 12px);
+    letter-spacing: var(--eyebrow-tracking, 0.3em);
     font-weight: 600;
-    margin-bottom: 12px;
+    margin-bottom: 14px;
     text-transform: uppercase;
-    color: var(--text-secondary, #6b5d52);
+    color: var(--color-brown, #4a2c18);
     display: block;
   }
 
   .styling__heading {
-    font-family: var(--font-display);
-    font-size: clamp(36px, 4vw, 56px);
-    font-weight: var(--font-weight-regular, 400);
-    line-height: 1.1;
-    margin: 0 0 14px 0;
-    letter-spacing: -0.02em;
+    font-family: var(--font-heading);
+    font-size: var(--section-heading-size, 48px);
+    font-weight: var(--font-weight-light, 300);
+    line-height: var(--section-heading-line, 1.02);
+    margin: 0 0 18px 0;
+    letter-spacing: var(--section-heading-tracking, -0.02em);
+    color: var(--color-text, #2b1a11);
   }
 
   .styling__desc {
     font-family: var(--font-body);
-    font-size: 15px;
+    font-size: var(--section-subtitle-size, 16px);
     line-height: 1.6;
-    color: #221f1d;
-    margin: 0 0 18px 0;
+    color: var(--color-muted, #221f1d);
+    margin: 0 0 22px 0;
+    max-width: 58ch;
+  }
+
+  .styling__custom-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 22px;
+    padding: 0;
+    list-style: none;
+  }
+
+  .styling__custom-list li {
+    margin: 0;
+    padding: 8px 11px;
+    border: 1px solid rgba(74, 44, 24, 0.16);
+    border-radius: var(--radius-full);
+    background-color: rgba(247, 242, 236, 0.72);
+    color: var(--color-earth-brown);
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.02em;
   }
 
   .styling__service-list {
@@ -114,11 +135,10 @@
     display: flex;
     align-items: center;
     background: rgba(255, 255, 255, 0.4);
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.6);
-    border-radius: var(--radius-sm, 6px);
-    padding: 12px 16px;
-    transition: background 0.3s ease;
+    border: 1px solid rgba(74, 44, 24, 0.12);
+    border-radius: var(--radius-lg, 8px);
+    padding: 14px 16px;
+    transition: background 0.3s var(--ease-standard), transform 0.3s var(--ease-standard);
     cursor: pointer;
     text-decoration: none;
     color: inherit;
@@ -126,6 +146,7 @@
 
   .styling__service-item:hover {
     background: rgba(255, 255, 255, 0.7);
+    transform: translateY(-2px);
   }
 
   .styling__service-icon {
@@ -173,14 +194,16 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background-color: #554437;
+    min-height: var(--btn-height, 52px);
+    background-color: var(--color-brown, #4a2c18);
     color: #fcf9f6;
     font-family: var(--font-body);
-    font-size: 14px;
-    padding: 14px 32px;
-    border-radius: var(--radius-sm, 6px);
+    font-size: var(--btn-font-size, 14px);
+    font-weight: var(--font-weight-medium, 500);
+    padding: 0 var(--btn-padding-x, 32px);
+    border-radius: var(--btn-radius, 4px);
     text-decoration: none;
-    transition: transform 0.3s ease;
+    transition: transform 0.3s ease, background-color 0.3s ease;
     border: none;
     cursor: pointer;
     width: 100%;
@@ -194,7 +217,8 @@
 
   .styling__btn:hover {
     color: #f1eae2;
-    transform: scale(1.05);
+    background-color: var(--color-brown-dark, #2f1a0d);
+    transform: translateY(-2px);
   }
 
   .styling__btn svg {
@@ -218,13 +242,14 @@
   }
 
   .advisor-card {
+    display: flex;
+    flex-direction: column;
+    width: min(100%, 580px);
     background-color: #6c533f;
     color: #f1eae2;
-    border-radius: var(--radius-lg, 12px);
+    border-radius: var(--radius-xl, 12px);
     overflow: hidden;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.15);
-    height: 100%;
-    aspect-ratio: 3 / 3.5;
+    box-shadow: 0 28px 60px rgba(74, 44, 24, 0.22);
   }
 
   .advisor-card__top {
@@ -383,146 +408,6 @@
     color: #f1eae2;
   }
 
-  /* Scale only the inner content on wide desktop displays. */
-  @media screen and (min-width: 1600px) {
-    .styling-consultation__inner {
-      width: min(
-        calc(100% - (var(--layout-padding-desktop) * 2)),
-        calc(var(--layout-max-width) + (var(--sp-8) * 3))
-      );
-      height: calc(var(--sp-8) * 11);
-      gap: calc(var(--sp-8) + var(--sp-6));
-    }
-
-    .styling-consultation__left {
-      max-width: calc((var(--sp-8) * 9) + var(--sp-6));
-    }
-
-    .styling__eyebrow {
-      margin-bottom: var(--sp-4);
-      font-size: var(--font-size-body-sm);
-    }
-
-    .styling__heading {
-      margin-bottom: var(--sp-4);
-      font-size: calc(var(--font-size-display-lg) + var(--font-size-body-lg));
-    }
-
-    .styling__desc {
-      margin-bottom: var(--sp-5);
-      font-size: var(--font-size-body-lg);
-    }
-
-    .styling__service-list {
-      gap: var(--sp-4);
-      margin-bottom: var(--sp-5);
-    }
-
-    .styling__service-item {
-      min-height: calc(var(--sp-8) + var(--sp-5));
-      padding: var(--sp-4) var(--sp-5);
-    }
-
-    .styling__service-icon {
-      flex-basis: var(--sp-8);
-      height: var(--sp-8);
-      margin-right: var(--sp-5);
-    }
-
-    .styling__service-icon svg {
-      width: var(--sp-6);
-      height: var(--sp-6);
-    }
-
-    .styling__service-title {
-      font-size: var(--font-size-body-md);
-    }
-
-    .styling__service-desc {
-      font-size: var(--font-size-body-sm);
-    }
-
-    .styling__service-arrow {
-      margin-left: var(--sp-5);
-    }
-
-    .styling__btn {
-      min-height: var(--sp-8);
-      padding: var(--sp-4) var(--sp-6);
-      font-size: var(--font-size-body-md);
-    }
-
-    .styling-consultation__right {
-      flex: none;
-    }
-
-    .advisor-card {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .advisor-card__top {
-      flex: 1;
-      min-height: 0;
-      padding: var(--sp-6);
-      gap: var(--sp-6);
-    }
-
-    .advisor-card__img-wrapper {
-      flex-basis: calc(var(--sp-8) * 4);
-    }
-
-    .advisor-card__eyebrow {
-      font-size: var(--font-size-caption);
-    }
-
-    .advisor-card__name {
-      font-size: var(--font-size-display-md);
-    }
-
-    .advisor-card__title,
-    .advisor-card__quote {
-      font-size: var(--font-size-body-md);
-    }
-
-    .advisor-card__divider {
-      margin-inline: var(--sp-6);
-    }
-
-    .advisor-card__divider.under-title {
-      margin-inline: 0;
-    }
-
-    .advisor-card__stats {
-      padding: var(--sp-5) var(--sp-6);
-    }
-
-    .advisor-card__stat-num {
-      font-size: var(--font-size-display-sm);
-    }
-
-    .advisor-card__stat-label {
-      font-size: var(--font-size-caption);
-    }
-
-    .advisor-card__bottom {
-      padding: var(--sp-5) var(--sp-6);
-      gap: var(--sp-5);
-    }
-
-    .advisor-card__bottom-icon {
-      flex-basis: var(--sp-7);
-      height: var(--sp-7);
-    }
-
-    .advisor-card__bottom-text h4 {
-      font-size: var(--font-size-body-sm);
-    }
-
-    .advisor-card__bottom-text p {
-      font-size: var(--font-size-body-md);
-    }
-  }
 {%- endstyle -%}
 
 <div class="styling-consultation section-{{ section.id }}-padding">
@@ -533,9 +418,19 @@
       <h2 class="styling__heading">{{ section.settings.heading | newline_to_br }}</h2>
       <p class="styling__desc">{{ section.settings.description }}</p>
 
+      <ul class="styling__custom-list" aria-label="Customization options">
+        <li>Custom size</li>
+        <li>Wood species</li>
+        <li>Finish color</li>
+        <li>Shape &amp; form</li>
+        <li>Edge detail</li>
+        <li>Shelving layout</li>
+        <li>Sketch approval</li>
+      </ul>
+
       <div class="styling__service-list">
         {%- for block in section.blocks -%}
-          <a href="#" class="styling__service-item" {{ block.shopify_attributes }}>
+          <a href="{{ section.settings.button_link | default: '#' }}" class="styling__service-item" {{ block.shopify_attributes }}>
             <div class="styling__service-icon">
               {%- if block.settings.icon == 'blueprint' -%}
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -609,6 +504,8 @@
                 alt="Mr. Nguyen"
                 class="advisor-card__img"
                 loading="lazy"
+                width="400"
+                height="533"
               >
             {%- endif -%}
           </div>

@@ -1,7 +1,7 @@
 {%- liquid
   assign question_limit = section.settings.max_questions | default: 7
   assign rendered_questions = 0
-  assign consultation_url = section.settings.consultation_url | default: pages['customization'].url | default: routes.root_url
+  assign consultation_url = section.settings.consultation_url | default: pages.customization.url | default: routes.root_url
 -%}
 
 <main class="faq-page" id="faq-page-{{ section.id }}">
@@ -75,11 +75,23 @@
           <span class="faq-page__category-icon">{% render 'faq-category-icon', icon: 'shipping' %}</span>
           {{ section.settings.shipping_label | escape }}
         </button>
-        <button class="faq-page__category" type="button" role="tab" aria-selected="false" data-faq-filter="custom-orders">
+        <button
+          class="faq-page__category"
+          type="button"
+          role="tab"
+          aria-selected="false"
+          data-faq-filter="custom-orders"
+        >
           <span class="faq-page__category-icon">{% render 'faq-category-icon', icon: 'custom-orders' %}</span>
           {{ section.settings.custom_orders_label | escape }}
         </button>
-        <button class="faq-page__category" type="button" role="tab" aria-selected="false" data-faq-filter="materials-care">
+        <button
+          class="faq-page__category"
+          type="button"
+          role="tab"
+          aria-selected="false"
+          data-faq-filter="materials-care"
+        >
           <span class="faq-page__category-icon">{% render 'faq-category-icon', icon: 'materials-care' %}</span>
           {{ section.settings.materials_care_label | escape }}
         </button>
@@ -91,11 +103,23 @@
           <span class="faq-page__category-icon">{% render 'faq-category-icon', icon: 'payments' %}</span>
           {{ section.settings.payments_label | escape }}
         </button>
-        <button class="faq-page__category" type="button" role="tab" aria-selected="false" data-faq-filter="production-timeline">
+        <button
+          class="faq-page__category"
+          type="button"
+          role="tab"
+          aria-selected="false"
+          data-faq-filter="production-timeline"
+        >
           <span class="faq-page__category-icon">{% render 'faq-category-icon', icon: 'production-timeline' %}</span>
           {{ section.settings.production_timeline_label | escape }}
         </button>
-        <button class="faq-page__category" type="button" role="tab" aria-selected="false" data-faq-filter="consultation">
+        <button
+          class="faq-page__category"
+          type="button"
+          role="tab"
+          aria-selected="false"
+          data-faq-filter="consultation"
+        >
           <span class="faq-page__category-icon">{% render 'faq-category-icon', icon: 'consultation' %}</span>
           {{ section.settings.consultation_label | escape }}
         </button>
@@ -137,10 +161,21 @@
 
         <aside class="faq-page__consultation" data-faq-consultation>
           <span class="faq-page__consultation-branch" aria-hidden="true">
-            <svg viewBox="0 0 180 100" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><path d="M6 94c39-13 67-35 91-78"/><path d="M47 74c-4-14-4-25 0-36M60 65c12-11 25-18 39-20M77 50c-2-13 0-24 6-34M91 30c10-8 21-12 34-13M35 81c-9-4-18-5-27-3M103 19c3-7 8-12 14-17"/><path d="M45 40c-5 1-8 4-9 9 5-1 8-4 9-9ZM99 43c6-1 10-4 12-9-6 0-10 3-12 9ZM81 18c-4 2-6 6-5 11 4-2 6-6 5-11ZM124 15c6 0 10-3 13-8-6-1-11 2-13 8ZM8 76c5-3 10-3 15 0-5 3-10 3-15 0Z"/></svg>
+            <svg viewBox="0 0 180 100" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round">
+              <path d="M6 94c39-13 67-35 91-78"/><path d="M47 74c-4-14-4-25 0-36M60 65c12-11 25-18 39-20M77 50c-2-13 0-24 6-34M91 30c10-8 21-12 34-13M35 81c-9-4-18-5-27-3M103 19c3-7 8-12 14-17"/><path d="M45 40c-5 1-8 4-9 9 5-1 8-4 9-9ZM99 43c6-1 10-4 12-9-6 0-10 3-12 9ZM81 18c-4 2-6 6-5 11 4-2 6-6 5-11ZM124 15c6 0 10-3 13-8-6-1-11 2-13 8ZM8 76c5-3 10-3 15 0-5 3-10 3-15 0Z"/>
+            </svg>
           </span>
           <span class="faq-page__consultation-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/></svg>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M4 5h16v11H9l-5 4z"/>
+            </svg>
           </span>
           <div class="faq-page__consultation-copy">
             <h3>{{ section.settings.consultation_card_heading | escape }}</h3>
@@ -184,6 +219,13 @@
   }
 </script>
 
+<script>
+  const mainProductSection = document.getElementById('faq-page-{{ section.id }}');
+  if (mainProductSection && window.innerWidth < 768) {
+    mainProductSection.closest('body').querySelector('.header__icon--search').style.color = 'var(--color-earth-brown)';
+    mainProductSection.closest('body').querySelector('.header__icon--cart').style.color = 'var(--color-earth-brown)';
+  }
+</script>
 {% stylesheet %}
   .faq-page {
     --faq-content-width: var(--layout-showcase-max-width);
@@ -361,8 +403,7 @@
   }
 
   .faq-page__categories {
-    display: grid;
-    grid-template-columns: minmax(var(--sp-10), 0.56fr) repeat(7, minmax(calc(var(--sp-8) + var(--sp-4)), 1fr));
+    display: flex;
     gap: var(--sp-3);
     overflow-x: auto;
     margin-block-start: var(--sp-4);
@@ -379,14 +420,14 @@
     align-items: center;
     justify-content: center;
     gap: var(--sp-3);
-    min-block-size: var(--sp-8);
+    width: max-content;
     padding: var(--sp-3) var(--sp-4);
     border: var(--border-width) solid var(--border-default);
     border-radius: var(--radius-md);
     background: transparent;
     color: var(--color-earth-brown);
     cursor: pointer;
-    font-family: var(--font-display);
+    font-family: var(--font-roboto);
     font-size: var(--font-size-body-sm);
     font-weight: var(--font-weight-regular);
     line-height: var(--line-height-normal);
@@ -394,6 +435,9 @@
     transition: background-color var(--timing-short) var(--ease-standard),
       border-color var(--timing-short) var(--ease-standard), color var(--timing-short) var(--ease-standard),
       transform var(--timing-short) var(--ease-standard);
+  }
+  .faq-page__category:first-child {
+    padding-inline: var(--sp-6);
   }
 
   .faq-page__category:hover {
@@ -635,6 +679,7 @@
 
     .faq-page__questions {
       grid-template-columns: minmax(0, 1fr);
+      margin-top: var(--sp-3);
     }
 
     .faq-page-row:nth-child(odd) {
@@ -690,15 +735,14 @@
     }
 
     .faq-page__categories {
-      margin-block-start: var(--sp-5);
+      margin-block-start: var(--sp-4);
     }
 
     .faq-page__category {
-      min-block-size: var(--sp-8);
     }
 
     .faq-page__content-inner {
-      padding-block: var(--sp-7) var(--sp-8);
+      padding-block: var(--sp-5) var(--sp-5);
     }
 
     .faq-page__content-title {

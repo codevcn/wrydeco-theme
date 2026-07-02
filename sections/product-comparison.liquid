@@ -53,6 +53,12 @@
     background-color: var(--border-light);
   }
 
+  @media screen and (max-width: 768px) {
+    .details-materials__rule {
+      margin: var(--sp-4) 0;
+    }
+  }
+
   .details-materials__features-eyebrow {
     margin: 0 0 var(--sp-5);
     font-family: var(--font-body);
@@ -195,6 +201,12 @@
   .dm-acc__content > :last-child {
     margin-bottom: 0;
   }
+  .dm-acc__content-wrap {
+    position: relative;
+  }
+  .dm-acc__more {
+    display: none;
+  }
 
   @media screen and (max-width: 1024px) {
     .details-materials {
@@ -207,16 +219,21 @@
   }
 
   @media screen and (max-width: 768px) {
+    .dm-acc__summary {
+      padding-block: var(--sp-4);
+    }
     .details-materials {
       grid-template-columns: minmax(0, 1fr);
-      row-gap: var(--sp-6);
+      row-gap: var(--sp-3);
       padding: var(--section-spacing-mobile) var(--layout-padding-mobile);
     }
     .details-materials__title {
       font-size: var(--font-size-display-md);
+      text-align: center;
     }
     .details-materials__subtitle {
       font-size: var(--font-size-body-md);
+      text-align: center;
     }
     .details-materials__features {
       grid-template-columns: 1fr;
@@ -232,8 +249,54 @@
       border-top: none;
       padding-top: 0;
     }
+    /* On mobile the inner scroll is awkward on touch; instead collapse the
+       content to a preview height with a fade + "Read more" toggle (wired up in
+       JS, which reveals the button only when the content actually overflows). */
     .dm-acc__content {
       max-height: none;
+      overflow: visible;
+    }
+    .dm-acc__clip.is-collapsed {
+      position: relative;
+      max-height: 340px;
+      overflow: hidden;
+    }
+    .dm-acc__clip.is-collapsed::after {
+      content: '';
+      position: absolute;
+      inset: auto 0 0 0;
+      height: var(--sp-8);
+      background: linear-gradient(to bottom, transparent, var(--surface-default));
+      pointer-events: none;
+    }
+    .dm-acc__more {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--sp-2);
+      margin-top: var(--sp-4);
+      margin-left: 8px;
+      padding: var(--sp-2) 0;
+      background: none;
+      border: none;
+      font-family: var(--font-body);
+      font-size: var(--font-size-body-sm);
+      font-weight: var(--font-weight-semibold);
+      letter-spacing: var(--letter-spacing-wide);
+      text-transform: uppercase;
+      color: var(--color-ebony);
+      cursor: pointer;
+    }
+    .dm-acc__more::after {
+      content: '';
+      width: 8px;
+      height: 8px;
+      border-right: 1.5px solid currentColor;
+      border-bottom: 1.5px solid currentColor;
+      transform: translateY(-2px) rotate(45deg);
+      transition: transform var(--timing-short) var(--ease-standard);
+    }
+    .dm-acc__more[aria-expanded='true']::after {
+      transform: translateY(1px) rotate(-135deg);
     }
   }
 {% endstylesheet %}
@@ -351,12 +414,19 @@
               <span class="dm-acc__title">{{ block.settings.heading | escape }}</span>
               <span class="dm-acc__icon" aria-hidden="true"></span>
             </summary>
-            <div class="dm-acc__content custom-scrollbar">
-              {% if block.settings.use_product_description %}
-                {{ product.description }}
-              {% else %}
-                {{ block.settings.content }}
-              {% endif %}
+            <div class="dm-acc__content-wrap" data-acc-collapsible>
+              <div class="dm-acc__clip" data-acc-clip>
+                <div class="dm-acc__content custom-scrollbar" data-acc-content>
+                  {% if block.settings.use_product_description %}
+                    {{ product.description }}
+                  {% else %}
+                    {{ block.settings.content }}
+                  {% endif %}
+                </div>
+              </div>
+              <button type="button" class="dm-acc__more" data-acc-more hidden aria-expanded="false">
+                <span class="dm-acc__more-label">{{ 'products.read_more' | t | default: 'Read more' }}</span>
+              </button>
             </div>
           </details>
         {% endif %}
@@ -364,6 +434,74 @@
     </div>
   </div>
 </section>
+
+<script>
+  (function () {
+    var MOBILE = '(max-width: 768px)';
+    var READ_MORE = {{ 'products.read_more' | t | default: 'Read more' | json }};
+    var READ_LESS = {{ 'products.read_less' | t | default: 'Read less' | json }};
+
+    function setup(wrap) {
+      var clip = wrap.querySelector('[data-acc-clip]');
+      var content = wrap.querySelector('[data-acc-content]');
+      var btn = wrap.querySelector('[data-acc-more]');
+      var label = btn ? btn.querySelector('.dm-acc__more-label') : null;
+      if (!clip || !content || !btn) return;
+
+      function refresh() {
+        if (!window.matchMedia(MOBILE).matches) {
+          // Desktop: no collapsing, ensure everything is reset/visible.
+          clip.classList.remove('is-collapsed');
+          btn.hidden = true;
+          btn.setAttribute('aria-expanded', 'false');
+          if (label) label.textContent = READ_MORE;
+          return;
+        }
+        var expanded = btn.getAttribute('aria-expanded') === 'true';
+        if (expanded) {
+          btn.hidden = false;
+          return;
+        }
+        // Collapsed: only show the toggle when the content actually overflows.
+        clip.classList.add('is-collapsed');
+        var overflows = content.scrollHeight - clip.clientHeight > 4;
+        btn.hidden = !overflows;
+      }
+
+      btn.addEventListener('click', function () {
+        var expanded = btn.getAttribute('aria-expanded') === 'true';
+        expanded = !expanded;
+        btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        clip.classList.toggle('is-collapsed', !expanded);
+        if (label) label.textContent = expanded ? READ_LESS : READ_MORE;
+      });
+
+      // Re-measure when the parent <details> opens (content has no size while closed).
+      var details = wrap.closest('details');
+      if (details) details.addEventListener('toggle', refresh);
+
+      var mq = window.matchMedia(MOBILE);
+      if (mq.addEventListener) mq.addEventListener('change', refresh);
+      else if (mq.addListener) mq.addListener(refresh);
+
+      refresh();
+    }
+
+    function init() {
+      document.querySelectorAll('[data-acc-collapsible]').forEach(function (wrap) {
+        if (wrap.dataset.init === 'true') return;
+        wrap.dataset.init = 'true';
+        setup(wrap);
+      });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  })();
+</script>
 
 {% schema %}
 {

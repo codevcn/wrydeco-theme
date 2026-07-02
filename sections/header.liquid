@@ -31,8 +31,6 @@
 
     <nav class="header__nav">
       <ul class="header__nav-list">
-        <li><a href="{{ pages['faq'].url }}?view=faq" class="header__nav-item">FAQ</a></li>
-        <li><a href="{{ pages['about-us'].url }}?view=about-us" class="header__nav-item">About Us</a></li>
         <li class="header__nav-item-has-mega-menu">
           <a href="{{ routes.collections_url }}" class="header__nav-item">
             Collections
@@ -79,8 +77,21 @@
             assign explore_link = section.settings.mega_menu_link | default: routes.collections_url
           -%}
 
-          <div class="header__mega-menu">
+          <div class="header__mega-menu" id="MobileMenuDrawer-{{ section.id }}" data-mobile-menu-drawer>
+            <button
+              type="button"
+              class="mobile-menu__overlay"
+              aria-label="Close menu"
+              data-mobile-menu-close
+              tabindex="-1"
+            ></button>
             <div class="cmega custom-scrollbar">
+              <div class="mobile-menu__bar">
+                <span class="mobile-menu__title">Menu</span>
+                <button type="button" class="mobile-menu__close" aria-label="Close menu" data-mobile-menu-close>
+                  <span aria-hidden="true"></span>
+                </button>
+              </div>
               <div class="cmega__cats">
                 <p class="cmega__heading">Shop by Category</p>
                 <div class="cmega__groups-wrap">
@@ -283,15 +294,19 @@
             </div>
           </div>
         </li>
+        <li><a href="{{ pages['faq'].url }}?view=faq" class="header__nav-item">FAQ</a></li>
+        <li><a href="{{ pages['about-us'].url }}?view=about-us" class="header__nav-item">About Us</a></li>
       </ul>
     </nav>
   </div>
 
   <div class="header__right">
+    <a href="/pages/customization" class="header__consultation-link">Book Consultation</a>
+
     <a
       href="{{ routes.search_url }}"
       class="header__icon header__icon--search"
-      aria-label="{{ 'general.search.search' | t | default: 'Search' }}"
+      aria-label="Search"
       onclick="window.openSearchPopup(event)"
     >
       <svg
@@ -311,9 +326,7 @@
     <a
       href="{{ routes.cart_url }}"
       class="header__icon header__icon--cart"
-      aria-label="{{ 'templates.cart.cart' | t | default: 'Cart' }}"
-      aria-haspopup="dialog"
-      aria-controls="CartDrawer"
+      aria-label="Cart"
       data-cart-drawer-open
     >
       {{ 'icon-cart.svg' | inline_asset_content }}
@@ -324,7 +337,14 @@
       {%- endif -%}
     </a>
 
-    <button class="header__icon header__icon--menu" aria-haspopup="dialog" aria-label="Menu">
+    <button
+      class="header__icon header__icon--menu"
+      aria-haspopup="dialog"
+      aria-controls="MobileMenuDrawer-{{ section.id }}"
+      aria-expanded="false"
+      aria-label="Open menu"
+      data-mobile-menu-open
+    >
       <svg
         viewBox="0 0 24 24"
         fill="none"
@@ -343,14 +363,16 @@
 
 {% render 'search-popup' %}
 
-<script>
+{% javascript %}
   (function () {
     function initMegaMenu() {
       var groups = Array.prototype.slice.call(document.querySelectorAll('[data-mega-group]'));
       groups.forEach(function (group) {
         var toggle = group.querySelector('[data-mega-toggle]');
+        var panel = group.querySelector('.cmega__panel');
         if (!toggle || toggle.dataset.init === 'true') return;
         toggle.dataset.init = 'true';
+        if (panel) panel.inert = true;
         toggle.addEventListener('click', function (e) {
           e.preventDefault();
           var willOpen = !group.classList.contains('is-open');
@@ -359,21 +381,115 @@
             if (other === group) return;
             other.classList.remove('is-open');
             var t = other.querySelector('[data-mega-toggle]');
+            var otherPanel = other.querySelector('.cmega__panel');
             if (t) t.setAttribute('aria-expanded', 'false');
+            if (otherPanel) otherPanel.inert = true;
           });
           group.classList.toggle('is-open', willOpen);
           toggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+          if (panel) panel.inert = !willOpen;
         });
       });
     }
 
+    function initMobileMenu() {
+      var trigger = document.querySelector('[data-mobile-menu-open]');
+      var drawer = document.querySelector('[data-mobile-menu-drawer]');
+      if (!trigger || !drawer || drawer.dataset.mobileMenuInit === 'true') return;
+
+      drawer.dataset.mobileMenuInit = 'true';
+      var panel = drawer.querySelector('.cmega');
+      var closeButtons = Array.prototype.slice.call(drawer.querySelectorAll('[data-mobile-menu-close]'));
+      var mobileQuery = window.matchMedia('(max-width: 46.8125rem)');
+      var previousFocus = null;
+
+      function closeMenu(restoreFocus) {
+        drawer.classList.remove('is-mobile-open');
+        trigger.setAttribute('aria-expanded', 'false');
+        document.documentElement.classList.remove('mobile-menu-is-open');
+        if (mobileQuery.matches) drawer.setAttribute('aria-hidden', 'true');
+        if (restoreFocus && previousFocus instanceof HTMLElement) previousFocus.focus();
+      }
+
+      function openMenu() {
+        if (!mobileQuery.matches) return;
+        previousFocus = document.activeElement;
+        drawer.classList.add('is-mobile-open');
+        drawer.setAttribute('aria-hidden', 'false');
+        trigger.setAttribute('aria-expanded', 'true');
+        document.documentElement.classList.add('mobile-menu-is-open');
+        window.requestAnimationFrame(function () {
+          var closeButton = drawer.querySelector('.mobile-menu__close');
+          if (closeButton) closeButton.focus();
+        });
+      }
+
+      function syncMode() {
+        closeMenu(false);
+        if (mobileQuery.matches) {
+          drawer.setAttribute('role', 'dialog');
+          drawer.setAttribute('aria-modal', 'true');
+          drawer.setAttribute('aria-label', 'Shop by category');
+          drawer.setAttribute('aria-hidden', 'true');
+        } else {
+          drawer.removeAttribute('role');
+          drawer.removeAttribute('aria-modal');
+          drawer.removeAttribute('aria-label');
+          drawer.removeAttribute('aria-hidden');
+        }
+      }
+
+      trigger.addEventListener('click', openMenu);
+      closeButtons.forEach(function (button) {
+        button.addEventListener('click', function () {
+          closeMenu(true);
+        });
+      });
+
+      drawer.addEventListener('click', function (event) {
+        if (event.target.closest('a') && mobileQuery.matches) closeMenu(false);
+      });
+
+      document.addEventListener('keydown', function (event) {
+        if (!drawer.classList.contains('is-mobile-open')) return;
+        if (event.key === 'Escape') {
+          closeMenu(true);
+          return;
+        }
+        if (event.key !== 'Tab' || !panel) return;
+
+        var focusable = Array.prototype.slice
+          .call(panel.querySelectorAll('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'))
+          .filter(function (element) {
+            return element.offsetParent !== null && !element.closest('[inert]');
+          });
+        if (!focusable.length) return;
+        var first = focusable[0];
+        var last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      });
+
+      if (mobileQuery.addEventListener) mobileQuery.addEventListener('change', syncMode);
+      syncMode();
+    }
+
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initMegaMenu);
+      document.addEventListener('DOMContentLoaded', function () {
+        initMegaMenu();
+        initMobileMenu();
+      });
     } else {
       initMegaMenu();
+      initMobileMenu();
     }
   })();
-</script>
+{% endjavascript %}
 
 {% stylesheet %}
   .header {
@@ -388,6 +504,11 @@
     left: 0;
     width: 100%;
     z-index: 99;
+  }
+
+  /* Prevent injected elements (like Shopify's clear:both div) from breaking flex layout */
+  .header > :not(.header__left):not(.header__right) {
+    display: none !important;
   }
 
   .header__left {
@@ -421,11 +542,13 @@
     text-decoration: none;
     color: var(--color-earth-brown, #333);
     font-family: var(--font-roboto, sans-serif);
-    font-size: 16px;
+    font-size: 12px;
     font-weight: 700;
     text-transform: uppercase;
+    letter-spacing: 0.1em;
     transition: color var(--transition-fast, 0.2s);
     padding: 10px 0;
+    white-space: nowrap;
   }
 
   .header__nav-item .icon-caret {
@@ -461,6 +584,11 @@
     transform: translateY(5px);
     transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s ease;
     font-family: var(--font-body);
+  }
+
+  .mobile-menu__overlay,
+  .mobile-menu__bar {
+    display: none;
   }
 
   .cmega {
@@ -700,10 +828,259 @@
     }
   }
 
+  @media screen and (max-width: 46.8125rem) {
+    .mobile-menu-is-open {
+      overflow: hidden;
+    }
+
+    .header__nav {
+      position: absolute;
+      display: block;
+      inline-size: var(--sp-0);
+      block-size: var(--sp-0);
+    }
+
+    .header__nav-list {
+      display: block;
+      margin: var(--sp-0);
+      padding: var(--sp-0);
+    }
+
+    .header__nav-list > li:not(.header__nav-item-has-mega-menu) {
+      display: none;
+    }
+
+    .header__nav-item-has-mega-menu {
+      padding: var(--sp-0) !important;
+    }
+
+    .header__nav-item-has-mega-menu > .header__nav-item {
+      display: none;
+    }
+
+    .header__nav-item-has-mega-menu:hover .header__mega-menu,
+    .header__nav-item-has-mega-menu:focus-within .header__mega-menu,
+    .header__mega-menu {
+      position: fixed;
+      inset: var(--sp-0);
+      z-index: var(--z-overlay);
+      display: flex;
+      justify-content: flex-end;
+      inline-size: 100%;
+      max-inline-size: none;
+      block-size: 100dvh;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transform: none;
+      transition: opacity var(--timing-base) var(--ease-standard), visibility var(--timing-base) var(--ease-standard);
+    }
+
+    .header__nav-item-has-mega-menu:hover .header__mega-menu.is-mobile-open,
+    .header__nav-item-has-mega-menu:focus-within .header__mega-menu.is-mobile-open,
+    .header__mega-menu.is-mobile-open {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    .mobile-menu__overlay {
+      position: absolute;
+      inset: var(--sp-0);
+      display: block;
+      inline-size: 100%;
+      block-size: 100%;
+      padding: var(--sp-0);
+      border: 0;
+      background: var(--bg-overlay);
+      cursor: pointer;
+    }
+
+    .header__mega-menu .cmega {
+      position: relative;
+      z-index: var(--z-drawer);
+      display: block;
+      inline-size: calc(100% - var(--sp-4));
+      max-inline-size: calc(var(--sp-12) * 3);
+      block-size: 100dvh;
+      max-block-size: 100dvh;
+      margin: var(--sp-0) var(--sp-0) var(--sp-0) auto;
+      overflow: hidden auto;
+      overscroll-behavior: contain;
+      border: 0;
+      border-inline-start: var(--border-width) solid var(--border-light);
+      border-radius: var(--radius-none);
+      background: var(--color-milk);
+      box-shadow: var(--shadow-modal);
+      transform: translateX(100%);
+      transition: transform var(--timing-long) var(--ease-out);
+    }
+
+    .header__mega-menu.is-mobile-open .cmega {
+      transform: translateX(var(--sp-0));
+    }
+
+    .mobile-menu__bar {
+      position: sticky;
+      inset-block-start: var(--sp-0);
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-block-size: var(--sp-8);
+      padding-inline: var(--sp-4);
+      border-block-end: var(--border-width) solid var(--border-light);
+      background: var(--color-milk);
+    }
+
+    .mobile-menu__title {
+      color: var(--color-earth-brown);
+      font-family: var(--font-display);
+      font-size: var(--font-size-body-xl);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .mobile-menu__close {
+      position: relative;
+      inline-size: var(--sp-7);
+      block-size: var(--sp-7);
+      padding: var(--sp-0);
+      border: 0;
+      border-radius: var(--radius-full);
+      background: transparent;
+      color: var(--color-earth-brown);
+      cursor: pointer;
+    }
+
+    .mobile-menu__close::before,
+    .mobile-menu__close::after {
+      position: absolute;
+      inset-block-start: 50%;
+      inset-inline-start: 50%;
+      inline-size: var(--sp-5);
+      block-size: calc(var(--border-width) * 2);
+      background: currentColor;
+      content: '';
+      transform: translate(-50%, -50%) rotate(45deg);
+    }
+
+    .mobile-menu__close::after {
+      transform: translate(-50%, -50%) rotate(-45deg);
+    }
+
+    .mobile-menu__close:focus-visible,
+    .cmega__group-head:focus-visible,
+    .cmega__collections a:focus-visible {
+      outline: calc(var(--border-width) * 2) solid var(--color-sage);
+      outline-offset: calc(var(--border-width) * -2);
+    }
+
+    .header__mega-menu .cmega__cats {
+      block-size: auto;
+      padding: var(--sp-5) var(--sp-4) var(--sp-8);
+    }
+
+    .header__mega-menu .cmega__heading {
+      margin-block-end: var(--sp-3);
+      color: var(--color-earth-brown);
+      font-size: var(--font-size-caption);
+      letter-spacing: calc(var(--letter-spacing-wide) * 5);
+    }
+
+    .header__mega-menu .cmega__groups-wrap {
+      display: block;
+    }
+
+    .header__mega-menu .cmega__groups:first-child,
+    .header__mega-menu .cmega__groups:last-child {
+      padding-inline: var(--sp-0);
+      border: 0;
+    }
+
+    .header__mega-menu .cmega__groups:last-child .cmega__group:first-child {
+      border-block-start: var(--border-width) solid var(--border-light);
+    }
+
+    .header__mega-menu .cmega__group-head {
+      gap: var(--sp-4);
+      min-block-size: calc(var(--sp-8) + var(--sp-3));
+      padding: var(--sp-3) var(--sp-2);
+      border-radius: var(--radius-none);
+    }
+
+    .header__mega-menu .cmega__group-icon {
+      inline-size: var(--sp-7);
+      block-size: var(--sp-7);
+    }
+
+    .header__mega-menu .cmega__group-icon svg {
+      inline-size: var(--sp-6);
+      block-size: var(--sp-6);
+    }
+
+    .header__mega-menu .cmega__group-name {
+      color: var(--text-primary);
+      font-family: var(--font-display);
+      font-size: var(--font-size-body-lg);
+      font-weight: var(--font-weight-medium);
+      line-height: var(--line-height-tight);
+    }
+
+    .header__mega-menu .cmega__group-desc {
+      color: var(--text-secondary);
+      font-size: var(--font-size-caption);
+      line-height: var(--line-height-normal);
+    }
+
+    .header__mega-menu .cmega__group-caret svg {
+      inline-size: var(--sp-5);
+      block-size: var(--sp-5);
+    }
+
+    .header__mega-menu .cmega__collections a {
+      min-block-size: var(--sp-7);
+      padding: var(--sp-3) var(--sp-4) var(--sp-3) calc(var(--sp-7) + var(--sp-6));
+      color: var(--text-secondary);
+      font-size: var(--font-size-body-sm);
+    }
+
+    .header__mega-menu .cmega__feature {
+      display: none;
+    }
+  }
+
   .header__right {
     display: flex;
     justify-content: flex-end;
-    gap: var(--space-4, 10px);
+    align-items: center;
+    gap: var(--space-2, 10px);
+  }
+
+  .header__consultation-link {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    padding: 0 18px;
+    border: 1px solid color-mix(in srgb, var(--color-earth-brown) 54%, transparent);
+    border-radius: var(--radius-full);
+    background-color: rgba(247, 242, 236, 0.62);
+    color: var(--color-earth-brown);
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.08em;
+    text-decoration: none;
+    text-transform: uppercase;
+    transition: background-color var(--timing-short) var(--ease-standard),
+      color var(--timing-short) var(--ease-standard), transform var(--timing-short) var(--ease-standard);
+    margin-right: 10px;
+  }
+
+  .header__consultation-link:hover {
+    background-color: var(--color-earth-brown);
+    color: var(--color-cream);
+    transform: translateY(-1px);
   }
 
   .header__heading {
@@ -791,6 +1168,10 @@
   }
 
   @media screen and (min-width: 750px) {
+    .header__right {
+      gap: var(--space-4, 10px);
+    }
+
     .header {
       padding-inline: 32px;
       padding-block: var(--space-6, 12px);
@@ -802,6 +1183,24 @@
 
     .header__nav {
       display: block;
+    }
+  }
+
+  @media screen and (min-width: 1180px) {
+    .header__consultation-link {
+      display: inline-flex;
+    }
+  }
+
+  @media screen and (max-width: 1180px) and (min-width: 750px) {
+    .header__nav-list {
+      gap: 14px;
+      margin-inline: 12px;
+    }
+
+    .header__nav-item {
+      font-size: 11px;
+      letter-spacing: 0.07em;
     }
   }
 {% endstylesheet %}
