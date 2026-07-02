@@ -1,10 +1,15 @@
 {% comment %}
-  Renders product variant picker as labelled dropdowns (SIZE / FINISH).
+  Renders the product variant picker as circular FINISH swatches + a SIZE button
+  grid (made-to-order style).
 
-  The custom dropdown UI is layered on top of hidden radio inputs. Selecting a
-  dropdown item checks the matching radio and dispatches a `change` event, so
-  the existing variant logic (image swap + inventory below, and the Section
+  The visible controls are layered on top of hidden radio inputs. Selecting a
+  swatch/size checks the matching radio and dispatches a `change` event, so the
+  existing variant logic (image swap + inventory in this file, and the Section
   Rendering API in product-info.js) keeps working unchanged.
+
+  Availability is combo-aware: a value is disabled (with a strike) when no
+  AVAILABLE variant exists for it given the current selection of the other
+  options.
 
   @param {product} product
   @param {variant} current_variant
@@ -16,145 +21,150 @@
     .product-variant-picker {
       margin: 0;
       font-family: var(--font-body);
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-6);
     }
-    .variant-options {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: var(--sp-5);
-    }
-    .variant-field {
+
+    .pv__field {
       min-width: 0;
     }
-    .variant-field__head {
+
+    .pv__head {
       display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: var(--sp-2);
-      margin-bottom: var(--sp-2);
+      align-items: baseline;
+      gap: var(--sp-3);
+      margin-bottom: var(--sp-3);
     }
-    .variant-field__label {
+    .pv__label {
       font-size: var(--font-size-body-sm);
       font-weight: var(--font-weight-bold);
-      letter-spacing: var(--letter-spacing-wide);
+      letter-spacing: 0.14em;
       text-transform: uppercase;
+      color: var(--text-secondary);
+      margin: 0;
+    }
+    .pv__current {
+      font-size: var(--font-size-body-md);
+      font-weight: var(--font-weight-medium);
       color: var(--text-primary);
     }
-    .variant-field__guide {
+    .pv__guide {
+      margin-left: auto;
       font-size: var(--font-size-body-sm);
       color: var(--color-sage);
       text-decoration: none;
     }
-    .variant-field__guide:hover {
-      color: var(--color-sage);
+    .pv__guide:hover {
       text-decoration: underline;
       text-underline-offset: 3px;
     }
 
-    .variant-dropdown {
-      position: relative;
-    }
-    .variant-dropdown__trigger {
-      width: 100%;
+    /* --- Finish swatches --- */
+    .pv__swatches {
       display: flex;
-      align-items: center;
+      flex-wrap: wrap;
       gap: var(--sp-3);
-      height: 52px;
-      padding: 0 var(--sp-4);
-      background-color: transparent;
-      border: 1px solid var(--border-default);
-      border-radius: var(--radius-lg);
+    }
+    .pv__swatch {
+      position: relative;
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      border: none;
+      border-radius: var(--radius-full);
+      background: var(--swatch, var(--surface-tertiary));
+      background-size: cover;
+      background-position: center;
       cursor: pointer;
-      text-align: left;
+      outline: none;
+      transition: transform var(--timing-short) var(--ease-standard);
+    }
+    .pv__swatch::after {
+      content: '';
+      position: absolute;
+      inset: -5px;
+      border-radius: var(--radius-full);
+      border: 1.5px solid transparent;
+      transition: border-color var(--timing-short) var(--ease-standard);
+    }
+    .pv__swatch:hover {
+      transform: scale(1.05);
+    }
+    .pv__swatch.is-active::after {
+      border-color: var(--color-earth-brown, #4a2c18);
+    }
+    .pv__swatch:focus-visible::after {
+      border-color: var(--color-sage);
+    }
+    .pv__swatch.is-unavailable {
+      cursor: not-allowed;
+      opacity: 0.4;
+    }
+    .pv__swatch.is-unavailable::before {
+      content: '';
+      position: absolute;
+      inset: 50% 0 auto 0;
+      height: 1.5px;
+      background: var(--text-primary);
+      transform: rotate(-45deg);
+    }
+
+    /* --- Size grid --- */
+    .pv__sizes {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(56px, 92px));
+      justify-content: start;
+      gap: 10px;
+    }
+    .pv__size {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 48px;
+      padding: 0 var(--sp-3);
+      background: transparent;
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-md);
       font-family: var(--font-body);
       font-size: var(--font-size-body-md);
-      font-weight: var(--font-weight-regular);
+      font-weight: var(--font-weight-medium);
       color: var(--text-primary);
+      cursor: pointer;
       transition: border-color var(--timing-short) var(--ease-standard),
-        box-shadow var(--timing-short) var(--ease-standard);
+        background-color var(--timing-short) var(--ease-standard);
     }
-    .variant-dropdown__trigger:hover {
+    .pv__size:hover {
       border-color: var(--border-dark);
     }
-    .variant-dropdown__trigger[aria-expanded='true'] {
+    .pv__size:focus-visible {
       border-color: var(--color-sage);
       box-shadow: var(--shadow-focus);
     }
-    .variant-dropdown__swatch {
-      flex: 0 0 auto;
-      width: 20px;
-      height: 20px;
-      border-radius: var(--radius-full);
-      border: 1px solid var(--border-light);
+    .pv__size.is-active {
+      border-color: var(--color-earth-brown, #4a2c18);
+      background-color: var(--color-earth-brown, #4a2c18);
+      color: var(--color-cream, #f5f1ed);
     }
-    .variant-dropdown__value {
-      flex: 1 1 auto;
-      min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      font-family: var(--font-roboto);
-      letter-spacing: 0.01rem;
-    }
-    .variant-dropdown__chevron {
-      flex: 0 0 auto;
-      width: 18px;
-      height: 18px;
-      color: var(--text-secondary);
-      transition: transform var(--timing-short) var(--ease-standard);
-    }
-    .variant-dropdown__trigger[aria-expanded='true'] .variant-dropdown__chevron {
-      transform: rotate(180deg);
-    }
-
-    .variant-dropdown__panel {
-      position: absolute;
-      top: calc(100% + 6px);
-      left: 0;
-      right: 0;
-      z-index: 30;
-      margin: 0;
-      padding: var(--sp-1);
-      list-style: none;
-      background-color: var(--surface-elevated);
-      border: 1px solid var(--border-default);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-dropdown);
-      max-height: 280px;
-      overflow-y: auto;
-    }
-    .variant-dropdown__panel[hidden] {
-      display: none;
-    }
-    .variant-dropdown__item {
-      display: flex;
-      align-items: center;
-      gap: var(--sp-3);
-      margin: 0;
-      padding: var(--sp-3);
-      border-radius: var(--radius-md);
-      cursor: pointer;
-      font-size: var(--font-size-body-md);
-      color: var(--text-primary);
-      transition: background-color var(--timing-short) var(--ease-standard);
-    }
-    .variant-dropdown__item:hover {
-      background-color: var(--bg-secondary);
-    }
-    .variant-dropdown__item.is-selected {
-      background-color: var(--bg-secondary);
-      font-weight: var(--font-weight-semibold);
-    }
-    .variant-dropdown__item.is-disabled {
+    .pv__size.is-unavailable {
+      position: relative;
       color: var(--text-disabled);
+      border-color: var(--border-light);
       cursor: not-allowed;
-      text-decoration: line-through;
-      opacity: 0.65;
+      overflow: hidden;
     }
-    .variant-dropdown__item.is-disabled:hover {
-      background-color: transparent;
+    .pv__size.is-unavailable::after {
+      content: '';
+      position: absolute;
+      left: -10%;
+      top: 50%;
+      width: 120%;
+      height: 1px;
+      background: var(--text-disabled);
+      transform: rotate(-18deg);
     }
 
-    .variant-field__inputs {
+    .pv__inputs {
       position: absolute;
       width: 1px;
       height: 1px;
@@ -162,186 +172,268 @@
       clip: rect(0 0 0 0);
     }
 
-    @media screen and (max-width: 768px) {
-      .variant-options {
-        grid-template-columns: 1fr;
-        gap: var(--sp-4);
+    @media screen and (max-width: 600px) {
+      .pv__sizes {
+        grid-template-columns: repeat(4, minmax(52px, 1fr));
+      }
+    }
+    @media screen and (max-width: 380px) {
+      .pv__sizes {
+        grid-template-columns: repeat(3, minmax(52px, 1fr));
       }
     }
   {% endstyle %}
 
   <div class="product-variant-picker">
-    <div class="variant-options">
-      {% for option in product.options_with_values %}
-        {% assign downcased_option = option.name | downcase %}
-        {% assign is_color = false %}
-        {% if downcased_option contains 'color'
-          or downcased_option contains 'màu'
-          or downcased_option contains 'canvas'
-          or downcased_option contains 'finish'
-        %}
-          {% assign is_color = true %}
+    {% for option in product.options_with_values %}
+      {% comment %} Skip Shopify's default placeholder option {% endcomment %}
+      {% if option.values.size == 1 %}
+        {% assign only_value = option.values.first %}
+        {% if option.name == 'Title' or only_value == 'Default Title' %}
+          {% continue %}
         {% endif %}
+      {% endif %}
+      {% assign downcased_option = option.name | downcase %}
+      {% assign is_color = false %}
+      {% if downcased_option contains 'color'
+        or downcased_option contains 'colour'
+        or downcased_option contains 'màu'
+        or downcased_option contains 'finish'
+        or downcased_option contains 'wood'
+        or downcased_option contains 'canvas'
+      %}
+        {% assign is_color = true %}
+      {% endif %}
 
-        <div
-          class="variant-field variant-field--{% if is_color %}color{% else %}size{% endif %}"
-          data-variant-field
-        >
-          <div class="variant-field__head">
-            <span class="variant-field__label">{{ option.name }}</span>
-            {% unless is_color %}
-              <a class="variant-field__guide" href="#size-guide">Guide</a>
-            {% endunless %}
+      <div class="pv__field pv__field--{% if is_color %}color{% else %}size{% endif %}" data-vp-field>
+        {% if is_color %}
+          <div class="pv__head">
+            <span class="pv__label">{{ option.name }}</span>
+            <span
+              class="pv__current variant-option__selected-value"
+              data-vp-current
+              data-pos="{{ option.position }}"
+            >{{ option.selected_value }}</span>
           </div>
 
-          <div class="variant-dropdown" data-variant-dropdown>
-            <button
-              type="button"
-              class="variant-dropdown__trigger"
-              data-dropdown-trigger
-              aria-haspopup="listbox"
-              aria-expanded="false"
-              aria-label="{{ option.name | escape }}"
-            >
-              {% if is_color %}
-                <span
-                  class="variant-dropdown__swatch"
-                  data-dropdown-swatch
-                  style="background-color: {{ option.selected_value | downcase | remove: ' ' }};"
-                ></span>
-              {% endif %}
-              <span
-                class="variant-dropdown__value variant-option__selected-value"
-                id="OptionLabel-{{ section_id }}-{{ forloop.index0 }}"
-                data-dropdown-value
-              >
-                {{- option.selected_value -}}
-              </span>
-              <svg class="variant-dropdown__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-                <polyline points="6 9 12 15 18 9"></polyline>
-              </svg>
-            </button>
-
-            <ul class="variant-dropdown__panel" role="listbox" data-dropdown-panel hidden>
-              {% for value in option.values %}
-                <li
-                  class="variant-dropdown__item{% if option.selected_value == value %} is-selected{% endif %}{% unless value.available %} is-disabled{% endunless %}"
-                  role="option"
-                  data-dropdown-item
-                  data-value="{{ value | escape }}"
-                  data-radio-id="Option-{{ section_id }}-{{ option.position }}-{{ forloop.index0 }}"
-                  {% if is_color %}data-swatch="{{ value | downcase | remove: ' ' }}"{% endif %}
-                  aria-selected="{% if option.selected_value == value %}true{% else %}false{% endif %}"
-                  {% unless value.available %}aria-disabled="true"{% endunless %}
-                >
-                  {% if is_color %}
-                    <span
-                      class="variant-dropdown__swatch"
-                      style="background-color: {{ value | downcase | remove: ' ' }};"
-                    ></span>
-                  {% endif %}
-                  <span>{{ value }}</span>
-                </li>
-              {% endfor %}
-            </ul>
-          </div>
-
-          {% comment %} Hidden radios drive the existing variant logic {% endcomment %}
-          <div class="variant-field__inputs" aria-hidden="true">
+          <div class="pv__swatches" role="group" aria-label="{{ option.name | escape }}">
             {% for value in option.values %}
-              <span class="variant-swatch">
-                <input
-                  type="radio"
-                  id="Option-{{ section_id }}-{{ option.position }}-{{ forloop.index0 }}"
-                  name="options[{{ option.name | escape }}]"
-                  value="{{ value | escape }}"
-                  data-index="option{{ option.position }}"
-                  tabindex="-1"
-                  {% if option.selected_value == value %}
-                    checked="checked"
-                  {% endif %}
-                  {% unless value.available %}
-                    disabled
-                  {% endunless %}
-                >
-              </span>
+              {% liquid
+                assign sc = ''
+                assign sw_image = ''
+                if value.swatch.color != blank
+                  assign sc = value.swatch.color
+                endif
+                if value.swatch.image != blank
+                  assign sw_image = value.swatch.image | image_url: width: 88
+                endif
+                assign v_down = value | downcase | strip
+                if sc == ''
+                  case v_down
+                    when 'natural', 'natural oil', 'natural wood'
+                      assign sc = '#d8b78a'
+                    when 'light oak', 'oak'
+                      assign sc = '#c8a165'
+                    when 'ash'
+                      assign sc = '#d9cbb3'
+                    when 'maple'
+                      assign sc = '#e3c795'
+                    when 'cherry'
+                      assign sc = '#8a4b32'
+                    when 'walnut'
+                      assign sc = '#5c3a21'
+                    when 'dark walnut', 'dark brown', 'smoked', 'espresso'
+                      assign sc = '#3d2817'
+                    when 'matte black', 'black', 'ebony'
+                      assign sc = '#1a1815'
+                    when 'white', 'warm white', 'whitewash'
+                      assign sc = '#efe9df'
+                    else
+                      assign sc = '#c8a165'
+                  endcase
+                endif
+              %}
+              <button
+                type="button"
+                class="pv__swatch{% if option.selected_value == value %} is-active{% endif %}{% unless value.available %} is-unavailable{% endunless %}"
+                data-vp-btn
+                data-option-position="{{ option.position }}"
+                data-value="{{ value | escape }}"
+                data-radio-id="Option-{{ section_id }}-{{ option.position }}-{{ forloop.index0 }}"
+                aria-label="{{ option.name | escape }}: {{ value | escape }}"
+                aria-pressed="{% if option.selected_value == value %}true{% else %}false{% endif %}"
+                style="--swatch: {% if sw_image != blank %}url('{{ sw_image }}'){% else %}{{ sc }}{% endif %};"
+                {% unless value.available %}aria-disabled="true"{% endunless %}
+              ></button>
             {% endfor %}
           </div>
+        {% else %}
+          <div class="pv__head">
+            <span class="pv__label">{{ option.name }}</span>
+            <a class="pv__guide" href="#size-guide">Size guide</a>
+          </div>
+
+          <div class="pv__sizes" role="group" aria-label="{{ option.name | escape }}">
+            {% for value in option.values %}
+              <button
+                type="button"
+                class="pv__size{% if option.selected_value == value %} is-active{% endif %}{% unless value.available %} is-unavailable{% endunless %}"
+                data-vp-btn
+                data-option-position="{{ option.position }}"
+                data-value="{{ value | escape }}"
+                data-radio-id="Option-{{ section_id }}-{{ option.position }}-{{ forloop.index0 }}"
+                aria-pressed="{% if option.selected_value == value %}true{% else %}false{% endif %}"
+                {% unless value.available %}aria-disabled="true"{% endunless %}
+              >{{ value }}</button>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {% comment %} Hidden radios drive the existing variant logic {% endcomment %}
+        <div class="pv__inputs" aria-hidden="true">
+          {% for value in option.values %}
+            <span class="variant-swatch">
+              <input
+                type="radio"
+                id="Option-{{ section_id }}-{{ option.position }}-{{ forloop.index0 }}"
+                name="options[{{ option.name | escape }}]"
+                value="{{ value | escape }}"
+                data-index="option{{ option.position }}"
+                tabindex="-1"
+                {% if option.selected_value == value %}checked="checked"{% endif %}
+                {% unless value.available %}disabled{% endunless %}
+              >
+            </span>
+          {% endfor %}
         </div>
-      {% endfor %}
-    </div>
+      </div>
+    {% endfor %}
   </div>
+
+  <script type="application/json" data-vp-variants>
+    {{ product.variants | json }}
+  </script>
 
   <script>
     (function () {
-      function initVariantDropdowns() {
-        const dropdowns = document.querySelectorAll('[data-variant-dropdown]');
+      function initPicker(root) {
+        if (!root || root.dataset.vpInit === '1') return;
+        root.dataset.vpInit = '1';
 
-        const closeAll = (except) => {
-          document.querySelectorAll('[data-dropdown-panel]').forEach((panel) => {
-            if (panel === except || panel.hidden) return;
-            panel.hidden = true;
-            const trigger = panel.closest('[data-variant-dropdown]').querySelector('[data-dropdown-trigger]');
-            if (trigger) trigger.setAttribute('aria-expanded', 'false');
+        var dataEl = root.parentNode.querySelector('[data-vp-variants]') || document.querySelector('[data-vp-variants]');
+        var variants = [];
+        try { variants = JSON.parse(dataEl.textContent); } catch (e) { variants = []; }
+
+        var buttons = Array.prototype.slice.call(root.querySelectorAll('[data-vp-btn]'));
+
+        function selectedValues() {
+          var map = {};
+          root.querySelectorAll('.variant-swatch input[type="radio"]:checked').forEach(function (r) {
+            var pos = (r.dataset.index || '').replace('option', '');
+            if (pos) map[pos] = r.value;
           });
-        };
+          return map;
+        }
 
-        dropdowns.forEach((dd) => {
-          if (dd.dataset.ddInit === 'true') return;
-          dd.dataset.ddInit = 'true';
+        function optionsMatch(vOptions, sel) {
+          for (var pos in sel) {
+            if (vOptions[pos - 1] !== sel[pos]) return false;
+          }
+          return true;
+        }
 
-          const trigger = dd.querySelector('[data-dropdown-trigger]');
-          const panel = dd.querySelector('[data-dropdown-panel]');
-          const valueEl = dd.querySelector('[data-dropdown-value]');
-          const swatchEl = dd.querySelector('[data-dropdown-swatch]');
+        function comboAvailable(position, value) {
+          var sel = selectedValues();
+          return variants.some(function (v) {
+            if (!v.available) return false;
+            if (v.options[position - 1] !== value) return false;
+            for (var pos in sel) {
+              if (String(pos) === String(position)) continue;
+              if (v.options[pos - 1] !== sel[pos]) return false;
+            }
+            return true;
+          });
+        }
 
-          trigger.addEventListener('click', (event) => {
-            event.stopPropagation();
-            const willOpen = panel.hidden;
-            closeAll(willOpen ? panel : null);
-            panel.hidden = !willOpen;
-            trigger.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+        function setRadios(position, value) {
+          root.querySelectorAll('input[data-index="option' + position + '"]').forEach(function (r) {
+            r.checked = (r.value === value);
+          });
+        }
+
+        function syncToVariant(variant) {
+          variant.options.forEach(function (val, i) {
+            setRadios(i + 1, val);
+          });
+        }
+
+        function refresh() {
+          var sel = selectedValues();
+          buttons.forEach(function (btn) {
+            var pos = parseInt(btn.dataset.optionPosition, 10);
+            var val = btn.dataset.value;
+            var active = sel[pos] === val;
+            btn.classList.toggle('is-active', active);
+            btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+
+            var ok = comboAvailable(pos, val);
+            btn.classList.toggle('is-unavailable', !ok);
+            if (!ok) {
+              btn.setAttribute('aria-disabled', 'true');
+            } else {
+              btn.removeAttribute('aria-disabled');
+            }
           });
 
-          panel.addEventListener('click', (event) => {
-            const item = event.target.closest('[data-dropdown-item]');
-            if (!item || item.getAttribute('aria-disabled') === 'true') return;
+          root.querySelectorAll('[data-vp-current]').forEach(function (el) {
+            var pos = el.dataset.pos;
+            if (sel[pos]) el.textContent = sel[pos];
+          });
+        }
 
-            panel.querySelectorAll('[data-dropdown-item]').forEach((el) => {
-              const selected = el === item;
-              el.classList.toggle('is-selected', selected);
-              el.setAttribute('aria-selected', selected ? 'true' : 'false');
+        function dispatchChange() {
+          var target = root.querySelector('.variant-swatch input[type="radio"]:checked');
+          if (target) target.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+
+        buttons.forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            if (btn.getAttribute('aria-disabled') === 'true') return;
+            var pos = parseInt(btn.dataset.optionPosition, 10);
+            var val = btn.dataset.value;
+
+            setRadios(pos, val);
+
+            var sel = selectedValues();
+            var exists = variants.some(function (v) {
+              return v.available && optionsMatch(v.options, sel);
             });
 
-            valueEl.textContent = item.dataset.value;
-            if (swatchEl && item.dataset.swatch) {
-              swatchEl.style.backgroundColor = item.dataset.swatch;
+            if (!exists) {
+              var cand = variants.filter(function (v) { return v.available && v.options[pos - 1] === val; })[0];
+              if (cand) syncToVariant(cand);
             }
 
-            const radio = document.getElementById(item.dataset.radioId);
-            if (radio) {
-              radio.checked = true;
-              radio.dispatchEvent(new Event('change', { bubbles: true }));
-            }
-
-            panel.hidden = true;
-            trigger.setAttribute('aria-expanded', 'false');
+            dispatchChange();
+            refresh();
           });
         });
 
-        if (!window.__variantDropdownGlobalBound) {
-          window.__variantDropdownGlobalBound = true;
-          document.addEventListener('click', () => closeAll(null));
-          document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape') closeAll(null);
-          });
-        }
+        root.querySelectorAll('.variant-swatch input[type="radio"]').forEach(function (r) {
+          r.addEventListener('change', refresh);
+        });
+
+        refresh();
+      }
+
+      function initAll() {
+        document.querySelectorAll('.product-variant-picker').forEach(initPicker);
       }
 
       if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initVariantDropdowns);
+        document.addEventListener('DOMContentLoaded', initAll);
       } else {
-        initVariantDropdowns();
+        initAll();
       }
     })();
   </script>
@@ -350,7 +442,6 @@
     document.addEventListener('DOMContentLoaded', function () {
       const selectedOptions = {};
 
-      // 1. Khởi tạo giá trị ban đầu dựa vào các input đã được check
       const checkedInputs = document.querySelectorAll('.product-variant-picker input[type="radio"]:checked');
       checkedInputs.forEach(input => {
         selectedOptions[input.dataset.index] = input.value;
@@ -359,14 +450,12 @@
       const variantInputs = document.querySelectorAll('.product-variant-picker input[type="radio"]');
       const productVariants = {{ product.variants | json }};
 
-      // 2. Bắt buộc: Tự map dữ liệu Metafield bằng Liquid vì bộ lọc `| json` của Shopify sẽ xóa mất Metafield
       const variantMetafieldsMap = {
         {% for v in product.variants %}
           "{{ v.id }}": {{ v.metafields.custom.variant_images.value | default: v.metafields.custom.variant_images | json }}{% unless forloop.last %},{% endunless %}
         {% endfor %}
       };
 
-      // Tự map dữ liệu Inventory vì API/json đôi khi không trả về inventory_quantity
       const variantInventoryMap = {
         {% for v in product.variants %}
           "{{ v.id }}": {
@@ -380,10 +469,8 @@
 
       for (const input of variantInputs) {
         input.addEventListener('change', function () {
-          // 3. Cập nhật giá trị mới khi user chọn
           selectedOptions[input.dataset.index] = input.value;
 
-          // 4. Tìm variant khớp với toàn bộ lựa chọn
           const selectedVariant = productVariants.find(variant => {
             return Object.keys(selectedOptions).every(key => {
               return variant[key] === selectedOptions[key];
@@ -391,17 +478,14 @@
           });
 
           if (selectedVariant) {
-            // Gắn thêm metafield vào selectedVariant để tiện sử dụng
             selectedVariant.metafields = {
               custom: {
                 variant_images: variantMetafieldsMap[selectedVariant.id]
               }
             };
 
-            // Logic lọc ảnh theo variant-images
             const variantImagesRaw = selectedVariant.metafields.custom.variant_images;
             if (variantImagesRaw) {
-              // Phân tích ra thành 1 mảng variant-image[] (string[])
               const variantImages = variantImagesRaw.split('\n').map(s => s.trim().replace(/<br\s*\/?>/g, '')).filter(s => s !== '');
 
               if (variantImages.length > 0) {
@@ -410,22 +494,19 @@
 
                 let firstMatchedThumbnail = null;
 
-                // Lọc thumbnails
                 thumbnails.forEach(thumb => {
                   const alt = thumb.dataset.alt || '';
-                  // Kiểm tra alt có chứa bất kỳ string nào trong mảng variantImages không
                   const isMatch = variantImages.some(vImg => alt.includes(vImg));
 
                   if (isMatch) {
-                    thumb.style.display = ''; // Show
+                    thumb.style.display = '';
                     if (!firstMatchedThumbnail) firstMatchedThumbnail = thumb;
                   } else {
-                    thumb.style.display = 'none'; // Hide
+                    thumb.style.display = 'none';
                     thumb.classList.remove('is-active');
                   }
                 });
 
-                // Xóa active khỏi các main items không khớp
                 mainItems.forEach(item => {
                   const alt = item.dataset.alt || '';
                   const isMatch = variantImages.some(vImg => alt.includes(vImg));
@@ -434,20 +515,16 @@
                   }
                 });
 
-                // Chọn ảnh đầu tiên trong pickedMediaList
                 if (firstMatchedThumbnail) {
                   firstMatchedThumbnail.click();
                 }
               } else {
-                // Nếu mảng rỗng thì show hết
                 document.querySelectorAll('.product-gallery__thumbnail').forEach(t => t.style.display = '');
               }
             } else {
-              // Không có metafield -> show hết
               document.querySelectorAll('.product-gallery__thumbnail').forEach(t => t.style.display = '');
             }
 
-            // Cập nhật Inventory Status
             const invInfo = variantInventoryMap[selectedVariant.id];
             const invStatusEl = document.querySelector('[data-inventory-status]');
             if (invStatusEl && invInfo) {

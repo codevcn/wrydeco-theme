@@ -31,8 +31,6 @@
 
     <nav class="header__nav">
       <ul class="header__nav-list">
-        <li><a href="{{ pages['faq'].url }}?view=faq" class="header__nav-item">FAQ</a></li>
-        <li><a href="{{ pages['about-us'].url }}?view=about-us" class="header__nav-item">About Us</a></li>
         <li class="header__nav-item-has-mega-menu">
           <a href="/pages/collections/all" class="header__nav-item">
             Collections
@@ -248,15 +246,22 @@
             </div>
           </div>
         </li>
+        <li><a href="/pages/contact" class="header__nav-item">Custom Furniture</a></li>
+        <li><a href="/pages/materials" class="header__nav-item">Materials</a></li>
+        <li><a href="/pages/projects" class="header__nav-item">Projects</a></li>
+        <li><a href="{{ pages['about-us'].url }}?view=about-us" class="header__nav-item">Craftsmanship</a></li>
+        <li><a href="{{ pages['faq'].url }}?view=faq" class="header__nav-item">FAQ</a></li>
       </ul>
     </nav>
   </div>
 
   <div class="header__right">
+    <a href="/pages/contact" class="header__consultation-link">Book Consultation</a>
+
     <a
       href="{{ routes.search_url }}"
       class="header__icon header__icon--search"
-      aria-label="{{ 'general.search.search' | t | default: 'Search' }}"
+      aria-label="Search"
       onclick="window.openSearchPopup(event)"
     >
       <svg
@@ -276,7 +281,7 @@
     <a
       href="{{ routes.cart_url }}"
       class="header__icon header__icon--cart"
-      aria-label="{{ 'templates.cart.cart' | t | default: 'Cart' }}"
+      aria-label="Cart"
     >
       {{ 'icon-cart.svg' | inline_asset_content }}
       {%- if cart.item_count > 0 -%}
@@ -350,12 +355,14 @@
     gap: 6px;
     text-decoration: none;
     color: var(--color-earth-brown, #333);
-    font-family: var(--font-roboto, sans-serif);
-    font-size: 16px;
+    font-family: var(--font-body, sans-serif);
+    font-size: 12px;
     font-weight: 700;
     text-transform: uppercase;
+    letter-spacing: 0.1em;
     transition: color var(--transition-fast, 0.2s);
     padding: 10px 0;
+    white-space: nowrap;
   }
 
   .header__nav-item .icon-caret {
@@ -765,7 +772,35 @@
   .header__right {
     display: flex;
     justify-content: flex-end;
+    align-items: center;
     gap: var(--space-4, 10px);
+  }
+
+  .header__consultation-link {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    padding: 0 18px;
+    border: 1px solid color-mix(in srgb, var(--color-earth-brown) 54%, transparent);
+    border-radius: var(--radius-full);
+    background-color: rgba(247, 242, 236, 0.62);
+    color: var(--color-earth-brown);
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.08em;
+    text-decoration: none;
+    text-transform: uppercase;
+    transition: background-color var(--timing-short) var(--ease-standard),
+      color var(--timing-short) var(--ease-standard),
+      transform var(--timing-short) var(--ease-standard);
+  }
+
+  .header__consultation-link:hover {
+    background-color: var(--color-earth-brown);
+    color: var(--color-cream);
+    transform: translateY(-1px);
   }
 
   .header__heading {
@@ -860,6 +895,24 @@
 
     .header__nav {
       display: block;
+    }
+  }
+
+  @media screen and (min-width: 1180px) {
+    .header__consultation-link {
+      display: inline-flex;
+    }
+  }
+
+  @media screen and (max-width: 1180px) and (min-width: 750px) {
+    .header__nav-list {
+      gap: 14px;
+      margin-inline: 12px;
+    }
+
+    .header__nav-item {
+      font-size: 11px;
+      letter-spacing: 0.07em;
     }
   }
 {% endstylesheet %}

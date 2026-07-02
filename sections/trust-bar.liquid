@@ -1,0 +1,158 @@
+<div class="trust-bar">
+  <div class="trust-bar__inner page-width">
+    {%- for block in section.blocks -%}
+      <div class="trust-bar__item" {{ block.shopify_attributes }}>
+        <span class="trust-bar__icon" aria-hidden="true">
+          {%- render 'hero-feature-icon', icon: block.settings.icon -%}
+        </span>
+        <span class="trust-bar__text">
+          <span class="trust-bar__title">{{ block.settings.title }}</span>
+          {%- if block.settings.subtitle != blank -%}
+            <span class="trust-bar__subtitle">{{ block.settings.subtitle }}</span>
+          {%- endif -%}
+        </span>
+      </div>
+    {%- endfor -%}
+  </div>
+</div>
+
+{% stylesheet %}
+  .trust-bar {
+    display: block;
+    background-color: var(--surface-elevated, #ffffff);
+    border-top: 1px solid var(--border-light, #e8e4df);
+    border-bottom: 1px solid var(--border-light, #e8e4df);
+  }
+
+  .trust-bar__inner {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    align-items: center;
+    max-width: var(--page-max-width, 1440px);
+    margin: 0 auto;
+    padding: var(--sp-5, 24px) var(--container-padding-x, 48px);
+    gap: var(--sp-4, 16px);
+  }
+
+  .trust-bar__item {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3, 12px);
+    min-width: 0;
+  }
+
+  .trust-bar__item + .trust-bar__item {
+    padding-left: var(--sp-4, 16px);
+    border-left: 1px solid var(--border-light, #e8e4df);
+  }
+
+  .trust-bar__icon {
+    color: var(--color-bark, #6b5d52);
+    flex-shrink: 0;
+    display: flex;
+  }
+
+  .trust-bar__icon svg {
+    width: 26px;
+    height: 26px;
+  }
+
+  .trust-bar__text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .trust-bar__title {
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-sm, 14px);
+    font-weight: var(--font-weight-semibold, 600);
+    line-height: var(--line-height-snug, 1.3);
+    color: var(--text-primary, #1a1815);
+  }
+
+  .trust-bar__subtitle {
+    font-family: var(--font-body);
+    font-size: var(--font-size-caption, 12px);
+    line-height: var(--line-height-snug, 1.3);
+    color: var(--text-secondary, #6b5d52);
+  }
+
+  /* --- Responsive (desktop-first overrides) --- */
+  @media screen and (max-width: 1024px) {
+    .trust-bar__inner {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: var(--sp-5, 24px);
+    }
+    .trust-bar__item:nth-child(3n + 1) {
+      padding-left: 0;
+      border-left: 0;
+    }
+  }
+
+  @media screen and (max-width: 600px) {
+    .trust-bar__inner {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--sp-4, 16px);
+    }
+    .trust-bar__item:nth-child(odd) {
+      padding-left: 0;
+      border-left: 0;
+    }
+    .trust-bar__item:nth-child(even) {
+      padding-left: var(--sp-4, 16px);
+      border-left: 1px solid var(--border-light, #e8e4df);
+    }
+    .trust-bar__icon svg {
+      width: 22px;
+      height: 22px;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Trust Bar",
+  "tag": "section",
+  "class": "section section-trust-bar",
+  "settings": [],
+  "blocks": [
+    {
+      "type": "trust_item",
+      "name": "Trust item",
+      "settings": [
+        {
+          "type": "select",
+          "id": "icon",
+          "label": "Icon",
+          "options": [
+            { "value": "sourcing", "label": "Ethical sourcing" },
+            { "value": "artisan", "label": "Artisan / hand" },
+            { "value": "made", "label": "Made to order" },
+            { "value": "truck", "label": "Delivery" },
+            { "value": "warranty", "label": "Warranty / shield" },
+            { "value": "support", "label": "Support" }
+          ],
+          "default": "sourcing"
+        },
+        { "type": "text", "id": "title", "label": "Title", "default": "Ethical Sourcing" },
+        { "type": "text", "id": "subtitle", "label": "Subtitle", "default": "Sustainably harvested wood" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Trust Bar",
+      "blocks": [
+        { "type": "trust_item", "settings": { "icon": "sourcing", "title": "Ethical Sourcing", "subtitle": "Sustainably harvested wood" } },
+        { "type": "trust_item", "settings": { "icon": "artisan", "title": "Handcrafted by Artisans", "subtitle": "Decades of experience" } },
+        { "type": "trust_item", "settings": { "icon": "made", "title": "Made to Order", "subtitle": "Limited, not mass produced" } },
+        { "type": "trust_item", "settings": { "icon": "truck", "title": "Secure & Insured Delivery", "subtitle": "White-glove service" } },
+        { "type": "trust_item", "settings": { "icon": "warranty", "title": "5-Year Warranty", "subtitle": "For structural integrity" } },
+        { "type": "trust_item", "settings": { "icon": "support", "title": "Dedicated Support", "subtitle": "We're here for you" } }
+      ]
+    }
+  ]
+}
+{% endschema %}
