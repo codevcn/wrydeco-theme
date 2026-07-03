@@ -43,6 +43,10 @@
       font-size: var(--font-size-body-sm);
       color: var(--color-sage);
       text-decoration: none;
+      background: none;
+      border: none;
+      padding: 0;
+      cursor: pointer;
     }
     .variant-field__guide:hover {
       color: var(--color-sage);
@@ -189,9 +193,18 @@
         >
           <div class="variant-field__head">
             <span class="variant-field__label">{{ option.name }}</span>
-            {% unless is_color %}
-              <a class="variant-field__guide" href="#size-guide">Guide</a>
-            {% endunless %}
+            {% if downcased_option == 'size' or downcased_option == 'kích thước' %}
+              {% if product.metafields.custom.size_guide != blank %}
+                <button
+                  type="button"
+                  class="variant-field__guide"
+                  aria-haspopup="dialog"
+                  onclick="window.openSizeGuidePopup && window.openSizeGuidePopup()"
+                >
+                  Guide
+                </button>
+              {% endif %}
+            {% endif %}
           </div>
 
           <div class="variant-dropdown" data-variant-dropdown>
@@ -217,7 +230,14 @@
               >
                 {{- option.selected_value -}}
               </span>
-              <svg class="variant-dropdown__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+              <svg
+                class="variant-dropdown__chevron"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                aria-hidden="true"
+              >
                 <polyline points="6 9 12 15 18 9"></polyline>
               </svg>
             </button>
@@ -230,9 +250,13 @@
                   data-dropdown-item
                   data-value="{{ value | escape }}"
                   data-radio-id="Option-{{ section_id }}-{{ option.position }}-{{ forloop.index0 }}"
-                  {% if is_color %}data-swatch="{{ value | downcase | remove: ' ' }}"{% endif %}
+                  {% if is_color %}
+                    data-swatch="{{ value | downcase | remove: ' ' }}"
+                  {% endif %}
                   aria-selected="{% if option.selected_value == value %}true{% else %}false{% endif %}"
-                  {% unless value.available %}aria-disabled="true"{% endunless %}
+                  {% unless value.available %}
+                    aria-disabled="true"
+                  {% endunless %}
                 >
                   {% if is_color %}
                     <span
@@ -391,6 +415,27 @@
           });
 
           if (selectedVariant) {
+            // Instant, no-API updates the moment a variant is picked:
+            // price + compare + "Save", the hidden variant id used by the form,
+            // the add-to-cart button state, and the ?variant= URL param.
+            if (window.updateProductPrice) {
+              window.updateProductPrice(selectedVariant.id);
+            }
+
+            const variantIdInput = document.querySelector('[data-variant-id]');
+            if (variantIdInput) variantIdInput.value = selectedVariant.id;
+
+            const addText = document.querySelector('[data-add-to-cart-text]');
+            const addBtn = document.querySelector('form[data-type="add-to-cart-form"] button[name="add"]');
+            if (addText) addText.textContent = selectedVariant.available ? 'ADD TO CART' : 'SOLD OUT';
+            if (addBtn) addBtn.disabled = !selectedVariant.available;
+
+            if (window.history && window.history.replaceState) {
+              const nextUrl = new URL(window.location.href);
+              nextUrl.searchParams.set('variant', selectedVariant.id);
+              window.history.replaceState({}, '', nextUrl);
+            }
+
             // Gắn thêm metafield vào selectedVariant để tiện sử dụng
             selectedVariant.metafields = {
               custom: {
@@ -486,3 +531,157 @@
     });
   </script>
 {% endunless %}
+
+{% if product.metafields.custom.size_guide != blank %}
+  <size-guide-popup class="size-guide-popup-wrapper">
+    <div class="size-guide-popup__overlay">
+      <div class="size-guide-popup__content" role="dialog" aria-modal="true" aria-labelledby="SizeGuideTitle">
+        <div class="size-guide-popup__header">
+          <h2 class="size-guide-popup__heading" id="SizeGuideTitle">Product Size Guide</h2>
+          <button class="size-guide-popup__close" type="button" aria-label="Close size guide">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <div class="size-guide-popup__body custom-scrollbar">
+          <img
+            src="{{ product.metafields.custom.size_guide }}"
+            alt="Size Guide for {{ product.title | escape }}"
+            loading="lazy"
+            style="max-width: 100%; height: auto; display: block; margin: 0 auto;"
+          >
+        </div>
+      </div>
+    </div>
+  </size-guide-popup>
+
+  <script>
+    class SizeGuidePopup extends HTMLElement {
+      constructor() {
+        super();
+        this.overlay = this.querySelector('.size-guide-popup__overlay');
+        this.closeBtn = this.querySelector('.size-guide-popup__close');
+
+        if (this.closeBtn) this.closeBtn.addEventListener('click', this.close.bind(this));
+        if (this.overlay) {
+          this.overlay.addEventListener('click', (e) => {
+            if (e.target === this.overlay) this.close();
+          });
+        }
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape' && this.hasAttribute('open')) this.close();
+        });
+
+        window.openSizeGuidePopup = (e) => {
+          if (e) e.preventDefault();
+          this.open();
+        };
+      }
+
+      open() {
+        this.setAttribute('open', '');
+        document.body.style.overflow = 'hidden';
+      }
+
+      close() {
+        this.removeAttribute('open');
+        document.body.style.overflow = '';
+      }
+    }
+
+    if (!customElements.get('size-guide-popup')) {
+      customElements.define('size-guide-popup', SizeGuidePopup);
+    }
+  </script>
+
+  <style>
+    size-guide-popup {
+      display: block;
+    }
+    .size-guide-popup__overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--sp-6, 24px);
+      background-color: rgba(23, 21, 21, 0.4);
+      backdrop-filter: blur(4px);
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity var(--timing-short, 0.2s) ease, visibility var(--timing-short, 0.2s) ease;
+    }
+    size-guide-popup[open] .size-guide-popup__overlay {
+      opacity: 1;
+      visibility: visible;
+    }
+    .size-guide-popup__content {
+      display: flex;
+      flex-direction: column;
+      width: min(100%, 800px);
+      max-height: calc(100dvh - var(--sp-8, 32px));
+      overflow: hidden;
+      border: 1px solid var(--border-light, #e8e3df);
+      border-radius: var(--radius-lg, 8px);
+      background-color: var(--surface-elevated, #fff);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+      opacity: 0;
+      transform: translateY(-8px);
+      transition: transform var(--timing-short, 0.2s) ease, opacity var(--timing-short, 0.2s) ease;
+    }
+    size-guide-popup[open] .size-guide-popup__content {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .size-guide-popup__header {
+      position: relative;
+      padding: var(--sp-4, 16px) var(--sp-6, 24px);
+      border-bottom: 1px solid var(--border-light, #e8e3df);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background-color: var(--color-milk, #fdfaf7);
+    }
+    .size-guide-popup__heading {
+      margin: 0;
+      font-family: var(--font-display, 'Fraunces', serif);
+      font-size: var(--font-size-body-xl, 20px);
+      letter-spacing: 0.01rem;
+      word-spacing: 0.02rem;
+    }
+    .size-guide-popup__close {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      border: 0;
+      border-radius: 50%;
+      background: transparent;
+      cursor: pointer;
+    }
+    .size-guide-popup__close:hover {
+      background-color: var(--surface-tertiary, #f5f1ed);
+    }
+    .size-guide-popup__close svg {
+      width: 20px;
+      height: 20px;
+    }
+    .size-guide-popup__body {
+      padding: var(--sp-6, 24px);
+      overflow-y: auto;
+      text-align: center;
+      background-color: var(--color-milk, #fdfaf7);
+    }
+  </style>
+{% endif %}

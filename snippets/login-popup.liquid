@@ -1,0 +1,305 @@
+{% doc %}
+  Renders the login popup dialog.
+{% enddoc %}
+
+<login-popup class="login-popup-wrapper">
+  <div class="login-popup__overlay">
+    <div class="login-popup__content" role="dialog" aria-modal="true" aria-labelledby="LoginPopupTitle">
+      <div class="login-popup__header">
+        <h2 class="login-popup__heading" id="LoginPopupTitle">Log In</h2>
+        <p class="login-popup__subtitle">Access your account to view your bespoke orders.</p>
+        <button class="login-popup__close" type="button" aria-label="Close login">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="login-popup__body">
+        {% form 'customer_login', class: 'login-popup__form' %}
+          {{ form.errors | default_errors }}
+
+          <div class="login-popup__input-group">
+            <label for="CustomerEmail">Email</label>
+            <input
+              type="email"
+              name="customer[email]"
+              id="CustomerEmail"
+              autocomplete="email"
+              autocorrect="off"
+              autocapitalize="off"
+              required
+              class="login-popup__input"
+              placeholder="Enter your email..."
+            >
+          </div>
+
+          <div class="login-popup__input-group">
+            <label for="CustomerPassword">Password</label>
+            <input
+              type="password"
+              name="customer[password]"
+              id="CustomerPassword"
+              required
+              class="login-popup__input"
+              placeholder="Enter your password..."
+            >
+          </div>
+
+          <button type="submit" class="login-popup__submit button button--primary">Sign In</button>
+        {% endform %}
+
+        <div class="login-popup__divider" role="separator">
+          <span>New to WRYDECO?</span>
+        </div>
+
+        <a href="{{ routes.account_register_url }}" class="login-popup__register">Create an account</a>
+      </div>
+    </div>
+  </div>
+</login-popup>
+
+<script>
+  class LoginPopup extends HTMLElement {
+    constructor() {
+      super();
+      this.overlay = this.querySelector('.login-popup__overlay');
+      this.closeBtn = this.querySelector('.login-popup__close');
+
+      if (this.closeBtn) this.closeBtn.addEventListener('click', this.close.bind(this));
+      if (this.overlay) {
+        this.overlay.addEventListener('click', (e) => {
+          if (e.target === this.overlay) this.close();
+        });
+      }
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && this.hasAttribute('open')) this.close();
+      });
+
+      // Global function to open popup
+      window.openLoginPopup = (e) => {
+        if (e) e.preventDefault();
+        this.open();
+      };
+    }
+
+    open() {
+      this.setAttribute('open', '');
+      document.body.style.overflow = 'hidden';
+      const firstInput = this.querySelector('input');
+      if (firstInput) setTimeout(() => firstInput.focus(), 100);
+    }
+
+    close() {
+      this.removeAttribute('open');
+      document.body.style.overflow = '';
+    }
+  }
+
+  if (!customElements.get('login-popup')) {
+    customElements.define('login-popup', LoginPopup);
+  }
+</script>
+
+{% stylesheet %}
+  login-popup {
+    display: block;
+  }
+
+  .login-popup__overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--sp-6);
+    background-color: var(--bg-overlay);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--timing-short) var(--ease-standard), visibility var(--timing-short) var(--ease-standard);
+  }
+
+  login-popup[open] .login-popup__overlay {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .login-popup__content {
+    display: flex;
+    flex-direction: column;
+    width: min(100%, calc(var(--sp-8) * 7));
+    max-height: calc(100dvh - var(--sp-8));
+    overflow: hidden;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    background: radial-gradient(circle at top, var(--color-milk) 0%, var(--surface-elevated) 72%);
+    box-shadow: var(--shadow-modal);
+    contain: layout paint;
+    will-change: transform, opacity;
+    opacity: 0;
+    transform: translateY(calc(var(--sp-2) * -1));
+    transition: transform var(--timing-short) var(--ease-out), opacity var(--timing-short) var(--ease-standard);
+  }
+
+  login-popup[open] .login-popup__content {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .login-popup__header {
+    position: relative;
+    padding: var(--sp-4) var(--sp-5) var(--sp-4);
+    text-align: center;
+  }
+
+  .login-popup__heading {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--font-size-display-sm);
+    color: var(--text-primary);
+  }
+
+  .login-popup__subtitle {
+    margin: var(--sp-2) 0 0;
+    font-size: var(--font-size-body-sm);
+    color: var(--text-secondary);
+  }
+
+  .login-popup__close {
+    position: absolute;
+    top: var(--sp-3);
+    right: var(--sp-3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--sp-7);
+    height: var(--sp-7);
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-full);
+    background: transparent;
+    color: var(--color-bark);
+    cursor: pointer;
+  }
+
+  .login-popup__close:hover {
+    background-color: var(--surface-tertiary);
+  }
+
+  .login-popup__close svg {
+    width: var(--sp-5);
+    height: var(--sp-5);
+  }
+
+  .login-popup__body {
+    padding: 0 var(--sp-5) var(--sp-5);
+  }
+
+  .login-popup__form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-4);
+  }
+
+  .login-popup__input-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+  }
+
+  .login-popup__input-group label {
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-medium);
+    color: var(--text-primary);
+  }
+
+  .login-popup__input {
+    width: 100%;
+    min-height: var(--sp-7);
+    padding: var(--sp-3) var(--sp-4);
+    border: 1px solid var(--border-dark);
+    border-radius: var(--radius-md);
+    background-color: var(--surface-elevated);
+    outline: none;
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-md);
+    color: var(--text-primary);
+  }
+
+  .login-popup__input:focus {
+    border-color: var(--color-earth-brown);
+    box-shadow: var(--shadow-focus);
+  }
+
+  .login-popup__submit {
+    margin-top: var(--sp-2);
+    width: 100%;
+    padding: var(--sp-3);
+    border-radius: var(--radius-md);
+    background-color: var(--color-earth-brown);
+    color: var(--text-inverse);
+    border: none;
+    font-weight: var(--font-weight-semibold);
+    cursor: pointer;
+    font-size: var(--font-size-body-md);
+  }
+
+  .login-popup__submit:hover {
+    opacity: 0.9;
+  }
+
+  .login-popup__divider {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    margin-top: var(--sp-5);
+    color: var(--text-secondary);
+    font-size: var(--font-size-caption);
+  }
+  .login-popup__divider::before,
+  .login-popup__divider::after {
+    content: '';
+    flex: 1 1 auto;
+    height: 1px;
+    background-color: var(--border-light);
+  }
+
+  .login-popup__register {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: var(--sp-7);
+    margin-top: var(--sp-4);
+    padding: var(--sp-3);
+    border: 1px solid var(--color-earth-brown);
+    border-radius: var(--radius-md);
+    background-color: transparent;
+    color: var(--color-earth-brown);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-md);
+    font-weight: var(--font-weight-semibold);
+    text-decoration: none;
+    transition: background-color var(--timing-short) var(--ease-standard),
+      color var(--timing-short) var(--ease-standard);
+  }
+  .login-popup__register:hover {
+    background-color: var(--color-earth-brown);
+    color: var(--text-inverse);
+  }
+
+  @media screen and (max-width: 768px) {
+    .login-popup__close {
+      top: var(--sp-1);
+      right: var(--sp-1);
+    }
+  }
+{% endstylesheet %}

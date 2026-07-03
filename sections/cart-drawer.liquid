@@ -3,6 +3,7 @@
   class="cart-drawer"
   data-cart-drawer-shell
   data-section-id="{{ section.id }}"
+  data-cart-count="{{ cart.item_count }}"
   aria-hidden="true"
 >
   <button
@@ -153,7 +154,7 @@
             <span>Subtotal</span>
             <strong>{{ cart.total_price | money }}</strong>
           </div>
-          <div class="cart-drawer__summary-row">
+          <div class="cart-drawer__summary-row cart-drawer__summary-row--shipping">
             <span class="cart-drawer__shipping-label">
               Shipping
               <span
@@ -715,8 +716,11 @@
       const wasOpen = shell.classList.contains('is-open') || open;
       shell.replaceWith(replacement);
       if (wasOpen) openDrawer();
-      const countText = replacement.querySelector('[data-cart-drawer-count]')?.textContent || '';
-      updateCartBubble(Number.parseInt(countText, 10) || 0);
+      // Read the exact item count from a clean numeric attribute — the visible
+      // "(N pieces added" text starts with "(", so parseInt on it returned NaN
+      // and wiped the header badge.
+      const count = Number.parseInt(replacement.dataset.cartCount, 10);
+      updateCartBubble(Number.isNaN(count) ? 0 : count);
     };
 
     const changeLine = async (lineItem, quantity) => {

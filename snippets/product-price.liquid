@@ -21,11 +21,15 @@
     line-height: var(--line-height-tight);
     letter-spacing: var(--letter-spacing-normal);
   }
+  /* Original price + savings show only when the current variant is on sale
+     (the container gets .product-price--has-sale). Toggling the class — not a
+     hard `display: none !important` — lets the price update instantly per variant. */
   .product-price__compare {
     font-family: var(--font-roboto);
     font-size: var(--font-size-body-2xl);
     color: var(--text-tertiary);
     text-decoration: line-through;
+    display: none;
   }
   .product-price__savings {
     font-family: var(--font-roboto);
@@ -37,6 +41,13 @@
     border-radius: 4px;
     line-height: 1;
     letter-spacing: 0.05em;
+    display: none;
+  }
+  .product-price--has-sale .product-price__compare {
+    display: inline;
+  }
+  .product-price--has-sale .product-price__savings {
+    display: inline-block;
   }
 
   @media screen and (max-width: 768px) {
@@ -69,3 +80,84 @@
     <span class="product-price__savings" data-savings-price style="display: none;"></span>
   {% endif %}
 </div>
+
+{%- comment -%}
+  Pre-formatted price data for every variant so the price, compare-at price and
+  "Save" amount can be recalculated instantly on variant change — no API call.
+{%- endcomment -%}
+<script type="application/json" data-variant-prices>
+  {
+    {%- for v in product.variants -%}
+      {%- assign on_sale = false -%}
+      {%- if v.compare_at_price and v.compare_at_price > v.price -%}
+        {%- assign on_sale = true -%}
+      {%- endif -%}
+      "{{ v.id }}": {
+        "price": {{ v.price | money | json }},
+        "onSale": {{ on_sale | json }},
+        "compareAt": {% if on_sale %}{{ v.compare_at_price | money | json }}{% else %}""{% endif %},
+        "savings": {% if on_sale %}{{ v.compare_at_price | minus: v.price | money | json }}{% else %}""{% endif %}
+      }{%- unless forloop.last -%},{%- endunless -%}
+    {%- endfor -%}
+  }
+</script>
+
+{% javascript %}
+  (function () {
+    function initPriceUpdater() {
+      var container = document.querySelector('[data-price-container]');
+      var mapEl = document.querySelector('[data-variant-prices]');
+      if (!container || !mapEl || container.dataset.priceInit === 'true') return;
+
+      var map;
+      try {
+        map = JSON.parse(mapEl.textContent);
+      } catch (e) {
+        return;
+      }
+      container.dataset.priceInit = 'true';
+
+      var regularEl = container.querySelector('[data-regular-price]');
+      var compareEl = container.querySelector('[data-compare-price]');
+      var savingsEl = container.querySelector('[data-savings-price]');
+
+      // Global entry point called by the variant picker the moment a variant is
+      // selected. Updates text content in place (nodes stay stable, so the sticky
+      // bar's price mirror keeps working).
+      window.updateProductPrice = function (variantId) {
+        var data = map[String(variantId)];
+        if (!data || !regularEl) return;
+
+        regularEl.textContent = data.price;
+
+        if (data.onSale) {
+          container.classList.add('product-price--has-sale');
+          if (compareEl) {
+            compareEl.textContent = data.compareAt;
+            compareEl.style.display = '';
+          }
+          if (savingsEl) {
+            savingsEl.innerHTML = '<span>Save </span><span>' + data.savings + '</span>';
+            savingsEl.style.display = '';
+          }
+        } else {
+          container.classList.remove('product-price--has-sale');
+          if (compareEl) {
+            compareEl.textContent = '';
+            compareEl.style.display = 'none';
+          }
+          if (savingsEl) {
+            savingsEl.innerHTML = '';
+            savingsEl.style.display = 'none';
+          }
+        }
+      };
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initPriceUpdater);
+    } else {
+      initPriceUpdater();
+    }
+  })();
+{% endjavascript %}

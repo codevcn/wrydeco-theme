@@ -40,6 +40,9 @@
           <div class="maker-card" {{ block.shopify_attributes }}>
             <div class="maker-card__body">
               <div class="maker-card__image-col">
+                {%- if block.settings.link != blank -%}
+                  <a href="{{ block.settings.link }}" class="maker-card__img-link" aria-label="View {{ maker_name | escape }}'s profile">
+                {%- endif -%}
                 {%- if block.settings.image != blank -%}
                   {{
                     block.settings.image
@@ -56,6 +59,9 @@
                     width="600"
                     height="600"
                   >
+                {%- endif -%}
+                {%- if block.settings.link != blank -%}
+                  </a>
                 {%- endif -%}
               </div>
               <div class="maker-card__text-col">
@@ -149,10 +155,27 @@
     <p class="meet-makers__credit">{{ section.settings.footer_credit | default: 'The WRYDECO Makers' | escape }}</p>
     {%- assign cta_label = section.settings.cta_label | default: 'View Craftsmanship' -%}
     {%- if cta_label != blank -%}
-      <a class="meet-makers__cta" href="{{ section.settings.cta_link | default: '/pages/about-us' }}">
+      <script>
+        function randomMakerRedirect() {
+          var links = [];
+          {%- for block in section.blocks -%}
+            {%- if block.settings.link != blank -%}
+              links.push({{ block.settings.link | json }});
+            {%- endif -%}
+          {%- endfor -%}
+          
+          if (links.length > 0) {
+            var randomLink = links[Math.floor(Math.random() * links.length)];
+            window.location.href = randomLink;
+          } else {
+            window.location.href = {{ section.settings.cta_link | default: '/pages/about-us' | json }};
+          }
+        }
+      </script>
+      <button class="meet-makers__cta" type="button" onclick="randomMakerRedirect()">
         <span>{{ cta_label | escape }}</span>
         <span aria-hidden="true">→</span>
-      </a>
+      </button>
     {%- endif -%}
   </div>
   </div>
@@ -301,6 +324,7 @@
     width: 100%;
     position: relative;
     background-color: #e8e3df; /* placeholder color */
+    overflow: hidden;
   }
 
   @media screen and (min-width: 600px) {
@@ -318,6 +342,20 @@
     min-height: 300px;
     -webkit-user-drag: none; /* Disable image dragging */
     user-select: none;
+    transition: transform var(--timing-long, 0.4s) var(--ease-out, ease-out);
+  }
+
+  .maker-card__img-link {
+    display: block;
+    width: 100%;
+    height: 100%;
+    text-decoration: none;
+    outline: none;
+  }
+  
+  .maker-card__img-link:hover .maker-card__img,
+  .maker-card__img-link:focus .maker-card__img {
+    transform: scale(1.05);
   }
 
   .maker-card__text-col {
@@ -1033,11 +1071,15 @@
     min-width: min(100%, 260px);
     min-height: var(--btn-height, 52px);
     padding: 0 var(--btn-padding-x, 32px);
+    border: none;
     border-radius: var(--btn-radius, 4px);
     background: var(--color-brown, #4a2c18);
     color: var(--text-inverse, #f5f1ed);
     font-size: var(--btn-font-size, 14px);
     font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    text-decoration: none;
     box-shadow: 0 14px 30px rgba(74, 44, 24, 0.14);
     transition:
       transform var(--timing-short) var(--ease-standard),

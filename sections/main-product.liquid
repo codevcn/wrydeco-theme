@@ -2,7 +2,12 @@
   Main Product Section
 {% endcomment %}
 
-<script src="{{ 'product-info.js' | asset_url }}" defer="defer"></script>
+{%- comment -%}
+  product-info.js (Section Rendering API on variant change) is intentionally not
+  loaded: variant switching now updates price/save/availability instantly on the
+  client (see product-price.liquid + product-variant-picker.liquid), with no API
+  round-trip.
+{%- endcomment -%}
 <script src="{{ 'product-gallery.js' | asset_url }}" defer="defer"></script>
 <script src="{{ 'product-form.js' | asset_url }}" defer="defer"></script>
 <script src="{{ 'sale-event.js' | asset_url }}" defer="defer"></script>
@@ -11,6 +16,7 @@
   /* Desktop-first layout */
   .main-product {
     width: 100%;
+    max-width: 100rem;
     margin-inline: auto;
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -46,11 +52,11 @@
   }
   .main-product__title {
     margin: 0;
-    font-family: var(--font-display);
+    font-family: var(--font-body);
     font-size: var(--font-size-display-md);
     font-weight: var(--font-weight-regular);
     line-height: var(--line-height-tight);
-    letter-spacing: 0;
+    letter-spacing: -0.03rem;
     color: var(--text-primary);
     text-wrap: balance;
   }
@@ -172,7 +178,7 @@
     margin: 0 auto;
     padding: 0 64px;
     list-style: none;
-    margin-top: var(--sp-4);
+    margin-top: var(--sp-6);
   }
 
   .main-product__trust-item {
@@ -360,7 +366,7 @@
     position: fixed;
     inset: auto 0 0 0;
     z-index: var(--z-overlay);
-    background-color: var(--surface-elevated);
+    background-color: var(--color-milk);
     border-top: 1px solid var(--border-light);
     box-shadow: var(--cart-drawer-footer-shadow);
     transform: translateY(100%);
@@ -753,6 +759,21 @@
       </li>
     </ul>
   </aside>
+
+  {%- comment -%}
+    Product state for product-info.js. Must live INSIDE the section: the script
+    resolves it via `container.querySelector('[data-product-state]')` (container =
+    this section), so if it sits outside, variant switching — including the price
+    update via the Section Rendering API — silently never runs.
+  {%- endcomment -%}
+  <script type="application/json" data-product-state>
+    {
+      "id": {{ product.id | json }},
+      "url": {{ product.url | json }},
+      "selectedVariantId": {{ current_variant.id | json }},
+      "hasOnlyDefaultVariant": {{ product.has_only_default_variant | json }}
+    }
+  </script>
 </section>
 
 {%- liquid
@@ -867,14 +888,6 @@
     mainProductSection.closest('body').querySelector('.header__icon--search').style.color = 'var(--color-earth-brown)';
     mainProductSection.closest('body').querySelector('.header__icon--cart').style.color = 'var(--color-earth-brown)';
     mainProductSection.closest('body').querySelector('.header').style.border = '1px solid #cfcbc7b4';
-  }
-</script>
-<script type="application/json" data-product-state>
-  {
-    "id": {{ product.id | json }},
-    "url": {{ product.url | json }},
-    "selectedVariantId": {{ current_variant.id | json }},
-    "hasOnlyDefaultVariant": {{ product.has_only_default_variant | json }}
   }
 </script>
 <script type="application/ld+json">

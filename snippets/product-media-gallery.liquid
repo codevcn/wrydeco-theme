@@ -15,7 +15,8 @@
     gap: var(--sp-2);
   }
   .product-gallery__main {
-    width: 100%;
+    aspect-ratio: 1 / 1;
+    height: clamp(300px, 78vw, 600px);
     position: relative;
     overflow: hidden;
     border-radius: var(--radius-xl);
@@ -49,6 +50,19 @@
   .product-gallery__zoom svg {
     width: 18px;
     height: 18px;
+  }
+  /* Light-blue lens marking the area shown in the zoom popup. */
+  .product-gallery__zoom-lens {
+    position: absolute;
+    z-index: 2;
+    display: none;
+    pointer-events: none;
+    border: 1.5px solid rgba(90, 150, 230, 0.85);
+    background-color: rgba(120, 170, 235, 0.22);
+    border-radius: var(--radius-sm);
+  }
+  .product-gallery__zoom-lens.is-active {
+    display: block;
   }
   .product-gallery__main-item {
     display: none;
@@ -130,9 +144,7 @@
       gap: var(--sp-3);
     }
     .product-gallery__main {
-      aspect-ratio: 1 / 1;
       border-radius: var(--radius-sm);
-      max-height: 78vh;
     }
     .product-gallery__main:hover .product-gallery__zoom {
       opacity: 1;
@@ -246,6 +258,7 @@
         <line x1="8" y1="11" x2="14" y2="11"></line>
       </svg>
     </button>
+    <div class="product-gallery__zoom-lens" data-zoom-lens aria-hidden="true"></div>
     {% assign featured_media = current_variant.featured_media | default: product.featured_media %}
     {% for media in product.media %}
       {% liquid
@@ -410,10 +423,10 @@
         }
 
         zoomBtn.addEventListener('click', openLightbox);
-        
+
         var mainContainer = gallery.querySelector('.product-gallery__main');
         if (mainContainer) {
-          mainContainer.addEventListener('click', function(event) {
+          mainContainer.addEventListener('click', function (event) {
             // Ignore if clicked on the zoom button itself to prevent duplicate handling
             if (event.target.closest('[data-gallery-zoom]')) return;
             openLightbox();
@@ -484,6 +497,11 @@
         var mainContainer = gallery.querySelector('.product-gallery__main');
         var zoomPopup = gallery.querySelector('[data-zoom-popup]');
         if (!mainContainer || !zoomPopup) return;
+        var lens = gallery.querySelector('[data-zoom-lens]');
+
+        // The popup zooms to 200% (background-size), so the lens covers half the
+        // image in each dimension — the exact region shown in the popup.
+        var ZOOM = 2;
 
         mainContainer.addEventListener('mouseenter', function () {
           var activeItem = gallery.querySelector('.product-gallery__main-item.is-active');
@@ -495,6 +513,7 @@
           if (zoomSrc) {
             zoomPopup.style.backgroundImage = 'url(' + zoomSrc + ')';
             zoomPopup.classList.add('is-active');
+            if (lens) lens.classList.add('is-active');
           }
         });
 
@@ -505,16 +524,34 @@
           var x = e.clientX - rect.left;
           var y = e.clientY - rect.top;
 
-          var xPercent = Math.max(0, Math.min(100, (x / rect.width) * 100));
-          var yPercent = Math.max(0, Math.min(100, (y / rect.height) * 100));
+          var lensW = rect.width / ZOOM;
+          var lensH = rect.height / ZOOM;
 
-          zoomPopup.style.backgroundPosition = xPercent + '% ' + yPercent + '%';
-          zoomPopup.style.backgroundSize = '200%';
+          // Center the lens on the cursor so it tracks the pointer 1:1, clamped
+          // to stay inside the image.
+          var lensLeft = Math.max(0, Math.min(rect.width - lensW, x - lensW / 2));
+          var lensTop = Math.max(0, Math.min(rect.height - lensH, y - lensH / 2));
+
+          if (lens) {
+            lens.style.width = lensW + 'px';
+            lens.style.height = lensH + 'px';
+            lens.style.left = lensLeft + 'px';
+            lens.style.top = lensTop + 'px';
+          }
+
+          // Keep the popup showing exactly the region under the lens.
+          var rangeX = rect.width - lensW;
+          var rangeY = rect.height - lensH;
+          var posX = rangeX > 0 ? lensLeft / rangeX : 0;
+          var posY = rangeY > 0 ? lensTop / rangeY : 0;
+          zoomPopup.style.backgroundPosition = posX * 100 + '% ' + posY * 100 + '%';
+          zoomPopup.style.backgroundSize = ZOOM * 100 + '%';
         });
 
         mainContainer.addEventListener('mouseleave', function () {
           zoomPopup.classList.remove('is-active');
           zoomPopup.style.backgroundImage = 'none';
+          if (lens) lens.classList.remove('is-active');
         });
       });
     }

@@ -8,6 +8,15 @@
 {% endcomment %}
 
 <section class="collection-page" id="Collection-{{ section.id }}">
+  {%- liquid
+    assign collection_is_empty = false
+    if collection.all_products_count == 0
+      assign collection_is_empty = true
+    endif
+    assign consultation_url = section.settings.consultation_url | default: pages.customization.url | default: routes.root_url
+  -%}
+
+  {%- unless collection_is_empty -%}
   <div class="col-toolbar">
     <div class="col-toolbar__left">
       <div class="col-toolbar__facets">
@@ -300,11 +309,96 @@
       <div class="col-toolbar__count">{{ items_on_page }} items</div>
     </div>
   </div>
+  {%- endunless -%}
 
+  {%- if collection_is_empty -%}
+    <div class="col-empty-state">
+      <div class="col-empty-state__inner">
+        <div class="col-empty-state__art" aria-hidden="true">
+          <svg viewBox="0 0 240 168" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Arch backdrop -->
+            <path d="M40 150V90a80 80 0 0 1 160 0v60Z" fill="var(--color-stone)" opacity="0.55"/>
+            <!-- Console table top -->
+            <path d="M64 108h112" stroke="var(--color-bark)" stroke-width="1.6" stroke-linecap="round"/>
+            <!-- Table legs (arched omega) -->
+            <path d="M80 108c0 18-6 24-14 42M160 108c0 18 6 24 14 42" stroke="var(--color-bark)" stroke-width="1.6" stroke-linecap="round"/>
+            <path d="M84 150c0-14 4-22 12-22s12 8 12 22M132 150c0-14 4-22 12-22s12 8 12 22" stroke="var(--color-bark)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            <!-- Vase -->
+            <path d="M96 108c-5 0-8-4-8-9s3-11 9-11h6c6 0 9 6 9 11s-3 9-8 9Z" stroke="var(--color-bark)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            <!-- Branches -->
+            <path d="M100 88V52" stroke="var(--color-clay)" stroke-width="1.4" stroke-linecap="round"/>
+            <path d="M100 70c-7-2-12-8-13-17M100 66c7-2 11-7 12-15M100 60c-6-1-11-5-13-11M100 76c6-1 10-4 12-9" stroke="var(--color-clay)" stroke-width="1.4" stroke-linecap="round"/>
+            <!-- Bowl -->
+            <path d="M132 108a11 11 0 0 0 22 0Z" stroke="var(--color-bark)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+
+        <h2 class="col-empty-state__title">{{ section.settings.empty_heading | escape }}</h2>
+        <p class="col-empty-state__text">{{ section.settings.empty_text | escape | newline_to_br }}</p>
+
+        <div class="col-empty-state__actions">
+          <a class="col-empty-state__btn col-empty-state__btn--primary" href="{{ routes.collections_url }}">
+            {{- section.settings.empty_primary_label | escape -}}
+          </a>
+          <a class="col-empty-state__btn col-empty-state__btn--secondary" href="{{ consultation_url }}">
+            {{- section.settings.empty_secondary_label | escape -}}
+          </a>
+        </div>
+      </div>
+
+      {%- assign other_collections = collections | where: 'products_count' -%}
+      {%- assign other_count = 0 -%}
+      {%- for other in other_collections -%}
+        {%- if other.handle != collection.handle and other.all_products_count > 0 -%}
+          {%- assign other_count = other_count | plus: 1 -%}
+        {%- endif -%}
+      {%- endfor -%}
+
+      {%- if other_count > 0 -%}
+        <div class="col-empty-state__divider" role="separator">
+          <span class="col-empty-state__divider-line"></span>
+          <span class="col-empty-state__divider-label">{{ section.settings.empty_other_label | escape }}</span>
+          <span class="col-empty-state__divider-line"></span>
+        </div>
+
+        <ul class="col-empty-state__others" role="list">
+          {%- assign shown = 0 -%}
+          {%- for other in other_collections -%}
+            {%- if other.handle == collection.handle or other.all_products_count == 0 -%}
+              {%- continue -%}
+            {%- endif -%}
+            {%- assign shown = shown | plus: 1 -%}
+            <li class="col-empty-state__other">
+              <a class="col-empty-state__other-link" href="{{ other.url }}">
+                <span class="col-empty-state__other-media">
+                  {%- if other.featured_image != blank -%}
+                    {{
+                      other.featured_image
+                      | image_url: width: 640
+                      | image_tag:
+                        class: 'col-empty-state__other-img',
+                        loading: 'lazy',
+                        widths: '280, 420, 640',
+                        sizes: '(min-width: 768px) 25vw, 45vw',
+                        alt: other.featured_image.alt | default: other.title
+                    }}
+                  {%- else -%}
+                    {{ 'collection-1' | placeholder_svg_tag: 'col-empty-state__other-img placeholder-svg' }}
+                  {%- endif -%}
+                </span>
+                <span class="col-empty-state__other-title">{{ other.title | escape }}</span>
+              </a>
+            </li>
+            {%- if shown >= 4 -%}{%- break -%}{%- endif -%}
+          {%- endfor -%}
+        </ul>
+      {%- endif -%}
+    </div>
+  {%- else -%}
   <div class="col-grid-wrap">
     {% paginate collection.products by per_page %}
       {% if collection.products.size == 0 %}
-        <p class="col-empty">No products found in this collection.</p>
+        <p class="col-empty">No products match the selected filters.</p>
       {% else %}
         <div class="col-grid">
           {% for product in collection.products %}
@@ -496,6 +590,7 @@
       {% endif %}
     {% endpaginate %}
   </div>
+  {%- endif -%}
 </section>
 
 {% stylesheet %}
@@ -808,6 +903,148 @@
     color: var(--text-secondary);
   }
 
+  /* Empty collection state */
+  .col-empty-state {
+    width: min(calc(100% - (var(--layout-padding-desktop) * 2)), var(--layout-max-width));
+    margin-inline: auto;
+    padding-block: var(--sp-7) var(--section-spacing-desktop);
+  }
+  .col-empty-state__inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  .col-empty-state__art {
+    width: clamp(200px, 22vw, 260px);
+    margin-bottom: var(--sp-3);
+  }
+  .col-empty-state__art svg {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  .col-empty-state__title {
+    margin: 0;
+    font-family: var(--font-display-light);
+    font-size: clamp(var(--font-size-display-md), 3.4vw, var(--font-size-display-lg));
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-tight);
+    color: var(--text-primary);
+    text-wrap: balance;
+  }
+  .col-empty-state__text {
+    max-width: 60ch;
+    margin: var(--sp-5) 0 0;
+    font-size: var(--font-size-body-lg);
+    line-height: var(--line-height-generous);
+    color: var(--text-secondary);
+  }
+  .col-empty-state__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--sp-4);
+    margin-top: var(--sp-7);
+  }
+  .col-empty-state__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 56px;
+    padding: 0 var(--sp-7);
+    border-radius: var(--radius-md);
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-lg);
+    font-weight: var(--font-weight-regular);
+    letter-spacing: 0.01em;
+    text-decoration: none;
+    transition: background-color var(--timing-short) var(--ease-standard),
+      color var(--timing-short) var(--ease-standard);
+  }
+  .col-empty-state__btn--primary {
+    background-color: var(--color-earth-brown);
+    color: var(--text-inverse);
+    border: 1px solid var(--color-earth-brown);
+  }
+  .col-empty-state__btn--primary:hover {
+    background-color: var(--color-charcoal);
+    border-color: var(--color-charcoal);
+  }
+  .col-empty-state__btn--secondary {
+    background-color: transparent;
+    color: var(--color-earth-brown);
+    border: 1px solid var(--color-earth-brown);
+  }
+  .col-empty-state__btn--secondary:hover {
+    background-color: var(--color-earth-brown);
+    color: var(--text-inverse);
+  }
+
+  .col-empty-state__divider {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-5);
+    margin-top: var(--sp-11);
+  }
+  .col-empty-state__divider-line {
+    flex: 1 1 auto;
+    height: 1px;
+    background-color: var(--border-default);
+  }
+  .col-empty-state__divider-label {
+    font-family: var(--font-roboto);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-earth-brown);
+    white-space: nowrap;
+  }
+
+  .col-empty-state__others {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--sp-5);
+    margin: var(--sp-7) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .col-empty-state__other {
+    min-width: 0;
+  }
+  .col-empty-state__other-link {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-3);
+    text-decoration: none;
+    color: var(--text-primary);
+  }
+  .col-empty-state__other-media {
+    display: block;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    border-radius: var(--radius-md);
+    background-color: var(--bg-secondary);
+  }
+  .col-empty-state__other-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform var(--timing-long) var(--ease-standard);
+  }
+  .col-empty-state__other-link:hover .col-empty-state__other-img {
+    transform: scale(1.04);
+  }
+  .col-empty-state__other-title {
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-lg);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-tight);
+    color: var(--text-primary);
+  }
+
   .pcard {
     display: flex;
     flex-direction: column;
@@ -903,7 +1140,7 @@
     color: var(--color-clay);
   }
   .pcard__title {
-    margin: var(--sp-4) 0 0;
+    margin: var(--sp-2) 0 0;
     min-width: 0;
     font-family: var(--font-body);
     font-size: var(--font-size-body-xl);
@@ -1051,9 +1288,33 @@
     .col-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+    .col-empty-state__others {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
   }
 
   @media screen and (max-width: 768px) {
+    .col-empty-state {
+      width: min(calc(100% - (var(--layout-padding-mobile) * 2)), var(--layout-max-width));
+      padding-block: var(--sp-9) var(--section-spacing-mobile);
+    }
+    .col-empty-state__text {
+      font-size: var(--font-size-body-md);
+    }
+    .col-empty-state__actions {
+      flex-direction: column;
+      align-self: stretch;
+      width: 100%;
+      max-width: 360px;
+      margin-inline: auto;
+    }
+    .col-empty-state__btn {
+      width: 100%;
+    }
+    .col-empty-state__divider {
+      margin-top: var(--sp-9);
+      gap: var(--sp-3);
+    }
     .col-toolbar__facet,
     .col-toolbar__sort,
     .col-toolbar__count {
@@ -1092,6 +1353,13 @@
   }
 
   @media screen and (max-width: 480px) {
+    .col-empty-state__others {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--sp-4);
+    }
+    .col-empty-state__other-title {
+      font-size: var(--font-size-body-md);
+    }
     .col-dropdown--left {
       padding-left: 3px;
     }
@@ -1381,6 +1649,14 @@
 {% schema %}
 {
   "name": "t:general.collection",
-  "settings": []
+  "settings": [
+    { "type": "header", "content": "Empty collection state" },
+    { "type": "text", "id": "empty_heading", "label": "Heading", "default": "This collection is being curated." },
+    { "type": "textarea", "id": "empty_text", "label": "Text", "default": "We're thoughtfully selecting exceptional pieces for this collection.\nExplore our other handcrafted designs or connect with our team for a bespoke creation." },
+    { "type": "text", "id": "empty_primary_label", "label": "Primary button label", "default": "Explore All Collections" },
+    { "type": "text", "id": "empty_secondary_label", "label": "Secondary button label", "default": "Book a Design Consultation" },
+    { "type": "url", "id": "consultation_url", "label": "Consultation page", "info": "Defaults to the customization page." },
+    { "type": "text", "id": "empty_other_label", "label": "Other collections label", "default": "Explore Other Collections" }
+  ]
 }
 {% endschema %}

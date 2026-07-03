@@ -177,7 +177,7 @@ class SearchPopup extends HTMLElement {
   showEmptyState() {
     this.hideAllSections();
     this.currentMode = 'empty';
-    this.emptyState.style.display = 'block';
+    this.emptyState.style.display = 'flex';
   }
   
   hideAllSections() {
