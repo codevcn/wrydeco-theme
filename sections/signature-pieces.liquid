@@ -84,7 +84,13 @@
             {%- endif -%}
 
             {%- if product.available -%}
-              <button class="signature-pieces__quick" data-add-to-cart-signature data-variant-id="{{ product.variants.first.id }}" aria-label="Add {{ display_title | escape }} to cart" type="button">
+              <button
+                class="signature-pieces__quick"
+                data-add-to-cart-signature
+                data-variant-id="{{ product.variants.first.id }}"
+                aria-label="Add {{ display_title | escape }} to cart"
+                type="button"
+              >
                 {{ 'icon-cart.svg' | inline_asset_content }}
               </button>
             {%- else -%}
@@ -258,7 +264,14 @@
       aria-labelledby="SPQuickTitle-{{ section.id }}"
     >
       <button type="button" class="sp-quick__close" aria-label="Close" data-quick-close>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          aria-hidden="true"
+        >
           <path d="M6 6l12 12M18 6 6 18"></path>
         </svg>
       </button>
@@ -690,6 +703,18 @@
     overflow: hidden;
   }
 
+  /* Hide the live-chat launcher while the popup is open so it doesn't overlap the
+     dialog. The chat widget renders at a near-max z-index, so hiding it is more
+     reliable than out-stacking it. */
+  .sp-quick-open #shopify-chat,
+  .sp-quick-open .shopify-chat,
+  .sp-quick-open #chat-widget-container,
+  .sp-quick-open iframe[title*='chat' i],
+  .sp-quick-open iframe[id*='chat' i] {
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+
   .sp-quick {
     position: fixed;
     inset: 0;
@@ -719,9 +744,9 @@
   .sp-quick__panel {
     position: relative;
     display: grid;
-    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
     grid-template-rows: minmax(0, 1fr);
-    width: min(100%, 720px);
+    max-width: 80vw;
     max-height: calc(100dvh - var(--sp-8));
     overflow: hidden;
     border: 1px solid var(--border-light);
@@ -822,8 +847,7 @@
     background: var(--color-stone, #e5dbd0);
     cursor: pointer;
     opacity: 0.7;
-    transition: opacity var(--timing-short) var(--ease-standard),
-      border-color var(--timing-short) var(--ease-standard);
+    transition: opacity var(--timing-short) var(--ease-standard), border-color var(--timing-short) var(--ease-standard);
   }
 
   .sp-quick__thumb img {
@@ -866,7 +890,7 @@
     color: var(--color-text, #2e1d14);
     font-family: var(--font-heading);
     font-size: clamp(22px, 2.4vw, 28px);
-    font-weight: var(--font-weight-regular);
+    font-weight: var(--font-weight-semibold);
     line-height: 1.12;
   }
 
@@ -1012,6 +1036,7 @@
       overflow-y: auto;
       border-radius: var(--radius-lg) var(--radius-lg) 0 0;
       transform: translateY(100%);
+      max-width: 95vw;
     }
 
     .sp-quick.is-open .sp-quick__panel {
@@ -1057,7 +1082,9 @@
         headers: { 'Content-Type': 'application/json', Accept: 'application/javascript' },
         body: JSON.stringify({ id: variantId, quantity: 1 }),
       })
-        .then(function (res) { return res.json(); })
+        .then(function (res) {
+          return res.json();
+        })
         .then(function (data) {
           if (data.status) throw new Error(data.description || 'Could not add to cart');
           toast('Item added to your cart.', 'success');
@@ -1080,7 +1107,9 @@
         var variantId = btn.dataset.variantId;
         if (!variantId) return;
         btn.classList.add('is-loading');
-        addVariantToCart(variantId, btn, function () { btn.classList.remove('is-loading'); });
+        addVariantToCart(variantId, btn, function () {
+          btn.classList.remove('is-loading');
+        });
       });
     });
 
@@ -1106,7 +1135,10 @@
         var v = data.variants[i];
         var match = true;
         for (var j = 0; j < v.options.length; j++) {
-          if (v.options[j] !== selected[j]) { match = false; break; }
+          if (v.options[j] !== selected[j]) {
+            match = false;
+            break;
+          }
         }
         if (match) return v;
       }
@@ -1137,8 +1169,7 @@
     function renderOptions() {
       optionsEl.innerHTML = '';
       var data = state.data;
-      var isSingleDefault =
-        data.variants.length === 1 && data.options.length === 1 && data.options[0] === 'Title';
+      var isSingleDefault = data.variants.length === 1 && data.options.length === 1 && data.options[0] === 'Title';
       if (isSingleDefault) return;
 
       data.options.forEach(function (optName, oi) {
@@ -1166,7 +1197,9 @@
           if (state.selected[oi] === val) pill.setAttribute('aria-pressed', 'true');
           pill.addEventListener('click', function () {
             state.selected[oi] = val;
-            Array.prototype.forEach.call(pills.children, function (c) { c.removeAttribute('aria-pressed'); });
+            Array.prototype.forEach.call(pills.children, function (c) {
+              c.removeAttribute('aria-pressed');
+            });
             pill.setAttribute('aria-pressed', 'true');
             updateSelection();
           });
@@ -1182,14 +1215,18 @@
       modal.hidden = false;
       modal.setAttribute('aria-hidden', 'false');
       document.documentElement.classList.add('sp-quick-open');
-      window.requestAnimationFrame(function () { modal.classList.add('is-open'); });
+      window.requestAnimationFrame(function () {
+        modal.classList.add('is-open');
+      });
     }
 
     function closeModal() {
       modal.classList.remove('is-open');
       modal.setAttribute('aria-hidden', 'true');
       document.documentElement.classList.remove('sp-quick-open');
-      window.setTimeout(function () { modal.hidden = true; }, 240);
+      window.setTimeout(function () {
+        modal.hidden = true;
+      }, 240);
       if (lastFocused && typeof lastFocused.focus === 'function') lastFocused.focus();
     }
 
@@ -1200,13 +1237,20 @@
         var script = card && card.querySelector('.signature-pieces__data');
         if (!script) return;
         var data;
-        try { data = JSON.parse(script.textContent); } catch (err) { return; }
+        try {
+          data = JSON.parse(script.textContent);
+        } catch (err) {
+          return;
+        }
         if (!data.variants || !data.variants.length) return;
 
         lastFocused = btn;
         var initial = null;
         for (var i = 0; i < data.variants.length; i++) {
-          if (data.variants[i].available) { initial = data.variants[i]; break; }
+          if (data.variants[i].available) {
+            initial = data.variants[i];
+            break;
+          }
         }
         if (!initial) initial = data.variants[0];
         state = { data: data, selected: initial.options.slice(), variant: initial };
@@ -1214,7 +1258,7 @@
         titleEl.textContent = data.title;
 
         // Build the gallery: one large image + a row of thumbnails.
-        var gallery = (data.images && data.images.length) ? data.images : (data.image ? [data.image] : []);
+        var gallery = data.images && data.images.length ? data.images : data.image ? [data.image] : [];
         thumbsEl.innerHTML = '';
         if (gallery.length) {
           imageEl.src = gallery[0];
