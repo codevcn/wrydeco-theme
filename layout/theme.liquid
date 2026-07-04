@@ -17,7 +17,58 @@
     {% # Social, title, etc. %}
     {% render 'meta-tags' %}
 
+    {% assign redirect_to = '' %}
+    {% case request.path %}
+      {% when '/cart' %}
+        {% assign redirect_to = '/collections/all' %}
+    {% endcase %}
+    {% if redirect_to != blank and request.path != redirect_to %}
+      <script>
+        window.location.replace('{{ redirect_to }}?from={{ request.path | url_encode }}');
+      </script>
+    {% endif %}
+
     {{ content_for_header }}
+
+    <style>
+      .header__icon {
+        color: var(--color-milk, #f7f2ec);
+      }
+    </style>
+    {% assign styled_path_patterns = '/products/,/policies/privacy-policy,/policies/refund-policy,/policies/terms-of-service,/policies/shipping-policy,/pages/contact,/pages/legal-notice'
+      | split: ','
+    %}
+    {% assign should_apply_header_style = false %}
+    {% for path_pattern in styled_path_patterns %}
+      {% if request.path contains path_pattern %}
+        {% assign should_apply_header_style = true %}
+        {% break %}
+      {% endif %}
+    {% endfor %}
+    {% if should_apply_header_style %}
+      <style>
+        .header {
+          border-bottom: 1px solid #cfcbc7b4;
+        }
+
+        .header__icon,
+        .header__icon--search,
+        .header__icon--cart,
+        .header__icon--account,
+        .header__icon--menu {
+          color: var(--color-earth-brown, #333);
+        }
+
+        .header__icon svg,
+        .header__icon--search svg,
+        .header__icon--cart svg,
+        .header__icon--account svg,
+        .header__icon--menu svg {
+          color: var(--color-earth-brown, #333);
+          stroke: currentColor;
+        }
+      </style>
+    {% endif %}
   </head>
 
   <body>
@@ -31,5 +82,43 @@
     {% render 'scroll-to-top' %}
 
     <script src="{{ 'toast.js' | asset_url }}" defer="defer"></script>
+    <script defer="defer">
+      (function () {
+        if (new URLSearchParams(window.location.search).get('from') !== '/cart') return;
+
+        // Strip the ?from marker immediately so a reload can never re-trigger the flow.
+        var cleanUrl = new URL(window.location.href);
+        cleanUrl.searchParams.delete('from');
+        window.history.replaceState({}, document.title, cleanUrl.toString());
+
+        var cartIcon = document.querySelector('[data-cart-drawer-open]');
+        if (!cartIcon) return;
+
+        // The cart icon is an <a href="/cart">. If we click it before the cart-drawer
+        // script has attached its delegated handler, the default navigation sends us
+        // back to /cart, which redirects here again — an infinite loop. Block the
+        // anchor's default navigation (capture phase) until the drawer is open, and
+        // retry opening until the drawer script is ready to intercept the click.
+        var blockNavigation = function (event) {
+          if (event.target.closest('[data-cart-drawer-open]')) event.preventDefault();
+        };
+        document.addEventListener('click', blockNavigation, true);
+
+        var attempts = 0;
+        var tryOpen = function () {
+          if (document.documentElement.classList.contains('cart-drawer-is-open')) {
+            document.removeEventListener('click', blockNavigation, true);
+            return;
+          }
+          if (attempts++ > 40) {
+            document.removeEventListener('click', blockNavigation, true);
+            return;
+          }
+          cartIcon.click();
+          window.setTimeout(tryOpen, 100);
+        };
+        tryOpen();
+      })();
+    </script>
   </body>
 </html>

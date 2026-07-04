@@ -149,7 +149,52 @@
       </div>
 
       <footer class="cart-drawer__footer">
+        <form class="cart-drawer__discount-form" data-cart-discount-form novalidate>
+          <label class="cart-drawer__visually-hidden" for="CartDiscountInput">Discount code</label>
+          <input
+            id="CartDiscountInput"
+            type="text"
+            name="discount"
+            class="cart-drawer__discount-input"
+            placeholder="Discount code"
+            autocomplete="off"
+            autocapitalize="characters"
+            autocorrect="off"
+            spellcheck="false"
+            data-cart-discount-input
+          >
+          <button type="submit" class="cart-drawer__discount-apply" data-cart-discount-apply>Apply</button>
+        </form>
+
         <div class="cart-drawer__summary">
+          {% if cart.cart_level_discount_applications.size > 0 %}
+            {% for discount in cart.cart_level_discount_applications %}
+              <div class="cart-drawer__summary-row cart-drawer__summary-row--discount">
+                <span class="cart-drawer__discount-tag">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M20.5 12.5 12 21l-8.5-8.5V4h8.5z"></path>
+                    <circle cx="8" cy="8" r="1.4"></circle>
+                  </svg>
+                  {{ discount.title | escape }}
+                </span>
+                <span class="cart-drawer__discount-end">
+                  <span class="cart-drawer__discount-amount">−{{ discount.total_allocated_amount | money }}</span>
+                  <button
+                    type="button"
+                    class="cart-drawer__discount-remove"
+                    data-cart-discount-remove
+                    aria-label="Remove discount {{ discount.title | escape }}"
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+                  </button>
+                </span>
+              </div>
+            {% endfor %}
+          {% endif %}
+
+          {% comment %} Populated by JS when a code is pending for checkout but not yet applied in-cart. {% endcomment %}
+          <div class="cart-drawer__summary-row cart-drawer__summary-row--discount cart-drawer__pending-discount" data-cart-pending-discount hidden></div>
+
           <div class="cart-drawer__summary-row cart-drawer__summary-row--total">
             <span>Subtotal</span>
             <strong>{{ cart.total_price | money }}</strong>
@@ -463,9 +508,135 @@
     box-shadow: var(--cart-drawer-footer-shadow);
   }
 
+  .cart-drawer__discount-form {
+    display: flex;
+    gap: var(--sp-2);
+    margin: var(--sp-0) var(--sp-0) var(--sp-4);
+  }
+
+  .cart-drawer__discount-input {
+    flex: 1 1 auto;
+    min-inline-size: var(--sp-0);
+    min-block-size: var(--sp-7);
+    padding: var(--sp-3) var(--sp-4);
+    border: var(--border-width) solid var(--border-dark);
+    border-radius: var(--radius-sm);
+    background: var(--surface-default);
+    color: var(--text-primary);
+    font: var(--type-body-small);
+    letter-spacing: var(--letter-spacing-wide);
+    text-transform: uppercase;
+  }
+
+  .cart-drawer__discount-input::placeholder {
+    color: var(--text-secondary);
+    letter-spacing: var(--letter-spacing-normal);
+    text-transform: none;
+  }
+
+  .cart-drawer__discount-input:focus-visible {
+    outline: none;
+    border-color: var(--color-earth-brown);
+  }
+
+  .cart-drawer__discount-apply {
+    flex: none;
+    min-block-size: var(--sp-7);
+    padding: var(--sp-3) var(--sp-5);
+    border: var(--border-width) solid var(--color-earth-brown);
+    border-radius: var(--radius-sm);
+    background: var(--surface-default);
+    color: var(--color-earth-brown);
+    font: var(--type-body-small);
+    letter-spacing: var(--letter-spacing-wide);
+    cursor: pointer;
+    transition: var(--transition-fast);
+  }
+
+  .cart-drawer__discount-apply:hover {
+    background: var(--color-earth-brown);
+    color: var(--text-inverse);
+  }
+
   .cart-drawer__summary {
     padding-block-end: var(--sp-4);
     border-block-end: var(--border-width) solid var(--border-light);
+  }
+
+  .cart-drawer__summary-row--discount {
+    color: var(--color-earth-brown);
+    font: var(--type-body-small);
+  }
+
+  .cart-drawer__summary-row--discount + .cart-drawer__summary-row--total {
+    margin-block-start: var(--sp-3);
+  }
+
+  .cart-drawer__discount-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    letter-spacing: var(--letter-spacing-wide);
+    text-transform: uppercase;
+  }
+
+  .cart-drawer__discount-tag svg {
+    flex: none;
+    inline-size: var(--sp-4);
+    block-size: var(--sp-4);
+    fill: none;
+    stroke: currentColor;
+    stroke-width: var(--border-width);
+    stroke-linejoin: round;
+  }
+
+  .cart-drawer__discount-amount {
+    white-space: nowrap;
+  }
+
+  .cart-drawer__discount-end {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+  }
+
+  .cart-drawer__discount-remove {
+    display: inline-grid;
+    place-items: center;
+    inline-size: var(--sp-5);
+    block-size: var(--sp-5);
+    padding: var(--sp-0);
+    border: none;
+    border-radius: var(--radius-full);
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: var(--transition-fast);
+  }
+
+  .cart-drawer__discount-remove:hover {
+    background: color-mix(in srgb, var(--color-earth-brown) 12%, transparent);
+    color: var(--color-earth-brown);
+  }
+
+  .cart-drawer__discount-remove svg {
+    inline-size: var(--sp-3);
+    block-size: var(--sp-3);
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
+
+  .cart-drawer__pending-discount[hidden] {
+    display: none;
+  }
+
+  .cart-drawer__pending-note {
+    color: var(--text-secondary);
+    font-size: var(--font-size-caption);
+    letter-spacing: var(--letter-spacing-normal);
+    text-transform: none;
   }
 
   .cart-drawer__summary-row {
@@ -595,6 +766,18 @@
     overflow: hidden;
   }
 
+  /* Hide the live-chat launcher while the cart drawer is open so it doesn't
+     overlap the drawer footer / checkout button. The chat widget renders at a
+     near-max z-index, so hiding it is more reliable than out-stacking it. */
+  .cart-drawer-is-open #shopify-chat,
+  .cart-drawer-is-open .shopify-chat,
+  .cart-drawer-is-open #chat-widget-container,
+  .cart-drawer-is-open iframe[title*='chat' i],
+  .cart-drawer-is-open iframe[id*='chat' i] {
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+
   @keyframes cart-drawer-spin {
     to {
       transform: rotate(360deg);
@@ -687,6 +870,7 @@
       shell.classList.add('is-open');
       shell.setAttribute('aria-hidden', 'false');
       document.documentElement.classList.add('cart-drawer-is-open');
+      syncPendingDiscount();
       window.requestAnimationFrame(() => panel.focus());
     };
 
@@ -721,6 +905,7 @@
       // and wiped the header badge.
       const count = Number.parseInt(replacement.dataset.cartCount, 10);
       updateCartBubble(Number.isNaN(count) ? 0 : count);
+      syncPendingDiscount();
     };
 
     const changeLine = async (lineItem, quantity) => {
@@ -752,6 +937,196 @@
       }
     };
 
+    // Persist the entered code so it is applied at checkout even when the in-cart
+    // /discount endpoint can't confirm it (e.g. the Shopify theme dev preview
+    // blocks /discount and /checkout with a 401 — they only work on the live store).
+    const CHECKOUT_DISCOUNT_KEY = 'wrydeco:pending-discount';
+    const rememberCheckoutDiscount = (code) => {
+      try {
+        window.sessionStorage.setItem(CHECKOUT_DISCOUNT_KEY, code);
+      } catch (error) {
+        /* sessionStorage unavailable — checkout carry simply won't persist */
+      }
+    };
+    const forgetCheckoutDiscount = () => {
+      try {
+        window.sessionStorage.removeItem(CHECKOUT_DISCOUNT_KEY);
+      } catch (error) {
+        /* no-op */
+      }
+    };
+    const getCheckoutDiscount = () => {
+      try {
+        return window.sessionStorage.getItem(CHECKOUT_DISCOUNT_KEY);
+      } catch (error) {
+        return null;
+      }
+    };
+
+    const applyDiscount = async (form) => {
+      const input = form.querySelector('[data-cart-discount-input]');
+      const code = (input?.value || '').trim();
+      const shell = getShell();
+      const loader = shell?.querySelector('[data-cart-drawer-loading]');
+      if (!loader) return;
+      if (!code) {
+        input?.focus();
+        return;
+      }
+      loader.hidden = false;
+      const root = window.Shopify?.routes?.root || '/';
+      const toast = (options) => {
+        if (window.showToast) window.showToast(Object.assign({ position: 'bottom-right' }, options));
+      };
+
+      try {
+        // Shopify's AJAX cart API can't apply discount codes; visiting /discount/CODE
+        // applies the code to the cart session server-side (302 -> storefront).
+        let response = null;
+        try {
+          response = await fetch(`${root}discount/${encodeURIComponent(code)}`, { redirect: 'follow' });
+        } catch (error) {
+          response = null;
+        }
+
+        if (response && response.ok) {
+          // Confirm via /cart.js: entered codes appear in `discount_codes`, each
+          // with an `applicable` flag (Shopify's validity signal). There is no
+          // top-level `discount_applications` in /cart.js — that's Liquid-only.
+          const cart = await (
+            await fetch(`${root}cart.js`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+          ).json();
+          const entry = (cart.discount_codes || []).find(
+            (discount) => (discount.code || '').toLowerCase() === code.toLowerCase()
+          );
+          const applied = entry ? entry.applicable !== false : (cart.total_discount || 0) > 0;
+
+          if (applied) {
+            rememberCheckoutDiscount(code);
+            await refreshDrawer({ open: true });
+            toast({ message: `Discount “${code}” applied.`, type: 'success' });
+          } else if (entry) {
+            // The code is recognized but doesn't apply to the current cart — usually
+            // an unmet minimum spend, or it isn't active/eligible yet. Keep it: it
+            // stays on the cart and Shopify applies it automatically once the cart
+            // qualifies (so raising the quantity can make it kick in).
+            rememberCheckoutDiscount(code);
+            loader.hidden = true;
+            syncPendingDiscount();
+            toast({
+              message: `“${code}” can’t be applied to your cart yet — it may require a higher order total or other conditions.`,
+              type: 'info',
+            });
+          } else {
+            // The code isn't recognized at all.
+            forgetCheckoutDiscount();
+            loader.hidden = true;
+            toast({ message: `“${code}” isn’t a valid discount code.`, type: 'error' });
+          }
+          return;
+        }
+
+        // /discount isn't reachable here (theme dev preview blocks it). We can't
+        // validate in-page, so carry the code to checkout where it gets applied.
+        rememberCheckoutDiscount(code);
+        loader.hidden = true;
+        syncPendingDiscount();
+        toast({ message: `“${code}” will be applied at checkout.`, type: 'info' });
+      } catch (error) {
+        loader.hidden = true;
+        toast({ message: 'We couldn’t apply that code. Please try again.', type: 'error' });
+      }
+    };
+
+    const escapeHtml = (value) =>
+      String(value).replace(
+        /[&<>"']/g,
+        (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char])
+      );
+
+    // Renders a "pending" discount chip from the code carried to checkout, but only
+    // when no discount is actually applied in-cart (e.g. theme dev preview). This
+    // gives the shopper a way to cancel a code they entered but that hasn't reduced
+    // the cart yet. Applied discounts are rendered server-side by Liquid instead.
+    const syncPendingDiscount = () => {
+      const shell = getShell();
+      const container = shell?.querySelector('[data-cart-pending-discount]');
+      if (!container) return;
+      const code = getCheckoutDiscount();
+      const hasApplied = !!shell.querySelector(
+        '.cart-drawer__summary-row--discount:not(.cart-drawer__pending-discount)'
+      );
+      if (code && !hasApplied) {
+        container.hidden = false;
+        container.innerHTML =
+          '<span class="cart-drawer__discount-tag">' +
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 12.5 12 21l-8.5-8.5V4h8.5z"></path><circle cx="8" cy="8" r="1.4"></circle></svg>' +
+          escapeHtml(code) +
+          '</span>' +
+          '<span class="cart-drawer__discount-end">' +
+          '<span class="cart-drawer__pending-note">At checkout</span>' +
+          '<button type="button" class="cart-drawer__discount-remove" data-cart-pending-remove aria-label="Remove discount ' +
+          escapeHtml(code) +
+          '"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>' +
+          '</span>';
+      } else {
+        container.hidden = true;
+        container.innerHTML = '';
+      }
+    };
+
+    // Removing a discount clears the cart's discount codes via the Cart AJAX API
+    // (POST /cart/update.js with an empty `discount`) — this works on both the live
+    // store and the theme dev preview — and also drops the code carried to checkout.
+    const removeDiscount = async () => {
+      const shell = getShell();
+      const loader = shell?.querySelector('[data-cart-drawer-loading]');
+      if (!loader) return;
+      loader.hidden = false;
+      const root = window.Shopify?.routes?.root || '/';
+      try {
+        await fetch(`${root}cart/update.js`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ discount: '' }),
+        });
+        forgetCheckoutDiscount();
+        await refreshDrawer({ open: true });
+        if (window.showToast) {
+          window.showToast({ message: 'Discount removed.', type: 'info', position: 'bottom-right' });
+        }
+      } catch (error) {
+        loader.hidden = true;
+        if (window.showToast) {
+          window.showToast({
+            message: 'We couldn’t remove the discount. Please try again.',
+            type: 'error',
+            position: 'bottom-right',
+          });
+        }
+      }
+    };
+
+    document.addEventListener('submit', (event) => {
+      const discountForm = event.target.closest('[data-cart-discount-form]');
+      if (discountForm) {
+        event.preventDefault();
+        applyDiscount(discountForm);
+        return;
+      }
+
+      // Carry any entered discount code through to checkout so it applies there.
+      const checkoutForm = event.target.closest('.cart-drawer__checkout-form');
+      if (checkoutForm) {
+        const pending = getCheckoutDiscount();
+        if (pending) {
+          event.preventDefault();
+          const root = window.Shopify?.routes?.root || '/';
+          window.location.href = `${root}checkout?discount=${encodeURIComponent(pending)}`;
+        }
+      }
+    });
+
     document.addEventListener('click', (event) => {
       const opener = event.target.closest('[data-cart-drawer-open]');
       if (opener) {
@@ -762,6 +1137,20 @@
 
       if (event.target.closest('[data-cart-drawer-close]')) {
         closeDrawer();
+        return;
+      }
+
+      if (event.target.closest('[data-cart-discount-remove]')) {
+        removeDiscount();
+        return;
+      }
+
+      if (event.target.closest('[data-cart-pending-remove]')) {
+        forgetCheckoutDiscount();
+        syncPendingDiscount();
+        if (window.showToast) {
+          window.showToast({ message: 'Discount removed.', type: 'info', position: 'bottom-right' });
+        }
         return;
       }
 

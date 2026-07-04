@@ -1,0 +1,1150 @@
+{%- liquid
+  assign craft_url = section.settings.craft_url | default: '/pages/about-us'
+  assign finish_guide_url = section.settings.finish_guide_url | default: '/pages/faq'
+  assign consultation_url = section.settings.consultation_url | default: '/pages/customization'
+
+  assign hero_image = section.settings.hero_image_asset | default: 'care-guide-5.png'
+  assign preserve_image = section.settings.preserve_image_asset | default: 'care-guide-4.png'
+  assign cta_image = section.settings.cta_image_asset | default: 'care-guide-5.png'
+
+  assign finish_blocks = section.blocks | where: 'type', 'finish'
+  assign faq_blocks = section.blocks | where: 'type', 'faq'
+  assign accordion_name = 'care-guide-faq-' | append: section.id
+-%}
+
+{%- capture cg_icon_clean -%}
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 15.5c2.2 1.4 4.2 1.4 6 0s3.8-1.4 6 0"/><path d="M8.5 12.5 12 4l6.5 3-3.5 8.5"/><path d="M11 6.6l5.2 2.4"/></svg>
+{%- endcapture -%}
+{%- capture cg_icon_protect -%}
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5 12 6l8 3.5-8 3.5z"/><path d="M4 14 12 17.5 20 14"/></svg>
+{%- endcapture -%}
+{%- capture cg_icon_extremes -%}
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/></svg>
+{%- endcapture -%}
+{%- capture cg_icon_mindful -%}
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19c0-8 6-13 14-13 0 8-6 13-14 13z"/><path d="M9 15c2.5-3 5-4.5 8-5.5"/></svg>
+{%- endcapture -%}
+
+<main class="care-guide" id="care-guide-{{ section.id }}">
+  {%- comment -%} ---------------------------------- HERO ---------------------------------- {%- endcomment -%}
+  <section class="cg-hero" aria-labelledby="cg-hero-title-{{ section.id }}">
+    <div class="cg-hero__copy">
+      <p class="cg-eyebrow">{{ section.settings.hero_eyebrow | escape }}</p>
+      <h1 class="cg-hero__title" id="cg-hero-title-{{ section.id }}">{{ section.settings.hero_heading | escape }}</h1>
+      <div class="cg-hero__intro rte">{{ section.settings.hero_text }}</div>
+      <a class="cg-hero__scroll" href="#cg-preserve-{{ section.id }}">
+        <span>{{ section.settings.hero_scroll_label | escape }}</span>
+        <span class="cg-hero__scroll-arrow" aria-hidden="true">↓</span>
+      </a>
+    </div>
+    <div class="cg-hero__media">
+      <img
+        src="{{ hero_image | asset_img_url: '1400x' }}"
+        srcset="
+          {{ hero_image | asset_img_url: '760x' }} 760w,
+          {{ hero_image | asset_img_url: '1100x' }} 1100w,
+          {{ hero_image | asset_img_url: '1400x' }} 1400w
+        "
+        sizes="(max-width: 900px) 100vw, 56vw"
+        width="1400"
+        height="1050"
+        alt="{{ section.settings.hero_image_alt | escape }}"
+        fetchpriority="high"
+      >
+    </div>
+  </section>
+
+  {%- comment -%} -------------------------------- ESSENTIALS ------------------------------- {%- endcomment -%}
+  <section class="cg-essentials" aria-labelledby="cg-essentials-title-{{ section.id }}">
+    <div class="cg-essentials__panel">
+      <div class="cg-essentials__lead">
+        <p class="cg-eyebrow">{{ section.settings.essentials_eyebrow | escape }}</p>
+        <p class="cg-essentials__lead-text" id="cg-essentials-title-{{ section.id }}">
+          {{ section.settings.essentials_heading | escape }}
+        </p>
+      </div>
+
+      <ul class="cg-essentials__list" role="list">
+        <li class="cg-essential">
+          <span class="cg-essential__icon" aria-hidden="true">{{ cg_icon_clean }}</span>
+          <div class="cg-essential__text">
+            <h3 class="cg-essential__title">{{ section.settings.essential_1_title | escape }}</h3>
+            <p>{{ section.settings.essential_1_text | escape }}</p>
+          </div>
+        </li>
+        <li class="cg-essential">
+          <span class="cg-essential__icon" aria-hidden="true">{{ cg_icon_protect }}</span>
+          <div class="cg-essential__text">
+            <h3 class="cg-essential__title">{{ section.settings.essential_2_title | escape }}</h3>
+            <p>{{ section.settings.essential_2_text | escape }}</p>
+          </div>
+        </li>
+        <li class="cg-essential">
+          <span class="cg-essential__icon" aria-hidden="true">{{ cg_icon_extremes }}</span>
+          <div class="cg-essential__text">
+            <h3 class="cg-essential__title">{{ section.settings.essential_3_title | escape }}</h3>
+            <p>{{ section.settings.essential_3_text | escape }}</p>
+          </div>
+        </li>
+        <li class="cg-essential">
+          <span class="cg-essential__icon" aria-hidden="true">{{ cg_icon_mindful }}</span>
+          <div class="cg-essential__text">
+            <h3 class="cg-essential__title">{{ section.settings.essential_4_title | escape }}</h3>
+            <p>{{ section.settings.essential_4_text | escape }}</p>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  {%- comment -%} --------------------------------- PRESERVE -------------------------------- {%- endcomment -%}
+  <section class="cg-preserve" id="cg-preserve-{{ section.id }}" aria-labelledby="cg-preserve-title-{{ section.id }}">
+    <div class="cg-preserve__inner">
+      <div class="cg-preserve__media">
+        <img
+          src="{{ preserve_image | asset_img_url: '900x' }}"
+          srcset="
+            {{ preserve_image | asset_img_url: '480x' }} 480w,
+            {{ preserve_image | asset_img_url: '680x' }} 680w,
+            {{ preserve_image | asset_img_url: '900x' }} 900w
+          "
+          sizes="(max-width: 900px) 100vw, 42vw"
+          width="900"
+          height="770"
+          alt="{{ section.settings.preserve_image_alt | escape }}"
+          loading="lazy"
+        >
+      </div>
+      <div class="cg-preserve__copy">
+        <p class="cg-eyebrow">{{ section.settings.preserve_eyebrow | escape }}</p>
+        <h2 class="cg-preserve__title" id="cg-preserve-title-{{ section.id }}">
+          {{ section.settings.preserve_heading | escape }}
+        </h2>
+        <div class="cg-preserve__text rte">{{ section.settings.preserve_text }}</div>
+      </div>
+    </div>
+  </section>
+
+  {%- comment -%} ---------------------------------- ROUTINE -------------------------------- {%- endcomment -%}
+  <section class="cg-routine" aria-labelledby="cg-routine-title-{{ section.id }}">
+    <div class="cg-routine__inner">
+      <div class="cg-routine__lead">
+        <p class="cg-eyebrow">{{ section.settings.routine_eyebrow | escape }}</p>
+        <p class="cg-routine__lead-text" id="cg-routine-title-{{ section.id }}">
+          {{ section.settings.routine_heading | escape }}
+        </p>
+      </div>
+
+      <ol class="cg-routine__steps" role="list">
+        <li class="cg-step">
+          <span class="cg-step__marker"><span class="cg-step__num">01</span></span>
+          <h3 class="cg-step__title">{{ section.settings.routine_1_title | escape }}</h3>
+          <p class="cg-step__text">{{ section.settings.routine_1_text | escape }}</p>
+        </li>
+        <li class="cg-step">
+          <span class="cg-step__marker"><span class="cg-step__num">02</span></span>
+          <h3 class="cg-step__title">{{ section.settings.routine_2_title | escape }}</h3>
+          <p class="cg-step__text">{{ section.settings.routine_2_text | escape }}</p>
+        </li>
+        <li class="cg-step">
+          <span class="cg-step__marker"><span class="cg-step__num">03</span></span>
+          <h3 class="cg-step__title">{{ section.settings.routine_3_title | escape }}</h3>
+          <p class="cg-step__text">{{ section.settings.routine_3_text | escape }}</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  {%- comment -%} ------------------------------ MATERIALS/FINISHES ------------------------- {%- endcomment -%}
+  <section class="cg-materials" aria-labelledby="cg-materials-title-{{ section.id }}">
+    <div class="cg-materials__inner">
+      <div class="cg-materials__lead">
+        <p class="cg-eyebrow">{{ section.settings.materials_eyebrow | escape }}</p>
+        <h2 class="cg-materials__title" id="cg-materials-title-{{ section.id }}">
+          {{ section.settings.materials_heading | escape }}
+        </h2>
+        <p class="cg-materials__text">{{ section.settings.materials_text | escape }}</p>
+      </div>
+
+      <div class="cg-materials__grid">
+        {%- for block in finish_blocks -%}
+          <article class="cg-finish" {{ block.shopify_attributes }}>
+            <div class="cg-finish__media">
+              {%- if block.settings.image_asset != blank -%}
+                <img
+                  src="{{ block.settings.image_asset | asset_img_url: '520x' }}"
+                  srcset="
+                    {{ block.settings.image_asset | asset_img_url: '320x' }} 320w,
+                    {{ block.settings.image_asset | asset_img_url: '520x' }} 520w
+                  "
+                  sizes="(max-width: 900px) 90vw, 30vw"
+                  width="520"
+                  height="360"
+                  alt="{{ block.settings.image_alt | escape }}"
+                  loading="lazy"
+                >
+              {%- endif -%}
+            </div>
+            <div class="cg-finish__body">
+              <h3 class="cg-finish__title">{{ block.settings.title | escape }}</h3>
+              <p class="cg-finish__text">{{ block.settings.text | escape }}</p>
+              <a class="cg-link cg-link--sm" href="{{ block.settings.link_url | default: finish_guide_url }}">
+                <span>{{ block.settings.link_label | default: 'Care tips' | escape }}</span>
+              </a>
+            </div>
+          </article>
+        {%- endfor -%}
+      </div>
+    </div>
+  </section>
+
+  {%- comment -%} ------------------------------------ FAQ ---------------------------------- {%- endcomment -%}
+  <section class="cg-faq" aria-labelledby="cg-faq-title-{{ section.id }}">
+    <div class="cg-faq__inner">
+      <div class="cg-faq__lead">
+        <p class="cg-eyebrow">{{ section.settings.faq_eyebrow | escape }}</p>
+        <h2 class="cg-faq__title" id="cg-faq-title-{{ section.id }}">{{ section.settings.faq_heading | escape }}</h2>
+        <p class="cg-faq__text">{{ section.settings.faq_text | escape }}</p>
+      </div>
+
+      <div class="cg-faq__list">
+        {%- for block in faq_blocks -%}
+          <details
+            class="cg-faq__item"
+            name="{{ accordion_name }}"
+            {{ block.shopify_attributes }}
+            {% if forloop.first and block.settings.open_by_default %}open{% endif %}
+          >
+            <summary class="cg-faq__summary">
+              <span class="cg-faq__question">{{ block.settings.question | escape }}</span>
+              <span class="cg-faq__toggle" aria-hidden="true"></span>
+            </summary>
+            <div class="cg-faq__answer rte">{{ block.settings.answer }}</div>
+          </details>
+        {%- endfor -%}
+      </div>
+    </div>
+  </section>
+
+  {%- comment -%} ------------------------------------ CTA ---------------------------------- {%- endcomment -%}
+  <section class="cg-cta" aria-labelledby="cg-cta-title-{{ section.id }}">
+    <div class="cg-cta__inner">
+      <div class="cg-cta__media">
+        <img
+          src="{{ cta_image | asset_img_url: '1200x' }}"
+          srcset="
+            {{ cta_image | asset_img_url: '640x' }} 640w,
+            {{ cta_image | asset_img_url: '1200x' }} 1200w
+          "
+          sizes="(max-width: 900px) 100vw, 50vw"
+          width="1200"
+          height="760"
+          alt="{{ section.settings.cta_image_alt | escape }}"
+          loading="lazy"
+        >
+      </div>
+      <div class="cg-cta__content">
+        <p class="cg-eyebrow cg-eyebrow--light">{{ section.settings.cta_eyebrow | escape }}</p>
+        <h2 class="cg-cta__title" id="cg-cta-title-{{ section.id }}">{{ section.settings.cta_heading | escape }}</h2>
+        <p class="cg-cta__text">{{ section.settings.cta_text | escape }}</p>
+        <a class="cg-btn cg-btn--light" href="{{ consultation_url }}">
+          <span>{{ section.settings.cta_button_label | escape }}</span>
+          <span aria-hidden="true">→</span>
+        </a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+  const mainProductSection = document.getElementById('care-guide-{{ section.id }}');
+  if (mainProductSection) {
+    mainProductSection.closest('body').querySelector('.header__icon--search').style.color = 'var(--color-earth-brown)';
+    mainProductSection.closest('body').querySelector('.header__icon--cart').style.color = 'var(--color-earth-brown)';
+    mainProductSection.closest('body').querySelector('.header').style.border = '1px solid #cfcbc7b4';
+  }
+</script>
+{%- comment -%} FAQ structured data for SEO {%- endcomment -%}
+{%- if faq_blocks.size > 0 -%}
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {%- for block in faq_blocks -%}
+          {%- if forloop.first == false -%},{%- endif -%}
+          {
+            "@type": "Question",
+            "name": {{ block.settings.question | json }},
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": {{ block.settings.answer | strip_html | strip | json }}
+            }
+          }
+        {%- endfor -%}
+      ]
+    }
+  </script>
+{%- endif -%}
+
+{% stylesheet %}
+  .care-guide {
+    --cg-ink: var(--color-ebony);
+    --cg-muted: var(--color-bark);
+    --cg-line: rgba(74, 44, 24, 0.16);
+    --cg-cream: var(--color-cream);
+    --cg-surface: var(--surface-elevated);
+    --cg-accent: var(--color-earth-brown);
+    --cg-pad-x: var(--container-padding-x);
+    --cg-max: var(--page-max-width);
+    background: var(--cg-cream);
+    color: var(--cg-ink);
+    font-family: var(--font-body);
+    margin-top: 80px;
+  }
+
+  .care-guide :where(h1, h2, h3) {
+    margin: 0;
+  }
+
+  .cg-eyebrow {
+    margin: 0 0 var(--sp-4);
+    color: var(--cg-muted);
+    font-family: var(--font-body);
+    font-size: var(--eyebrow-size);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--eyebrow-tracking);
+    text-transform: uppercase;
+  }
+
+  .cg-eyebrow--light {
+    color: rgba(245, 241, 237, 0.72);
+  }
+
+  /* ------------------------------ Buttons / links ------------------------------ */
+  .cg-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-3);
+    min-height: var(--btn-height);
+    padding: 0 var(--btn-padding-x);
+    border: 1px solid transparent;
+    border-radius: var(--btn-radius);
+    font-family: var(--font-body);
+    font-size: var(--btn-font-size);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--letter-spacing-wide);
+    text-decoration: none;
+    transition: var(--transition-fast);
+  }
+
+  .cg-btn--dark {
+    background: var(--cg-accent);
+    color: var(--text-inverse);
+  }
+
+  .cg-btn--dark:hover {
+    background: var(--color-charcoal);
+  }
+
+  .cg-btn--light {
+    background: var(--cg-cream);
+    color: var(--cg-ink);
+  }
+
+  .cg-btn--light:hover {
+    background: var(--color-stone);
+  }
+
+  .cg-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding-bottom: var(--sp-1);
+    border-bottom: 1px solid var(--cg-ink);
+    color: var(--cg-ink);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--letter-spacing-wide);
+    text-decoration: none;
+    transition: var(--transition-fast);
+    width: fit-content;
+  }
+
+  .cg-link:hover {
+    color: var(--color-clay);
+    border-color: var(--color-clay);
+  }
+
+  .cg-link--sm {
+    border-bottom: none;
+    letter-spacing: var(--letter-spacing-normal);
+    padding: 3px 15px;
+    border-radius: var(--radius-full);
+    color: var(--color-milk);
+    background-color: var(--color-earth-brown);
+  }
+
+  /* ------------------------------------ Hero ----------------------------------- */
+  .cg-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 42%) minmax(0, 58%);
+    align-items: stretch;
+    width: 100%;
+    min-height: clamp(460px, 62svh, 640px);
+  }
+
+  .cg-hero__copy {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: clamp(48px, 6vw, 96px) clamp(32px, 4vw, 72px) clamp(48px, 6vw, 96px) var(--cg-pad-x);
+  }
+
+  .cg-hero__title {
+    margin: var(--sp-4) 0 0;
+    color: var(--cg-ink);
+    font-family: var(--font-display-light);
+    font-size: clamp(56px, 8vw, 104px);
+    font-weight: 300;
+    line-height: 0.98;
+    letter-spacing: var(--letter-spacing-tight);
+  }
+
+  .cg-hero__intro {
+    max-width: 34ch;
+    margin-top: var(--sp-5);
+    color: var(--text-secondary);
+    font-family: var(--font-display);
+    font-size: clamp(18px, 1.5vw, 22px);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-relaxed);
+  }
+
+  .cg-hero__intro p {
+    margin: 0;
+  }
+
+  .cg-hero__scroll {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-4);
+    margin-top: clamp(28px, 3vw, 48px);
+    padding-bottom: var(--sp-2);
+    border-bottom: 1px solid var(--cg-ink);
+    color: var(--cg-ink);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--eyebrow-tracking);
+    text-transform: uppercase;
+    width: fit-content;
+  }
+
+  .cg-hero__scroll-arrow {
+    transition: transform var(--timing-base) var(--ease-standard);
+  }
+
+  .cg-hero__scroll:hover .cg-hero__scroll-arrow {
+    transform: translateY(4px);
+  }
+
+  .cg-hero__media {
+    overflow: hidden;
+  }
+
+  .cg-hero__media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+  }
+
+  /* --------------------------------- Essentials -------------------------------- */
+  .cg-essentials {
+    width: min(100%, var(--cg-max));
+    margin-inline: auto;
+    padding: 0 var(--cg-pad-x);
+    margin-top: clamp(-40px, -3vw, -24px);
+    position: relative;
+    z-index: 2;
+  }
+
+  .cg-essentials__panel {
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 3.1fr);
+    gap: clamp(24px, 3vw, 56px);
+    align-items: center;
+    padding: clamp(28px, 3vw, 44px) clamp(28px, 3vw, 48px);
+    background: rgba(245, 241, 237, 0.72);
+    border: 1px solid var(--cg-line);
+    border-radius: var(--radius-lg);
+    backdrop-filter: blur(6px);
+  }
+
+  .cg-essentials__lead-text {
+    margin: 0;
+    color: var(--cg-ink);
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-lg);
+    line-height: var(--line-height-tight);
+  }
+
+  .cg-essentials__list {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: clamp(20px, 2vw, 36px);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .cg-essential {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-3);
+    margin: 0;
+  }
+
+  .cg-essential__icon {
+    width: 34px;
+    height: 34px;
+    color: var(--cg-muted);
+  }
+
+  .cg-essential__icon svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .cg-essential__title {
+    color: var(--cg-ink);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-semibold);
+  }
+
+  .cg-essential__text p {
+    margin: var(--sp-2) 0 0;
+    color: var(--text-secondary);
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-relaxed);
+  }
+
+  /* --------------------------------- Preserve ---------------------------------- */
+  .cg-preserve {
+    width: min(100%, var(--cg-max));
+    margin-inline: auto;
+    padding: clamp(56px, 6vw, 96px) var(--cg-pad-x);
+  }
+
+  .cg-preserve__inner {
+    display: grid;
+    grid-template-columns: minmax(0, 0.86fr) minmax(0, 1.14fr);
+    align-items: center;
+    gap: clamp(40px, 5vw, 88px);
+  }
+
+  .cg-preserve__media {
+    overflow: hidden;
+    border-radius: var(--radius-md);
+    aspect-ratio: 43 / 37;
+    background: var(--color-stone);
+  }
+
+  .cg-preserve__media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .cg-preserve__title {
+    max-width: 14ch;
+    color: var(--cg-ink);
+    font-family: var(--font-display-light);
+    font-size: clamp(30px, 3vw, 46px);
+    font-weight: 300;
+    line-height: 1.08;
+    letter-spacing: var(--letter-spacing-snug);
+  }
+
+  .cg-preserve__text {
+    max-width: 46ch;
+    margin-top: var(--sp-5);
+    color: var(--text-secondary);
+    font-size: var(--font-size-body-md);
+    line-height: var(--line-height-generous);
+  }
+
+  .cg-preserve__text p {
+    margin: 0 0 var(--sp-4);
+  }
+
+  .cg-preserve__copy .cg-btn {
+    margin-top: var(--sp-4);
+  }
+
+  /* ---------------------------------- Routine ---------------------------------- */
+  .cg-routine {
+    width: min(100%, var(--cg-max));
+    margin-inline: auto;
+    padding: clamp(48px, 5vw, 80px) var(--cg-pad-x);
+    border-top: 1px solid var(--cg-line);
+  }
+
+  .cg-routine__inner {
+    display: grid;
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 3fr);
+    gap: clamp(28px, 4vw, 64px);
+    align-items: center;
+  }
+
+  .cg-routine__lead-text {
+    margin: 0;
+    max-width: 22ch;
+    color: var(--cg-ink);
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-lg);
+    line-height: var(--line-height-tight);
+  }
+
+  .cg-routine__steps {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: clamp(28px, 3vw, 56px);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .cg-step {
+    margin: 0;
+    padding-top: var(--sp-5);
+  }
+
+  .cg-step__marker {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-4);
+    margin-bottom: var(--sp-5);
+  }
+
+  .cg-step__marker::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--cg-line);
+  }
+
+  .cg-step__num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border: 1px solid var(--cg-muted);
+    border-radius: var(--radius-full);
+    color: var(--cg-muted);
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-lg);
+    line-height: 1;
+  }
+
+  .cg-step__title {
+    color: var(--cg-ink);
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-2xl);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-tight);
+  }
+
+  .cg-step__text {
+    margin: var(--sp-3) 0 0;
+    max-width: 30ch;
+    color: var(--text-secondary);
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-generous);
+  }
+
+  /* --------------------------------- Materials --------------------------------- */
+  .cg-materials {
+    width: min(100%, var(--cg-max));
+    margin-inline: auto;
+    padding: clamp(48px, 5vw, 80px) var(--cg-pad-x);
+    border-top: 1px solid var(--cg-line);
+  }
+
+  .cg-materials__inner {
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 2.6fr);
+    gap: clamp(32px, 4vw, 72px);
+    align-items: center;
+  }
+
+  .cg-materials__title {
+    max-width: 12ch;
+    margin-bottom: var(--sp-4);
+    color: var(--cg-ink);
+    font-family: var(--font-display-light);
+    font-size: clamp(28px, 2.6vw, 40px);
+    font-weight: 300;
+    line-height: 1.1;
+    letter-spacing: var(--letter-spacing-snug);
+  }
+
+  .cg-materials__text {
+    max-width: 30ch;
+    margin: 0 0 var(--sp-6);
+    color: var(--text-secondary);
+    font-size: var(--font-size-body-md);
+    line-height: var(--line-height-generous);
+  }
+
+  .cg-materials__grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: clamp(20px, 2vw, 32px);
+  }
+
+  .cg-finish {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background-color: var(--color-milk);
+    border: 1px solid var(--cg-line);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    transition: box-shadow var(--timing-base) var(--ease-standard), transform var(--timing-base) var(--ease-standard);
+  }
+
+  .cg-finish:hover {
+    box-shadow: var(--shadow-card-hover);
+    transform: translateY(-3px);
+  }
+
+  .cg-finish__media {
+    aspect-ratio: 3 / 2;
+    overflow: hidden;
+    background-color: var(--color-stone);
+  }
+
+  .cg-finish__media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform var(--timing-long) var(--ease-standard);
+  }
+
+  .cg-finish:hover .cg-finish__media img {
+    transform: scale(1.04);
+  }
+
+  .cg-finish__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-3);
+    padding: clamp(18px, 1.6vw, 24px);
+  }
+
+  .cg-finish__title {
+    color: var(--cg-ink);
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-xl);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-tight);
+  }
+
+  .cg-finish__text {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-generous);
+  }
+
+  .cg-finish__body .cg-link {
+    margin-top: var(--sp-2);
+  }
+
+  /* ------------------------------------ FAQ ------------------------------------ */
+  .cg-faq {
+    width: min(100%, var(--cg-max));
+    margin-inline: auto;
+    padding: clamp(48px, 5vw, 80px) var(--cg-pad-x);
+    border-top: 1px solid var(--cg-line);
+  }
+
+  .cg-faq__inner {
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.6fr);
+    gap: clamp(32px, 4vw, 72px);
+    align-items: start;
+  }
+
+  .cg-faq__title {
+    max-width: 14ch;
+    margin-bottom: var(--sp-4);
+    color: var(--cg-ink);
+    font-family: var(--font-display-light);
+    font-size: clamp(28px, 2.6vw, 40px);
+    font-weight: 300;
+    line-height: 1.1;
+    letter-spacing: var(--letter-spacing-snug);
+  }
+
+  .cg-faq__text {
+    max-width: 34ch;
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: var(--font-size-body-md);
+    line-height: var(--line-height-generous);
+  }
+
+  .cg-faq__list {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .cg-faq__item {
+    border-bottom: 1px solid var(--cg-line);
+  }
+
+  .cg-faq__item:first-child {
+    border-top: 1px solid var(--cg-line);
+  }
+
+  .cg-faq__summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-4);
+    min-height: 64px;
+    padding: var(--sp-4) 0;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .cg-faq__summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .cg-faq__question {
+    color: var(--cg-ink);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-md);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--line-height-normal);
+  }
+
+  .cg-faq__toggle {
+    position: relative;
+    flex: 0 0 auto;
+    width: 20px;
+    height: 20px;
+  }
+
+  .cg-faq__toggle::before,
+  .cg-faq__toggle::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 14px;
+    height: 1.5px;
+    background: var(--cg-muted);
+    transform: translate(-50%, -50%);
+    transition: transform var(--timing-short) var(--ease-standard);
+  }
+
+  .cg-faq__toggle::after {
+    transform: translate(-50%, -50%) rotate(90deg);
+  }
+
+  .cg-faq__item[open] .cg-faq__toggle::after {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+
+  .cg-faq__answer {
+    max-width: 60ch;
+    padding: 0 0 var(--sp-5);
+    color: var(--text-secondary);
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-generous);
+  }
+
+  .cg-faq__answer p {
+    margin: 0;
+  }
+
+  /* ------------------------------------ CTA ------------------------------------ */
+  .cg-cta {
+    width: min(100%, var(--cg-max));
+    margin-inline: auto;
+    padding: 0 var(--cg-pad-x) clamp(48px, 5vw, 80px);
+  }
+
+  .cg-cta__inner {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    overflow: hidden;
+    border-radius: var(--radius-lg);
+    background: var(--color-earth-brown);
+    min-height: clamp(300px, 34vw, 420px);
+  }
+
+  .cg-cta__media {
+    overflow: hidden;
+  }
+
+  .cg-cta__media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .cg-cta__content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: clamp(36px, 4vw, 72px);
+    color: var(--text-inverse);
+  }
+
+  .cg-cta__title {
+    max-width: 16ch;
+    color: var(--text-inverse);
+    font-family: var(--font-display-light);
+    font-size: clamp(28px, 2.8vw, 44px);
+    font-weight: 300;
+    line-height: 1.08;
+    letter-spacing: var(--letter-spacing-snug);
+  }
+
+  .cg-cta__text {
+    max-width: 42ch;
+    margin: var(--sp-4) 0 var(--sp-6);
+    color: rgba(245, 241, 237, 0.82);
+    font-size: var(--font-size-body-md);
+    line-height: var(--line-height-generous);
+  }
+
+  .cg-cta__content .cg-btn {
+    align-self: flex-start;
+  }
+
+  /* =============================== RESPONSIVE (desktop-first) =============================== */
+  @media screen and (max-width: 1024px) {
+    .cg-essentials__panel {
+      grid-template-columns: 1fr;
+    }
+
+    .cg-essentials__list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .cg-materials__inner,
+    .cg-faq__inner {
+      grid-template-columns: 1fr;
+    }
+
+    .cg-materials__title,
+    .cg-faq__title {
+      max-width: none;
+    }
+  }
+
+  @media screen and (max-width: 900px) {
+    .cg-hero {
+      grid-template-columns: 1fr;
+      min-height: 0;
+    }
+
+    .cg-hero__copy {
+      order: 2;
+      padding: clamp(32px, 6vw, 48px) var(--cg-pad-x) clamp(28px, 5vw, 40px);
+    }
+
+    .cg-hero__media {
+      order: 1;
+      aspect-ratio: 4 / 3;
+    }
+
+    .cg-hero__intro {
+      max-width: none;
+    }
+
+    .cg-essentials {
+      margin-top: 0;
+      padding-top: clamp(32px, 6vw, 48px);
+    }
+
+    .cg-preserve__inner,
+    .cg-routine__inner {
+      grid-template-columns: 1fr;
+    }
+
+    .cg-preserve__media {
+      order: -1;
+      max-height: 380px;
+    }
+
+    .cg-routine__steps {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+
+    .cg-step {
+      padding: var(--sp-5) 0;
+      border-top: 1px solid var(--cg-line);
+    }
+
+    .cg-materials__grid {
+      grid-template-columns: 1fr;
+      gap: var(--sp-5);
+    }
+
+    .cg-cta__inner {
+      grid-template-columns: 1fr;
+    }
+
+    .cg-cta__media {
+      aspect-ratio: 16 / 9;
+      order: -1;
+    }
+  }
+
+  @media screen and (max-width: 560px) {
+    .cg-essentials__list {
+      grid-template-columns: 1fr;
+      gap: var(--sp-5);
+    }
+
+    .cg-hero__title {
+      font-size: clamp(52px, 16vw, 72px);
+    }
+
+    .cg-btn,
+    .cg-hero__scroll,
+    .cg-link {
+      min-height: 44px;
+    }
+
+    .cg-faq__summary {
+      min-height: 56px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cg-finish,
+    .cg-finish__media img,
+    .cg-hero__scroll-arrow,
+    .cg-faq__toggle::before,
+    .cg-faq__toggle::after {
+      transition: none;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Care guide page",
+  "tag": "section",
+  "class": "section-care-guide-page",
+  "settings": [
+    { "type": "header", "content": "Hero" },
+    { "type": "text", "id": "hero_eyebrow", "label": "Eyebrow", "default": "Timeless beauty. Lasting legacy." },
+    { "type": "text", "id": "hero_heading", "label": "Heading", "default": "Care Guide" },
+    { "type": "richtext", "id": "hero_text", "label": "Text", "default": "<p>Well cared for, solid wood becomes more than furniture—it becomes part of your story.</p>" },
+    { "type": "text", "id": "hero_scroll_label", "label": "Scroll link label", "default": "Scroll to learn more" },
+    { "type": "text", "id": "hero_image_asset", "label": "Hero image asset filename", "default": "care-guide-5.png" },
+    { "type": "text", "id": "hero_image_alt", "label": "Hero image alt", "default": "Sculptural solid wood dining table styled in a calm, sunlit interior" },
+
+    { "type": "header", "content": "Essentials strip" },
+    { "type": "text", "id": "essentials_eyebrow", "label": "Eyebrow", "default": "The essentials" },
+    { "type": "text", "id": "essentials_heading", "label": "Heading", "default": "Simple habits. Lasting beauty." },
+    { "type": "text", "id": "essential_1_title", "label": "Item 1 title", "default": "Keep it clean" },
+    { "type": "text", "id": "essential_1_text", "label": "Item 1 text", "default": "Wipe with a soft, dry or slightly damp cloth." },
+    { "type": "text", "id": "essential_2_title", "label": "Item 2 title", "default": "Protect the surface" },
+    { "type": "text", "id": "essential_2_text", "label": "Item 2 text", "default": "Use coasters, mats, and trivets." },
+    { "type": "text", "id": "essential_3_title", "label": "Item 3 title", "default": "Avoid extremes" },
+    { "type": "text", "id": "essential_3_text", "label": "Item 3 text", "default": "Keep away from direct sunlight and heaters." },
+    { "type": "text", "id": "essential_4_title", "label": "Item 4 title", "default": "Mindful living" },
+    { "type": "text", "id": "essential_4_text", "label": "Item 4 text", "default": "Treat with care, and it will age beautifully." },
+
+    { "type": "header", "content": "Preserve" },
+    { "type": "text", "id": "preserve_eyebrow", "label": "Eyebrow", "default": "Preserve what matters" },
+    { "type": "text", "id": "preserve_heading", "label": "Heading", "default": "How to Preserve the Character of Solid Wood" },
+    { "type": "richtext", "id": "preserve_text", "label": "Text", "default": "<p>Solid wood is alive. It moves with the seasons, responds to its environment, and tells a story through every grain and curve.</p><p>With a little care and attention, your furniture will remain as stunning—and enduring—as the day it was made.</p>" },
+    { "type": "text", "id": "preserve_button_label", "label": "Button label", "default": "Learn about our craft" },
+    { "type": "url", "id": "craft_url", "label": "Button link" },
+    { "type": "text", "id": "preserve_image_asset", "label": "Image asset filename", "default": "care-guide-4.png" },
+    { "type": "text", "id": "preserve_image_alt", "label": "Image alt", "default": "Sculptural solid wood shelving unit styled with ceramics and books" },
+
+    { "type": "header", "content": "Care routine" },
+    { "type": "text", "id": "routine_eyebrow", "label": "Eyebrow", "default": "Care routine" },
+    { "type": "text", "id": "routine_heading", "label": "Heading", "default": "A rhythm of care for every stage of your furniture's life." },
+    { "type": "text", "id": "routine_1_title", "label": "Step 1 title", "default": "Daily Care" },
+    { "type": "textarea", "id": "routine_1_text", "label": "Step 1 text", "default": "Dust regularly with a soft cloth. Wipe spills immediately. Keep surfaces dry and protected." },
+    { "type": "text", "id": "routine_2_title", "label": "Step 2 title", "default": "Seasonal Care" },
+    { "type": "textarea", "id": "routine_2_text", "label": "Step 2 text", "default": "Deep clean gently. Reapply oil to nourish the wood and restore its natural luster." },
+    { "type": "text", "id": "routine_3_title", "label": "Step 3 title", "default": "Long-Term Care" },
+    { "type": "textarea", "id": "routine_3_text", "label": "Step 3 text", "default": "Maintain structure and beauty with occasional inspections and professional care." },
+
+    { "type": "header", "content": "Materials & finishes" },
+    { "type": "text", "id": "materials_eyebrow", "label": "Eyebrow", "default": "Materials & finishes" },
+    { "type": "text", "id": "materials_heading", "label": "Heading", "default": "Tailored Care for Timeless Materials" },
+    { "type": "text", "id": "materials_text", "label": "Text", "default": "Each finish is natural. Each deserves thoughtful care." },
+    { "type": "text", "id": "materials_link_label", "label": "Link label", "default": "View wood & finish guide" },
+    { "type": "url", "id": "finish_guide_url", "label": "Link URL" },
+
+    { "type": "header", "content": "FAQ" },
+    { "type": "text", "id": "faq_eyebrow", "label": "Eyebrow", "default": "Common questions" },
+    { "type": "text", "id": "faq_heading", "label": "Heading", "default": "Answers to Help You Care with Confidence" },
+    { "type": "textarea", "id": "faq_text", "label": "Text", "default": "Everything you need to know to keep your WRYDECO pieces beautiful for generations." },
+
+    { "type": "header", "content": "Consultation CTA" },
+    { "type": "text", "id": "cta_eyebrow", "label": "Eyebrow", "default": "White-glove care" },
+    { "type": "text", "id": "cta_heading", "label": "Heading", "default": "Need Personalized Care Advice?" },
+    { "type": "textarea", "id": "cta_text", "label": "Text", "default": "Our team is here to help you protect your investment with expert guidance and white-glove support." },
+    { "type": "text", "id": "cta_button_label", "label": "Button label", "default": "Book a care consultation" },
+    { "type": "url", "id": "consultation_url", "label": "Button link" },
+    { "type": "text", "id": "cta_image_asset", "label": "Image asset filename", "default": "care-guide-5.png" },
+    { "type": "text", "id": "cta_image_alt", "label": "Image alt", "default": "Handcrafted solid wood dining set in a warm, sunlit room" }
+  ],
+  "blocks": [
+    {
+      "type": "finish",
+      "name": "Finish card",
+      "settings": [
+        { "type": "text", "id": "image_asset", "label": "Image asset filename", "default": "care-guide-3.png" },
+        { "type": "text", "id": "image_alt", "label": "Image alt", "default": "Close-up of a natural wood surface" },
+        { "type": "text", "id": "title", "label": "Title", "default": "Oil Finish" },
+        { "type": "textarea", "id": "text", "label": "Text", "default": "Nourish every 6–12 months with natural oil to maintain depth and protection." },
+        { "type": "text", "id": "link_label", "label": "Link label", "default": "Care tips" },
+        { "type": "url", "id": "link_url", "label": "Link URL" }
+      ]
+    },
+    {
+      "type": "faq",
+      "name": "FAQ item",
+      "settings": [
+        { "type": "text", "id": "question", "label": "Question", "default": "Can I place hot items directly on the wood surface?" },
+        { "type": "richtext", "id": "answer", "label": "Answer", "default": "<p>We recommend using a trivet or heat pad. Extreme heat can damage the finish or cause cracks over time.</p>" },
+        { "type": "checkbox", "id": "open_by_default", "label": "Open by default (first item only)", "default": false }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Care guide page",
+      "blocks": [
+        { "type": "finish", "settings": { "image_asset": "care-guide-3.png", "title": "Oil Finish", "text": "Nourish every 6–12 months with natural oil to maintain depth and protection.", "image_alt": "Oiled solid wood table with a dark ceramic bowl" } },
+        { "type": "finish", "settings": { "image_asset": "care-guide-1.png", "title": "Matte Finish", "text": "Clean gently and avoid waxes. Use soft cloths and mild, natural cleaners.", "image_alt": "Matte walnut cabinet corner with soft grain detail" } },
+        { "type": "finish", "settings": { "image_asset": "care-guide-2.png", "title": "Natural Grain", "text": "Embrace unique markings and variations—part of the wood's natural story.", "image_alt": "Live-edge natural wood slab with visible grain and a book" } },
+        { "type": "faq", "settings": { "question": "Can I place hot items directly on the wood surface?", "answer": "<p>We recommend using a trivet or heat pad. Extreme heat can damage the finish or cause cracks over time.</p>", "open_by_default": true } },
+        { "type": "faq", "settings": { "question": "How often should I oil my furniture?", "answer": "<p>For oil-finished pieces, reapply a thin coat of natural oil every 6 to 12 months, or whenever the surface begins to look dry.</p>" } },
+        { "type": "faq", "settings": { "question": "Why does my wood change color over time?", "answer": "<p>Natural wood develops a warm patina as it responds to light and air. This gentle shift in tone is a normal, cherished part of solid wood aging.</p>" } },
+        { "type": "faq", "settings": { "question": "What should I avoid using to clean my furniture?", "answer": "<p>Avoid abrasive pads, silicone sprays, and harsh chemical cleaners. Use a soft cloth with water or a mild, natural cleaner instead.</p>" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

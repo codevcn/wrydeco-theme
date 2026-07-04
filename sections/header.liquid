@@ -99,26 +99,63 @@
                 {%- if customer -%}
                   <a class="cmega__account-btn" href="{{ routes.account_url }}">
                     <span class="cmega__account-btn-icon" aria-hidden="true">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/></svg>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="18"
+                        height="18"
+                        fill="currentColor"
+                        viewBox="0 0 16 16"
+                      >
+                        <path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/>
+                      </svg>
                     </span>
                     <span>My account</span>
                   </a>
                   <a class="cmega__account-logout" href="{{ routes.account_logout_url }}">Log out</a>
                 {%- else -%}
-                  <button
-                    type="button"
-                    class="cmega__account-btn"
-                    data-mobile-menu-close
-                    onclick="window.openLoginPopup && window.openLoginPopup(event)"
-                  >
+                  <a class="cmega__account-btn" href="{{ routes.account_login_url }}" data-mobile-menu-close>
                     <span class="cmega__account-btn-icon" aria-hidden="true">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/></svg>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="18"
+                        height="18"
+                        fill="currentColor"
+                        viewBox="0 0 16 16"
+                      >
+                        <path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/>
+                      </svg>
                     </span>
-                    <span>Log in</span>
-                  </button>
-                  <p class="cmega__account-note">Access your account to view your bespoke orders.</p>
+                    <span>Sign in</span>
+                  </a>
+                  <p class="cmega__account-note">Secure passwordless sign-in — we email you a one-time code.</p>
                 {%- endif -%}
               </div>
+
+              {%- comment -%} Primary nav links — mirrors the desktop header nav (hidden on desktop). {%- endcomment -%}
+              <nav class="cmega__nav" aria-label="Main">
+                <ul class="cmega__nav-list">
+                  <li class="cmega__nav-item">
+                    <a class="cmega__nav-link" href="/collections/all" data-mobile-menu-close>Explore All Pieces</a>
+                  </li>
+                  <li class="cmega__nav-item">
+                    <a class="cmega__nav-link" href="{{ pages['faq'].url | default: '/pages/faq' }}?view=faq" data-mobile-menu-close>FAQ</a>
+                  </li>
+                  <li class="cmega__nav-item">
+                    <a
+                      class="cmega__nav-link"
+                      href="{{ pages['about-us'].url | default: '/pages/about-us' }}?view=about-us"
+                      data-mobile-menu-close
+                    >About Us</a>
+                  </li>
+                  <li class="cmega__nav-item">
+                    <a
+                      class="cmega__nav-link"
+                      href="{{ pages['contact'].url | default: '/pages/contact' }}"
+                      data-mobile-menu-close
+                    >Contact</a>
+                  </li>
+                </ul>
+              </nav>
 
               <div class="cmega__cats">
                 <p class="cmega__heading">Shop by Category</p>
@@ -389,11 +426,10 @@
       </svg>
     </button>
 
-    <button
-      type="button"
+    <a
+      href="{% if customer %}{{ routes.account_url }}{% else %}{{ routes.account_login_url }}{% endif %}"
       class="header__icon header__icon--account"
-      aria-label="Account"
-      onclick="window.openLoginPopup && window.openLoginPopup(event)"
+      aria-label="{% if customer %}My account{% else %}Sign in{% endif %}"
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -406,12 +442,11 @@
       >
         <path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/>
       </svg>
-    </button>
+    </a>
   </div>
 </header>
 
 {% render 'search-popup' %}
-{% render 'login-popup' %}
 
 {% javascript %}
   (function () {
@@ -638,7 +673,8 @@
 
   .mobile-menu__overlay,
   .mobile-menu__bar,
-  .cmega__account {
+  .cmega__account,
+  .cmega__nav {
     display: none;
   }
 
@@ -666,6 +702,7 @@
     margin: 0 0 var(--sp-2);
     font-size: var(--font-size-caption);
     font-weight: var(--font-weight-bold);
+    font-family: var(--font-roboto);
     letter-spacing: 0.05em;
     text-transform: uppercase;
     color: var(--text-secondary);
@@ -1103,6 +1140,7 @@
        Scoped to .header__right to outrank the later base .header__icon rule. */
     .header__right .header__icon--account {
       display: none;
+      color: var(--color-milk);
     }
 
     /* Dedicated account section pinned to the top of the drawer (above the
@@ -1117,7 +1155,7 @@
     .cmega__account .cmega__heading {
       margin-block-end: var(--sp-3);
       color: var(--color-earth-brown);
-      font-family: var(--font-body);
+      font-family: var(--font-roboto);
       font-size: var(--font-size-caption);
       font-weight: var(--font-weight-semibold);
       letter-spacing: calc(var(--letter-spacing-wide) * 5);
@@ -1173,6 +1211,47 @@
 
     .cmega__account-logout:hover {
       color: var(--color-earth-brown);
+    }
+
+    /* Primary nav links, pinned above the category list. */
+    .cmega__nav {
+      display: block;
+      padding: var(--sp-3) var(--sp-4);
+      border-block-end: var(--border-width) solid var(--border-light);
+      background: var(--color-milk);
+    }
+
+    .cmega__nav-list {
+      margin: var(--sp-0);
+      padding: var(--sp-0);
+      list-style: none;
+    }
+
+    .cmega__nav-item + .cmega__nav-item {
+      border-block-start: var(--border-width) solid var(--border-light);
+    }
+
+    .cmega__nav-link {
+      display: flex;
+      align-items: center;
+      min-block-size: var(--sp-7);
+      padding: var(--sp-3) var(--sp-2);
+      color: var(--text-primary);
+      font-family: var(--font-roboto);
+      font-size: var(--font-size-body-lg);
+      font-weight: var(--font-weight-medium);
+      line-height: var(--line-height-tight);
+      text-decoration: none;
+      transition: color var(--timing-short) var(--ease-standard);
+    }
+
+    .cmega__nav-link:hover {
+      color: var(--color-earth-brown);
+    }
+
+    .cmega__nav-link:focus-visible {
+      outline: calc(var(--border-width) * 2) solid var(--color-sage);
+      outline-offset: calc(var(--border-width) * -2);
     }
   }
 
@@ -1234,7 +1313,6 @@
     justify-content: center;
     width: 44px;
     height: 44px;
-    color: var(--color-1, #000);
     background: transparent;
     border: none;
     cursor: pointer;
