@@ -1,0 +1,1 @@
+python inactive_products.py "./products_export_1.csv" products_export_inactive_except.csv

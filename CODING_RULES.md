@@ -48,3 +48,9 @@ The technical implementation must align with the brand's luxury positioning.
 
 - All text displayed to the end user (on the website interface) must be written entirely in English.
 - Strictly do not use Vietnamese or any other language for UI components (buttons, labels, placeholders, messages, etc.).
+
+## 8. File References (Shopify Files)
+
+- All file assets have been fully uploaded to Shopify Content > Files.
+- When writing code that references a file (images, fonts, scripts, styles, etc.), always use the `file_url` filter instead of `asset_url`.
+- **Exception:** `asset_url` is still correct for files that genuinely live in the theme's `assets/` folder (e.g. compiled/critical assets not managed via Shopify Files).
