@@ -131,6 +131,14 @@
                 {%- endif -%}
               </div>
 
+              {%- comment -%} Country / currency selector — mobile drawer copy. {%- endcomment -%}
+              {%- if localization.available_countries.size > 1 -%}
+                <div class="cmega__localization">
+                  <p class="cmega__heading">{{ 'general.localization.country_label' | t }}</p>
+                  {% render 'localization-selector', variant: 'drawer', id: 'mobile-drawer' %}
+                </div>
+              {%- endif -%}
+
               {%- comment -%} Primary nav links — mirrors the desktop header nav (hidden on desktop). {%- endcomment -%}
               <nav class="cmega__nav" aria-label="Main">
                 <ul class="cmega__nav-list">
@@ -369,6 +377,10 @@
 
   <div class="header__right">
     <a href="/pages/customization" class="header__consultation-link">Book Consultation</a>
+
+    <div class="header__localization">
+      {% render 'localization-selector', variant: 'header', id: 'header' %}
+    </div>
 
     <a
       href="{{ routes.search_url }}"
@@ -674,6 +686,7 @@
   .mobile-menu__overlay,
   .mobile-menu__bar,
   .cmega__account,
+  .cmega__localization,
   .cmega__nav {
     display: none;
   }
@@ -1145,7 +1158,8 @@
 
     /* Dedicated account section pinned to the top of the drawer (above the
        category list) so it is reachable without scrolling. */
-    .cmega__account {
+    .cmega__account,
+    .cmega__localization {
       display: block;
       padding: var(--sp-5) var(--sp-4);
       border-block-end: var(--border-width) solid var(--border-light);
@@ -1259,6 +1273,21 @@
     display: flex;
     justify-content: flex-end;
     align-items: center;
+  }
+
+  .header__localization {
+    display: none;
+  }
+
+  @media screen and (min-width: 750px) {
+    .header__localization {
+      display: inline-flex;
+      margin-right: var(--space-2, 10px);
+    }
+  }
+
+  .cmega__localization .cmega__heading {
+    margin-block-end: var(--sp-3);
   }
 
   .header__consultation-link {

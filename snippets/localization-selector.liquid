@@ -1,0 +1,503 @@
+{% doc %}
+  Renders a country / currency picker backed by Shopify's built-in
+  localization form. Selecting a country updates the shopper's shipping
+  country and the currency prices are displayed in.
+
+  Progressive enhancement: the picker is a native <details> disclosure whose
+  options are real submit buttons, so switching country works without JS.
+  JavaScript only enhances it (open/close behaviour, live search, keyboard).
+
+  Renders nothing if the shop only has a single available country.
+
+  @param {string} [variant] - Visual variant: 'header', 'footer' or 'drawer'. Defaults to 'header'.
+  @param {string} [id] - Unique id suffix, required when rendering more than once on the same page.
+
+  @example
+  {% render 'localization-selector', variant: 'header', id: 'header' %}
+  {% render 'localization-selector', variant: 'footer', id: 'footer' %}
+{% enddoc %}
+
+{%- liquid
+  assign variant = variant | default: 'header'
+  assign uid = id | default: variant
+  assign form_id = 'LocForm-' | append: uid
+  assign current_country = localization.country
+-%}
+
+{%- if localization.available_countries.size > 1 -%}
+  <details class="loc-picker loc-picker--{{ variant }}" data-loc-picker>
+    <summary
+      class="loc-picker__trigger"
+      aria-label="{{ 'general.localization.country_label' | t }}: {{ current_country.name | escape }}"
+    >
+      <span class="loc-picker__flag loc-picker__flag--trigger">
+        <img
+          src="https://flagcdn.com/{{ current_country.iso_code | downcase }}.svg"
+          width="24"
+          height="18"
+          loading="lazy"
+          alt=""
+        >
+      </span>
+      <svg class="loc-picker__chevron" aria-hidden="true" focusable="false" viewBox="0 0 10 6">
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M9.354.646a.5.5 0 00-.708 0L5 4.293 1.354.646a.5.5 0 00-.708.708l4 4a.5.5 0 00.708 0l4-4a.5.5 0 000-.708z" fill="currentColor"/>
+      </svg>
+    </summary>
+
+    <div class="loc-picker__panel">
+      <div class="loc-picker__search">
+        <svg
+          class="loc-picker__search-icon"
+          aria-hidden="true"
+          focusable="false"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input
+          type="text"
+          class="loc-picker__search-input"
+          placeholder="{{ 'general.localization.search' | t }}"
+          aria-label="{{ 'general.localization.search' | t }}"
+          autocomplete="off"
+          data-loc-search
+        >
+      </div>
+
+      {% form 'localization', id: form_id, class: 'loc-picker__form' %}
+        <input type="hidden" name="return_to" value="{{ request.path }}">
+        <ul class="loc-picker__list" data-loc-list>
+          {%- for country in localization.available_countries -%}
+            {%- liquid
+              assign is_selected = false
+              if country.iso_code == current_country.iso_code
+                assign is_selected = true
+              endif
+              assign search_hay = country.name | append: ' ' | append: country.currency.iso_code | append: ' ' | append: country.currency.symbol | downcase
+            -%}
+            <li class="loc-picker__item" data-loc-item data-search="{{ search_hay | escape }}">
+              <button
+                type="submit"
+                name="country_code"
+                value="{{ country.iso_code }}"
+                class="loc-picker__option{% if is_selected %} is-selected{% endif %}"
+                {% if is_selected %}
+                  aria-current="true"
+                {% endif %}
+              >
+                <span class="loc-picker__flag">
+                  <img
+                    src="https://flagcdn.com/{{ country.iso_code | downcase }}.svg"
+                    width="40"
+                    height="28"
+                    loading="lazy"
+                    alt=""
+                  >
+                </span>
+                <span class="loc-picker__code">{{ country.currency.iso_code }}</span>
+                <span class="loc-picker__symbol">{{ country.currency.symbol }}</span>
+                <span class="loc-picker__divider" aria-hidden="true"></span>
+                <span class="loc-picker__name">{{ country.name }}</span>
+                <span class="loc-picker__check" aria-hidden="true">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="3"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                </span>
+              </button>
+            </li>
+          {%- endfor -%}
+        </ul>
+        <p class="loc-picker__empty" data-loc-empty hidden>{{ 'general.localization.no_results' | t }}</p>
+      {% endform %}
+    </div>
+  </details>
+{%- endif -%}
+
+{% stylesheet %}
+  .loc-picker {
+    position: relative;
+    display: inline-block;
+  }
+
+  /* ---- Trigger (pill with flag + chevron) ---- */
+  .loc-picker__trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    border-radius: var(--radius-full);
+    color: var(--color-earth-brown);
+    cursor: pointer;
+    list-style: none;
+    transition: border-color var(--timing-short) var(--ease-standard),
+      background-color var(--timing-short) var(--ease-standard);
+  }
+
+  .loc-picker__trigger::-webkit-details-marker {
+    display: none;
+  }
+
+  .loc-picker__trigger:hover {
+    border-color: color-mix(in srgb, var(--color-earth-brown) 40%, transparent);
+  }
+
+  .loc-picker__trigger:focus-visible {
+    outline: 2px solid var(--color-sage);
+    outline-offset: 2px;
+  }
+
+  .loc-picker__flag--trigger img {
+    display: block;
+    width: 24px;
+    height: 18px;
+    object-fit: cover;
+    border-radius: var(--radius-sm);
+    box-shadow: 0 0 0 var(--border-width) var(--color-border);
+  }
+
+  .loc-picker__chevron {
+    width: 10px;
+    height: auto;
+    color: currentColor;
+    opacity: 0.75;
+    transition: transform var(--timing-short) var(--ease-standard);
+  }
+
+  .loc-picker[open] .loc-picker__chevron {
+    transform: rotate(180deg);
+  }
+
+  /* ---- Panel ---- */
+  .loc-picker__panel {
+    position: absolute;
+    z-index: var(--z-drawer);
+    width: min(340px, calc(100vw - var(--sp-6)));
+    padding: var(--sp-4) var(--sp-3) var(--sp-2);
+    background: var(--color-milk);
+    border: 1px solid var(--color-border);
+    border-radius: calc(var(--radius-xl) * 2);
+    box-shadow: var(--shadow-dropdown);
+  }
+
+  .loc-picker--header {
+    display: flex;
+    align-items: center;
+  }
+
+  /* Header: open downward, aligned to the right edge of the trigger */
+  .loc-picker--header .loc-picker__panel {
+    top: calc(100% + var(--sp-4));
+    right: 0;
+  }
+
+  .loc-picker--footer {
+    display: flex;
+    align-items: center;
+  }
+
+  /* Footer: open upward, aligned to the left edge of the trigger */
+  .loc-picker--footer .loc-picker__panel {
+    bottom: calc(100% + var(--sp-4));
+    left: 0;
+  }
+
+  /* ---- Search ---- */
+  .loc-picker__search {
+    position: relative;
+    margin-bottom: var(--sp-4);
+  }
+
+  .loc-picker__search-icon {
+    position: absolute;
+    top: 50%;
+    left: var(--sp-4);
+    width: 18px;
+    height: 18px;
+    transform: translateY(-50%);
+    color: var(--text-tertiary);
+    pointer-events: none;
+  }
+
+  .loc-picker__search-input {
+    width: 100%;
+    min-height: calc(var(--sp-7) + var(--sp-1));
+    padding: 0 var(--sp-4) 0 calc(var(--sp-7) + var(--sp-2));
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    background: var(--surface-elevated);
+    color: var(--text-primary);
+    font-family: var(--font-roboto);
+    font-size: var(--font-size-body-md);
+  }
+
+  .loc-picker__search-input::placeholder {
+    color: var(--text-tertiary);
+  }
+
+  .loc-picker__search-input:focus {
+    outline: none;
+    border-color: var(--color-clay);
+    box-shadow: var(--shadow-focus);
+  }
+
+  /* ---- List ---- */
+  .loc-picker__list {
+    max-height: 320px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-clay) transparent;
+  }
+
+  .loc-picker__list::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .loc-picker__list::-webkit-scrollbar-thumb {
+    border-radius: var(--radius-full);
+    background: var(--color-clay);
+  }
+
+  .loc-picker__item {
+    margin: 0;
+  }
+
+  .loc-picker__option {
+    display: grid;
+    grid-template-columns: auto auto auto auto 1fr auto;
+    align-items: center;
+    gap: var(--sp-2);
+    width: 100%;
+    padding: var(--sp-2) var(--sp-3);
+    border: 0;
+    border-radius: var(--radius-lg);
+    background: transparent;
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-weight: var(--font-weight-regular);
+    text-align: left;
+    cursor: pointer;
+    transition: background-color var(--timing-short) var(--ease-standard);
+  }
+
+  .loc-picker__option:hover {
+    background: var(--color-cream);
+  }
+
+  .loc-picker__option:focus-visible {
+    outline: 2px solid var(--color-sage);
+    outline-offset: -2px;
+  }
+
+  .loc-picker__option.is-selected {
+    background: color-mix(in srgb, var(--color-earth-brown) 8%, var(--color-milk));
+    box-shadow: inset 0 0 0 var(--border-width) var(--color-border);
+  }
+
+  .loc-picker__flag img {
+    display: block;
+    width: 33px;
+    aspect-ratio: 40 / 24;
+    object-fit: cover;
+    border-radius: var(--radius-md);
+    box-shadow: 0 0 0 var(--border-width) var(--color-border);
+  }
+
+  .loc-picker__code {
+    font-size: var(--font-size-body-md);
+    font-weight: var(--font-weight-medium);
+    font-family: var(--font-roboto);
+    letter-spacing: var(--letter-spacing-wide);
+    color: var(--text-secondary);
+  }
+
+  .loc-picker__symbol {
+    min-width: var(--sp-4);
+    font-size: var(--font-size-body-md);
+    color: var(--text-secondary);
+  }
+
+  .loc-picker__divider {
+    width: var(--border-width);
+    height: var(--sp-5);
+    background: var(--border-light);
+  }
+
+  .loc-picker__name {
+    min-width: 0;
+    font-size: var(--font-size-body-lg);
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .loc-picker__option.is-selected .loc-picker__name,
+  .loc-picker__option.is-selected .loc-picker__code {
+    color: var(--color-earth-brown);
+    font-weight: var(--font-weight-semibold);
+  }
+
+  .loc-picker__check {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--sp-6);
+    height: var(--sp-6);
+    border-radius: var(--radius-full);
+    background: var(--color-earth-brown);
+    color: var(--color-cream);
+    opacity: 0;
+    transform: scale(0.6);
+    transition: opacity var(--timing-short) var(--ease-standard), transform var(--timing-short) var(--ease-standard);
+  }
+
+  .loc-picker__check svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .loc-picker__option.is-selected .loc-picker__check {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  .loc-picker__empty {
+    margin: var(--sp-4) 0 0;
+    padding: var(--sp-3);
+    color: var(--text-secondary);
+    font-size: var(--font-size-body-sm);
+    text-align: center;
+  }
+
+  /* ---- Footer variant colours (dark surface) ---- */
+  .loc-picker--footer .loc-picker__trigger {
+    background: transparent;
+    border-color: var(--footer-line, var(--color-border));
+    color: var(--footer-ink, var(--color-cream));
+  }
+
+  .loc-picker--footer .loc-picker__trigger:hover {
+    border-color: var(--footer-ink, var(--color-cream));
+  }
+
+  /* ---- Drawer variant: inline disclosure inside the mobile menu ---- */
+  .loc-picker--drawer {
+    display: block;
+    width: 100%;
+  }
+
+  .loc-picker--drawer .loc-picker__trigger {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .loc-picker--drawer .loc-picker__panel {
+    position: static;
+    width: 100%;
+    margin-top: var(--sp-3);
+    padding: var(--sp-4);
+    box-shadow: none;
+  }
+
+  /* Narrower panel in the drawer: tighten spacing so country names fit */
+  .loc-picker--drawer .loc-picker__option {
+    gap: var(--sp-2);
+    padding-inline: var(--sp-2);
+  }
+
+  .loc-picker--drawer .loc-picker__name {
+    font-size: var(--font-size-body-md);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .loc-picker__chevron,
+    .loc-picker__check,
+    .loc-picker__option {
+      transition: none;
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  (function () {
+    function initPicker(details) {
+      if (details.dataset.locInit === 'true') return;
+      details.dataset.locInit = 'true';
+
+      var summary = details.querySelector('summary');
+      var search = details.querySelector('[data-loc-search]');
+      var items = Array.prototype.slice.call(details.querySelectorAll('[data-loc-item]'));
+      var empty = details.querySelector('[data-loc-empty]');
+
+      function filter(query) {
+        var q = (query || '').trim().toLowerCase();
+        var anyVisible = false;
+        items.forEach(function (item) {
+          var hay = item.getAttribute('data-search') || '';
+          var match = !q || hay.indexOf(q) !== -1;
+          item.hidden = !match;
+          if (match) anyVisible = true;
+        });
+        if (empty) empty.hidden = anyVisible;
+      }
+
+      details.addEventListener('toggle', function () {
+        if (details.open && search) {
+          search.value = '';
+          filter('');
+          window.requestAnimationFrame(function () {
+            search.focus();
+          });
+        }
+      });
+
+      if (search) {
+        search.addEventListener('input', function () {
+          filter(search.value);
+        });
+        search.addEventListener('keydown', function (event) {
+          // The search box sits outside the form, but guard against Enter anyway.
+          if (event.key === 'Enter') event.preventDefault();
+        });
+      }
+
+      details.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape' && details.open) {
+          details.open = false;
+          if (summary) summary.focus();
+        }
+      });
+
+      document.addEventListener('click', function (event) {
+        if (details.open && !details.contains(event.target)) {
+          details.open = false;
+        }
+      });
+    }
+
+    function initAll() {
+      Array.prototype.slice.call(document.querySelectorAll('[data-loc-picker]')).forEach(initPicker);
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initAll);
+    } else {
+      initAll();
+    }
+  })();
+{% endjavascript %}
