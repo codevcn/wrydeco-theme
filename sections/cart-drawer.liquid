@@ -86,9 +86,28 @@
                     <dl class="cart-drawer__options">
                       {% for option in item.options_with_values %}
                         {% if option.value != 'Default Title' %}
-                          <div class="cart-drawer__option">
+                          {% liquid
+                            assign option_down = option.name | downcase
+                            assign is_color_option = false
+                            if option_down contains 'color' or option_down contains 'màu' or option_down contains 'canvas' or option_down contains 'finish'
+                              assign is_color_option = true
+                            endif
+                          %}
+                          <div class="cart-drawer__option{% if is_color_option %} cart-drawer__option--color{% endif %}">
                             <dt>{{ option.name | escape }}:</dt>
-                            <dd>{{ option.value | escape }}</dd>
+                            <dd>
+                              {% if is_color_option and item.variant.metafields.custom.color_pattern != blank %}
+                                <img
+                                  class="cart-drawer__option-swatch"
+                                  src="{{ item.variant.metafields.custom.color_pattern }}"
+                                  alt=""
+                                  width="20"
+                                  height="20"
+                                  loading="lazy"
+                                >
+                              {% endif %}
+                              <span>{{ option.value | escape }}</span>
+                            </dd>
                           </div>
                         {% endif %}
                       {% endfor %}
@@ -103,10 +122,34 @@
 
                   {% for property in item.properties %}
                     {% assign property_first_character = property.first | slice: 0 %}
-                    {% if property.last != blank and property_first_character != '_' %}
+                    {% if property.last != blank and property_first_character != '_' and property.first != 'Note' %}
                       <p class="cart-drawer__property">{{ property.first | escape }}: {{ property.last | escape }}</p>
                     {% endif %}
                   {% endfor %}
+
+                  {% assign line_note = item.properties.Note %}
+                  {% if line_note != blank %}
+                    <button
+                      type="button"
+                      class="cart-drawer__note-button"
+                      data-cart-note-view
+                      data-note="{{ line_note | escape }}"
+                      aria-haspopup="dialog"
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.6"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M4 4h16v12H7l-3 3z"></path><line x1="8" y1="9" x2="16" y2="9"></line><line x1="8" y1="12.5" x2="13" y2="12.5"></line>
+                      </svg>
+                      <span>View note</span>
+                    </button>
+                  {% endif %}
                 </div>
 
                 <p class="cart-drawer__price">
@@ -137,7 +180,14 @@
                     </button>
                   </div>
                   <button type="button" class="cart-drawer__remove" aria-label="Remove" data-cart-remove>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3-fill" viewBox="0 0 16 16">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      fill="currentColor"
+                      class="bi bi-trash3-fill"
+                      viewBox="0 0 16 16"
+                    >
                       <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5m-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5M4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06m6.53-.528a.5.5 0 0 0-.528.47l-.5 8.5a.5.5 0 0 0 .998.058l.5-8.5a.5.5 0 0 0-.47-.528M8 4.5a.5.5 0 0 0-.5.5v8.5a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5-.5"/>
                     </svg>
                   </button>
@@ -185,7 +235,9 @@
                     data-cart-discount-remove
                     aria-label="Remove discount {{ discount.title | escape }}"
                   >
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M6 6l12 12M18 6 6 18"></path>
+                    </svg>
                   </button>
                 </span>
               </div>
@@ -193,7 +245,11 @@
           {% endif %}
 
           {% comment %} Populated by JS when a code is pending for checkout but not yet applied in-cart. {% endcomment %}
-          <div class="cart-drawer__summary-row cart-drawer__summary-row--discount cart-drawer__pending-discount" data-cart-pending-discount hidden></div>
+          <div
+            class="cart-drawer__summary-row cart-drawer__summary-row--discount cart-drawer__pending-discount"
+            data-cart-pending-discount
+            hidden
+          ></div>
 
           <div class="cart-drawer__summary-row cart-drawer__summary-row--total">
             <span>Subtotal</span>
@@ -241,6 +297,75 @@
     </div>
   </aside>
 </div>
+
+{%- comment -%} Note viewer — kept outside the shell so it survives the section refresh and its position:fixed is relative to the viewport. {%- endcomment -%}
+<div class="cart-drawer__note-popup" data-cart-note-popup hidden>
+  <div class="cart-drawer__note-overlay" data-cart-note-close></div>
+  <div class="cart-drawer__note-dialog" role="dialog" aria-modal="true" aria-labelledby="CartNoteTitle">
+    <div class="cart-drawer__note-header">
+      <h2 id="CartNoteTitle" class="cart-drawer__note-title">Your note</h2>
+      <button type="button" class="cart-drawer__note-close" data-cart-note-close aria-label="Close note">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+    <div class="cart-drawer__note-body">
+      <p class="cart-drawer__note-text" data-cart-note-text></p>
+    </div>
+  </div>
+</div>
+
+<script>
+  if (!window.cartNotePopupInitialized) {
+    window.cartNotePopupInitialized = true;
+    (function () {
+      function popup() {
+        return document.querySelector('[data-cart-note-popup]');
+      }
+
+      function openNote(text) {
+        var p = popup();
+        if (!p) return;
+        var body = p.querySelector('[data-cart-note-text]');
+        if (body) body.textContent = text;
+        p.hidden = false;
+        document.documentElement.style.overflow = 'hidden';
+      }
+
+      function closeNote() {
+        var p = popup();
+        if (!p) return;
+        p.hidden = true;
+        document.documentElement.style.overflow = '';
+      }
+
+      document.addEventListener('click', function (event) {
+        var viewBtn = event.target.closest('[data-cart-note-view]');
+        if (viewBtn) {
+          openNote(viewBtn.getAttribute('data-note') || '');
+          return;
+        }
+        if (event.target.closest('[data-cart-note-close]')) {
+          closeNote();
+        }
+      });
+
+      document.addEventListener('keydown', function (event) {
+        var p = popup();
+        if (event.key === 'Escape' && p && !p.hidden) closeNote();
+      });
+    })();
+  }
+</script>
 
 {% stylesheet %}
   .cart-drawer {
@@ -413,6 +538,123 @@
     font: var(--type-caption);
   }
 
+  .cart-drawer__note-button {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-1);
+    margin: var(--sp-2) var(--sp-0) var(--sp-0);
+    padding: var(--sp-1) var(--sp-2);
+    border: var(--border-width) solid var(--border-default);
+    border-radius: var(--radius-full);
+    background-color: var(--color-earth-brown);
+    color: var(--color-milk);
+    font: var(--type-caption);
+    font-weight: var(--font-weight-semibold);
+    cursor: pointer;
+    transition: transform var(--timing-short) var(--ease-standard);
+  }
+  .cart-drawer__note-button:hover {
+    transform: scale(1.05);
+  }
+  .cart-drawer__note-button svg {
+    width: var(--sp-4);
+    height: var(--sp-4);
+  }
+
+  .cart-drawer__note-popup[hidden] {
+    display: none;
+  }
+  .cart-drawer__note-popup {
+    position: fixed;
+    inset: var(--sp-0);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--sp-5);
+  }
+  .cart-drawer__note-overlay {
+    position: absolute;
+    inset: 0;
+    border: 0;
+    padding: 0;
+    background: rgba(23, 21, 21, 0.4);
+    backdrop-filter: blur(4px);
+    cursor: pointer;
+  }
+  .cart-drawer__note-dialog {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: min(100%, 420px);
+    max-height: calc(100dvh - var(--sp-8));
+    overflow: hidden;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    background: var(--surface-elevated);
+    box-shadow: var(--shadow-modal);
+  }
+  .cart-drawer__note-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--sp-4) var(--sp-5);
+    border-bottom: 1px solid var(--border-light);
+    background: var(--color-milk);
+  }
+  .cart-drawer__note-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-xl);
+    font-weight: var(--font-weight-regular);
+    color: var(--text-primary);
+  }
+  .cart-drawer__note-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--sp-6);
+    height: var(--sp-6);
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-full);
+    background: transparent;
+    color: var(--text-primary);
+    cursor: pointer;
+  }
+  .cart-drawer__note-close:hover {
+    background: var(--surface-tertiary);
+  }
+  .cart-drawer__note-close svg {
+    width: 18px;
+    height: 18px;
+  }
+  .cart-drawer__note-body {
+    padding: var(--sp-5);
+    overflow-y: auto;
+  }
+  .cart-drawer__note-text {
+    margin: 0;
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-md);
+    line-height: var(--line-height-generous);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  @media screen and (max-width: 480px) {
+    .cart-drawer__note-popup {
+      padding: 0;
+      align-items: flex-end;
+    }
+    .cart-drawer__note-dialog {
+      width: 100%;
+      max-height: 80dvh;
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    }
+  }
+
   .cart-drawer__options {
     display: flex;
     flex-wrap: wrap;
@@ -437,6 +679,21 @@
 
   .cart-drawer__option dd {
     margin: var(--sp-0);
+  }
+
+  .cart-drawer__option--color dd {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-1);
+  }
+
+  .cart-drawer__option-swatch {
+    display: block;
+    width: var(--sp-4);
+    height: var(--sp-4);
+    object-fit: cover;
+    border-radius: var(--radius-sm);
+    box-shadow: 0 0 0 var(--border-width) var(--border-light);
   }
 
   .cart-drawer__price {

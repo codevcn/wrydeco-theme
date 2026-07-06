@@ -1,10 +1,12 @@
 {% comment %}
-  Renders product variant picker as labelled dropdowns (SIZE / FINISH).
+  Renders the product variant picker as labelled card tiles (FINISH / SIZE).
 
-  The custom dropdown UI is layered on top of hidden radio inputs. Selecting a
-  dropdown item checks the matching radio and dispatches a `change` event, so
-  the existing variant logic (image swap + inventory below, and the Section
-  Rendering API in product-info.js) keeps working unchanged.
+  Colour/finish options render a thumbnail image taken from each variant's
+  `custom.color_pattern` metafield (an image URL); size options render text.
+  Each tile is a <label> wrapping a native radio, so selecting one checks the
+  matching radio and fires a `change` event — the existing variant logic
+  (price + inventory + gallery below, and the Section Rendering API in
+  product-info.js) keeps working unchanged.
 
   @param {product} product
   @param {variant} current_variant
@@ -15,360 +17,282 @@
   {% style %}
     .product-variant-picker {
       margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-5);
       font-family: var(--font-body);
     }
-    .variant-options {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: var(--sp-5);
+
+    .variant-group {
+      padding: var(--sp-3) var(--sp-4);
+      background: var(--color-milk);
+      border: 1px solid var(--border-light);
+      border-radius: calc(var(--radius-lg) * 2);
     }
-    .variant-field {
-      min-width: 0;
-    }
-    .variant-field__head {
+
+    .variant-group__head {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: var(--sp-2);
       margin-bottom: var(--sp-2);
     }
-    .variant-field__label {
+    .variant-group__label {
       font-size: var(--font-size-body-sm);
       font-weight: var(--font-weight-bold);
       letter-spacing: var(--letter-spacing-wide);
       text-transform: uppercase;
       color: var(--text-primary);
     }
-    .variant-field__guide {
+    .variant-group__guide {
       font-size: var(--font-size-body-sm);
       color: var(--color-sage);
-      text-decoration: none;
       background: none;
-      border: none;
+      border: 0;
       padding: 0;
       cursor: pointer;
     }
-    .variant-field__guide:hover {
-      color: var(--color-sage);
+    .variant-group__guide:hover {
       text-decoration: underline;
       text-underline-offset: 3px;
     }
 
-    .variant-dropdown {
-      position: relative;
+    .variant-group__grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: var(--sp-4);
     }
-    .variant-dropdown__trigger {
-      width: 100%;
+
+    .variant-tile {
+      position: relative;
       display: flex;
-      align-items: center;
-      gap: var(--sp-3);
-      height: 52px;
-      padding: 0 var(--sp-4);
-      background-color: transparent;
+      flex-direction: column;
+      min-width: 0;
+      margin: 0;
       border: 1px solid var(--border-default);
       border-radius: var(--radius-lg);
+      background: var(--surface-elevated);
       cursor: pointer;
-      text-align: left;
-      font-family: var(--font-body);
-      font-size: var(--font-size-body-md);
-      font-weight: var(--font-weight-regular);
-      color: var(--text-primary);
       transition: border-color var(--timing-short) var(--ease-standard),
         box-shadow var(--timing-short) var(--ease-standard);
     }
-    .variant-dropdown__trigger:hover {
+    .variant-tile:hover {
       border-color: var(--border-dark);
     }
-    .variant-dropdown__trigger[aria-expanded='true'] {
-      border-color: var(--color-sage);
-      box-shadow: var(--shadow-focus);
-    }
-    .variant-dropdown__swatch {
-      flex: 0 0 auto;
-      width: 20px;
-      height: 20px;
-      border-radius: var(--radius-full);
-      border: 1px solid var(--border-light);
-    }
-    .variant-dropdown__value {
-      flex: 1 1 auto;
-      min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      font-family: var(--font-roboto);
-      letter-spacing: 0.01rem;
-    }
-    .variant-dropdown__chevron {
-      flex: 0 0 auto;
-      width: 18px;
-      height: 18px;
-      color: var(--text-secondary);
-      transition: transform var(--timing-short) var(--ease-standard);
-    }
-    .variant-dropdown__trigger[aria-expanded='true'] .variant-dropdown__chevron {
-      transform: rotate(180deg);
+    .variant-tile:focus-within {
+      outline: 2px solid var(--color-sage);
+      outline-offset: 2px;
     }
 
-    .variant-dropdown__panel {
-      position: absolute;
-      top: calc(100% + 6px);
-      left: 0;
-      right: 0;
-      z-index: 30;
-      margin: 0;
-      padding: var(--sp-1);
-      list-style: none;
-      background-color: var(--surface-elevated);
-      border: 1px solid var(--border-default);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-dropdown);
-      max-height: 280px;
-      overflow-y: auto;
-    }
-    .variant-dropdown__panel[hidden] {
-      display: none;
-    }
-    .variant-dropdown__item {
-      display: flex;
-      align-items: center;
-      gap: var(--sp-3);
-      margin: 0;
-      padding: var(--sp-3);
-      border-radius: var(--radius-md);
-      cursor: pointer;
-      font-size: var(--font-size-body-md);
-      color: var(--text-primary);
-      transition: background-color var(--timing-short) var(--ease-standard);
-    }
-    .variant-dropdown__item:hover {
-      background-color: var(--bg-secondary);
-    }
-    .variant-dropdown__item.is-selected {
-      background-color: var(--bg-secondary);
-      font-weight: var(--font-weight-semibold);
-    }
-    .variant-dropdown__item.is-disabled {
-      color: var(--text-disabled);
-      cursor: not-allowed;
-      text-decoration: line-through;
-      opacity: 0.65;
-    }
-    .variant-dropdown__item.is-disabled:hover {
-      background-color: transparent;
-    }
-
-    .variant-field__inputs {
+    .variant-tile__input {
       position: absolute;
       width: 1px;
       height: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .variant-tile:has(.variant-tile__input:checked) {
+      border-color: var(--color-earth-brown);
+      box-shadow: inset 0 0 0 var(--border-width) var(--color-earth-brown);
+    }
+
+    .variant-tile.is-disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .variant-tile.is-disabled .variant-tile__label {
+      text-decoration: line-through;
+    }
+
+    /* ---- Colour / finish tile ---- */
+    .variant-tile--color {
+      padding: var(--sp-3);
+    }
+    .variant-tile__media {
+      display: block;
       overflow: hidden;
-      clip: rect(0 0 0 0);
+      border-radius: var(--radius-md);
+      aspect-ratio: 16 / 10;
+      background: var(--bg-secondary);
+    }
+    .variant-tile__media img,
+    .variant-tile__swatch {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .variant-tile--color .variant-tile__label {
+      margin-top: var(--sp-3);
+      text-align: center;
+      font-size: var(--font-size-body-md);
+      color: var(--text-primary);
+    }
+
+    /* ---- Size tile ---- */
+    .variant-tile--size {
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
+      width: max-content;
+      padding: var(--sp-4) var(--sp-5);
+      text-align: center;
+    }
+    .variant-tile--size .variant-tile__label {
+      font-size: var(--font-size-body-sm);
+      color: var(--text-primary);
+    }
+
+    /* ---- Selected checkmark badge ---- */
+    .variant-tile__check {
+      position: absolute;
+      top: var(--sp-2);
+      right: var(--sp-2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: var(--sp-5);
+      height: var(--sp-5);
+      border-radius: var(--radius-full);
+      background: var(--color-earth-brown);
+      color: var(--color-cream);
+      opacity: 0;
+      transform: scale(0.6);
+      transition: opacity var(--timing-short) var(--ease-standard),
+        transform var(--timing-short) var(--ease-standard);
+    }
+    .variant-tile--color .variant-tile__check {
+      top: var(--sp-4);
+      right: var(--sp-4);
+    }
+    /* Smaller, corner-tucked check on size tiles so it never overlaps the
+       vertically-centred dimension text. */
+    .variant-tile--size .variant-tile__check {
+      top: var(--sp-1);
+      right: var(--sp-1);
+      width: var(--sp-4);
+      height: var(--sp-4);
+    }
+    .variant-tile__check svg {
+      width: 14px;
+      height: 14px;
+    }
+    .variant-tile--size .variant-tile__check svg {
+      width: 11px;
+      height: 11px;
+    }
+    .variant-tile:has(.variant-tile__input:checked) .variant-tile__check {
+      opacity: 1;
+      transform: scale(1);
     }
 
     @media screen and (max-width: 768px) {
-      .variant-options {
-        grid-template-columns: 1fr 1fr;
-        gap: var(--sp-4);
+      .variant-group--size .variant-group__grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .variant-tile,
+      .variant-tile__check {
+        transition: none;
       }
     }
   {% endstyle %}
 
   <div class="product-variant-picker">
-    <div class="variant-options">
-      {% for option in product.options_with_values %}
-        {% assign downcased_option = option.name | downcase %}
-        {% assign is_color = false %}
-        {% if downcased_option contains 'color'
-          or downcased_option contains 'màu'
-          or downcased_option contains 'canvas'
-          or downcased_option contains 'finish'
-        %}
-          {% assign is_color = true %}
-        {% endif %}
+    {% for option in product.options_with_values %}
+      {% assign downcased_option = option.name | downcase %}
+      {% assign is_color = false %}
+      {% if downcased_option contains 'color'
+        or downcased_option contains 'màu'
+        or downcased_option contains 'canvas'
+        or downcased_option contains 'finish'
+      %}
+        {% assign is_color = true %}
+      {% endif %}
+      {% assign option_prop = 'option' | append: option.position %}
 
-        <div
-          class="variant-field variant-field--{% if is_color %}color{% else %}size{% endif %}"
-          data-variant-field
-        >
-          <div class="variant-field__head">
-            <span class="variant-field__label">{{ option.name }}</span>
-            {% if downcased_option == 'size' or downcased_option == 'kích thước' %}
-              {% if product.metafields.custom.size_guide != blank %}
-                <button
-                  type="button"
-                  class="variant-field__guide"
-                  aria-haspopup="dialog"
-                  onclick="window.openSizeGuidePopup && window.openSizeGuidePopup()"
-                >
-                  Guide
-                </button>
-              {% endif %}
+      <div
+        class="variant-group variant-group--{% if is_color %}color{% else %}size{% endif %}"
+        data-variant-field
+      >
+        <div class="variant-group__head">
+          <span class="variant-group__label">{{ option.name }}</span>
+          {% if downcased_option == 'size' or downcased_option == 'kích thước' %}
+            {% if product.metafields.custom.size_guide != blank %}
+              <button
+                type="button"
+                class="variant-group__guide"
+                aria-haspopup="dialog"
+                onclick="window.openSizeGuidePopup && window.openSizeGuidePopup()"
+              >
+                Size Guide
+              </button>
             {% endif %}
-          </div>
+          {% endif %}
+        </div>
 
-          <div class="variant-dropdown" data-variant-dropdown>
-            <button
-              type="button"
-              class="variant-dropdown__trigger"
-              data-dropdown-trigger
-              aria-haspopup="listbox"
-              aria-expanded="false"
-              aria-label="{{ option.name | escape }}"
+        <div class="variant-group__grid" role="radiogroup" aria-label="{{ option.name | escape }}">
+          {% for value in option.values %}
+            {% assign color_image = '' %}
+            {% if is_color %}
+              {% capture value_str %}{{ value }}{% endcapture %}
+              {% assign matched_variant = product.variants | where: option_prop, value_str | first %}
+              {% assign color_image = matched_variant.metafields.custom.color_pattern %}
+            {% endif %}
+
+            <label
+              class="variant-tile variant-tile--{% if is_color %}color{% else %}size{% endif %}{% unless value.available %} is-disabled{% endunless %}"
             >
-              {% if is_color %}
-                <span
-                  class="variant-dropdown__swatch"
-                  data-dropdown-swatch
-                  style="background-color: {{ option.selected_value | downcase | remove: ' ' }};"
-                ></span>
-              {% endif %}
-              <span
-                class="variant-dropdown__value variant-option__selected-value"
-                id="OptionLabel-{{ section_id }}-{{ forloop.index0 }}"
-                data-dropdown-value
+              <input
+                type="radio"
+                class="variant-tile__input"
+                id="Option-{{ section_id }}-{{ option.position }}-{{ forloop.index0 }}"
+                name="options[{{ option.name | escape }}]"
+                value="{{ value | escape }}"
+                data-index="option{{ option.position }}"
+                {% if option.selected_value == value %}
+                  checked="checked"
+                {% endif %}
+                {% unless value.available %}
+                  disabled
+                {% endunless %}
               >
-                {{- option.selected_value -}}
-              </span>
-              <svg
-                class="variant-dropdown__chevron"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.5"
-                aria-hidden="true"
-              >
-                <polyline points="6 9 12 15 18 9"></polyline>
-              </svg>
-            </button>
 
-            <ul class="variant-dropdown__panel" role="listbox" data-dropdown-panel hidden>
-              {% for value in option.values %}
-                <li
-                  class="variant-dropdown__item{% if option.selected_value == value %} is-selected{% endif %}{% unless value.available %} is-disabled{% endunless %}"
-                  role="option"
-                  data-dropdown-item
-                  data-value="{{ value | escape }}"
-                  data-radio-id="Option-{{ section_id }}-{{ option.position }}-{{ forloop.index0 }}"
-                  {% if is_color %}
-                    data-swatch="{{ value | downcase | remove: ' ' }}"
-                  {% endif %}
-                  aria-selected="{% if option.selected_value == value %}true{% else %}false{% endif %}"
-                  {% unless value.available %}
-                    aria-disabled="true"
-                  {% endunless %}
-                >
-                  {% if is_color %}
+              {% if is_color %}
+                <span class="variant-tile__media">
+                  {% if color_image != blank %}
+                    <img
+                      src="{{ color_image }}"
+                      alt="{{ value | escape }}"
+                      width="160"
+                      height="100"
+                      loading="lazy"
+                    >
+                  {% else %}
                     <span
-                      class="variant-dropdown__swatch"
+                      class="variant-tile__swatch"
                       style="background-color: {{ value | downcase | remove: ' ' }};"
                     ></span>
                   {% endif %}
-                  <span>{{ value }}</span>
-                </li>
-              {% endfor %}
-            </ul>
-          </div>
+                </span>
+              {% endif %}
 
-          {% comment %} Hidden radios drive the existing variant logic {% endcomment %}
-          <div class="variant-field__inputs" aria-hidden="true">
-            {% for value in option.values %}
-              <span class="variant-swatch">
-                <input
-                  type="radio"
-                  id="Option-{{ section_id }}-{{ option.position }}-{{ forloop.index0 }}"
-                  name="options[{{ option.name | escape }}]"
-                  value="{{ value | escape }}"
-                  data-index="option{{ option.position }}"
-                  tabindex="-1"
-                  {% if option.selected_value == value %}
-                    checked="checked"
-                  {% endif %}
-                  {% unless value.available %}
-                    disabled
-                  {% endunless %}
-                >
+              <span class="variant-tile__label">{{ value }}</span>
+
+              <span class="variant-tile__check" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
               </span>
-            {% endfor %}
-          </div>
+            </label>
+          {% endfor %}
         </div>
-      {% endfor %}
-    </div>
+      </div>
+    {% endfor %}
   </div>
-
-  <script>
-    (function () {
-      function initVariantDropdowns() {
-        const dropdowns = document.querySelectorAll('[data-variant-dropdown]');
-
-        const closeAll = (except) => {
-          document.querySelectorAll('[data-dropdown-panel]').forEach((panel) => {
-            if (panel === except || panel.hidden) return;
-            panel.hidden = true;
-            const trigger = panel.closest('[data-variant-dropdown]').querySelector('[data-dropdown-trigger]');
-            if (trigger) trigger.setAttribute('aria-expanded', 'false');
-          });
-        };
-
-        dropdowns.forEach((dd) => {
-          if (dd.dataset.ddInit === 'true') return;
-          dd.dataset.ddInit = 'true';
-
-          const trigger = dd.querySelector('[data-dropdown-trigger]');
-          const panel = dd.querySelector('[data-dropdown-panel]');
-          const valueEl = dd.querySelector('[data-dropdown-value]');
-          const swatchEl = dd.querySelector('[data-dropdown-swatch]');
-
-          trigger.addEventListener('click', (event) => {
-            event.stopPropagation();
-            const willOpen = panel.hidden;
-            closeAll(willOpen ? panel : null);
-            panel.hidden = !willOpen;
-            trigger.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
-          });
-
-          panel.addEventListener('click', (event) => {
-            const item = event.target.closest('[data-dropdown-item]');
-            if (!item || item.getAttribute('aria-disabled') === 'true') return;
-
-            panel.querySelectorAll('[data-dropdown-item]').forEach((el) => {
-              const selected = el === item;
-              el.classList.toggle('is-selected', selected);
-              el.setAttribute('aria-selected', selected ? 'true' : 'false');
-            });
-
-            valueEl.textContent = item.dataset.value;
-            if (swatchEl && item.dataset.swatch) {
-              swatchEl.style.backgroundColor = item.dataset.swatch;
-            }
-
-            const radio = document.getElementById(item.dataset.radioId);
-            if (radio) {
-              radio.checked = true;
-              radio.dispatchEvent(new Event('change', { bubbles: true }));
-            }
-
-            panel.hidden = true;
-            trigger.setAttribute('aria-expanded', 'false');
-          });
-        });
-
-        if (!window.__variantDropdownGlobalBound) {
-          window.__variantDropdownGlobalBound = true;
-          document.addEventListener('click', () => closeAll(null));
-          document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape') closeAll(null);
-          });
-        }
-      }
-
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initVariantDropdowns);
-      } else {
-        initVariantDropdowns();
-      }
-    })();
-  </script>
 
   <script>
     document.addEventListener('DOMContentLoaded', function () {
