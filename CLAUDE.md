@@ -393,7 +393,7 @@ Here's how the filters are executed step by step to eventually return `"WORLD"`:
 - `weight_with_unit`: `{{ number | weight_with_unit }}` returns `string`
 
 #### Hosted_file
-- `asset_img_url`: `{{ string | asset_img_url }}` returns `string`
+- `file_url`: `{{ string | file_url }}` returns `string`
 - `asset_url`: `{{ string | asset_url }}` returns `string`
 - `file_img_url`: `{{ string | file_img_url }}` returns `string`
 - `file_url`: `{{ string | file_url }}` returns `string`
