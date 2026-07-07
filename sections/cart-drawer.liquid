@@ -128,28 +128,28 @@
                   {% endfor %}
 
                   {% assign line_note = item.properties.Note %}
+                  {% assign note_action = 'Write a note' %}
                   {% if line_note != blank %}
-                    <button
-                      type="button"
-                      class="cart-drawer__note-button"
-                      data-cart-note-view
-                      data-note="{{ line_note | escape }}"
-                      aria-haspopup="dialog"
-                    >
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="1.6"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        aria-hidden="true"
-                      >
-                        <path d="M4 4h16v12H7l-3 3z"></path><line x1="8" y1="9" x2="16" y2="9"></line><line x1="8" y1="12.5" x2="13" y2="12.5"></line>
-                      </svg>
-                      <span>View note</span>
-                    </button>
+                    {% assign note_action = 'Edit note' %}
                   {% endif %}
+                  <button
+                    type="button"
+                    class="cart-drawer__note-button{% if line_note != blank %} cart-drawer__note-button--has-note{% endif %}"
+                    data-cart-note-view
+                    data-note="{{ line_note | escape }}"
+                    aria-haspopup="dialog"
+                    aria-label="{{ note_action }} for {{ item.product.title | escape }}"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 256 256">
+                      <path d="M0 0h256v256H0z" fill="none" />
+                      <g fill="currentColor">
+                      	<path d="m216 160l-56 56v-56Z" opacity=".2" />
+                      	<path d="M88 96a8 8 0 0 1 8-8h64a8 8 0 0 1 0 16H96a8 8 0 0 1-8-8m8 40h64a8 8 0 0 0 0-16H96a8 8 0 0 0 0 16m32 16H96a8 8 0 0 0 0 16h32a8 8 0 0 0 0-16m96-104v108.69a15.86 15.86 0 0 1-4.69 11.31L168 219.31a15.86 15.86 0 0 1-11.31 4.69H48a16 16 0 0 1-16-16V48a16 16 0 0 1 16-16h160a16 16 0 0 1 16 16M48 208h104v-48a8 8 0 0 1 8-8h48V48H48Zm120-40v28.7l28.69-28.7Z" />
+                      </g>
+                    </svg>
+
+                    <span>{{ note_action }}</span>
+                  </button>
                 </div>
 
                 <p class="cart-drawer__price">
@@ -303,7 +303,7 @@
   <div class="cart-drawer__note-overlay" data-cart-note-close></div>
   <div class="cart-drawer__note-dialog" role="dialog" aria-modal="true" aria-labelledby="CartNoteTitle">
     <div class="cart-drawer__note-header">
-      <h2 id="CartNoteTitle" class="cart-drawer__note-title">Your note</h2>
+      <h2 id="CartNoteTitle" class="cart-drawer__note-title" data-cart-note-title>Write a note</h2>
       <button type="button" class="cart-drawer__note-close" data-cart-note-close aria-label="Close note">
         <svg
           viewBox="0 0 24 24"
@@ -319,7 +319,51 @@
       </button>
     </div>
     <div class="cart-drawer__note-body">
-      <p class="cart-drawer__note-text" data-cart-note-text></p>
+      <label class="cart-drawer__note-label" for="CartNoteField">Your note</label>
+      <textarea
+        id="CartNoteField"
+        class="cart-drawer__note-field"
+        data-cart-note-field
+        rows="4"
+        maxlength="500"
+        placeholder="Add any special requests or details for this piece…"
+      ></textarea>
+    </div>
+    <div class="cart-drawer__note-footer">
+      <button type="button" class="cart-drawer__note-clear" data-cart-note-clear>Clear</button>
+      <button type="button" class="cart-drawer__note-save" data-cart-note-save>Save note</button>
+    </div>
+  </div>
+</div>
+
+{%- comment -%} Remove confirmation viewer {%- endcomment -%}
+<div class="cart-drawer__note-popup" data-cart-remove-popup hidden>
+  <div class="cart-drawer__note-overlay" data-cart-remove-cancel></div>
+  <div class="cart-drawer__note-dialog" role="dialog" aria-modal="true" aria-labelledby="CartRemoveTitle">
+    <div class="cart-drawer__note-header">
+      <h2 id="CartRemoveTitle" class="cart-drawer__note-title">Remove piece</h2>
+      <button type="button" class="cart-drawer__note-close" data-cart-remove-cancel aria-label="Cancel">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+    <div class="cart-drawer__note-body">
+      <p class="cart-drawer__note-label" style="text-transform: none; margin-bottom: 0;">
+        Are you sure you want to remove this piece from your cart?
+      </p>
+    </div>
+    <div class="cart-drawer__note-footer">
+      <button type="button" class="cart-drawer__note-clear" data-cart-remove-cancel>Cancel</button>
+      <button type="button" class="cart-drawer__note-save" data-cart-remove-confirm>Remove</button>
     </div>
   </div>
 </div>
@@ -328,17 +372,30 @@
   if (!window.cartNotePopupInitialized) {
     window.cartNotePopupInitialized = true;
     (function () {
+      var saving = false;
+
       function popup() {
         return document.querySelector('[data-cart-note-popup]');
       }
+      function field() {
+        var p = popup();
+        return p ? p.querySelector('[data-cart-note-field]') : null;
+      }
 
-      function openNote(text) {
+      function openNote(text, lineKey) {
         var p = popup();
         if (!p) return;
-        var body = p.querySelector('[data-cart-note-text]');
-        if (body) body.textContent = text;
+        var f = field();
+        var title = p.querySelector('[data-cart-note-title]');
+        var hasNote = text.trim() !== '';
+        if (f) f.value = text;
+        if (title) title.textContent = hasNote ? 'Edit note' : 'Write a note';
+        p.dataset.lineKey = lineKey || '';
         p.hidden = false;
         document.documentElement.style.overflow = 'hidden';
+        window.requestAnimationFrame(function () {
+          if (f) f.focus();
+        });
       }
 
       function closeNote() {
@@ -348,10 +405,79 @@
         document.documentElement.style.overflow = '';
       }
 
+      function toast(message, type) {
+        if (window.showToast) window.showToast({ message: message, type: type, position: 'bottom-right' });
+      }
+
+      async function saveNote() {
+        var p = popup();
+        if (!p || saving) return;
+        var lineKey = p.dataset.lineKey;
+        if (!lineKey) {
+          closeNote();
+          return;
+        }
+        var f = field();
+        var value = (f ? f.value : '').trim();
+        var root = (window.Shopify && window.Shopify.routes && window.Shopify.routes.root) || '/';
+        var saveBtn = p.querySelector('[data-cart-note-save]');
+        var loader = document.querySelector('[data-cart-drawer-loading]');
+
+        saving = true;
+        if (saveBtn) saveBtn.disabled = true;
+        if (loader) loader.hidden = false;
+        try {
+          // Read the line's current properties so other properties are preserved
+          // (cart/change.js replaces the whole properties object of the line).
+          var cartRes = await fetch(root + 'cart.js', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+          var cart = await cartRes.json();
+          var line = (cart.items || []).filter(function (i) {
+            return i.key === lineKey;
+          })[0];
+          var props = Object.assign({}, (line && line.properties) || {});
+          if (value === '') {
+            delete props.Note;
+          } else {
+            props.Note = value;
+          }
+
+          var res = await fetch(root + 'cart/change.js', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({ id: lineKey, properties: props }),
+          });
+          var updated = await res.json();
+          if (!res.ok || updated.status) throw new Error(updated.description || 'Unable to update the note.');
+
+          closeNote();
+          document.dispatchEvent(new CustomEvent('cart:updated', { detail: { open: true } }));
+          toast(value === '' ? 'Note removed.' : 'Note updated.', 'success');
+        } catch (error) {
+          if (loader) loader.hidden = true;
+          toast(error.message || 'Unable to update the note.', 'error');
+        } finally {
+          saving = false;
+          if (saveBtn) saveBtn.disabled = false;
+        }
+      }
+
       document.addEventListener('click', function (event) {
         var viewBtn = event.target.closest('[data-cart-note-view]');
         if (viewBtn) {
-          openNote(viewBtn.getAttribute('data-note') || '');
+          var lineItem = viewBtn.closest('[data-cart-line-item]');
+          openNote(viewBtn.getAttribute('data-note') || '', lineItem ? lineItem.dataset.lineKey : '');
+          return;
+        }
+        if (event.target.closest('[data-cart-note-save]')) {
+          saveNote();
+          return;
+        }
+        if (event.target.closest('[data-cart-note-clear]')) {
+          var f = field();
+          if (f) {
+            f.value = '';
+            f.focus();
+          }
           return;
         }
         if (event.target.closest('[data-cart-note-close]')) {
@@ -541,28 +667,49 @@
   .cart-drawer__note-button {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
+    align-self: flex-start;
     gap: var(--sp-1);
     margin: var(--sp-2) var(--sp-0) var(--sp-0);
-    padding: var(--sp-1) var(--sp-2);
-    border: var(--border-width) solid var(--border-default);
+    padding: var(--sp-1) var(--sp-3);
+    border: var(--border-width) solid #c96a5b;
     border-radius: var(--radius-full);
-    background-color: var(--color-earth-brown);
-    color: var(--color-milk);
-    font: var(--type-caption);
-    font-weight: var(--font-weight-semibold);
+    background-color: var(--surface-elevated);
+    color: #c96a5b;
+    font-size: 14px;
+    font-family: var(--font-roboto);
+    font-weight: 400;
+    white-space: nowrap;
     cursor: pointer;
-    transition: transform var(--timing-short) var(--ease-standard);
+    transition: background-color var(--timing-short) var(--ease-standard),
+      border-color var(--timing-short) var(--ease-standard), color var(--timing-short) var(--ease-standard);
   }
-  .cart-drawer__note-button:hover {
-    transform: scale(1.05);
+  .cart-drawer__note-button:hover,
+  .cart-drawer__note-button:focus-visible {
+    background-color: #e8b9b342;
+    outline: none;
+  }
+  .cart-drawer__note-button--has-note {
+    border-color: var(--color-earth-brown);
+    background-color: var(--color-earth-brown);
+    color: var(--color-cream);
+  }
+  .cart-drawer__note-button--has-note:hover,
+  .cart-drawer__note-button--has-note:focus-visible {
+    background-color: var(--color-charcoal);
+    color: var(--color-cream);
   }
   .cart-drawer__note-button svg {
-    width: var(--sp-4);
-    height: var(--sp-4);
+    width: var(--sp-5);
+    height: var(--sp-5);
+    flex: 0 0 auto;
   }
 
   .cart-drawer__note-popup[hidden] {
-    display: none;
+    display: flex !important;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
   }
   .cart-drawer__note-popup {
     position: fixed;
@@ -572,6 +719,10 @@
     align-items: center;
     justify-content: center;
     padding: var(--sp-5);
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition: opacity var(--timing-short) var(--ease-standard), visibility var(--timing-short) var(--ease-standard);
   }
   .cart-drawer__note-overlay {
     position: absolute;
@@ -593,6 +744,11 @@
     border-radius: var(--radius-lg);
     background: var(--surface-elevated);
     box-shadow: var(--shadow-modal);
+    transform: scale(1) translateY(0);
+    transition: transform var(--timing-short) var(--ease-out);
+  }
+  .cart-drawer__note-popup[hidden] .cart-drawer__note-dialog {
+    transform: scale(0.95) translateY(10px);
   }
   .cart-drawer__note-header {
     display: flex;
@@ -633,17 +789,82 @@
     padding: var(--sp-5);
     overflow-y: auto;
   }
-  .cart-drawer__note-text {
-    margin: 0;
+  .cart-drawer__note-label {
+    display: block;
+    margin-bottom: var(--sp-2);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--letter-spacing-wide);
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+  .cart-drawer__note-field {
+    width: 100%;
+    min-height: calc(var(--sp-8) * 2);
+    padding: var(--sp-3) var(--sp-4);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    background: var(--surface-elevated);
     color: var(--text-primary);
     font-family: var(--font-body);
     font-size: var(--font-size-body-md);
-    line-height: var(--line-height-generous);
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
+    line-height: var(--line-height-normal);
+    resize: vertical;
+  }
+  .cart-drawer__note-field:focus {
+    outline: none;
+    border-color: var(--color-sage);
+    box-shadow: var(--shadow-focus);
+  }
+  .cart-drawer__note-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--sp-3);
+    padding: var(--sp-4) var(--sp-5);
+    border-top: 1px solid var(--border-light);
+  }
+  .cart-drawer__note-clear {
+    margin-right: auto;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-sm);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+  }
+  .cart-drawer__note-save {
+    min-height: var(--sp-7);
+    padding: 0 var(--sp-6);
+    border: 0;
+    border-radius: var(--radius-md);
+    background: var(--color-earth-brown);
+    color: var(--color-cream);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--letter-spacing-wide);
+    cursor: pointer;
+    transition: background-color var(--timing-short) var(--ease-standard);
+  }
+  .cart-drawer__note-save:hover {
+    background: var(--color-charcoal);
+  }
+  .cart-drawer__note-save[disabled] {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 
   @media screen and (max-width: 480px) {
+    .cart-drawer__note-button {
+      width: 100%;
+      max-width: var(--cart-drawer-copy-width);
+    }
+
     .cart-drawer__note-popup {
       padding: 0;
       align-items: flex-end;
@@ -1031,6 +1252,7 @@
   .cart-drawer-is-open #chat-widget-container,
   .cart-drawer-is-open iframe[title*='chat' i],
   .cart-drawer-is-open iframe[id*='chat' i] {
+    opacity: 0 !important;
     visibility: hidden !important;
     pointer-events: none !important;
   }
@@ -1419,10 +1641,50 @@
       }
 
       const removeButton = event.target.closest('[data-cart-remove]');
-      if (removeButton) changeLine(removeButton.closest('[data-cart-line-item]'), 0);
+      if (removeButton) {
+        const lineItem = removeButton.closest('[data-cart-line-item]');
+        const popup = document.querySelector('[data-cart-remove-popup]');
+        if (popup && lineItem) {
+          popup.dataset.lineKey = lineItem.dataset.lineKey;
+          popup.hidden = false;
+          document.documentElement.style.overflow = 'hidden';
+        } else if (lineItem) {
+          changeLine(lineItem, 0);
+        }
+        return;
+      }
+
+      const removeCancelBtn = event.target.closest('[data-cart-remove-cancel]');
+      if (removeCancelBtn) {
+        const popup = document.querySelector('[data-cart-remove-popup]');
+        if (popup) {
+          popup.hidden = true;
+          document.documentElement.style.overflow = '';
+        }
+        return;
+      }
+
+      const removeConfirmBtn = event.target.closest('[data-cart-remove-confirm]');
+      if (removeConfirmBtn) {
+        const popup = document.querySelector('[data-cart-remove-popup]');
+        if (popup && popup.dataset.lineKey) {
+          changeLine({ dataset: { lineKey: popup.dataset.lineKey } }, 0);
+          popup.hidden = true;
+          document.documentElement.style.overflow = '';
+        }
+        return;
+      }
     });
 
     document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        const removePopup = document.querySelector('[data-cart-remove-popup]');
+        if (removePopup && !removePopup.hidden) {
+          removePopup.hidden = true;
+          document.documentElement.style.overflow = '';
+          return;
+        }
+      }
       const shell = getShell();
       if (!shell?.classList.contains('is-open')) return;
       if (event.key === 'Escape') {

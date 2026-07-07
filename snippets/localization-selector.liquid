@@ -27,7 +27,7 @@
 {%- if localization.available_countries.size > 1 -%}
   <details class="loc-picker loc-picker--{{ variant }}" data-loc-picker>
     <summary
-      class="loc-picker__trigger"
+      class="loc-picker__trigger no-select"
       aria-label="{{ 'general.localization.country_label' | t }}: {{ current_country.name | escape }}"
     >
       <span class="loc-picker__flag loc-picker__flag--trigger">
@@ -213,6 +213,22 @@
     left: 0;
   }
 
+  @keyframes loc-picker-fade-down {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .loc-picker--header[open] .loc-picker__panel {
+    animation: loc-picker-fade-down var(--timing-short) var(--ease-out);
+  }
+
+  @keyframes loc-picker-fade-up {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .loc-picker--footer[open] .loc-picker__panel {
+    animation: loc-picker-fade-up var(--timing-short) var(--ease-out);
+  }
+
   /* ---- Search ---- */
   .loc-picker__search {
     position: relative;
@@ -395,7 +411,7 @@
     border-color: var(--footer-ink, var(--color-cream));
   }
 
-  /* ---- Drawer variant: inline disclosure inside the mobile menu ---- */
+  /* Drawer variant: inline disclosure inside the mobile menu */
   .loc-picker--drawer {
     display: block;
     width: 100%;
@@ -406,12 +422,21 @@
     width: 100%;
   }
 
+  @keyframes loc-picker-fade {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
   .loc-picker--drawer .loc-picker__panel {
     position: static;
     width: 100%;
     margin-top: var(--sp-3);
     padding: var(--sp-4);
     box-shadow: none;
+  }
+
+  .loc-picker--drawer[open] .loc-picker__panel {
+    animation: loc-picker-fade var(--timing-short) var(--ease-out);
   }
 
   /* Narrower panel in the drawer: tighten spacing so country names fit */
