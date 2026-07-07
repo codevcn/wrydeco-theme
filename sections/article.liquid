@@ -1,68 +1,571 @@
 {% comment %}
-  This section is used in the article template to render the article page, which
-  displays the full content of the blog post and can optionally include a
-  comments section for customers (not shown in this example).
-
-  https://shopify.dev/docs/storefronts/themes/architecture/templates/article
+  Editorial article page.
+  The article title, image, metadata, and body are server-rendered for crawlability.
 {% endcomment %}
 
-{% if article.image %}
-  {{ article.image | image_url: width: 1000 | image_tag }}
-{% endif %}
+{% liquid
+  assign article_excerpt = article.excerpt | strip_html | strip
+  if article_excerpt == blank
+    assign article_excerpt = article.content | strip_html | strip | truncatewords: 32
+  endif
 
-<h1>{{ article.title }}</h1>
+  assign article_image_alt = article.image.alt | default: article.title
+  assign article_body = article.content | replace: '<h1>', '<h2 class="article-editorial__content-title">' | replace: '<h1 ', '<h2 class="article-editorial__content-title" ' | replace: '</h1>', '</h2>'
+  assign related_available_count = 0
+  assign related_count = 0
 
-{% assign date = article.published_at | time_tag: format: 'date' %}
-<p>{{ 'blog.article_metadata_html' | t: date: date, author: article.author }}</p>
+  for related_article in blog.articles limit: 4
+    unless related_article.id == article.id
+      assign related_available_count = related_available_count | plus: 1
+    endunless
+  endfor
+%}
 
-{{ article.content }}
+<main class="article-editorial" id="ArticleEditorial-{{ section.id }}">
+  <article class="article-editorial__article" itemscope itemtype="https://schema.org/Article">
+    <section class="article-editorial__hero" aria-labelledby="ArticleTitle-{{ section.id }}">
+      <div class="article-editorial__media">
+        {% if article.image %}
+          {{
+            article.image
+            | image_url: width: 1800
+            | image_tag:
+              class: 'article-editorial__image',
+              loading: 'eager',
+              fetchpriority: 'high',
+              widths: '720, 960, 1200, 1500, 1800',
+              sizes: '(max-width: 899px) 100vw, 58vw',
+              alt: article_image_alt
+          }}
+        {% else %}
+          <div class="article-editorial__image article-editorial__image--placeholder" aria-hidden="true"></div>
+        {% endif %}
+      </div>
 
-{% if blog.comments_enabled? %}
-  <h2>{{ 'blog.article_comments' | t }}</h2>
+      <div class="article-editorial__hero-panel">
+        <nav class="article-editorial__breadcrumbs" aria-label="Breadcrumb">
+          <a href="{{ routes.root_url }}">Home</a>
+          <span aria-hidden="true">/</span>
+          <a href="{{ blog.url }}">{{ blog.title | escape }}</a>
+        </nav>
 
-  <div id="comments">
-    {% paginate article.comments by 10 %}
-      {% for comment in article.comments %}
-        <div>
-          <p>{{ comment.author }}</p>
-          <p>
-            {{- comment.created_at | time_tag: format: 'date' -}}
-          </p>
-          <p>{{ comment.content }}</p>
+        <p class="article-editorial__eyebrow">{{ blog.title | escape }}</p>
+        <h1 id="ArticleTitle-{{ section.id }}" class="article-editorial__title" itemprop="headline">
+          {{ article.title | escape }}
+        </h1>
+
+        {% if article_excerpt != blank %}
+          <p class="article-editorial__dek" itemprop="description">{{ article_excerpt }}</p>
+        {% endif %}
+
+        <div class="article-editorial__meta" aria-label="Article details">
+          <span itemprop="author">{{ article.author | escape }}</span>
+          <span aria-hidden="true"></span>
+          {{ article.published_at | time_tag: format: 'date' }}
         </div>
-      {% endfor %}
 
-      {{ paginate | default_pagination: anchor: 'comments' }}
-    {% endpaginate %}
-  </div>
+        {% if article.tags.size > 0 %}
+          <ul class="article-editorial__tags" aria-label="Topics">
+            {% for tag in article.tags limit: 3 %}
+              <li>{{ tag | escape }}</li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+      </div>
+    </section>
 
-  {% form 'new_comment', article %}
-    <h2>{{ 'blog.comment_form_title' | t }}</h2>
+    <div class="article-editorial__body-shell">
+      <aside class="article-editorial__aside" aria-label="Article navigation">
+        <p>Journal</p>
+        <a href="{{ blog.url }}">More stories</a>
+      </aside>
 
-    {{ form.errors | default_errors }}
-
-    <div>
-      <label for="author">{{ 'blog.comment_form_name' | t }}</label>
-      <input type="text" name="comment[author]" id="author" value="{{ form.author }}" required>
+      <div class="article-editorial__content rte" itemprop="articleBody">
+        {{ article_body }}
+      </div>
     </div>
+  </article>
 
-    <div>
-      <label for="email">{{ 'blog.comment_form_email' | t }}</label>
-      <input type="email" name="comment[email]" id="email" value="{{ form.email }}" required>
-    </div>
+  {% if section.settings.show_related_articles and related_available_count > 0 %}
+    <section class="article-editorial__related" aria-labelledby="ArticleRelated-{{ section.id }}">
+      <div class="article-editorial__related-header">
+        <p class="article-editorial__eyebrow">Continue Reading</p>
+        <h2 id="ArticleRelated-{{ section.id }}">More from the journal</h2>
+      </div>
 
-    <div>
-      <label for="body">{{ 'blog.comment_form_body' | t }}</label>
-      <textarea name="comment[body]" id="body" required>{{ form.body }}</textarea>
-    </div>
+      <div class="article-editorial__related-grid">
+        {% for related_article in blog.articles limit: 4 %}
+          {% unless related_article.id == article.id %}
+            {% assign related_count = related_count | plus: 1 %}
+            {% if related_count <= 3 %}
+              <a class="article-editorial__related-card" href="{{ related_article.url }}">
+                {% if related_article.image %}
+                  {% assign related_image_alt = related_article.image.alt | default: related_article.title %}
+                  {{
+                    related_article.image
+                    | image_url: width: 720
+                    | image_tag:
+                      class: 'article-editorial__related-image',
+                      loading: 'lazy',
+                      widths: '360, 540, 720',
+                      sizes: '(max-width: 767px) 100vw, 33vw',
+                      alt: related_image_alt
+                  }}
+                {% endif %}
+                <span class="article-editorial__related-body">
+                  <span class="article-editorial__related-date">
+                    {{ related_article.published_at | date: '%B %d, %Y' }}
+                  </span>
+                  <span class="article-editorial__related-title">{{ related_article.title | escape }}</span>
+                </span>
+              </a>
+            {% endif %}
+          {% endunless %}
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+</main>
 
-    <input type="submit" value="{{ 'blog.comment_form_submit' | t }}">
-  {% endform %}
-{% endif %}
+<script>
+  const mainProductSection = document.getElementById('ArticleEditorial-{{ section.id }}');
+  if (mainProductSection) {
+    mainProductSection.closest('body').querySelector('.header__icon--search').style.color = 'var(--color-earth-brown)';
+    mainProductSection.closest('body').querySelector('.header__icon--cart').style.color = 'var(--color-earth-brown)';
+    mainProductSection.closest('body').querySelector('.header__icon--menu').style.color = 'var(--color-earth-brown)';
+    mainProductSection.closest('body').querySelector('.header__icon--account').style.color = 'var(--color-earth-brown)';
+    mainProductSection.closest('body').querySelector('.header').style.border = '1px solid #cfcbc7b4';
+  }
+</script>
+
+{% stylesheet %}
+  .article-editorial {
+    overflow: hidden;
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-milk) 76%, var(--color-stone)) 0%,
+      var(--surface-default) 100%
+    );
+    color: var(--text-primary);
+    font-family: var(--font-body);
+  }
+
+  .article-editorial__article {
+    display: block;
+  }
+
+  .article-editorial__hero {
+    display: grid;
+    grid-template-columns: minmax(var(--sp-0), 1.15fr) minmax(var(--sp-0), 0.85fr);
+    min-height: min(var(--layout-hero-wide-height), 100vh);
+    background: var(--color-cream);
+  }
+
+  .article-editorial__media {
+    position: relative;
+    min-height: min(var(--layout-hero-wide-height), 100vh);
+    overflow: hidden;
+  }
+
+  .article-editorial__media::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent 64%, color-mix(in srgb, var(--color-earth-brown) 22%, transparent));
+    pointer-events: none;
+  }
+
+  .article-editorial__image {
+    width: 100%;
+    height: 100%;
+    min-height: inherit;
+    display: block;
+    object-fit: cover;
+  }
+
+  .article-editorial__image--placeholder {
+    background: radial-gradient(circle at center, var(--surface-tertiary), var(--color-cream));
+  }
+
+  .article-editorial__hero-panel {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--sp-4);
+    min-width: 0;
+    padding: calc(var(--sp-12) + var(--sp-5)) clamp(var(--sp-6), 5vw, var(--sp-10)) var(--sp-10);
+    border-left: var(--border-width) solid color-mix(in srgb, var(--color-earth-brown) 14%, transparent);
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--color-milk) 92%, transparent),
+      color-mix(in srgb, var(--color-stone) 64%, transparent)
+    );
+  }
+
+  .article-editorial__breadcrumbs {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--sp-2);
+    font-size: var(--font-size-caption);
+    letter-spacing: var(--letter-spacing-wide);
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+
+  .article-editorial__breadcrumbs a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .article-editorial__breadcrumbs a:hover {
+    color: var(--color-earth-brown);
+  }
+
+  .article-editorial__eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-3);
+    margin: 0;
+    color: var(--color-clay);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: calc(var(--letter-spacing-wide) * 2);
+    text-transform: uppercase;
+  }
+
+  .article-editorial__eyebrow::before {
+    content: '';
+    width: var(--sp-7);
+    height: var(--border-width);
+    background: currentColor;
+  }
+
+  .article-editorial__title {
+    max-width: 11ch;
+    margin: 0;
+    color: var(--text-primary);
+    font-family: var(--font-display);
+    font-size: clamp(var(--font-size-display-lg), 5vw, var(--font-size-display-2xl));
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-display);
+    letter-spacing: var(--letter-spacing-normal);
+    text-wrap: balance;
+  }
+
+  .article-editorial__dek {
+    max-width: 42ch;
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: var(--font-size-body-lg);
+    line-height: var(--line-height-generous);
+  }
+
+  .article-editorial__meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--sp-3);
+    color: var(--color-earth-brown);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-semibold);
+  }
+
+  .article-editorial__meta > span[aria-hidden='true'] {
+    width: var(--sp-1);
+    height: var(--sp-1);
+    border-radius: var(--radius-full);
+    background: var(--color-clay);
+  }
+
+  .article-editorial__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-2);
+    margin: var(--sp-2) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .article-editorial__tags li {
+    padding: var(--sp-2) var(--sp-3);
+    border: var(--border-width) solid color-mix(in srgb, var(--color-earth-brown) 16%, transparent);
+    border-radius: var(--radius-full);
+    color: var(--text-secondary);
+    font-size: var(--font-size-caption);
+    letter-spacing: var(--letter-spacing-wide);
+    text-transform: uppercase;
+  }
+
+  .article-editorial__body-shell {
+    display: grid;
+    grid-template-columns: minmax(var(--sp-0), calc(var(--sp-12) * 1.5)) minmax(var(--sp-0), 76ch);
+    gap: var(--sp-8);
+    width: min(calc(100% - (var(--layout-padding-desktop) * 2)), var(--layout-max-width));
+    margin-inline: auto;
+    padding-block: var(--sp-10);
+  }
+
+  .article-editorial__aside {
+    position: sticky;
+    top: var(--sp-6);
+    align-self: start;
+    padding-top: var(--sp-4);
+    border-top: var(--border-width) solid color-mix(in srgb, var(--color-earth-brown) 24%, transparent);
+    color: var(--text-secondary);
+  }
+
+  .article-editorial__aside p {
+    margin: 0 0 var(--sp-3);
+    color: var(--color-earth-brown);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: calc(var(--letter-spacing-wide) * 2);
+    text-transform: uppercase;
+  }
+
+  .article-editorial__aside a {
+    color: var(--text-secondary);
+    font-size: var(--font-size-body-sm);
+    text-decoration: none;
+  }
+
+  .article-editorial__aside a:hover {
+    color: var(--color-earth-brown);
+  }
+
+  .article-editorial__content {
+    min-width: 0;
+    color: var(--text-primary);
+    font-size: var(--font-size-body-lg);
+    line-height: var(--line-height-generous);
+  }
+
+  .article-editorial__content > *:first-child {
+    margin-top: 0;
+  }
+
+  .article-editorial__content > *:last-child {
+    margin-bottom: 0;
+  }
+
+  .article-editorial__content p,
+  .article-editorial__content li {
+    color: var(--text-secondary);
+  }
+
+  .article-editorial__content h2,
+  .article-editorial__content h3,
+  .article-editorial__content-title {
+    margin-top: var(--sp-8);
+    color: var(--text-primary);
+    font-family: var(--font-display);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-tight);
+  }
+
+  .article-editorial__content h2 {
+    font-size: var(--font-size-display-md);
+  }
+
+  .article-editorial__content h3 {
+    font-size: var(--font-size-display-sm);
+  }
+
+  .article-editorial__content img {
+    width: 100%;
+    height: auto;
+    display: block;
+    margin-block: var(--sp-7);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-elevation-2);
+  }
+
+  .article-editorial__content blockquote {
+    margin: var(--sp-8) 0;
+    padding: var(--sp-6);
+    border-left: var(--sp-1) solid var(--color-clay);
+    background: color-mix(in srgb, var(--surface-elevated) 76%, transparent);
+    color: var(--color-earth-brown);
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-2xl);
+    line-height: var(--line-height-relaxed);
+  }
+
+  .article-editorial__related {
+    width: min(calc(100% - (var(--layout-padding-desktop) * 2)), var(--layout-max-width));
+    margin-inline: auto;
+    padding-block: var(--sp-8);
+    border-top: var(--border-width) solid color-mix(in srgb, var(--color-earth-brown) 12%, transparent);
+  }
+
+  .article-editorial__related-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+    gap: var(--sp-6);
+    margin-bottom: var(--sp-5);
+  }
+
+  .article-editorial__related-header h2 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--font-size-display-sm);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-tight);
+  }
+
+  .article-editorial__related-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(var(--sp-0), 1fr));
+    gap: var(--sp-4);
+  }
+
+  .article-editorial__related-card {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: var(--border-width) solid color-mix(in srgb, var(--color-earth-brown) 12%, transparent);
+    border-radius: var(--radius-lg);
+    background: color-mix(in srgb, var(--surface-elevated) 72%, transparent);
+    color: inherit;
+    text-decoration: none;
+    box-shadow: var(--shadow-elevation-1);
+  }
+
+  .article-editorial__related-image {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    height: auto;
+    object-fit: cover;
+  }
+
+  .article-editorial__related-body {
+    display: grid;
+    gap: var(--sp-2);
+    padding: var(--sp-4);
+  }
+
+  .article-editorial__related-date {
+    color: var(--text-secondary);
+    font-size: var(--font-size-caption);
+    letter-spacing: var(--letter-spacing-wide);
+    text-transform: uppercase;
+  }
+
+  .article-editorial__related-title {
+    color: var(--text-primary);
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-xl);
+    line-height: var(--line-height-snug);
+  }
+
+  @media screen and (max-width: 1024px) {
+    .article-editorial__hero {
+      grid-template-columns: minmax(var(--sp-0), 1fr);
+    }
+
+    .article-editorial__media {
+      min-height: calc(var(--sp-12) * 4);
+    }
+
+    .article-editorial__hero-panel {
+      padding: var(--sp-7) var(--layout-padding-tablet);
+      border-left: 0;
+      border-top: var(--border-width) solid color-mix(in srgb, var(--color-earth-brown) 14%, transparent);
+    }
+
+    .article-editorial__title {
+      max-width: 14ch;
+    }
+
+    .article-editorial__body-shell {
+      grid-template-columns: minmax(var(--sp-0), 1fr);
+      gap: var(--sp-6);
+      width: min(calc(100% - (var(--layout-padding-tablet) * 2)), var(--layout-max-width));
+      padding-block: var(--sp-8);
+    }
+
+    .article-editorial__aside {
+      position: static;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: var(--sp-4);
+    }
+  }
+
+  @media screen and (max-width: 767px) {
+    .article-editorial__media {
+      min-height: min(calc(var(--sp-12) * 3.5), 62vh);
+    }
+
+    .article-editorial__media::after {
+      background: linear-gradient(
+        180deg,
+        transparent 54%,
+        color-mix(in srgb, var(--color-earth-brown) 24%, transparent)
+      );
+    }
+
+    .article-editorial__hero-panel {
+      padding: var(--sp-6) var(--layout-padding-mobile) var(--sp-7);
+    }
+
+    .article-editorial__title {
+      max-width: none;
+      font-size: clamp(var(--font-size-display-md), 12vw, var(--font-size-display-xl));
+    }
+
+    .article-editorial__dek,
+    .article-editorial__content {
+      font-size: var(--font-size-body-md);
+    }
+
+    .article-editorial__body-shell,
+    .article-editorial__related {
+      width: min(calc(100% - (var(--layout-padding-mobile) * 2)), var(--layout-max-width));
+    }
+
+    .article-editorial__body-shell {
+      padding-block: var(--sp-7);
+    }
+
+    .article-editorial__content h2 {
+      font-size: var(--font-size-display-sm);
+    }
+
+    .article-editorial__content h3 {
+      font-size: var(--font-size-body-2xl);
+    }
+
+    .article-editorial__related-header,
+    .article-editorial__aside {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    .article-editorial__related-grid {
+      grid-template-columns: minmax(var(--sp-0), 1fr);
+    }
+
+    .article-editorial__content blockquote {
+      padding: var(--sp-5);
+      font-size: var(--font-size-body-xl);
+    }
+  }
+{% endstylesheet %}
 
 {% schema %}
 {
-  "name": "t:general.article",
-  "settings": []
+  "name": "Article editorial",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "show_related_articles",
+      "label": "Show related articles",
+      "default": true
+    }
+  ]
 }
 {% endschema %}

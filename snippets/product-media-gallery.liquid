@@ -174,13 +174,12 @@
   @media (hover: hover) and (pointer: fine) and (min-width: 990px) {
     .product-gallery__zoom-popup {
       position: fixed;
-      top: 50%;
-      transform: translateY(-50%);
+      top: var(--product-gallery-zoom-top, calc(var(--sp-12) + var(--sp-3)));
+      bottom: var(--sp-6);
       left: calc(50% + (var(--sp-8, 40px) / 2));
       right: 64px;
-      height: 85vh;
       background-color: var(--bg-primary, #fff);
-      z-index: 9999;
+      z-index: 10000;
       border-radius: var(--radius-lg, 12px);
       box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
       overflow: hidden;
@@ -540,10 +539,34 @@
         var zoomPopup = gallery.querySelector('[data-zoom-popup]');
         if (!mainContainer || !zoomPopup) return;
         var lens = gallery.querySelector('[data-zoom-lens]');
+        var zoomPopupParent = zoomPopup.parentNode;
+        var zoomPopupNextSibling = zoomPopup.nextSibling;
 
         // The popup zooms to 200% (background-size), so the lens covers half the
         // image in each dimension — the exact region shown in the popup.
         var ZOOM = 2;
+
+        function getZoomTop() {
+          var header = document.querySelector('.header');
+          if (!header) return 24;
+
+          var rect = header.getBoundingClientRect();
+          return Math.max(24, Math.ceil(rect.bottom + 12));
+        }
+
+        function mountZoomPopup() {
+          if (zoomPopup.parentNode !== document.body) {
+            document.body.appendChild(zoomPopup);
+          }
+
+          zoomPopup.style.setProperty('--product-gallery-zoom-top', getZoomTop() + 'px');
+        }
+
+        function restoreZoomPopup() {
+          if (zoomPopupParent && zoomPopup.parentNode !== zoomPopupParent) {
+            zoomPopupParent.insertBefore(zoomPopup, zoomPopupNextSibling);
+          }
+        }
 
         mainContainer.addEventListener('mouseenter', function () {
           var activeItem = gallery.querySelector('.product-gallery__main-item.is-active');
@@ -553,6 +576,7 @@
 
           var zoomSrc = img.getAttribute('data-zoom-src');
           if (zoomSrc) {
+            mountZoomPopup();
             zoomPopup.style.backgroundImage = 'url(' + zoomSrc + ')';
             zoomPopup.classList.add('is-active');
             if (lens) lens.classList.add('is-active');
@@ -593,6 +617,7 @@
         mainContainer.addEventListener('mouseleave', function () {
           zoomPopup.classList.remove('is-active');
           zoomPopup.style.backgroundImage = 'none';
+          restoreZoomPopup();
           if (lens) lens.classList.remove('is-active');
         });
       });
