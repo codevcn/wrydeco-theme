@@ -8,6 +8,8 @@
 
 {% stylesheet %}
   .product-gallery {
+    --product-gallery-main-max: calc(var(--sp-12) * 9.375);
+    --product-gallery-thumb-size: clamp(calc(var(--sp-10) + var(--sp-2)), 8vw, calc(var(--sp-12) + var(--sp-7)));
     width: 100%;
     margin-block-end: var(--sp-4);
     display: flex;
@@ -21,6 +23,8 @@
     overflow: hidden;
     border-radius: var(--radius-xl);
     background-color: var(--bg-secondary);
+    position: relative;
+    z-index: 99;
   }
   .product-gallery__zoom {
     position: absolute;
@@ -101,16 +105,15 @@
     min-width: 0;
     padding: 0;
     cursor: pointer;
-    border: 1px solid transparent;
+    border: 3px solid transparent;
     border-radius: var(--radius-lg);
     overflow: hidden;
-    opacity: 0.6;
-    transition: opacity var(--timing-short) var(--ease-standard), border-color var(--timing-short) var(--ease-standard);
+    opacity: 1;
+    transition: border-color var(--timing-short) var(--ease-standard);
     background-color: var(--bg-secondary);
   }
   .product-gallery__thumbnail.is-active,
   .product-gallery__thumbnail:hover {
-    opacity: 1;
     border-color: var(--color-clay);
   }
   .product-gallery__thumbnail:focus-visible {
@@ -137,11 +140,12 @@
       padding-inline: var(--sp-2);
     }
     .product-gallery__thumbnail {
-      flex: 0 0 calc(25% - var(--sp-7));
+      flex: 0 0 var(--product-gallery-thumb-size);
     }
     .product-gallery {
       margin-block-end: 0;
       gap: var(--sp-3);
+      max-height: calc(100vh - var(--sp-3));
     }
     .product-gallery__main {
       border-radius: var(--radius-sm);
@@ -198,7 +202,7 @@
   .product-lightbox {
     position: fixed;
     inset: 0;
-    z-index: 1200;
+    z-index: 10000;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -211,8 +215,8 @@
     display: none;
   }
   .product-lightbox__img {
-    max-width: 95vw;
-    max-height: 90vh;
+    max-width: calc(100vw - (var(--sp-6) * 2));
+    max-height: calc(100vh - (var(--sp-6) * 2));
     width: auto;
     height: auto;
     border-radius: var(--radius-lg);
@@ -220,8 +224,9 @@
   }
   .product-lightbox__close {
     position: absolute;
-    top: var(--sp-5);
-    right: var(--sp-5);
+    top: max(var(--sp-5), env(safe-area-inset-top));
+    right: max(var(--sp-5), env(safe-area-inset-right));
+    z-index: 1;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -237,6 +242,33 @@
   .product-lightbox__close svg {
     width: 22px;
     height: 22px;
+  }
+
+  .product-lightbox-is-open #shopify-chat,
+  .product-lightbox-is-open .shopify-chat,
+  .product-lightbox-is-open #chat-widget-container,
+  .product-lightbox-is-open iframe[title*='chat' i],
+  .product-lightbox-is-open iframe[id*='chat' i],
+  .product-lightbox-is-open .scroll-to-top {
+    display: none !important;
+  }
+
+  @media screen and (max-width: 720px) {
+    .product-lightbox {
+      --product-lightbox-mobile-top-clear: calc(var(--sp-8) + var(--sp-2));
+      align-items: center;
+      padding: var(--sp-3);
+    }
+
+    .product-lightbox__img {
+      max-width: calc(100vw - (var(--sp-3) * 2));
+      max-height: calc(100vh - (var(--sp-3) * 2));
+    }
+
+    .product-lightbox__close {
+      top: max(var(--product-lightbox-mobile-top-clear), env(safe-area-inset-top));
+      right: max(var(--sp-3), env(safe-area-inset-right));
+    }
   }
 {% endstylesheet %}
 
@@ -399,6 +431,8 @@
 
         var lightboxImg = lightbox.querySelector('[data-lightbox-img]');
         var closeBtn = lightbox.querySelector('[data-lightbox-close]');
+        var originalParent = lightbox.parentNode;
+        var originalNextSibling = lightbox.nextSibling;
 
         function getActiveImage() {
           var activeItem = gallery.querySelector('.product-gallery__main-item.is-active');
@@ -411,7 +445,11 @@
           if (!img) return;
           lightboxImg.src = img.currentSrc || img.src;
           lightboxImg.alt = img.alt || '';
+          if (lightbox.parentNode !== document.body) {
+            document.body.appendChild(lightbox);
+          }
           lightbox.hidden = false;
+          document.body.classList.add('product-lightbox-is-open');
           document.body.style.overflow = 'hidden';
           closeBtn.focus();
         }
@@ -419,7 +457,11 @@
         function closeLightbox() {
           lightbox.hidden = true;
           lightboxImg.src = '';
+          document.body.classList.remove('product-lightbox-is-open');
           document.body.style.overflow = '';
+          if (originalParent && lightbox.parentNode !== originalParent) {
+            originalParent.insertBefore(lightbox, originalNextSibling);
+          }
         }
 
         zoomBtn.addEventListener('click', openLightbox);

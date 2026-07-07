@@ -26,10 +26,11 @@
 
   /* Desktop-first layout */
   .main-product {
+    --main-product-padding-top: 100px;
     width: 100%;
     max-width: 100rem;
     margin-inline: auto;
-    padding: 100px 64px var(--section-spacing-desktop);
+    padding: var(--main-product-padding-top) 64px var(--section-spacing-desktop);
   }
 
   .main-product__summary {
@@ -39,8 +40,9 @@
     column-gap: var(--sp-8);
   }
   .main-product__media {
+    --product-gallery-viewport-offset: var(--main-product-padding-top);
     position: sticky;
-    top: var(--sp-0);
+    top: var(--sp-2);
     z-index: 20;
     min-width: 0;
     align-self: start;
@@ -84,6 +86,12 @@
     font-size: var(--font-size-body-lg);
     line-height: var(--line-height-relaxed);
     color: var(--text-secondary);
+    /* Clamp the description teaser to 2 lines; overflow shows an ellipsis. */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
   .main-product__features {
@@ -137,32 +145,6 @@
     background: radial-gradient(circle at top, var(--color-milk) 0%, var(--surface-default) 65%);
   }
 
-  .main-product__trust-header {
-    display: none;
-  }
-
-  .main-product__trust-eyebrow {
-    margin: 0 0 var(--sp-3);
-    font-family: var(--font-body);
-    font-size: var(--font-size-body-sm);
-    font-weight: var(--font-weight-semibold);
-    line-height: var(--line-height-normal);
-    letter-spacing: calc(var(--letter-spacing-wide) * 5);
-    text-transform: uppercase;
-    color: var(--color-bark);
-  }
-
-  .main-product__trust-heading {
-    margin: 0;
-    font-family: var(--font-display);
-    font-size: var(--font-size-display-lg);
-    font-weight: var(--font-weight-regular);
-    line-height: var(--line-height-tight);
-    letter-spacing: var(--letter-spacing-normal);
-    color: var(--text-primary);
-    text-wrap: balance;
-  }
-
   .main-product__trust-subheading {
     display: block;
     font-size: clamp(var(--font-size-display-sm), 7.5vw, var(--font-size-display-lg));
@@ -177,29 +159,6 @@
     background-color: var(--border-default);
     min-height: 100%;
     width: 0.5px;
-  }
-
-  .main-product__trust-ornament {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--sp-5);
-    width: 100%;
-    margin-top: var(--sp-5);
-    color: var(--color-clay);
-  }
-
-  .main-product__trust-ornament-line {
-    width: calc(var(--sp-8) * 2);
-    height: 1px;
-    background-color: currentColor;
-  }
-
-  .main-product__trust-ornament-mark {
-    width: var(--sp-3);
-    height: var(--sp-3);
-    border: 2px solid currentColor;
-    transform: rotate(45deg);
   }
 
   .main-product__trust-list {
@@ -284,10 +243,6 @@
       padding-block: calc(var(--sp-8) * 2);
     }
 
-    .main-product__trust-heading {
-      font-size: var(--font-size-display-md);
-    }
-
     .main-product__trust-item {
       min-height: calc(var(--sp-8) * 5);
       padding: var(--sp-5);
@@ -316,6 +271,7 @@
       grid-template-columns: minmax(0, 1fr);
     }
     .main-product__media {
+      --product-gallery-viewport-offset: 0px;
       position: static;
       top: auto;
     }
@@ -370,26 +326,6 @@
     .main-product__trust-icon svg {
       width: 32px;
       height: 32px;
-    }
-
-    .main-product__trust-header {
-      margin-bottom: var(--sp-6);
-    }
-
-    .main-product__trust-eyebrow {
-      font-size: var(--font-size-caption);
-    }
-
-    .main-product__trust-heading {
-      font-size: var(--font-size-display-sm);
-    }
-
-    .main-product__trust-ornament {
-      gap: var(--sp-3);
-    }
-
-    .main-product__trust-ornament-line {
-      width: var(--sp-8);
     }
 
     .main-product__trust-item {
@@ -660,94 +596,101 @@
     </div>
 
     <div class="main-product__info">
-    <div class="main-product__header">
-      {%- assign current_collection = collection | default: product.collections.first -%}
-      {%- if current_collection != blank -%}
-        <a href="{{ current_collection.url }}" class="main-product__eyebrow" style="text-decoration: none;">
-          {{ current_collection.title }}
-        </a>
-      {%- endif -%}
-      <h1 class="main-product__title" id="MainProductTitle-{{ section.id }}">{{ product.title | escape }}</h1>
-      <p class="main-product__subtitle">
-        Sculptural function. Hand-carved fluting and solid walnut bring quiet sophistication to any space.
-      </p>
-    </div>
+      <div class="main-product__header">
+        {%- assign current_collection = collection | default: product.collections.first -%}
+        {%- if current_collection != blank -%}
+          <a href="{{ current_collection.url }}" class="main-product__eyebrow" style="text-decoration: none;">
+            {{ current_collection.title }}
+          </a>
+        {%- endif -%}
+        <h1 class="main-product__title" id="MainProductTitle-{{ section.id }}">{{ product.title | escape }}</h1>
+        {%- comment -%}
+          Real per-product teaser from the product description (plain text, clamped to 2 lines
+          with an ellipsis via CSS). Replaces the old hardcoded subtitle that was identical on
+          every product. The full description still renders in the product-comparison accordion.
+          See doc/SEO-diagnose.md #3.
+        {%- endcomment -%}
+        {%- assign product_subtitle = product.description | strip_html | strip -%}
+        {%- if product_subtitle != blank -%}
+          <p class="main-product__subtitle">{{ product_subtitle }}</p>
+        {%- endif -%}
+      </div>
 
-    {% render 'product-price', product: product, current_variant: current_variant %}
+      {% render 'product-price', product: product, current_variant: current_variant %}
 
-    <ul class="main-product__features">
-      <li class="main-product__feature">
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
-          <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"></path>
-          <path d="M2 21c0-3 1.85-5.36 5.08-6"></path>
-        </svg>
-        Solid walnut
-      </li>
-      <li class="main-product__feature">
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
-          <path d="M18 11V6a2 2 0 0 0-2-2 2 2 0 0 0-2 2"></path>
-          <path d="M14 10V4a2 2 0 0 0-2-2 2 2 0 0 0-2 2v2"></path>
-          <path d="M10 10.5V6a2 2 0 0 0-2-2 2 2 0 0 0-2 2v8"></path>
-          <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"></path>
-        </svg>
-        Hand-finished
-      </li>
-      <li class="main-product__feature">
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
-          <rect x="3" y="4" width="18" height="18" rx="2"></rect>
-          <line x1="16" y1="2" x2="16" y2="6"></line>
-          <line x1="8" y1="2" x2="8" y2="6"></line>
-          <line x1="3" y1="10" x2="21" y2="10"></line>
-        </svg>
-        Made to order in 3–5 weeks
-      </li>
-    </ul>
+      <ul class="main-product__features">
+        <li class="main-product__feature">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"></path>
+            <path d="M2 21c0-3 1.85-5.36 5.08-6"></path>
+          </svg>
+          Solid walnut
+        </li>
+        <li class="main-product__feature">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M18 11V6a2 2 0 0 0-2-2 2 2 0 0 0-2 2"></path>
+            <path d="M14 10V4a2 2 0 0 0-2-2 2 2 0 0 0-2 2v2"></path>
+            <path d="M10 10.5V6a2 2 0 0 0-2-2 2 2 0 0 0-2 2v8"></path>
+            <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"></path>
+          </svg>
+          Hand-finished
+        </li>
+        <li class="main-product__feature">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+          </svg>
+          Made to order in 3–5 weeks
+        </li>
+      </ul>
 
-    <hr class="main-product__divider">
+      <hr class="main-product__divider">
 
-    {% render 'product-variant-picker', product: product, current_variant: current_variant, section_id: section.id %}
+      {% render 'product-variant-picker', product: product, current_variant: current_variant, section_id: section.id %}
 
-    <div class="main-product__purchase">
-      {% render 'product-buy-buttons',
-        product: product,
-        current_variant: current_variant,
-        product_form_id: product_form_id
-      %}
-    </div>
+      <div class="main-product__purchase">
+        {% render 'product-buy-buttons',
+          product: product,
+          current_variant: current_variant,
+          product_form_id: product_form_id
+        %}
+      </div>
 
-    {% render 'product-consultation', product: product %}
+      {% render 'product-consultation', product: product %}
 
-    {% for block in section.blocks %}
-      {% if block.type == '@app' %}
-        <div class="main-product__app-block" {{ block.shopify_attributes }}>
-          {% render block %}
-        </div>
-      {% endif %}
-    {% endfor %}
+      {% for block in section.blocks %}
+        {% if block.type == '@app' %}
+          <div class="main-product__app-block" {{ block.shopify_attributes }}>
+            {% render block %}
+          </div>
+        {% endif %}
+      {% endfor %}
     </div>
   </div>
 
@@ -756,21 +699,13 @@
       <span></span>
     </div>
 
-    <header class="main-product__trust-header">
-      {% if section.settings.trust_eyebrow != blank %}
-        <p class="main-product__trust-eyebrow">{{ section.settings.trust_eyebrow | escape }}</p>
-      {% endif %}
-      <h2 class="main-product__trust-heading" id="MainProductTrustHeading-{{ section.id }}">
-        {{ section.settings.trust_heading | escape }}
-      </h2>
-      <div class="main-product__trust-ornament" aria-hidden="true">
-        <span class="main-product__trust-ornament-line"></span>
-        <span class="main-product__trust-ornament-mark"></span>
-        <span class="main-product__trust-ornament-line"></span>
-      </div>
-    </header>
-
-    <h2 class="main-product__trust-subheading">Why You Choose This Masterpiece</h2>
+    {%- comment -%}
+      Single logical H2 for this panel, driven by schema (was hardcoded + a second hidden
+      H2 that duplicated the heading). See doc/SEO-diagnose.md #5.
+    {%- endcomment -%}
+    <h2 class="main-product__trust-subheading" id="MainProductTrustHeading-{{ section.id }}">
+      {{ section.settings.trust_subheading | escape }}
+    </h2>
 
     <div class="main-product__trust-list" role="list">
       <div class="main-product__trust-item">
@@ -967,9 +902,11 @@
   }
 </script>
 
-<script type="application/ld+json">
-  {{ product | structured_data }}
-</script>
+{%- comment -%}
+  Product JSON-LD is rendered once in snippets/meta-tags.liquid (inside <head>).
+  Do not duplicate it here — duplicate structured data triggers Search Console warnings.
+  See doc/SEO-diagnose.md #2.
+{%- endcomment -%}
 
 <script>
   (function () {
@@ -1138,15 +1075,9 @@
     },
     {
       "type": "text",
-      "id": "trust_eyebrow",
-      "label": "Eyebrow",
-      "default": "Crafted to be lived with"
-    },
-    {
-      "type": "text",
-      "id": "trust_heading",
-      "label": "Heading",
-      "default": "Thoughtful details. Lasting quality."
+      "id": "trust_subheading",
+      "label": "Subheading",
+      "default": "Why you choose this masterpiece"
     },
     {
       "type": "text",

@@ -429,6 +429,12 @@
                       {% if media.media_type == 'image' %}
                         {% assign img_class = 'pcard__image' %}
                         {% if img_count == 0 %}{% assign img_class = 'pcard__image is-active' %}{% endif %}
+                        {%- comment -%}
+                          Fallback alt to the product title when the media has no alt. Compute it in a
+                          variable: chaining `| default:` after image_tag applies to the <img> string
+                          (never blank), so the fallback never fired. See doc/SEO-diagnose.md #8.
+                        {%- endcomment -%}
+                        {% assign card_alt = media.alt | default: product.title %}
                         {{
                           media.preview_image
                           | image_url: width: 720
@@ -437,8 +443,7 @@
                             loading: 'lazy',
                             widths: '280, 420, 560, 720',
                             sizes: '(min-width: 1024px) 24vw, (min-width: 720px) 33vw, 90vw',
-                            alt: media.alt
-                          | default: product.title
+                            alt: card_alt
                         }}
                         {% assign img_count = img_count | plus: 1 %}
                         {% if img_count >= 5 %}{% break %}{% endif %}

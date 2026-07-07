@@ -1,6 +1,17 @@
 <header class="header page-width">
   <div class="header__left">
-    <h1 class="header__heading">
+    {%- comment -%}
+      The logo is the page H1 only on the homepage. On every other template the page's own
+      title (product, collection, article, page…) is the H1, so the logo uses a plain <div>
+      to avoid two H1s. See doc/SEO-diagnose.md #1.
+    {%- endcomment -%}
+    {%- if request.page_type == 'index' -%}
+      {%- assign header_heading_tag = 'h1' -%}
+    {%- else -%}
+      {%- assign header_heading_tag = 'div' -%}
+    {%- endif -%}
+    {%- assign logo_alt = section.settings.logo.alt | default: shop.name -%}
+    <{{ header_heading_tag }} class="header__heading">
       <a href="{{ routes.root_url }}" class="header__heading-link">
         {%- if section.settings.logo != blank -%}
           {{
@@ -11,9 +22,7 @@
               widths: '100, 200, 300, 400',
               height: section.settings.logo.height,
               width: section.settings.logo.width,
-              alt: section.settings.logo.alt
-            | default: shop.name
-            | escape
+              alt: logo_alt
           }}
         {%- elsif section.settings.logo_asset != blank -%}
           <img
@@ -27,7 +36,7 @@
           <span class="h2">{{ shop.name }}</span>
         {%- endif -%}
       </a>
-    </h1>
+    </{{ header_heading_tag }}>
 
     <nav class="header__nav">
       <ul class="header__nav-list">

@@ -5,6 +5,7 @@
 
 {% liquid
   assign consultation_url = section.settings.consultation_url | default: pages.customization.url | default: routes.root_url
+  assign mega_collection_handles = 'coffee-table,console-table,end-table,bookshelf,fireplace-mantel-shelf,floating-shelf,wall-shelf,coat-rack,entryway-shoe-bench-rack,storage-cabinet,tree-coat-rack,jewelry-tree-organizer-stand,wall-decorative-sculpture,wooden-floor-sculpture,wooden-fruit-bowl,wood-floor-lamp-base,wooden-lamp-base,wooden-plant-stand,rustic-wine-rack,tree-wine-rack,wall-mounted-wine-rack,cat-tree,parrot-tree,bedroom-furniture,bed-frame-with-headboard,bedside-table' | split: ','
   assign room_handles = 'living-room-furniture,dining-room-furniture,bedroom-furniture,home-office' | split: ','
   assign room_labels = 'Living Room,Dining Room,Bedroom,Home Office' | split: ','
 %}
@@ -40,35 +41,43 @@
     <section class="collections-page__featured" aria-labelledby="FeaturedCollections-{{ section.id }}">
       <h2 id="FeaturedCollections-{{ section.id }}" class="collections-page__visually-hidden">Featured collections</h2>
       <div class="collections-page__grid">
-        {% assign featured_count = 0 %}
-        {% for collection in collections %}
-          {% if collection.featured_image == blank %}
+        {% for collection_handle in mega_collection_handles %}
+          {% assign menu_collection = collections[collection_handle] %}
+          {% if menu_collection == blank %}
             {% continue %}
           {% endif %}
 
-          {% assign featured_count = featured_count | plus: 1 %}
-          {% if featured_count > 6 %}
-            {% break %}
+          {% assign card_image = menu_collection.image %}
+          {% if card_image == blank %}
+            {% assign card_image = menu_collection.featured_image %}
           {% endif %}
+          {% if card_image == blank %}
+            {% assign card_image = menu_collection.products.first.featured_image %}
+          {% endif %}
+          {% if card_image == blank %}
+            {% assign card_image = menu_collection.products.first.featured_media.preview_image %}
+          {% endif %}
+          {% assign card_alt = card_image.alt | default: menu_collection.title %}
 
-          <a class="collections-page__card collections-page__card--{{ featured_count }}" href="{{ collection.url }}">
-            {{
-              collection.featured_image
-              | image_url: width: 1200
-              | image_tag:
-                class: 'collections-page__card-image',
-                loading: 'lazy',
-                widths: '420, 640, 900, 1200',
-                sizes: '(max-width: 767px) 100vw, (max-width: 1200px) 50vw, 34vw',
-                alt: collection.featured_image.alt
-              | default: collection.title
-            }}
+          <a class="collections-page__card collections-page__card--{{ forloop.index }}" href="{{ menu_collection.url }}">
+            {% if card_image != blank %}
+              {{
+                card_image
+                | image_url: width: 1200
+                | image_tag:
+                  class: 'collections-page__card-image',
+                  loading: 'lazy',
+                  widths: '420, 640, 900, 1200',
+                  sizes: '(max-width: 767px) 100vw, (max-width: 1200px) 50vw, 34vw',
+                  alt: card_alt
+              }}
+            {% endif %}
             <span class="collections-page__card-shade" aria-hidden="true"></span>
             <span class="collections-page__card-content">
-              <span class="collections-page__card-title">{{ collection.title | escape }}</span>
-              {% if collection.description != blank %}
+              <span class="collections-page__card-title">{{ menu_collection.title | escape }}</span>
+              {% if menu_collection.description != blank %}
                 <span class="collections-page__card-description">
-                  {{- collection.description | strip_html | truncatewords: 11 -}}
+                  {{- menu_collection.description | strip_html | truncatewords: 11 -}}
                 </span>
               {% endif %}
             </span>
@@ -196,8 +205,11 @@
   if (mainProductSection) {
     mainProductSection.closest('body').querySelector('.header__icon--search').style.color = 'var(--color-earth-brown)';
     mainProductSection.closest('body').querySelector('.header__icon--cart').style.color = 'var(--color-earth-brown)';
+    mainProductSection.closest('body').querySelector('.header__icon--menu').style.color = 'var(--color-earth-brown)';
+    mainProductSection.closest('body').querySelector('.header__icon--account').style.color = 'var(--color-earth-brown)';
   }
 </script>
+
 {% stylesheet %}
   .collections-page {
     overflow: hidden;
@@ -296,13 +308,6 @@
     color: var(--text-inverse);
   }
 
-  .collections-page__card--4 {
-    grid-column: span 3;
-  }
-  .collections-page__card--5 {
-    grid-column: span 5;
-  }
-
   .collections-page__card-image,
   .collections-page__room-image {
     width: 100%;
@@ -392,7 +397,6 @@
     grid-template-columns: 1.05fr repeat(4, minmax(0, 1fr)) 1.4fr;
     gap: var(--sp-3);
     align-items: stretch;
-    pointer-events: none;
   }
 
   .collections-page__rooms-intro {
@@ -431,6 +435,7 @@
     overflow: hidden;
     border-radius: var(--radius-lg);
     color: var(--text-inverse);
+    pointer-events: none;
   }
 
   .collections-page__room-label {

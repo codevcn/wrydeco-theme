@@ -1250,8 +1250,28 @@
   .cart-drawer-is-open #shopify-chat,
   .cart-drawer-is-open .shopify-chat,
   .cart-drawer-is-open #chat-widget-container,
+  .cart-drawer-is-open #ShopifyChat,
+  .cart-drawer-is-open .shopify-chat-launcher,
+  .cart-drawer-is-open .intercom-lightweight-app,
+  .cart-drawer-is-open .crisp-client,
   .cart-drawer-is-open iframe[title*='chat' i],
-  .cart-drawer-is-open iframe[id*='chat' i] {
+  .cart-drawer-is-open iframe[id*='chat' i],
+  .cart-drawer-is-open iframe[src*='chat' i],
+  .cart-drawer-is-open iframe[src*='inbox' i],
+  .cart-drawer-is-open iframe[src*='sidekick' i],
+  body.cart-drawer-is-open #shopify-chat,
+  body.cart-drawer-is-open .shopify-chat,
+  body.cart-drawer-is-open #chat-widget-container,
+  body.cart-drawer-is-open #ShopifyChat,
+  body.cart-drawer-is-open .shopify-chat-launcher,
+  body.cart-drawer-is-open .intercom-lightweight-app,
+  body.cart-drawer-is-open .crisp-client,
+  body.cart-drawer-is-open iframe[title*='chat' i],
+  body.cart-drawer-is-open iframe[id*='chat' i],
+  body.cart-drawer-is-open iframe[src*='chat' i],
+  body.cart-drawer-is-open iframe[src*='inbox' i],
+  body.cart-drawer-is-open iframe[src*='sidekick' i] {
+    display: none !important;
     opacity: 0 !important;
     visibility: hidden !important;
     pointer-events: none !important;
@@ -1324,6 +1344,84 @@
     const getShell = () => document.querySelector('[data-cart-drawer-shell]');
     const getPanel = () => getShell()?.querySelector('[data-cart-drawer-panel]');
 
+    const floatingWidgetSelectors = [
+      '#shopify-chat',
+      '#ShopifyChat',
+      '#chat-widget-container',
+      '.shopify-chat',
+      '.shopify-chat-launcher',
+      '.intercom-lightweight-app',
+      '.crisp-client',
+      '[id*="chat" i]',
+      '[class*="chat" i]',
+      '[id*="inbox" i]',
+      '[class*="inbox" i]',
+      '[id*="sidekick" i]',
+      '[class*="sidekick" i]',
+      'iframe[title*="chat" i]',
+      'iframe[id*="chat" i]',
+      'iframe[src*="chat" i]',
+      'iframe[src*="inbox" i]',
+      'iframe[src*="sidekick" i]'
+    ];
+
+    const shouldHideFloatingWidget = (element) => {
+      if (!(element instanceof HTMLElement)) return false;
+      if (element.closest('[data-cart-drawer-shell], .cart-drawer__note-popup, #global-toast-container')) return false;
+
+      const style = window.getComputedStyle(element);
+      if (style.display === 'none' || style.visibility === 'hidden') return false;
+
+      const rect = element.getBoundingClientRect();
+      const isBottomRightFloating =
+        style.position === 'fixed' &&
+        rect.width > 0 &&
+        rect.height > 0 &&
+        rect.right > window.innerWidth - 180 &&
+        rect.bottom > window.innerHeight - 260;
+
+      return isBottomRightFloating;
+    };
+
+    const hideCartDrawerFloatingWidgets = () => {
+      const candidates = new Set();
+
+      floatingWidgetSelectors.forEach((selector) => {
+        document.querySelectorAll(selector).forEach((element) => candidates.add(element));
+      });
+
+      Array.from(document.body.children).forEach((element) => {
+        if (shouldHideFloatingWidget(element)) candidates.add(element);
+      });
+
+      candidates.forEach((element) => {
+        if (!(element instanceof HTMLElement)) return;
+        if (element.dataset.cartDrawerHiddenFloating === 'true') return;
+        if (!shouldHideFloatingWidget(element) && !element.matches(floatingWidgetSelectors.join(','))) return;
+
+        element.dataset.cartDrawerPreviousStyle = element.getAttribute('style') || '';
+        element.dataset.cartDrawerHiddenFloating = 'true';
+        element.style.setProperty('display', 'none', 'important');
+        element.style.setProperty('visibility', 'hidden', 'important');
+        element.style.setProperty('opacity', '0', 'important');
+        element.style.setProperty('pointer-events', 'none', 'important');
+      });
+    };
+
+    const restoreCartDrawerFloatingWidgets = () => {
+      document.querySelectorAll('[data-cart-drawer-hidden-floating="true"]').forEach((element) => {
+        const previousStyle = element.dataset.cartDrawerPreviousStyle || '';
+        if (previousStyle) {
+          element.setAttribute('style', previousStyle);
+        } else {
+          element.removeAttribute('style');
+        }
+
+        delete element.dataset.cartDrawerPreviousStyle;
+        delete element.dataset.cartDrawerHiddenFloating;
+      });
+    };
+
     const updateCartBubble = (count) => {
       document.querySelectorAll('.header__icon--cart').forEach((cartIcon) => {
         let bubble = cartIcon.querySelector('.cart-count-bubble');
@@ -1349,6 +1447,8 @@
       shell.classList.add('is-open');
       shell.setAttribute('aria-hidden', 'false');
       document.documentElement.classList.add('cart-drawer-is-open');
+      document.body.classList.add('cart-drawer-is-open');
+      hideCartDrawerFloatingWidgets();
       syncPendingDiscount();
       window.requestAnimationFrame(() => panel.focus());
     };
@@ -1359,6 +1459,8 @@
       shell.classList.remove('is-open');
       shell.setAttribute('aria-hidden', 'true');
       document.documentElement.classList.remove('cart-drawer-is-open');
+      document.body.classList.remove('cart-drawer-is-open');
+      restoreCartDrawerFloatingWidgets();
       if (lastFocusedElement instanceof HTMLElement) lastFocusedElement.focus();
     };
 
