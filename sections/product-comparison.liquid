@@ -2,36 +2,67 @@
   Details, Materials & Care section.
 
   Left column: eyebrow, title, subtitle, divider and a "what makes this piece
-  special" feature grid (feature blocks). Right column: a numbered accordion
-  (accordion blocks); the first item is open by default.
+  special" feature grid (feature blocks). Right column: tabbed product details
+  (accordion blocks rendered as tabs); the first item is active by default.
 {% endcomment %}
 
 {% stylesheet %}
-  /* Desktop-first */
   .details-materials {
+    box-sizing: border-box;
     width: 100%;
-    max-width: var(--layout-max-width);
+    height: 100svh;
+    max-height: 700px;
+    max-width: calc(var(--layout-max-width) + var(--sp-12) + var(--sp-8));
     margin-inline: auto;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
-    align-items: start;
-    column-gap: var(--sp-8);
-    padding: var(--sp-7) var(--layout-padding-desktop);
+    grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    align-items: stretch;
+    gap: var(--sp-5) var(--sp-6);
+    padding: var(--sp-4) var(--layout-padding-desktop);
+    background: radial-gradient(
+        circle at 12% 18%,
+        color-mix(in srgb, var(--color-clay) 8%, transparent),
+        transparent 30%
+      ),
+      radial-gradient(circle at 88% 74%, color-mix(in srgb, var(--color-earth-brown) 6%, transparent), transparent 32%),
+      var(--surface-default);
+    margin-top: var(--sp-0);
+  }
+
+  .details-materials__left {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-self: center;
+    min-width: 0;
+    min-height: 0;
+    text-align: center;
+    height: 100%;
   }
 
   .details-materials__eyebrow {
-    margin: 0 0 var(--sp-4);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-3);
+    margin: 0 0 var(--sp-3);
     font-family: var(--font-body);
     font-size: var(--font-size-body-sm);
     font-weight: var(--font-weight-semibold);
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: var(--color-bark);
+    color: var(--color-earth-brown);
+  }
+  .details-materials__eyebrow svg {
+    width: var(--sp-4);
+    height: var(--sp-4);
+    flex: 0 0 auto;
   }
   .details-materials__title {
-    margin: 0 0 var(--sp-4);
+    margin: 0;
     font-family: var(--font-display);
-    font-size: var(--font-size-display-lg);
+    font-size: clamp(var(--font-size-display-sm), 7.5vw, var(--font-size-display-lg));
     font-weight: var(--font-weight-regular);
     line-height: var(--line-height-display);
     letter-spacing: var(--letter-spacing-normal);
@@ -39,70 +70,85 @@
     text-wrap: balance;
   }
   .details-materials__subtitle {
-    margin: 0;
-    max-width: 52ch;
+    margin: var(--sp-4) auto 0;
+    max-width: 58ch;
     font-size: var(--font-size-body-lg);
-    line-height: var(--line-height-relaxed);
-    color: var(--text-secondary);
+    line-height: var(--line-height-generous);
+    color: var(--text-primary);
   }
   .details-materials__rule {
-    width: 100%;
-    height: 1px;
-    margin: var(--sp-6) 0;
+    position: relative;
+    width: min(calc(var(--sp-10) * 2 + var(--sp-5)), 40%);
+    height: var(--border-width);
+    margin: var(--sp-4) auto;
     border: none;
-    background-color: var(--border-light);
+    overflow: visible;
+    background-color: color-mix(in srgb, var(--color-clay) 48%, transparent);
   }
-
-  @media screen and (max-width: 768px) {
-    .details-materials__rule {
-      margin: var(--sp-4) 0;
-    }
+  .details-materials__rule::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: var(--sp-2);
+    height: var(--sp-2);
+    border: var(--border-width) solid var(--color-clay);
+    background: var(--surface-default);
+    transform: translate(-50%, -50%) rotate(45deg);
   }
 
   .details-materials__features-eyebrow {
-    margin: 0 0 var(--sp-5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-3);
+    margin: var(--sp-4) 0 var(--sp-4);
     font-family: var(--font-body);
     font-size: var(--font-size-body-sm);
     font-weight: var(--font-weight-semibold);
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: var(--color-bark);
+    color: var(--color-earth-brown);
+  }
+  .details-materials__features-eyebrow::before,
+  .details-materials__features-eyebrow::after {
+    content: '';
+    width: var(--sp-9);
+    height: var(--border-width);
+    background-color: color-mix(in srgb, var(--color-clay) 42%, transparent);
   }
 
   .details-materials__features {
     display: grid;
     grid-template-columns: 1fr 1fr;
+    gap: var(--sp-4);
   }
   .dm-feature {
     display: flex;
-    align-items: flex-start;
+    flex-direction: row;
+    align-items: center;
     gap: var(--sp-4);
-    padding: var(--sp-5);
-  }
-  .dm-feature:nth-child(odd) {
-    padding-left: 0;
-    border-right: 1px solid var(--border-light);
-  }
-  .dm-feature:nth-child(even) {
-    padding-right: 0;
-  }
-  .dm-feature:nth-child(1),
-  .dm-feature:nth-child(2) {
-    padding-top: 0;
-  }
-  .dm-feature:nth-child(n + 3) {
-    border-top: 1px solid var(--border-light);
-    padding-bottom: 0;
+    min-height: var(--sp-9);
+    padding: var(--sp-4);
+    border: var(--border-width) solid var(--border-light);
+    border-radius: var(--radius-lg);
+    background: color-mix(in srgb, var(--surface-elevated) 72%, transparent);
   }
   .dm-feature__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     flex: 0 0 auto;
-    width: 44px;
-    height: 44px;
-    color: var(--color-bark);
+    width: var(--sp-7);
+    height: var(--sp-7);
+    border: var(--border-width) solid color-mix(in srgb, var(--color-clay) 36%, transparent);
+    border-radius: var(--radius-full);
+    background-color: color-mix(in srgb, var(--color-milk) 76%, transparent);
+    color: var(--color-earth-brown);
   }
   .dm-feature__icon svg {
-    width: 100%;
-    height: 100%;
+    width: var(--sp-5);
+    height: var(--sp-5);
   }
   .dm-feature__body {
     min-width: 0;
@@ -114,189 +160,330 @@
     font-weight: var(--font-weight-regular);
     line-height: var(--line-height-tight);
     color: var(--text-primary);
+    text-align: left;
   }
   .dm-feature__text {
     margin: 0;
     font-size: var(--font-size-body-sm);
-    line-height: var(--line-height-relaxed);
-    color: var(--text-secondary);
+    line-height: var(--line-height-normal);
+    color: var(--text-primary);
+    text-align: left;
   }
 
-  /* Accordion */
-  .dm-accordion {
-    border: 1px solid #33333328;
+  .details-materials__right {
+    display: flex;
+    align-self: stretch;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .dm-tabs {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-height: 0;
+    border: var(--border-width) solid var(--border-light);
     border-radius: var(--radius-lg);
     overflow: hidden;
-    background-color: transparent;
+    background-color: color-mix(in srgb, var(--surface-elevated) 68%, transparent);
+    box-shadow: var(--shadow-card);
   }
-  .dm-acc {
-    border-bottom: 1px solid #33333328;
-  }
-  .dm-acc:last-child {
-    border-bottom: none;
-  }
-  .dm-acc__summary {
+  .dm-tabs__list {
+    flex: 0 0 auto;
     display: grid;
-    grid-template-columns: 2.75rem 1fr auto;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(max-content, 1fr);
     align-items: center;
-    gap: var(--sp-4);
-    padding: var(--sp-5) var(--sp-5);
-    cursor: pointer;
-    list-style: none;
+    gap: var(--sp-1);
+    min-height: var(--sp-10);
+    padding: var(--sp-3);
+    border-bottom: var(--border-width) solid var(--border-light);
+    overflow-x: auto;
+    scrollbar-width: thin;
   }
-  .dm-acc__summary::-webkit-details-marker {
-    display: none;
-  }
-  .dm-acc__summary:hover {
-    background-color: var(--bg-secondary);
-  }
-  .dm-acc__num {
-    font-family: var(--font-body);
+  .dm-tabs__tab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--sp-7);
+    padding: 0 var(--sp-3);
+    border: var(--border-width) solid transparent;
+    border-radius: var(--radius-lg);
+    background-color: transparent;
+    color: var(--text-primary);
+    font-family: var(--font-roboto);
     font-size: var(--font-size-body-sm);
     font-weight: var(--font-weight-regular);
-    color: var(--color-clay);
+    line-height: var(--line-height-tight);
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color var(--timing-short) var(--ease-standard),
+      color var(--timing-short) var(--ease-standard), border-color var(--timing-short) var(--ease-standard);
   }
-  .dm-acc__title {
+  .dm-tabs__tab:hover,
+  .dm-tabs__tab:focus-visible {
+    border-color: color-mix(in srgb, var(--color-earth-brown) 22%, transparent);
+    outline: none;
+  }
+  .dm-tabs__tab[aria-selected='true'] {
+    background-color: var(--color-earth-brown);
+    color: var(--color-cream);
+    border-color: var(--color-earth-brown);
+  }
+  .dm-tabs__panel {
+    display: none;
+    min-height: 0;
+  }
+  .dm-tabs__panel.is-active {
+    display: flex;
+    flex: 1 1 auto;
+  }
+  .dm-tabs__content {
+    display: grid;
+    grid-template-columns: minmax(0, 0.92fr) minmax(0, 1fr);
+    align-items: center;
+    gap: var(--sp-6);
+    width: 100%;
+    min-height: 0;
+    padding: var(--sp-5);
+  }
+  .dm-tabs__media {
+    overflow: hidden;
+    align-self: center;
+    height: 100%;
+    border-radius: var(--radius-lg);
+    background: color-mix(in srgb, var(--color-milk) 72%, transparent);
+  }
+  .dm-tabs__image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .dm-tabs__placeholder {
+    width: 100%;
+    height: 100%;
+    color: color-mix(in srgb, var(--color-earth-brown) 24%, transparent);
+  }
+  .dm-tabs__body {
+    min-width: 0;
+    height: 100%;
+    overflow-y: auto;
+    padding-right: var(--sp-2);
+    font-size: var(--font-size-body-md);
+    line-height: var(--line-height-generous);
+    color: var(--text-primary);
+  }
+  .dm-tabs__body > :last-child {
+    margin-bottom: 0;
+  }
+  .dm-tabs__body img,
+  .dm-tabs__body picture,
+  .dm-tabs__body figure {
+    display: none;
+  }
+  .dm-tabs__rte,
+  .dm-tabs__rte * {
+    color: var(--text-primary) !important;
+    font-family: var(--font-body) !important;
+  }
+  .dm-tabs__rte h1,
+  .dm-tabs__rte h2,
+  .dm-tabs__rte h3,
+  .dm-tabs__rte h4 {
+    break-after: avoid;
+    margin: 0 0 var(--sp-3);
     font-family: var(--font-display);
-    font-size: var(--font-size-body-xl);
+    font-size: var(--font-size-body-lg);
     font-weight: var(--font-weight-regular);
+    color: var(--text-primary);
+  }
+  .dm-tabs__rte h1,
+  .dm-tabs__rte h1 *,
+  .dm-tabs__rte h2,
+  .dm-tabs__rte h2 *,
+  .dm-tabs__rte h3,
+  .dm-tabs__rte h3 *,
+  .dm-tabs__rte h4,
+  .dm-tabs__rte h4 * {
+    font-family: var(--font-display) !important;
+  }
+  .dm-tabs__rte p,
+  .dm-tabs__rte ul,
+  .dm-tabs__rte ol {
+    margin-top: 0;
+    break-inside: avoid;
+  }
+  .dm-tabs__rte p + h1,
+  .dm-tabs__rte p + h2,
+  .dm-tabs__rte p + h3,
+  .dm-tabs__rte p + h4,
+  .dm-tabs__rte ul + h1,
+  .dm-tabs__rte ul + h2,
+  .dm-tabs__rte ul + h3,
+  .dm-tabs__rte ul + h4 {
+    margin-top: var(--sp-5);
+  }
+  .dm-tabs__rte a {
+    color: inherit;
+    text-underline-offset: 0.18em;
+  }
+  .details-materials__trust {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: center;
+    min-height: var(--sp-8);
+    border-radius: var(--radius-lg);
+    background: color-mix(in srgb, var(--surface-elevated) 58%, transparent);
+    box-shadow: var(--shadow-card);
+  }
+  .dm-trust {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-4);
+    padding: var(--sp-4) var(--sp-5);
+    color: var(--color-earth-brown);
+  }
+  .dm-trust + .dm-trust {
+    border-left: var(--border-width) solid var(--border-light);
+  }
+  .dm-trust__icon {
+    display: inline-flex;
+    width: var(--sp-6);
+    height: var(--sp-6);
+    flex: 0 0 auto;
+  }
+  .dm-trust__icon svg {
+    width: 100%;
+    height: 100%;
+  }
+  .dm-trust__title {
+    display: block;
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-md);
     line-height: var(--line-height-tight);
     color: var(--text-primary);
   }
-  .dm-acc__icon {
-    position: relative;
-    width: 16px;
-    height: 16px;
+  .dm-trust__text {
+    display: block;
+    margin-top: var(--sp-1);
+    font-size: var(--font-size-caption);
+    line-height: var(--line-height-normal);
     color: var(--text-secondary);
-  }
-  .dm-acc__icon::before,
-  .dm-acc__icon::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background-color: currentColor;
-    transition: transform var(--timing-base) var(--ease-standard);
-  }
-  .dm-acc__icon::before {
-    width: 16px;
-    height: 1.5px;
-  }
-  .dm-acc__icon::after {
-    width: 1.5px;
-    height: 16px;
-  }
-  .dm-acc[open] .dm-acc__icon::after {
-    transform: translate(-50%, -50%) rotate(90deg);
-  }
-  .dm-acc__content {
-    padding: 0 var(--sp-5) var(--sp-5) 32px;
-    max-height: 220px;
-    overflow-y: auto;
-    font-size: var(--font-size-body-md);
-    line-height: var(--line-height-generous);
-    color: var(--text-secondary);
-  }
-  .dm-acc__content > :last-child {
-    margin-bottom: 0;
-  }
-  .dm-acc__content-wrap {
-    position: relative;
-  }
-  .dm-acc__more {
-    display: none;
   }
 
-  @media screen and (max-width: 1024px) {
+  @media screen and (max-width: 1180px) {
     .details-materials {
+      height: auto;
+      max-height: none;
       column-gap: var(--sp-6);
       padding-inline: var(--layout-padding-tablet);
     }
     .details-materials__title {
       font-size: var(--font-size-display-md);
     }
+    .details-materials__features {
+      gap: var(--sp-3);
+    }
+    .dm-feature {
+      padding: var(--sp-4);
+    }
   }
 
   @media screen and (max-width: 768px) {
-    .dm-acc__summary {
-      padding-block: var(--sp-4);
-    }
     .details-materials {
+      height: auto;
+      max-height: none;
       grid-template-columns: minmax(0, 1fr);
-      row-gap: var(--sp-3);
-      padding: var(--section-spacing-mobile) var(--layout-padding-mobile);
+      grid-template-rows: auto;
+      row-gap: var(--sp-5);
+      padding: var(--section-spacing-mobile) var(--layout-padding-mobile) var(--sp-7);
+    }
+    .details-materials__eyebrow {
+      gap: var(--sp-2);
+      margin-bottom: var(--sp-4);
+      font-size: var(--font-size-caption);
     }
     .details-materials__title {
       font-size: var(--font-size-display-md);
-      text-align: center;
     }
     .details-materials__subtitle {
       font-size: var(--font-size-body-md);
-      text-align: center;
+    }
+    .details-materials__features-eyebrow {
+      gap: var(--sp-3);
+      margin-top: var(--sp-5);
+      font-size: var(--font-size-caption);
+    }
+    .details-materials__features-eyebrow::before,
+    .details-materials__features-eyebrow::after {
+      width: var(--sp-6);
     }
     .details-materials__features {
       grid-template-columns: 1fr;
     }
-    .dm-feature,
-    .dm-feature:nth-child(odd),
-    .dm-feature:nth-child(even) {
-      padding: var(--sp-5) 0;
-      border-right: none;
-      border-top: 1px solid var(--border-light);
+    .dm-feature {
+      flex-direction: column;
+      min-height: 0;
+      text-align: center;
     }
-    .dm-feature:nth-child(1) {
-      border-top: none;
-      padding-top: 0;
+    .dm-feature__title,
+    .dm-feature__text {
+      text-align: center;
     }
-    /* On mobile the inner scroll is awkward on touch; instead collapse the
-       content to a preview height with a fade + "Read more" toggle (wired up in
-       JS, which reveals the button only when the content actually overflows). */
-    .dm-acc__content {
-      max-height: none;
-      overflow: visible;
+    .dm-tabs__list {
+      display: flex;
+      min-height: var(--sp-8);
+      padding: var(--sp-2);
+      scroll-snap-type: x proximity;
     }
-    .dm-acc__clip.is-collapsed {
-      position: relative;
-      max-height: 340px;
-      overflow: hidden;
+    .dm-tabs__tab {
+      flex: 0 0 auto;
+      min-height: var(--sp-7);
+      padding: 0 var(--sp-4);
+      scroll-snap-align: start;
     }
-    .dm-acc__clip.is-collapsed::after {
-      content: '';
-      position: absolute;
-      inset: auto 0 0 0;
-      height: var(--sp-8);
-      background: linear-gradient(to bottom, transparent, var(--surface-default));
-      pointer-events: none;
+    .dm-tabs__content {
+      grid-template-columns: minmax(0, 1fr);
+      min-height: 0;
+      padding: var(--sp-4);
+      gap: var(--sp-4);
     }
-    .dm-acc__more {
-      display: inline-flex;
-      align-items: center;
-      gap: var(--sp-2);
-      margin-top: var(--sp-4);
-      margin-left: 8px;
-      padding: var(--sp-2) 0;
-      background: none;
-      border: none;
-      font-family: var(--font-body);
-      font-size: var(--font-size-body-sm);
-      font-weight: var(--font-weight-semibold);
-      letter-spacing: var(--letter-spacing-wide);
-      text-transform: uppercase;
-      color: var(--color-ebony);
-      cursor: pointer;
+    .dm-tabs__media {
+      aspect-ratio: 16 / 11;
     }
-    .dm-acc__more::after {
-      content: '';
-      width: 8px;
-      height: 8px;
-      border-right: 1.5px solid currentColor;
-      border-bottom: 1.5px solid currentColor;
-      transform: translateY(-2px) rotate(45deg);
-      transition: transform var(--timing-short) var(--ease-standard);
+    .dm-tabs__body {
+      max-height: calc(var(--sp-10) * 6 + var(--sp-4));
+      padding-right: var(--sp-1);
     }
-    .dm-acc__more[aria-expanded='true']::after {
-      transform: translateY(1px) rotate(-135deg);
+    .details-materials__trust {
+      grid-template-columns: 1fr;
+    }
+    .dm-trust {
+      justify-content: flex-start;
+    }
+    .dm-trust + .dm-trust {
+      border-left: 0;
+      border-top: var(--border-width) solid var(--border-light);
+    }
+  }
+
+  @media screen and (max-width: 480px) {
+    .details-materials__title {
+      font-size: var(--font-size-display-sm);
+    }
+    .dm-feature {
+      gap: var(--sp-3);
+      padding: var(--sp-4);
+    }
+    .dm-feature__icon {
+      width: var(--sp-7);
+      height: var(--sp-7);
+    }
+    .dm-tabs__tab {
+      padding: 0 var(--sp-3);
     }
   }
 {% endstylesheet %}
@@ -304,7 +491,15 @@
 <section class="details-materials" id="ProductComparison-{{ section.id }}">
   <div class="details-materials__left">
     {% if section.settings.eyebrow != blank %}
-      <p class="details-materials__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+      <p class="details-materials__eyebrow">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+          <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+            <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8c0 5.5-4.78 10-10 10"></path>
+            <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"></path>
+          </g>
+        </svg>
+        <span>{{ section.settings.eyebrow | escape }}</span>
+      </p>
     {% endif %}
 
     {% if section.settings.title != blank %}
@@ -328,56 +523,40 @@
             <span class="dm-feature__icon" aria-hidden="true">
               {% case block.settings.icon %}
                 {% when 'grain' %}
-                  <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4">
-                    <circle cx="24" cy="24" r="19"></circle>
-                    <circle cx="24" cy="24" r="13.5"></circle>
-                    <circle cx="24" cy="24" r="8"></circle>
-                    <circle cx="24" cy="24" r="2.6" fill="currentColor" stroke="none"></circle>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                    <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <circle cx="12" cy="12" r="1"></circle>
+                    </g>
                   </svg>
                 {% when 'joinery' %}
-                  <svg
-                    viewBox="0 0 48 48"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.4"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path d="M8 30l9-9 4 4-9 9a2.8 2.8 0 0 1-4-4Z"></path>
-                    <path d="M21 25l13-13"></path>
-                    <path d="M30 8l10 10-5 5-10-10Z"></path>
-                    <path d="M28 34l4 4"></path>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                    <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+                      <path d="m15 12l-9.373 9.373a1 1 0 0 1-3.001-3L12 9m6 6l4-4"></path>
+                      <path d="m21.5 11.5l-1.914-1.914A2 2 0 0 1 19 8.172v-.344a2 2 0 0 0-.586-1.414l-1.657-1.657A6 6 0 0 0 12.516 3H9l1.243 1.243A6 6 0 0 1 12 8.485V10l2 2h1.172a2 2 0 0 1 1.414.586L18.5 14.5"></path>
+                    </g>
                   </svg>
                 {% when 'finish' %}
-                  <svg
-                    viewBox="0 0 48 48"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.4"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path d="M22 24V13a2.5 2.5 0 0 1 5 0M27 23v-13a2.5 2.5 0 0 1 5 0v3"></path>
-                    <path d="M17 25.5V18a2.5 2.5 0 0 1 5 0v6"></path>
-                    <path d="M32 15a2.5 2.5 0 0 1 5 0v9a11 11 0 0 1-11 11h-1c-3 0-5-1-7-3l-5-5a2.5 2.5 0 0 1 3.6-3.5l3.4 3"></path>
-                    <path d="M12 8l1.2 2.8L16 12l-2.8 1.2L12 16l-1.2-2.8L8 12l2.8-1.2Z"></path>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                    <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+                      <path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2m0 4V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2m0 4.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8"></path>
+                      <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"></path>
+                    </g>
                   </svg>
                 {% when 'made_to_order' %}
-                  <svg
-                    viewBox="0 0 48 48"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.4"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path d="M18 11h12"></path>
-                    <path d="M19 11c0 4-4 5-4 11a9 9 0 0 0 18 0c0-6-4-7-4-11"></path>
-                    <path d="M16 24h16"></path>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                    <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+                      <path d="M12 22V12m4 5l2 2l4-4"></path>
+                      <path d="M21 11.127V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.729l7 4a2 2 0 0 0 2 .001l1.32-.753"></path>
+                      <path d="M3.29 7L12 12l8.71-5M7.5 4.27l8.997 5.148"></path>
+                    </g>
                   </svg>
                 {% else %}
-                  <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4">
-                    <circle cx="24" cy="24" r="18"></circle>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                    <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <circle cx="12" cy="12" r="1"></circle>
+                    </g>
                   </svg>
               {% endcase %}
             </span>
@@ -396,27 +575,61 @@
   </div>
 
   <div class="details-materials__right">
-    <div class="dm-accordion">
-      {% assign acc_index = 0 %}
+    <div class="dm-tabs" data-dm-tabs>
+      <div class="dm-tabs__list custom-scrollbar" role="tablist" aria-label="{{ section.settings.title | escape }}">
+        {% assign tab_index = 0 %}
+        {% for block in section.blocks %}
+          {% if block.type == 'accordion' %}
+            {% assign tab_index = tab_index | plus: 1 %}
+            <button
+              type="button"
+              class="dm-tabs__tab"
+              id="DmTab-{{ section.id }}-{{ tab_index }}"
+              role="tab"
+              aria-selected="{% if tab_index == 1 %}true{% else %}false{% endif %}"
+              aria-controls="DmPanel-{{ section.id }}-{{ tab_index }}"
+              tabindex="{% if tab_index == 1 %}0{% else %}-1{% endif %}"
+              data-dm-tab
+            >
+              {{ block.settings.heading | escape }}
+            </button>
+          {% endif %}
+        {% endfor %}
+      </div>
+
+      {% assign panel_index = 0 %}
       {% for block in section.blocks %}
         {% if block.type == 'accordion' %}
-          {% assign acc_index = acc_index | plus: 1 %}
-          {% assign acc_label = acc_index | prepend: '0' %}
-          <details
-            class="dm-acc"
-            {% if acc_index == 1 %}
-              open
-            {% endif %}
+          {% assign panel_index = panel_index | plus: 1 %}
+          <div
+            class="dm-tabs__panel{% if panel_index == 1 %} is-active{% endif %}"
+            id="DmPanel-{{ section.id }}-{{ panel_index }}"
+            role="tabpanel"
+            aria-labelledby="DmTab-{{ section.id }}-{{ panel_index }}"
+            {% unless panel_index == 1 %}
+              hidden
+            {% endunless %}
             {{ block.shopify_attributes }}
           >
-            <summary class="dm-acc__summary">
-              <span class="dm-acc__num">{{ acc_label }}</span>
-              <span class="dm-acc__title">{{ block.settings.heading | escape }}</span>
-              <span class="dm-acc__icon" aria-hidden="true"></span>
-            </summary>
-            <div class="dm-acc__content-wrap" data-acc-collapsible>
-              <div class="dm-acc__clip" data-acc-clip>
-                <div class="dm-acc__content custom-scrollbar" data-acc-content>
+            <div class="dm-tabs__content">
+              <div class="dm-tabs__media" aria-hidden="true">
+                {% if product.featured_image != blank %}
+                  {{
+                    product.featured_image
+                    | image_url: width: 760
+                    | image_tag:
+                      class: 'dm-tabs__image',
+                      loading: 'lazy',
+                      widths: '360, 520, 760',
+                      sizes: '(max-width: 768px) 100vw, 360px',
+                      alt: ''
+                  }}
+                {% else %}
+                  {{ 'product-1' | placeholder_svg_tag: 'dm-tabs__placeholder' }}
+                {% endif %}
+              </div>
+              <div class="dm-tabs__body custom-scrollbar">
+                <div class="dm-tabs__rte">
                   {% if block.settings.use_product_description %}
                     {{ product.description }}
                   {% else %}
@@ -424,82 +637,110 @@
                   {% endif %}
                 </div>
               </div>
-              <button type="button" class="dm-acc__more" data-acc-more hidden aria-expanded="false">
-                <span class="dm-acc__more-label">{{ 'products.read_more' | t | default: 'Read more' }}</span>
-              </button>
             </div>
-          </details>
+          </div>
         {% endif %}
       {% endfor %}
+    </div>
+  </div>
+
+  <div class="details-materials__trust" aria-label="Purchase assurances">
+    <div class="dm-trust">
+      <span class="dm-trust__icon" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+          <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+            <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path>
+            <path d="m9 12l2 2l4-4"></path>
+          </g>
+        </svg>
+      </span>
+      <span>
+        <span class="dm-trust__title">Heirloom Quality</span>
+        <span class="dm-trust__text">Built to be passed down</span>
+      </span>
+    </div>
+    <div class="dm-trust">
+      <span class="dm-trust__icon" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+          <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+            <path d="M12 22V12m4 5l2 2l4-4"></path>
+            <path d="M21 11.127V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.729l7 4a2 2 0 0 0 2 .001l1.32-.753"></path>
+            <path d="M3.29 7L12 12l8.71-5M7.5 4.27l8.997 5.148"></path>
+          </g>
+        </svg>
+      </span>
+      <span>
+        <span class="dm-trust__title">Made to Order</span>
+        <span class="dm-trust__text">Crafted just for you</span>
+      </span>
+    </div>
+    <div class="dm-trust">
+      <span class="dm-trust__icon" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+          <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+            <path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2m10 0H9m10 0h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"></path>
+            <circle cx="17" cy="18" r="2"></circle>
+            <circle cx="7" cy="18" r="2"></circle>
+          </g>
+        </svg>
+      </span>
+      <span>
+        <span class="dm-trust__title">White Glove Delivery</span>
+        <span class="dm-trust__text">Care at every step</span>
+      </span>
     </div>
   </div>
 </section>
 
 <script>
   (function () {
-    var MOBILE = '(max-width: 768px)';
-    var READ_MORE = {{ 'products.read_more' | t | default: 'Read more' | json }};
-    var READ_LESS = {{ 'products.read_less' | t | default: 'Read less' | json }};
-
-    function setup(wrap) {
-      var clip = wrap.querySelector('[data-acc-clip]');
-      var content = wrap.querySelector('[data-acc-content]');
-      var btn = wrap.querySelector('[data-acc-more]');
-      var label = btn ? btn.querySelector('.dm-acc__more-label') : null;
-      if (!clip || !content || !btn) return;
-
-      function refresh() {
-        if (!window.matchMedia(MOBILE).matches) {
-          // Desktop: no collapsing, ensure everything is reset/visible.
-          clip.classList.remove('is-collapsed');
-          btn.hidden = true;
-          btn.setAttribute('aria-expanded', 'false');
-          if (label) label.textContent = READ_MORE;
-          return;
+    function activateTab(tabs, tab) {
+      var allTabs = Array.prototype.slice.call(tabs.querySelectorAll('[data-dm-tab]'));
+      allTabs.forEach(function (item) {
+        var selected = item === tab;
+        var panel = document.getElementById(item.getAttribute('aria-controls'));
+        item.setAttribute('aria-selected', selected ? 'true' : 'false');
+        item.setAttribute('tabindex', selected ? '0' : '-1');
+        if (panel) {
+          panel.hidden = !selected;
+          panel.classList.toggle('is-active', selected);
         }
-        var expanded = btn.getAttribute('aria-expanded') === 'true';
-        if (expanded) {
-          btn.hidden = false;
-          return;
-        }
-        // Collapsed: only show the toggle when the content actually overflows.
-        clip.classList.add('is-collapsed');
-        var overflows = content.scrollHeight - clip.clientHeight > 4;
-        btn.hidden = !overflows;
-      }
-
-      btn.addEventListener('click', function () {
-        var expanded = btn.getAttribute('aria-expanded') === 'true';
-        expanded = !expanded;
-        btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-        clip.classList.toggle('is-collapsed', !expanded);
-        if (label) label.textContent = expanded ? READ_LESS : READ_MORE;
       });
-
-      // Re-measure when the parent <details> opens (content has no size while closed).
-      var details = wrap.closest('details');
-      if (details) details.addEventListener('toggle', refresh);
-
-      var mq = window.matchMedia(MOBILE);
-      if (mq.addEventListener) mq.addEventListener('change', refresh);
-      else if (mq.addListener) mq.addListener(refresh);
-
-      refresh();
     }
 
-    function init() {
-      document.querySelectorAll('[data-acc-collapsible]').forEach(function (wrap) {
-        if (wrap.dataset.init === 'true') return;
-        wrap.dataset.init = 'true';
-        setup(wrap);
+    function setupTabs(root) {
+      if (!root || root.dataset.dmTabsInit === 'true') return;
+      root.dataset.dmTabsInit = 'true';
+      var tabs = Array.prototype.slice.call(root.querySelectorAll('[data-dm-tab]'));
+      tabs.forEach(function (tab, index) {
+        tab.addEventListener('click', function () {
+          activateTab(root, tab);
+        });
+        tab.addEventListener('keydown', function (event) {
+          var nextIndex = index;
+          if (event.key === 'ArrowRight') nextIndex = (index + 1) % tabs.length;
+          else if (event.key === 'ArrowLeft') nextIndex = (index - 1 + tabs.length) % tabs.length;
+          else if (event.key === 'Home') nextIndex = 0;
+          else if (event.key === 'End') nextIndex = tabs.length - 1;
+          else return;
+          event.preventDefault();
+          activateTab(root, tabs[nextIndex]);
+          tabs[nextIndex].focus();
+        });
       });
+    }
+
+    function initDetailsMaterialsTabs() {
+      document.querySelectorAll('[data-dm-tabs]').forEach(setupTabs);
     }
 
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', init);
+      document.addEventListener('DOMContentLoaded', initDetailsMaterialsTabs);
     } else {
-      init();
+      initDetailsMaterialsTabs();
     }
+
+    document.addEventListener('shopify:section:load', initDetailsMaterialsTabs);
   })();
 </script>
 
@@ -509,6 +750,12 @@
   "tag": "section",
   "class": "section",
   "settings": [
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "Eyebrow",
+      "default": "Crafted to endure"
+    },
     {
       "type": "text",
       "id": "title",

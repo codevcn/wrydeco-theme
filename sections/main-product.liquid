@@ -13,19 +13,36 @@
 <script src="{{ 'sale-event.js' | file_url }}" defer="defer"></script>
 
 {% stylesheet %}
+  .judgeme-reviews__divider {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    margin-block: var(--sp-3) var(--sp-4);
+  }
+  .judgeme-reviews__divider.divider-top {
+    margin-block-start: 0;
+    margin-block-end: 0;
+  }
+
   /* Desktop-first layout */
   .main-product {
     width: 100%;
     max-width: 100rem;
     margin-inline: auto;
+    padding: 100px 64px var(--section-spacing-desktop);
+  }
+
+  .main-product__summary {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     align-items: start;
     column-gap: var(--sp-8);
-    padding: 100px 64px var(--section-spacing-desktop);
   }
   .main-product__media {
+    position: sticky;
+    top: var(--sp-0);
     min-width: 0;
+    align-self: start;
   }
   .main-product__info {
     display: flex;
@@ -114,9 +131,8 @@
 
   /* Craft assurance panel spanning full width below both product columns */
   .main-product__trust {
-    grid-column: 1 / -1;
     width: 100%;
-    padding: 0 0 0;
+    padding: 48px 0 0;
     background: radial-gradient(circle at top, var(--color-milk) 0%, var(--surface-default) 65%);
   }
 
@@ -153,7 +169,7 @@
     letter-spacing: -0.05rem;
     text-align: center;
     width: 100%;
-    margin-top: var(--sp-9);
+    margin-top: var(--sp-7);
   }
 
   .trust-divider {
@@ -254,8 +270,11 @@
   }
 
   @media screen and (max-width: 1024px) {
-    .main-product {
+    .main-product__summary {
       column-gap: var(--sp-6);
+    }
+
+    .main-product {
       padding-inline: var(--layout-padding-tablet);
     }
 
@@ -290,8 +309,14 @@
 
   @media screen and (max-width: 768px) {
     .main-product {
-      grid-template-columns: minmax(0, 1fr);
       padding: var(--sp-5) var(--layout-padding-mobile) var(--section-spacing-mobile);
+    }
+    .main-product__summary {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .main-product__media {
+      position: static;
+      top: auto;
     }
     .main-product__title {
       font-size: var(--font-size-display-sm);
@@ -398,6 +423,7 @@
 
   /* Sticky quick add-to-cart bar (shown when the primary button leaves view) */
   .mp-sticky-bar {
+    display: none;
     position: fixed;
     inset: auto 0 0 0;
     z-index: var(--z-overlay);
@@ -627,11 +653,12 @@
   data-product-url="{{ product.url }}"
   aria-labelledby="MainProductTitle-{{ section.id }}"
 >
-  <div class="main-product__media">
-    {% render 'product-media-gallery', product: product, current_variant: current_variant, section_id: section.id %}
-  </div>
+  <div class="main-product__summary">
+    <div class="main-product__media">
+      {% render 'product-media-gallery', product: product, current_variant: current_variant, section_id: section.id %}
+    </div>
 
-  <div class="main-product__info">
+    <div class="main-product__info">
     <div class="main-product__header">
       {%- assign current_collection = collection | default: product.collections.first -%}
       {%- if current_collection != blank -%}
@@ -720,9 +747,14 @@
         </div>
       {% endif %}
     {% endfor %}
+    </div>
   </div>
 
   <aside class="main-product__trust" aria-labelledby="MainProductTrustHeading-{{ section.id }}">
+    <div class="judgeme-reviews__divider divider-top" aria-hidden="true">
+      <span></span>
+    </div>
+
     <header class="main-product__trust-header">
       {% if section.settings.trust_eyebrow != blank %}
         <p class="main-product__trust-eyebrow">{{ section.settings.trust_eyebrow | escape }}</p>
