@@ -54,3 +54,8 @@ The technical implementation must align with the brand's luxury positioning.
 - All file assets have been fully uploaded to Shopify Content > Files.
 - When writing code that references a file (images, fonts, scripts, styles, etc.), always use the `file_url` filter instead of `asset_url`.
 - **Exception:** `asset_url` is still correct for files that genuinely live in the theme's `assets/` folder (e.g. compiled/critical assets not managed via Shopify Files).
+
+## 9. SVG Creation and Usage
+
+- Whenever an AI Agent needs to create an SVG image or write SVG code, it MUST use the `iconify` MCP server located in the `outside-mcp` folder.
+- **Error Handling:** If an error occurs while using the MCP, the Agent is free to handle it, but it MUST explicitly notify the user that an error occurred during the MCP execution.

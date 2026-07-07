@@ -59,7 +59,6 @@
     line-height: var(--line-height-tight);
     letter-spacing: -0.03rem;
     color: var(--text-primary);
-    text-wrap: balance;
   }
   .main-product__subtitle {
     margin: 0;
@@ -1022,17 +1021,20 @@
         }
       }
 
-      // Show the bar when the primary button is more than 10px outside the
-      // viewport; hide it as soon as the button scrolls back into view.
+      // Show the bar only once the user has scrolled DOWN past the add-to-cart
+      // button — i.e. the viewport's top edge is below the button (the whole
+      // button has scrolled above the top of the screen). It stays hidden while
+      // the button is still below the fold (not yet reached).
       if ('IntersectionObserver' in window) {
         var io = new IntersectionObserver(
           function (entries) {
             entries.forEach(function (entry) {
-              bar.classList.toggle('is-visible', !entry.isIntersecting);
-              bar.setAttribute('aria-hidden', entry.isIntersecting ? 'true' : 'false');
+              var scrolledPast = entry.boundingClientRect.bottom <= 0;
+              bar.classList.toggle('is-visible', scrolledPast);
+              bar.setAttribute('aria-hidden', scrolledPast ? 'false' : 'true');
             });
           },
-          { root: null, rootMargin: '10px', threshold: 0 }
+          { root: null, rootMargin: '0px', threshold: 0 }
         );
         io.observe(mainBtn);
       }

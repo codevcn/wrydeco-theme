@@ -57,21 +57,34 @@
       text-underline-offset: 3px;
     }
 
-    .variant-group__grid {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
+    .variant-group__list {
+      display: flex;
+      flex-wrap: nowrap;
       gap: var(--sp-4);
+      overflow-x: auto;
+      /* Room so selected borders / focus outlines aren't clipped by the scroll box */
+      padding-block: var(--sp-1);
+      -webkit-overflow-scrolling: touch;
+      /* Scrollbar appearance comes from the shared `.custom-scrollbar` utility. */
+      cursor: grab;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .variant-group__list.is-active-drag,
+    .variant-group__list.is-active-drag .variant-tile {
+      cursor: grabbing;
     }
 
     .variant-tile {
       position: relative;
       display: flex;
       flex-direction: column;
+      flex: 0 0 auto;
       min-width: 0;
       margin: 0;
       border: 1px solid var(--border-default);
       border-radius: var(--radius-lg);
-      background: var(--surface-elevated);
+      background-color: var(--color-milk);
       cursor: pointer;
       transition: border-color var(--timing-short) var(--ease-standard),
         box-shadow var(--timing-short) var(--ease-standard);
@@ -107,13 +120,16 @@
 
     /* ---- Colour / finish tile ---- */
     .variant-tile--color {
-      padding: var(--sp-3);
+      padding: var(--sp-2);
+      align-items: center;
     }
     .variant-tile__media {
       display: block;
       overflow: hidden;
       border-radius: var(--radius-md);
-      aspect-ratio: 16 / 10;
+      width: var(--sp-9);
+      aspect-ratio: 4 / 3;
+      min-height: 50px;
       background: var(--bg-secondary);
     }
     .variant-tile__media img,
@@ -122,12 +138,19 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
+      /* Stop native image drag so press-and-hold only scrolls the list */
+      pointer-events: none;
+      -webkit-user-drag: none;
+      user-select: none;
+      -webkit-user-select: none;
     }
     .variant-tile--color .variant-tile__label {
       margin-top: var(--sp-3);
       text-align: center;
+      font-family: var(--font-roboto);
       font-size: var(--font-size-body-md);
       color: var(--text-primary);
+      white-space: nowrap;
     }
 
     /* ---- Size tile ---- */
@@ -136,12 +159,14 @@
       justify-content: center;
       min-height: 42px;
       width: max-content;
-      padding: var(--sp-4) var(--sp-5);
+      padding: var(--sp-3) var(--sp-5);
       text-align: center;
     }
     .variant-tile--size .variant-tile__label {
+      font-family: var(--font-roboto);
       font-size: var(--font-size-body-sm);
       color: var(--text-primary);
+      white-space: nowrap;
     }
 
     /* ---- Selected checkmark badge ---- */
@@ -159,12 +184,11 @@
       color: var(--color-cream);
       opacity: 0;
       transform: scale(0.6);
-      transition: opacity var(--timing-short) var(--ease-standard),
-        transform var(--timing-short) var(--ease-standard);
+      transition: opacity var(--timing-short) var(--ease-standard), transform var(--timing-short) var(--ease-standard);
     }
     .variant-tile--color .variant-tile__check {
-      top: var(--sp-4);
-      right: var(--sp-4);
+      top: var(--sp-2);
+      right: var(--sp-2);
     }
     /* Smaller, corner-tucked check on size tiles so it never overlaps the
        vertically-centred dimension text. */
@@ -185,12 +209,6 @@
     .variant-tile:has(.variant-tile__input:checked) .variant-tile__check {
       opacity: 1;
       transform: scale(1);
-    }
-
-    @media screen and (max-width: 768px) {
-      .variant-group--size .variant-group__grid {
-        grid-template-columns: 1fr;
-      }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -234,7 +252,7 @@
           {% endif %}
         </div>
 
-        <div class="variant-group__grid" role="radiogroup" aria-label="{{ option.name | escape }}">
+        <div class="variant-group__list custom-scrollbar" role="radiogroup" aria-label="{{ option.name | escape }}">
           {% for value in option.values %}
             {% assign color_image = '' %}
             {% if is_color %}
@@ -270,6 +288,7 @@
                       width="160"
                       height="100"
                       loading="lazy"
+                      draggable="false"
                     >
                   {% else %}
                     <span
@@ -283,7 +302,14 @@
               <span class="variant-tile__label">{{ value }}</span>
 
               <span class="variant-tile__check" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="3"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
                   <polyline points="20 6 9 17 4 12"></polyline>
                 </svg>
               </span>
@@ -293,6 +319,70 @@
       </div>
     {% endfor %}
   </div>
+
+  <script>
+    (function () {
+      // Press-and-hold to scroll the variant lists horizontally — mirrors the
+      // drag logic used by .product-gallery__thumbnails.
+      function initVariantDragScroll() {
+        document.querySelectorAll('.variant-group__list').forEach(function (list) {
+          if (list.dataset.dragInit === 'true') return;
+          list.dataset.dragInit = 'true';
+
+          var isDown = false;
+          var startX = 0;
+          var scrollLeft = 0;
+          var isDragging = false;
+
+          // Never let a press-and-hold start a native image/element drag.
+          list.addEventListener('dragstart', function (e) {
+            e.preventDefault();
+          });
+
+          list.addEventListener('mousedown', function (e) {
+            isDown = true;
+            isDragging = false;
+            list.classList.add('is-active-drag');
+            startX = e.pageX - list.offsetLeft;
+            scrollLeft = list.scrollLeft;
+          });
+          list.addEventListener('mouseleave', function () {
+            isDown = false;
+            list.classList.remove('is-active-drag');
+          });
+          list.addEventListener('mouseup', function () {
+            isDown = false;
+            list.classList.remove('is-active-drag');
+          });
+          list.addEventListener('mousemove', function (e) {
+            if (!isDown) return;
+            e.preventDefault();
+            var x = e.pageX - list.offsetLeft;
+            var walk = (x - startX) * 2; // scroll speed multiplier
+            if (Math.abs(walk) > 5) isDragging = true;
+            list.scrollLeft = scrollLeft - walk;
+          });
+          // Swallow the click that ends a drag so it doesn't select a variant.
+          list.addEventListener(
+            'click',
+            function (e) {
+              if (isDragging) {
+                e.stopPropagation();
+                e.preventDefault();
+              }
+            },
+            true
+          );
+        });
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initVariantDragScroll);
+      } else {
+        initVariantDragScroll();
+      }
+    })();
+  </script>
 
   <script>
     document.addEventListener('DOMContentLoaded', function () {
