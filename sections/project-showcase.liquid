@@ -20,16 +20,33 @@
       {%- endif -%}
     </div>
 
+    {%- assign cards_menu = section.settings.cards_menu -%}
     <div class="projects__grid">
-      {%- for block in section.blocks limit: 4 -%}
+      {%- for block in section.blocks -%}
         {%- liquid
+          # Card link. Default to the block's own link (or home).
           assign card_url = block.settings.link | default: routes.root_url
-          case forloop.index
-            when 1
+
+          # Extensible menu mapping: link the card to the blog of the menu item whose
+          # label matches this card's title. To add cards later, add a project block
+          # and a matching menu item (same label) — no code change needed.
+          if cards_menu != blank and block.settings.title != blank
+            for menu_link in cards_menu.links
+              if menu_link.title == block.settings.title
+                assign card_url = menu_link.url
+                break
+              endif
+            endfor
+          endif
+
+          # Cycle the bundled fallback images for cards without their own image.
+          assign image_cycle = forloop.index0 | modulo: 4
+          case image_cycle
+            when 0
               assign fallback_image = 'curated-collections-img-1.png'
-            when 2
+            when 1
               assign fallback_image = 'curated-collections-img-3.png'
-            when 3
+            when 2
               assign fallback_image = 'curated-collections-img-4.png'
             else
               assign fallback_image = 'curated-collections-img-2.png'
@@ -270,7 +287,9 @@
     { "type": "text", "id": "heading", "label": "Heading", "default": "Real Homes, Real Stories" },
     { "type": "text", "id": "subtitle", "label": "Subtitle", "default": "Explore how our pieces transform spaces around the world." },
     { "type": "text", "id": "view_all_label", "label": "View all label", "default": "View All Projects" },
-    { "type": "url", "id": "view_all_link", "label": "View all link" }
+    { "type": "url", "id": "view_all_link", "label": "View all link" },
+    { "type": "header", "content": "Card links" },
+    { "type": "link_list", "id": "cards_menu", "label": "Cards → blog menu", "info": "Pick the \"blog-posts\" menu. Each card links to the blog of the menu item whose label matches the card title. Add a card block + a menu item with the same label to extend. Falls back to the card's own Link when there's no match." }
   ],
   "blocks": [
     {

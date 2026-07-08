@@ -1,1 +1,0 @@
-python download_images_by_links.py

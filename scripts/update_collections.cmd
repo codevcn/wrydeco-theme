@@ -1,0 +1,1 @@
+python update_collections.py --json collections.json --run

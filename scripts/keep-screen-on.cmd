@@ -1,1 +1,0 @@
-python keep-screen-on.py

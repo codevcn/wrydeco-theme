@@ -1,35 +1,608 @@
 {% comment %}
-  This section is used in the blog template to render the blog page listing all
-  articles within a blog.
-
-  https://shopify.dev/docs/storefronts/themes/architecture/templates/blog
+  Editorial blog index.
+  Blog title, article cards, and empty state are server-rendered for SEO and graceful no-content states.
 {% endcomment %}
 
-<h1>{{ blog.title }}</h1>
+{% liquid
+  assign hero_image = section.settings.hero_image_asset | default: 'collections-page-banner.png'
+  assign blog_intro = section.settings.intro
+  if blog_intro == blank
+    assign blog_intro = 'Design notes, material stories, and quiet interiors shaped around sculptural wood.'
+  endif
+%}
 
-{% paginate blog.articles by 5 %}
-  {% for article in blog.articles %}
-    <div>
-      {% if article.image %}
-        {{ article.image | image_url: width: 1000 | image_tag }}
-      {% endif %}
-      <h2>
-        {{ article.title | link_to: article.url }}
-      </h2>
-      {% assign date = article.published_at | time_tag: format: 'date' %}
-      <p>{{ 'blog.article_metadata_html' | t: date: date, author: article.author }}</p>
-      <p>{{ article.excerpt }}</p>
+<main class="blog-editorial" id="BlogEditorial-{{ section.id }}">
+  <section class="blog-editorial__hero" aria-labelledby="BlogEditorialTitle-{{ section.id }}">
+    <div class="blog-editorial__media" aria-hidden="true">
+      <img
+        class="blog-editorial__hero-image"
+        src="{{ hero_image | file_url }}"
+        width="1792"
+        height="1024"
+        alt=""
+        loading="eager"
+        fetchpriority="high"
+      >
     </div>
-  {% endfor %}
 
-  {%- if paginate.pages > 1 -%}
-    {{- paginate | default_pagination -}}
-  {%- endif -%}
-{% endpaginate %}
+    <div class="blog-editorial__panel">
+      <nav class="blog-editorial__breadcrumbs" aria-label="Breadcrumb">
+        <a href="{{ routes.root_url }}">Home</a>
+        <span aria-hidden="true">/</span>
+        <span>{{ blog.title | escape }}</span>
+      </nav>
+
+      <p class="blog-editorial__eyebrow">WRYDECO Journal</p>
+      <h1 id="BlogEditorialTitle-{{ section.id }}" class="blog-editorial__title">{{ blog.title | escape }}</h1>
+      <p class="blog-editorial__intro">{{ blog_intro | escape }}</p>
+
+      <div class="blog-editorial__signals" aria-label="Journal focus">
+        <span>Material Notes</span>
+        <span>Interior Stories</span>
+        <span>Made-to-Order Guidance</span>
+      </div>
+    </div>
+  </section>
+
+  {% paginate blog.articles by section.settings.posts_per_page %}
+    {% if blog.articles.size > 0 %}
+      <section class="blog-editorial__listing" aria-labelledby="BlogEditorialLatest-{{ section.id }}">
+        <header class="blog-editorial__section-header">
+          <p class="blog-editorial__eyebrow">Latest Stories</p>
+          <h2 id="BlogEditorialLatest-{{ section.id }}">Thoughtful rooms, honest materials</h2>
+        </header>
+
+        <div class="blog-editorial__grid" role="list">
+          {% for article in blog.articles %}
+            {% liquid
+              assign article_excerpt = article.excerpt | strip_html | strip
+              if article_excerpt == blank
+                assign article_excerpt = article.content | strip_html | strip | truncatewords: 24
+              endif
+              assign article_image_alt = article.image.alt | default: article.title
+            %}
+
+            <article class="blog-editorial__card" role="listitem">
+              <a class="blog-editorial__card-media" href="{{ article.url }}" aria-label="{{ article.title | escape }}">
+                {% if article.image %}
+                  {{
+                    article.image
+                    | image_url: width: 960
+                    | image_tag:
+                      class: 'blog-editorial__card-image',
+                      loading: 'lazy',
+                      widths: '360, 540, 720, 960',
+                      sizes: '(max-width: 767px) 100vw, 33vw',
+                      alt: article_image_alt
+                  }}
+                {% else %}
+                  <span class="blog-editorial__card-placeholder" aria-hidden="true"></span>
+                {% endif %}
+              </a>
+
+              <div class="blog-editorial__card-body">
+                <div class="blog-editorial__card-meta">
+                  {{ article.published_at | time_tag: format: 'date' }}
+                  <span aria-hidden="true"></span>
+                  <span>{{ article.author | escape }}</span>
+                </div>
+
+                <h2 class="blog-editorial__card-title">
+                  <a href="{{ article.url }}">{{ article.title | escape }}</a>
+                </h2>
+
+                {% if article_excerpt != blank %}
+                  <p class="blog-editorial__card-excerpt">{{ article_excerpt }}</p>
+                {% endif %}
+
+                <a class="blog-editorial__read-more" href="{{ article.url }}">Read story</a>
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+
+        {% if paginate.pages > 1 %}
+          <nav class="blog-editorial__pagination" aria-label="Blog pagination">
+            {{ paginate | default_pagination }}
+          </nav>
+        {% endif %}
+      </section>
+    {% else %}
+      <section class="blog-editorial__empty" aria-labelledby="BlogEditorialEmpty-{{ section.id }}">
+        <div class="blog-editorial__empty-copy">
+          <p class="blog-editorial__eyebrow">Coming Soon</p>
+          <h2 id="BlogEditorialEmpty-{{ section.id }}">The journal is being curated.</h2>
+          <p>
+            We are preparing design stories, material guides, and room notes for homes shaped with lasting woodwork.
+            Until the first entry arrives, explore the pieces and consultation paths that inspire the journal.
+          </p>
+        </div>
+
+        <div class="blog-editorial__empty-actions">
+          <a class="blog-editorial__primary" href="{{ routes.collections_url }}">Explore Collections</a>
+          <a class="blog-editorial__secondary" href="{{ pages['customization'].url | default: routes.root_url }}">Book Design Guidance</a>
+        </div>
+
+        <div class="blog-editorial__empty-notes" aria-label="Upcoming journal themes">
+          <article>
+            <span>01</span>
+            <h3>Material Intelligence</h3>
+            <p>Wood species, finishes, grain character, and care rituals for heirloom pieces.</p>
+          </article>
+          <article>
+            <span>02</span>
+            <h3>Room Studies</h3>
+            <p>Warm interiors with sculptural furniture, balanced proportions, and collected details.</p>
+          </article>
+          <article>
+            <span>03</span>
+            <h3>Custom Guidance</h3>
+            <p>How made-to-order dimensions, finishes, and layouts become deeply personal spaces.</p>
+          </article>
+        </div>
+      </section>
+    {% endif %}
+  {% endpaginate %}
+</main>
+
+<script>
+  const mainProductSection = document.getElementById('BlogEditorial-{{ section.id }}');
+  if (mainProductSection) {
+    mainProductSection.closest('body').querySelector('.header__icon--search').style.color = 'var(--color-earth-brown)';
+    mainProductSection.closest('body').querySelector('.header__icon--cart').style.color = 'var(--color-earth-brown)';
+    mainProductSection.closest('body').querySelector('.header__icon--menu').style.color = 'var(--color-earth-brown)';
+    mainProductSection.closest('body').querySelector('.header__icon--account').style.color = 'var(--color-earth-brown)';
+    mainProductSection.closest('body').querySelector('.header').style.border = '1px solid #cfcbc7b4';
+  }
+</script>
+
+{% stylesheet %}
+  .blog-editorial {
+    overflow: hidden;
+    background: var(--surface-default);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    margin-top: 80px;
+  }
+
+  .blog-editorial__hero {
+    display: grid;
+    grid-template-columns: minmax(var(--sp-0), 1.1fr) minmax(var(--sp-0), 0.9fr);
+    min-height: min(var(--layout-hero-wide-height), 100vh);
+    background: var(--color-cream);
+  }
+
+  .blog-editorial__media {
+    position: relative;
+    min-height: min(var(--layout-hero-wide-height), 100vh);
+    overflow: hidden;
+  }
+
+  .blog-editorial__media::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent 62%, color-mix(in srgb, var(--color-earth-brown) 24%, transparent));
+    pointer-events: none;
+  }
+
+  .blog-editorial__hero-image {
+    width: 100%;
+    height: 100%;
+    min-height: inherit;
+    display: block;
+    object-fit: cover;
+  }
+
+  .blog-editorial__panel {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--sp-4);
+    min-width: 0;
+    padding: calc(var(--sp-12) + var(--sp-5)) clamp(var(--sp-6), var(--sp-8), var(--sp-10)) var(--sp-10);
+    border-left: var(--border-width) solid color-mix(in srgb, var(--color-earth-brown) 14%, transparent);
+    background:
+      linear-gradient(135deg, color-mix(in srgb, var(--color-milk) 92%, transparent), color-mix(in srgb, var(--color-stone) 64%, transparent));
+  }
+
+  .blog-editorial__breadcrumbs {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--sp-2);
+    color: var(--text-secondary);
+    font-size: var(--font-size-caption);
+    letter-spacing: var(--letter-spacing-wide);
+    text-transform: uppercase;
+  }
+
+  .blog-editorial__breadcrumbs a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .blog-editorial__breadcrumbs a:hover {
+    color: var(--color-earth-brown);
+  }
+
+  .blog-editorial__eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-3);
+    margin: 0;
+    color: var(--color-clay);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: calc(var(--letter-spacing-wide) * 2);
+    text-transform: uppercase;
+  }
+
+  .blog-editorial__eyebrow::before {
+    content: '';
+    width: var(--sp-7);
+    height: var(--border-width);
+    background: currentColor;
+  }
+
+  .blog-editorial__title {
+    max-width: 10ch;
+    margin: 0;
+    color: var(--text-primary);
+    font-family: var(--font-display);
+    font-size: var(--font-size-display-2xl);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-display);
+    letter-spacing: var(--letter-spacing-normal);
+  }
+
+  .blog-editorial__intro {
+    max-width: 44ch;
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: var(--font-size-body-lg);
+    line-height: var(--line-height-generous);
+  }
+
+  .blog-editorial__signals {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-2);
+    margin-top: var(--sp-2);
+  }
+
+  .blog-editorial__signals span {
+    padding: var(--sp-2) var(--sp-3);
+    border: var(--border-width) solid color-mix(in srgb, var(--color-earth-brown) 16%, transparent);
+    border-radius: var(--radius-full);
+    color: var(--text-secondary);
+    font-size: var(--font-size-caption);
+    letter-spacing: var(--letter-spacing-wide);
+    text-transform: uppercase;
+  }
+
+  .blog-editorial__listing,
+  .blog-editorial__empty {
+    width: min(calc(100% - (var(--layout-padding-desktop) * 2)), var(--layout-max-width));
+    margin-inline: auto;
+    padding-block: var(--sp-10);
+  }
+
+  .blog-editorial__section-header {
+    display: grid;
+    gap: var(--sp-3);
+    max-width: 56ch;
+    margin-bottom: var(--sp-6);
+  }
+
+  .blog-editorial__section-header h2,
+  .blog-editorial__empty h2 {
+    margin: 0;
+    color: var(--text-primary);
+    font-family: var(--font-display);
+    font-size: var(--font-size-display-md);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-tight);
+  }
+
+  .blog-editorial__grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(var(--sp-0), 1fr));
+    gap: var(--sp-5);
+  }
+
+  .blog-editorial__card {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: var(--border-width) solid color-mix(in srgb, var(--color-earth-brown) 12%, transparent);
+    border-radius: var(--radius-lg);
+    background: color-mix(in srgb, var(--surface-elevated) 74%, transparent);
+    box-shadow: var(--shadow-elevation-1);
+  }
+
+  .blog-editorial__card-media {
+    display: block;
+    overflow: hidden;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .blog-editorial__card-image,
+  .blog-editorial__card-placeholder {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    display: block;
+    object-fit: cover;
+    background:
+      linear-gradient(135deg, color-mix(in srgb, var(--color-stone) 68%, var(--surface-elevated)), color-mix(in srgb, var(--color-earth-brown) 16%, var(--color-cream)));
+  }
+
+  .blog-editorial__card-body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--sp-3);
+    padding: var(--sp-5);
+  }
+
+  .blog-editorial__card-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--sp-2);
+    color: var(--text-secondary);
+    font-size: var(--font-size-caption);
+    letter-spacing: var(--letter-spacing-wide);
+    text-transform: uppercase;
+  }
+
+  .blog-editorial__card-meta > span[aria-hidden='true'] {
+    width: var(--sp-1);
+    height: var(--sp-1);
+    border-radius: var(--radius-full);
+    background: var(--color-clay);
+  }
+
+  .blog-editorial__card-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-2xl);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-snug);
+  }
+
+  .blog-editorial__card-title a {
+    color: inherit;
+    text-decoration: none;
+    font-family: var(--font-roboto);
+  }
+
+  .blog-editorial__card-title a:hover,
+  .blog-editorial__read-more:hover {
+    color: var(--color-earth-brown);
+  }
+
+  .blog-editorial__card-excerpt {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-generous);
+  }
+
+  .blog-editorial__read-more {
+    margin-top: auto;
+    color: var(--color-earth-brown);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-semibold);
+    text-decoration: none;
+  }
+
+  .blog-editorial__pagination {
+    margin-top: var(--sp-7);
+  }
+
+  .blog-editorial__empty {
+    display: grid;
+    grid-template-columns: minmax(var(--sp-0), 0.82fr) minmax(var(--sp-0), 1.18fr);
+    gap: var(--sp-7);
+    align-items: start;
+  }
+
+  .blog-editorial__empty-copy {
+    display: grid;
+    gap: var(--sp-4);
+  }
+
+  .blog-editorial__empty-copy p:last-child {
+    max-width: 48ch;
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: var(--font-size-body-lg);
+    line-height: var(--line-height-generous);
+  }
+
+  .blog-editorial__empty-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-3);
+    grid-column: 1 / -1;
+  }
+
+  .blog-editorial__primary,
+  .blog-editorial__secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--sp-7);
+    padding: 0 var(--sp-5);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-semibold);
+    text-decoration: none;
+  }
+
+  .blog-editorial__primary {
+    background: var(--color-earth-brown);
+    color: var(--color-milk);
+  }
+
+  .blog-editorial__secondary {
+    border: var(--border-width) solid var(--color-earth-brown);
+    color: var(--color-earth-brown);
+  }
+
+  .blog-editorial__empty-notes {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(var(--sp-0), 1fr));
+    gap: var(--sp-4);
+    grid-column: 1 / -1;
+  }
+
+  .blog-editorial__empty-notes article {
+    display: grid;
+    gap: var(--sp-3);
+    padding: var(--sp-5);
+    border: var(--border-width) solid color-mix(in srgb, var(--color-earth-brown) 12%, transparent);
+    border-radius: var(--radius-lg);
+    background: color-mix(in srgb, var(--surface-elevated) 72%, transparent);
+    box-shadow: var(--shadow-elevation-1);
+  }
+
+  .blog-editorial__empty-notes span {
+    color: var(--color-clay);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: calc(var(--letter-spacing-wide) * 2);
+  }
+
+  .blog-editorial__empty-notes h3 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-xl);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-snug);
+  }
+
+  .blog-editorial__empty-notes p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-generous);
+  }
+
+  @media screen and (max-width: 1024px) {
+    .blog-editorial__hero {
+      grid-template-columns: minmax(var(--sp-0), 1fr);
+    }
+
+    .blog-editorial__media {
+      min-height: calc(var(--sp-12) * 4);
+    }
+
+    .blog-editorial__panel {
+      padding: var(--sp-7) var(--layout-padding-tablet);
+      border-left: 0;
+      border-top: var(--border-width) solid color-mix(in srgb, var(--color-earth-brown) 14%, transparent);
+    }
+
+    .blog-editorial__listing,
+    .blog-editorial__empty {
+      width: min(calc(100% - (var(--layout-padding-tablet) * 2)), var(--layout-max-width));
+      padding-block: var(--sp-8);
+    }
+
+    .blog-editorial__grid,
+    .blog-editorial__empty-notes {
+      grid-template-columns: repeat(2, minmax(var(--sp-0), 1fr));
+    }
+
+    .blog-editorial__empty {
+      grid-template-columns: minmax(var(--sp-0), 1fr);
+      gap: var(--sp-5);
+    }
+  }
+
+  @media screen and (max-width: 767px) {
+    .blog-editorial__media {
+      min-height: min(calc(var(--sp-12) * 3.5), 62vh);
+    }
+
+    .blog-editorial__media::after {
+      background: linear-gradient(180deg, transparent 54%, color-mix(in srgb, var(--color-earth-brown) 24%, transparent));
+    }
+
+    .blog-editorial__panel {
+      padding: var(--sp-6) var(--layout-padding-mobile) var(--sp-7);
+    }
+
+    .blog-editorial__title {
+      max-width: none;
+      font-size: var(--font-size-display-xl);
+    }
+
+    .blog-editorial__intro,
+    .blog-editorial__empty-copy p:last-child {
+      font-size: var(--font-size-body-md);
+    }
+
+    .blog-editorial__listing,
+    .blog-editorial__empty {
+      width: min(calc(100% - (var(--layout-padding-mobile) * 2)), var(--layout-max-width));
+      padding-block: var(--sp-7);
+    }
+
+    .blog-editorial__section-header h2,
+    .blog-editorial__empty h2 {
+      font-size: var(--font-size-display-sm);
+    }
+
+    .blog-editorial__grid,
+    .blog-editorial__empty-notes {
+      grid-template-columns: minmax(var(--sp-0), 1fr);
+    }
+
+    .blog-editorial__card-body,
+    .blog-editorial__empty-notes article {
+      padding: var(--sp-4);
+    }
+
+    .blog-editorial__primary,
+    .blog-editorial__secondary {
+      width: 100%;
+    }
+
+    .blog-editorial {
+      margin-top: 65px;
+    }
+  }
+{% endstylesheet %}
 
 {% schema %}
 {
-  "name": "t:general.blog",
-  "settings": []
+  "name": "Editorial blog",
+  "settings": [
+    {
+      "type": "text",
+      "id": "hero_image_asset",
+      "label": "Hero image file name",
+      "default": "collections-page-banner.png"
+    },
+    {
+      "type": "textarea",
+      "id": "intro",
+      "label": "Intro",
+      "default": "Design notes, material stories, and quiet interiors shaped around sculptural wood."
+    },
+    {
+      "type": "range",
+      "id": "posts_per_page",
+      "label": "Posts per page",
+      "min": 3,
+      "max": 12,
+      "step": 1,
+      "default": 6
+    }
+  ]
 }
 {% endschema %}

@@ -77,7 +77,31 @@
     <div class="article-editorial__body-shell">
       <aside class="article-editorial__aside" aria-label="Article navigation">
         <p>Journal</p>
-        <a href="{{ blog.url }}">More stories</a>
+        {%- comment -%}
+          List the blogs from a merchant-selected Navigation menu. Shopify's global
+          `blogs` object is not iterable (handle lookup only), so a link_list is the
+          standard way to enumerate blogs. Falls back to the current blog when no menu
+          is selected so the panel is never empty. The blog being read is marked active.
+        {%- endcomment -%}
+        {%- assign blogs_menu = section.settings.blogs_menu -%}
+        <ul class="article-editorial__aside-list" role="list">
+          {%- if blogs_menu != blank and blogs_menu.links.size > 0 -%}
+            {%- for link in blogs_menu.links -%}
+              <li>
+                <a
+                  href="{{ link.url }}"
+                  {% if link.object.id == blog.id %}class="is-current" aria-current="page"{% endif %}
+                >
+                  {{- link.title | escape -}}
+                </a>
+              </li>
+            {%- endfor -%}
+          {%- else -%}
+            <li>
+              <a href="{{ blog.url }}" class="is-current" aria-current="page">{{ blog.title | escape }}</a>
+            </li>
+          {%- endif -%}
+        </ul>
       </aside>
 
       <div class="article-editorial__content rte" itemprop="articleBody">
@@ -159,6 +183,7 @@
     grid-template-columns: minmax(var(--sp-0), 1.15fr) minmax(var(--sp-0), 0.85fr);
     min-height: min(var(--layout-hero-wide-height), 100vh);
     background: var(--color-cream);
+    margin-top: 80px;
   }
 
   .article-editorial__media {
@@ -245,7 +270,7 @@
     max-width: 11ch;
     margin: 0;
     color: var(--text-primary);
-    font-family: var(--font-display);
+    font-family: var(--font-roboto);
     font-size: clamp(var(--font-size-display-lg), 5vw, var(--font-size-display-2xl));
     font-weight: var(--font-weight-regular);
     line-height: var(--line-height-display);
@@ -299,11 +324,11 @@
 
   .article-editorial__body-shell {
     display: grid;
-    grid-template-columns: minmax(var(--sp-0), calc(var(--sp-12) * 1.5)) minmax(var(--sp-0), 76ch);
+    grid-template-columns: 0.3fr 1.8fr;
     gap: var(--sp-8);
-    width: min(calc(100% - (var(--layout-padding-desktop) * 2)), var(--layout-max-width));
+    width: min(85vw, 1400px);
     margin-inline: auto;
-    padding-block: var(--sp-10);
+    padding-block: var(--sp-10) var(--sp-8);
   }
 
   .article-editorial__aside {
@@ -332,6 +357,20 @@
 
   .article-editorial__aside a:hover {
     color: var(--color-earth-brown);
+  }
+
+  .article-editorial__aside-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .article-editorial__aside-list a.is-current {
+    color: var(--color-earth-brown);
+    font-weight: var(--font-weight-semibold);
   }
 
   .article-editorial__content {
@@ -395,7 +434,7 @@
   .article-editorial__related {
     width: min(calc(100% - (var(--layout-padding-desktop) * 2)), var(--layout-max-width));
     margin-inline: auto;
-    padding-block: var(--sp-8);
+    padding-block: var(--sp-6) var(--sp-8);
     border-top: var(--border-width) solid color-mix(in srgb, var(--color-earth-brown) 12%, transparent);
   }
 
@@ -455,7 +494,7 @@
 
   .article-editorial__related-title {
     color: var(--text-primary);
-    font-family: var(--font-display);
+    font-family: var(--font-roboto);
     font-size: var(--font-size-body-xl);
     line-height: var(--line-height-snug);
   }
@@ -493,6 +532,13 @@
       align-items: center;
       gap: var(--sp-4);
     }
+
+    .article-editorial__aside-list {
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: var(--sp-2) var(--sp-4);
+      justify-content: flex-end;
+    }
   }
 
   @media screen and (max-width: 767px) {
@@ -506,6 +552,14 @@
         transparent 54%,
         color-mix(in srgb, var(--color-earth-brown) 24%, transparent)
       );
+    }
+
+    .article-editorial__content-title {
+      text-align: center;
+    }
+
+    .article-editorial__hero {
+      margin-top: 65px;
     }
 
     .article-editorial__hero-panel {
@@ -545,6 +599,12 @@
       flex-direction: column;
     }
 
+    .article-editorial__aside-list {
+      flex-direction: column;
+      gap: var(--sp-2);
+      justify-content: flex-start;
+    }
+
     .article-editorial__related-grid {
       grid-template-columns: minmax(var(--sp-0), 1fr);
     }
@@ -560,6 +620,12 @@
 {
   "name": "Article editorial",
   "settings": [
+    {
+      "type": "link_list",
+      "id": "blogs_menu",
+      "label": "Blogs menu",
+      "info": "Pick a Navigation menu whose links point to your blogs. Shown in the sidebar under \"Journal\". If left empty, only the current blog is shown."
+    },
     {
       "type": "checkbox",
       "id": "show_related_articles",
