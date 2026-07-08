@@ -505,7 +505,15 @@
       <h2 class="details-materials__title">{{ section.settings.title | escape }}</h2>
     {% endif %}
 
-    {% if section.settings.subtitle != blank %}
+    {%- comment -%}
+      The material is per-product via the metafield custom.product_material (single line text),
+      so the copy is correct for every product. Falls back to the section subtitle when the
+      metafield is empty. See audit: "Nội dung sai template".
+    {%- endcomment -%}
+    {%- assign product_material = product.metafields.custom.product_material.value | strip -%}
+    {% if product_material != blank %}
+      <p class="details-materials__subtitle">{{ product_material | escape }}</p>
+    {% elsif section.settings.subtitle != blank %}
       <p class="details-materials__subtitle">{{ section.settings.subtitle | escape }}</p>
     {% endif %}
 
@@ -765,7 +773,7 @@
       "type": "textarea",
       "id": "subtitle",
       "label": "Subtitle",
-      "default": "Thoughtfully made from solid walnut and finished by hand, this fluted floating shelf brings quiet depth and refined texture to your space."
+      "default": "Thoughtfully made from solid natural wood and finished by hand, each piece brings quiet depth and refined texture to your space."
     },
     {
       "type": "text",

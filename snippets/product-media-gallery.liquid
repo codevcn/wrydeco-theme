@@ -302,6 +302,20 @@
           endif
         endif
         assign media_alt = media.alt | default: product.title
+
+        # Preload the first N gallery images (eager) so switching thumbnails is instant.
+        # The active image keeps high priority (LCP); the rest of the preloaded set uses low.
+        # Images beyond the cap stay lazy to save bandwidth on products with many images.
+        assign gallery_preload_count = 5
+        assign main_loading = 'lazy'
+        assign main_fetchpriority = 'auto'
+        if is_active_media
+          assign main_loading = 'eager'
+          assign main_fetchpriority = 'high'
+        elsif forloop.index <= gallery_preload_count
+          assign main_loading = 'eager'
+          assign main_fetchpriority = 'low'
+        endif
       %}
       <div
         id="ProductMedia-{{ section_id }}-{{ media.id }}"
@@ -311,34 +325,19 @@
       >
         {% case media.media_type %}
           {% when 'image' %}
-            {% if is_active_media %}
-              {% assign zoom_url = media | image_url: width: 2400 %}
-              {{
-                media
-                | image_url: width: 1200
-                | image_tag:
-                  class: 'product-gallery__main-media',
-                  loading: 'eager',
-                  fetchpriority: 'high',
-                  widths: '360, 540, 720, 900, 1200',
-                  sizes: '(min-width: 1024px) 56vw, (min-width: 720px) 58vw, 100vw',
-                  alt: media_alt,
-                  data-zoom-src: zoom_url
-              }}
-            {% else %}
-              {% assign zoom_url = media | image_url: width: 2400 %}
-              {{
-                media
-                | image_url: width: 1200
-                | image_tag:
-                  class: 'product-gallery__main-media',
-                  loading: 'lazy',
-                  widths: '360, 540, 720, 900, 1200',
-                  sizes: '(min-width: 1024px) 56vw, (min-width: 720px) 58vw, 100vw',
-                  alt: media_alt,
-                  data-zoom-src: zoom_url
-              }}
-            {% endif %}
+            {% assign zoom_url = media | image_url: width: 2400 %}
+            {{
+              media
+              | image_url: width: 1200
+              | image_tag:
+                class: 'product-gallery__main-media',
+                loading: main_loading,
+                fetchpriority: main_fetchpriority,
+                widths: '360, 540, 720, 900, 1200',
+                sizes: '(min-width: 1024px) 56vw, (min-width: 720px) 58vw, 100vw',
+                alt: media_alt,
+                data-zoom-src: zoom_url
+            }}
           {% when 'external_video' %}
             <div class="product-gallery__main-media">
               {{ media | external_video_tag }}

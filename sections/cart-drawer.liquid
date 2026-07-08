@@ -199,22 +199,15 @@
       </div>
 
       <footer class="cart-drawer__footer">
-        <form class="cart-drawer__discount-form" data-cart-discount-form novalidate>
-          <label class="cart-drawer__visually-hidden" for="CartDiscountInput">Discount code</label>
-          <input
-            id="CartDiscountInput"
-            type="text"
-            name="discount"
-            class="cart-drawer__discount-input"
-            placeholder="Discount code"
-            autocomplete="off"
-            autocapitalize="characters"
-            autocorrect="off"
-            spellcheck="false"
-            data-cart-discount-input
-          >
-          <button type="submit" class="cart-drawer__discount-apply" data-cart-discount-apply>Apply</button>
-        </form>
+        <button type="button" class="cart-drawer__voucher-trigger" data-cart-discount-open>
+          <span class="cart-drawer__voucher-copy">
+            <span class="cart-drawer__voucher-title">Have a discount code?</span>
+          </span>
+          <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24">
+            <path d="M0 0h24v24H0z" fill="none" />
+            <path fill="currentColor" d="M14.8 8L16 9.2L9.2 16L8 14.8zM4 4h16c1.11 0 2 .89 2 2v4a2 2 0 1 0 0 4v4c0 1.11-.89 2-2 2H4a2 2 0 0 1-2-2v-4c1.11 0 2-.89 2-2a2 2 0 0 0-2-2V6a2 2 0 0 1 2-2m0 2v2.54a3.994 3.994 0 0 1 0 6.92V18h16v-2.54a3.994 3.994 0 0 1 0-6.92V6zm5.5 2c.83 0 1.5.67 1.5 1.5S10.33 11 9.5 11S8 10.33 8 9.5S8.67 8 9.5 8m5 5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5s-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5" />
+          </svg>
+        </button>
 
         <div class="cart-drawer__summary">
           {% if cart.cart_level_discount_applications.size > 0 %}
@@ -255,18 +248,17 @@
             <span>Subtotal</span>
             <strong>{{ cart.total_price | money }}</strong>
           </div>
-          <div class="cart-drawer__summary-row cart-drawer__summary-row--shipping">
-            <span class="cart-drawer__shipping-label">
-              Shipping
-              <span
-                class="cart-drawer__info"
-                title="Shipping is calculated at checkout"
-                aria-label="Shipping is calculated at checkout"
-                >i</span
-              >
-            </span>
-            <span>Calculated at checkout</span>
-          </div>
+        </div>
+
+        <div class="cart-drawer__shipping-reassurance">
+          <strong>
+            <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24">
+              <path d="M0 0h24v24H0z" fill="none" />
+              <path fill="currentColor" d="m9.55 15.15l8.475-8.475q.3-.3.7-.3t.7.3t.3.713t-.3.712l-9.175 9.2q-.3.3-.7.3t-.7-.3L4.55 13q-.3-.3-.288-.712t.313-.713t.713-.3t.712.3z" />
+            </svg>
+            <span class="cart-drawer__free-shipping-included-text"> Free shipping included </span>
+          </strong>
+          <span class="cart-drawer__white-glove-text">White-glove delivery details confirmed at checkout</span>
         </div>
 
         <form action="{{ routes.cart_url }}" method="post" class="cart-drawer__checkout-form">
@@ -299,6 +291,52 @@
 </div>
 
 {%- comment -%} Note viewer — kept outside the shell so it survives the section refresh and its position:fixed is relative to the viewport. {%- endcomment -%}
+<div class="cart-drawer__voucher-popup" data-cart-discount-popup hidden>
+  <div class="cart-drawer__voucher-overlay" data-cart-discount-close></div>
+  <div
+    class="cart-drawer__voucher-dialog"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="CartDiscountTitle"
+  >
+    <button type="button" class="cart-drawer__voucher-close" data-cart-discount-close aria-label="Close discount code">
+      <span aria-hidden="true"></span>
+    </button>
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="1em"
+      height="1em"
+      viewBox="0 0 24 24"
+      class="voucher-popup__icon"
+    >
+      <path d="M0 0h24v24H0z" fill="none" />
+      <path fill="currentColor" d="M14.8 8L16 9.2L9.2 16L8 14.8zM4 4h16c1.11 0 2 .89 2 2v4a2 2 0 1 0 0 4v4c0 1.11-.89 2-2 2H4a2 2 0 0 1-2-2v-4c1.11 0 2-.89 2-2a2 2 0 0 0-2-2V6a2 2 0 0 1 2-2m0 2v2.54a3.994 3.994 0 0 1 0 6.92V18h16v-2.54a3.994 3.994 0 0 1 0-6.92V6zm5.5 2c.83 0 1.5.67 1.5 1.5S10.33 11 9.5 11S8 10.33 8 9.5S8.67 8 9.5 8m5 5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5s-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5" />
+    </svg>
+    <h2 id="CartDiscountTitle" class="cart-drawer__voucher-heading">Apply Discount Code</h2>
+    <span class="cart-drawer__voucher-rule" aria-hidden="true"></span>
+    <p class="cart-drawer__voucher-text">Enter your discount code below to unlock exclusive savings.</p>
+    <form class="cart-drawer__discount-form" data-cart-discount-form novalidate>
+      <label class="cart-drawer__visually-hidden" for="CartDiscountInput">Discount code</label>
+      <input
+        id="CartDiscountInput"
+        type="text"
+        name="discount"
+        class="cart-drawer__discount-input"
+        placeholder="Enter discount code"
+        autocomplete="off"
+        autocapitalize="characters"
+        autocorrect="off"
+        spellcheck="false"
+        data-cart-discount-input
+      >
+      <div class="cart-drawer__voucher-actions">
+        <button type="button" class="cart-drawer__discount-cancel" data-cart-discount-close>Cancel</button>
+        <button type="submit" class="cart-drawer__discount-apply" data-cart-discount-apply>Apply</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <div class="cart-drawer__note-popup" data-cart-note-popup hidden>
   <div class="cart-drawer__note-overlay" data-cart-note-close></div>
   <div class="cart-drawer__note-dialog" role="dialog" aria-modal="true" aria-labelledby="CartNoteTitle">
@@ -981,15 +1019,58 @@
 
   .cart-drawer__footer {
     flex: none;
-    padding: var(--sp-4) var(--sp-6) var(--sp-5);
+    padding: var(--sp-3) var(--sp-5) var(--sp-3);
     background: var(--surface-elevated);
     box-shadow: var(--cart-drawer-footer-shadow);
+  }
+
+  .cart-drawer__discount-disclosure {
+    margin: var(--sp-0) var(--sp-0) var(--sp-4);
+  }
+
+  .cart-drawer__discount-toggle {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: 44px;
+    color: var(--text-secondary);
+    font: var(--type-body-small);
+    cursor: pointer;
+    list-style: none;
+    transition: color var(--timing-short) var(--ease-standard);
+  }
+
+  .cart-drawer__discount-toggle::-webkit-details-marker {
+    display: none;
+  }
+
+  .cart-drawer__discount-toggle::after {
+    content: '+';
+    margin-inline-start: var(--sp-2);
+    color: var(--color-earth-brown);
+    font-weight: var(--font-weight-semibold);
+  }
+
+  .cart-drawer__discount-disclosure[open] .cart-drawer__discount-toggle {
+    color: var(--color-earth-brown);
+  }
+
+  .cart-drawer__discount-disclosure[open] .cart-drawer__discount-toggle::after {
+    content: '-';
+  }
+
+  .cart-drawer__discount-toggle:focus-visible {
+    outline: var(--border-width) solid var(--color-earth-brown);
+    outline-offset: var(--sp-1);
+  }
+
+  .cart-drawer__discount-disclosure:not([open]) .cart-drawer__discount-form {
+    display: none;
   }
 
   .cart-drawer__discount-form {
     display: flex;
     gap: var(--sp-2);
-    margin: var(--sp-0) var(--sp-0) var(--sp-4);
+    margin: var(--sp-1) var(--sp-0) var(--sp-0);
   }
 
   .cart-drawer__discount-input {
@@ -1044,10 +1125,6 @@
   .cart-drawer__summary-row--discount {
     color: var(--color-earth-brown);
     font: var(--type-body-small);
-  }
-
-  .cart-drawer__summary-row--discount + .cart-drawer__summary-row--total {
-    margin-block-start: var(--sp-3);
   }
 
   .cart-drawer__discount-tag {
@@ -1125,10 +1202,6 @@
     font: var(--type-caption);
   }
 
-  .cart-drawer__summary-row + .cart-drawer__summary-row {
-    margin-block-start: var(--sp-2);
-  }
-
   .cart-drawer__summary-row--total {
     color: var(--text-primary);
     font: var(--type-body-small);
@@ -1139,6 +1212,25 @@
     display: inline-flex;
     align-items: center;
     gap: var(--sp-2);
+  }
+
+  .cart-drawer__shipping-value {
+    display: grid;
+    justify-items: end;
+    max-inline-size: 28ch;
+    color: var(--color-pure-red);
+    text-align: end;
+  }
+
+  .cart-drawer__shipping-value strong {
+    font: var(--type-body-small);
+    font-weight: var(--font-weight-semibold);
+  }
+
+  .cart-drawer__shipping-value small {
+    color: var(--color-pure-red);
+    font: var(--type-caption);
+    line-height: var(--line-height-snug);
   }
 
   .cart-drawer__info {
@@ -1170,7 +1262,6 @@
     justify-content: center;
     gap: var(--sp-3);
     inline-size: 100%;
-    min-block-size: var(--sp-7);
     padding: var(--sp-3) var(--sp-5);
     border: var(--border-width) solid var(--color-earth-brown);
     border-radius: var(--radius-sm);
@@ -1179,6 +1270,297 @@
     font: var(--type-body-small);
     text-decoration: none;
     cursor: pointer;
+  }
+
+  .cart-drawer__footer {
+    padding: var(--sp-4) var(--sp-6) var(--sp-4);
+    background: var(--surface-elevated);
+  }
+
+  .cart-drawer__voucher-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--sp-2);
+    width: 100%;
+    padding: var(--sp-2) var(--sp-0);
+    border: var(--sp-0);
+    border-block: var(--border-width) solid var(--border-light);
+    background: transparent;
+    color: var(--color-bark);
+    text-align: start;
+    cursor: pointer;
+  }
+  .cart-drawer__voucher-trigger svg {
+    height: var(--sp-5);
+    width: var(--sp-5);
+  }
+
+  .cart-drawer__voucher-icon {
+    position: relative;
+    inline-size: var(--sp-6);
+    block-size: var(--sp-6);
+    margin-inline-start: var(--sp-1);
+    border: calc(var(--border-width) * 2) solid currentColor;
+    border-radius: var(--radius-sm);
+    transform: rotate(45deg);
+  }
+
+  .cart-drawer__voucher-icon::after {
+    content: '';
+    position: absolute;
+    inset-block-start: var(--sp-1);
+    inset-inline-end: var(--sp-1);
+    inline-size: var(--sp-1);
+    block-size: var(--sp-1);
+    border: calc(var(--border-width) * 2) solid currentColor;
+    border-radius: var(--radius-full);
+  }
+
+  .cart-drawer__voucher-copy {
+    display: grid;
+    gap: var(--sp-1);
+  }
+
+  .cart-drawer__voucher-title {
+    color: var(--text-primary);
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-md);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-tight);
+  }
+
+  .cart-drawer__voucher-subtitle {
+    color: var(--color-bark);
+    font: var(--type-body-large);
+    line-height: var(--line-height-snug);
+  }
+
+  .cart-drawer__voucher-chevron {
+    justify-self: end;
+    inline-size: var(--sp-4);
+    block-size: var(--sp-4);
+    border-block-start: calc(var(--border-width) * 2) solid currentColor;
+    border-inline-end: calc(var(--border-width) * 2) solid currentColor;
+    transform: rotate(45deg);
+  }
+
+  .cart-drawer__summary {
+    padding-block: var(--sp-2);
+    border-block-end: var(--border-width) solid var(--border-light);
+  }
+
+  .cart-drawer__summary-row--total {
+    align-items: baseline;
+    color: var(--text-primary);
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-md);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-tight);
+  }
+
+  .cart-drawer__summary-row--total strong {
+    font-family: var(--font-body);
+    text-align: end;
+    text-decoration-thickness: var(--border-width);
+    text-underline-offset: var(--sp-1);
+  }
+
+  .cart-drawer__shipping-reassurance {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding-block: var(--sp-2);
+    text-align: center;
+  }
+
+  .cart-drawer__shipping-reassurance svg {
+    height: var(--sp-4);
+    width: var(--sp-4);
+  }
+
+  .cart-drawer__shipping-reassurance strong {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-1);
+    padding: var(--sp-1) var(--sp-3);
+    background-color: var(--color-shipping-green);
+    color: var(--color-milk);
+    border-radius: var(--radius-full);
+    font-family: var(--font-body);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-tight);
+  }
+
+  .cart-drawer__free-shipping-included-text {
+    color: var(--color-milk);
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-snug);
+    word-spacing: 0.1rem;
+  }
+  .cart-drawer__white-glove-text {
+    color: var(--color-earth-brown);
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-snug);
+    word-spacing: 0.1rem;
+  }
+
+  .cart-drawer__checkout {
+    border: var(--sp-0);
+    border-radius: var(--radius-lg);
+    background: linear-gradient(
+      135deg,
+      var(--color-earth-brown),
+      color-mix(in srgb, var(--color-earth-brown) 72%, var(--color-ebony))
+    );
+    color: var(--text-inverse);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-md);
+    font-weight: var(--font-weight-regular);
+  }
+
+  .cart-drawer__checkout svg {
+    inline-size: var(--sp-5);
+    block-size: var(--sp-5);
+    stroke-width: calc(var(--border-width) * 1.5);
+  }
+
+  .cart-drawer__voucher-popup[hidden] {
+    display: none;
+  }
+
+  .cart-drawer__voucher-popup {
+    position: fixed;
+    inset: var(--sp-0);
+    z-index: calc(var(--z-drawer) + 4);
+    display: grid;
+    place-items: center;
+    padding: var(--sp-5);
+  }
+
+  .cart-drawer__voucher-overlay {
+    position: absolute;
+    inset: var(--sp-0);
+    background: color-mix(in srgb, var(--color-ebony) 62%, transparent);
+  }
+
+  .cart-drawer__voucher-dialog {
+    position: relative;
+    width: min(100%, 760px);
+    padding: var(--sp-6);
+    border-radius: var(--radius-xl);
+    background: var(--surface-elevated);
+    box-shadow: var(--shadow-modal);
+    color: var(--text-primary);
+    text-align: center;
+  }
+
+  .cart-drawer__voucher-close {
+    position: absolute;
+    inset-block-start: var(--sp-5);
+    inset-inline-end: var(--sp-5);
+    display: grid;
+    place-items: center;
+    inline-size: var(--sp-7);
+    block-size: var(--sp-7);
+    padding: var(--sp-0);
+    border: var(--border-width) solid var(--border-light);
+    border-radius: var(--radius-full);
+    background: transparent;
+    color: var(--color-bark);
+    cursor: pointer;
+  }
+
+  .cart-drawer__voucher-close span,
+  .cart-drawer__voucher-close span::after {
+    display: block;
+    inline-size: var(--sp-5);
+    block-size: calc(var(--border-width) * 2);
+    border-radius: var(--radius-full);
+    background: currentColor;
+    transform: rotate(45deg);
+  }
+
+  .cart-drawer__voucher-close span::after {
+    content: '';
+    transform: rotate(90deg);
+  }
+
+  .voucher-popup__icon {
+    height: var(--sp-7);
+    width: var(--sp-7);
+    margin-inline: auto;
+    margin-block-end: var(--sp-3);
+  }
+
+  .cart-drawer__voucher-heading {
+    margin: var(--sp-0);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: var(--font-size-display-md);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-tight);
+    word-spacing: 0.2rem;
+  }
+
+  .cart-drawer__voucher-rule {
+    display: block;
+    inline-size: var(--sp-7);
+    block-size: calc(var(--border-width) * 2);
+    margin: var(--sp-5) auto;
+    background: var(--color-bark);
+  }
+
+  .cart-drawer__voucher-text {
+    max-width: 34ch;
+    margin: var(--sp-0) auto var(--sp-6);
+    color: var(--color-bark);
+    font: var(--type-body-large);
+    font-size: var(--font-size-body-lg);
+  }
+
+  .cart-drawer__voucher-dialog .cart-drawer__discount-form {
+    display: grid;
+    gap: var(--sp-4);
+    margin: var(--sp-0);
+  }
+
+  .cart-drawer__voucher-dialog .cart-drawer__discount-input {
+    padding-inline: var(--sp-6);
+    border-color: var(--color-bark);
+    border-radius: var(--radius-lg);
+    background: transparent;
+    font: var(--type-body-large);
+    font-size: var(--font-size-body-lg);
+    text-transform: none;
+  }
+
+  .cart-drawer__voucher-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--sp-4);
+  }
+
+  .cart-drawer__discount-cancel,
+  .cart-drawer__voucher-dialog .cart-drawer__discount-apply {
+    border-radius: var(--radius-lg);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-lg);
+    font-weight: var(--font-weight-regular);
+    cursor: pointer;
+  }
+
+  .cart-drawer__discount-cancel {
+    border: calc(var(--border-width) * 2) solid var(--color-bark);
+    background: transparent;
+    color: var(--color-bark);
+  }
+
+  .cart-drawer__voucher-dialog .cart-drawer__discount-apply {
+    border: var(--sp-0);
+    background: var(--color-earth-brown);
+    color: var(--text-inverse);
   }
 
   .cart-drawer__empty {
@@ -1323,6 +1705,101 @@
     .cart-drawer__footer {
       padding-block: var(--sp-3) var(--sp-4);
     }
+
+    .cart-drawer__discount-form {
+      display: grid;
+      grid-template-columns: minmax(var(--sp-0), 1fr) auto;
+    }
+
+    .cart-drawer__discount-apply {
+      padding-inline: var(--sp-4);
+    }
+
+    .cart-drawer__footer {
+      padding: var(--sp-4) var(--sp-5);
+    }
+
+    .cart-drawer__voucher-trigger {
+      grid-template-columns: var(--sp-7) minmax(var(--sp-0), 1fr) var(--sp-5);
+      min-block-size: var(--sp-8);
+      padding-block: var(--sp-3);
+    }
+
+    .cart-drawer__voucher-icon {
+      inline-size: var(--sp-5);
+      block-size: var(--sp-5);
+    }
+
+    .cart-drawer__voucher-title,
+    .cart-drawer__shipping-reassurance strong,
+    .cart-drawer__checkout {
+      font-size: var(--font-size-body-xl);
+    }
+
+    .cart-drawer__voucher-subtitle,
+    .cart-drawer__shipping-reassurance span {
+      font-size: var(--font-size-body-md);
+    }
+
+    .cart-drawer__summary {
+      padding-block: var(--sp-4);
+    }
+
+    .cart-drawer__summary-row--total {
+      font-size: var(--font-size-body-2xl);
+    }
+
+    .cart-drawer__shipping-reassurance {
+      padding-block: var(--sp-4);
+    }
+
+    .cart-drawer__checkout {
+      min-block-size: var(--sp-8);
+    }
+
+    .cart-drawer__checkout svg {
+      inline-size: var(--sp-6);
+      block-size: var(--sp-6);
+    }
+
+    .cart-drawer__voucher-popup {
+      padding: var(--sp-4);
+    }
+
+    .cart-drawer__voucher-dialog {
+      padding: var(--sp-7) var(--sp-5) var(--sp-5);
+      width: min(100%, 360px);
+    }
+
+    .cart-drawer__voucher-close {
+      inset-block-start: var(--sp-4);
+      inset-inline-end: var(--sp-4);
+      inline-size: var(--sp-7);
+      block-size: var(--sp-7);
+    }
+
+    .cart-drawer__voucher-heading {
+      font-size: var(--font-size-display-sm);
+    }
+
+    .cart-drawer__voucher-text {
+      font-size: var(--font-size-body-md);
+    }
+
+    .cart-drawer__voucher-dialog .cart-drawer__discount-input {
+      padding-inline: var(--sp-4);
+      font-size: var(--font-size-body-md);
+    }
+
+    .cart-drawer__voucher-actions {
+      gap: var(--sp-3);
+    }
+
+    .cart-drawer__discount-cancel,
+    .cart-drawer__voucher-dialog .cart-drawer__discount-apply {
+      min-block-size: var(--sp-7);
+      font-size: var(--font-size-body-xl);
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -1362,7 +1839,7 @@
       'iframe[id*="chat" i]',
       'iframe[src*="chat" i]',
       'iframe[src*="inbox" i]',
-      'iframe[src*="sidekick" i]'
+      'iframe[src*="sidekick" i]',
     ];
 
     const shouldHideFloatingWidget = (element) => {
@@ -1544,6 +2021,23 @@
       }
     };
 
+    const getDiscountPopup = () => document.querySelector('[data-cart-discount-popup]');
+    const openDiscountPopup = () => {
+      const popup = getDiscountPopup();
+      if (!popup) return;
+      popup.hidden = false;
+      document.documentElement.style.overflow = 'hidden';
+      window.requestAnimationFrame(() => {
+        popup.querySelector('[data-cart-discount-input]')?.focus();
+      });
+    };
+    const closeDiscountPopup = () => {
+      const popup = getDiscountPopup();
+      if (!popup) return;
+      popup.hidden = true;
+      document.documentElement.style.overflow = '';
+    };
+
     const applyDiscount = async (form) => {
       const input = form.querySelector('[data-cart-discount-input]');
       const code = (input?.value || '').trim();
@@ -1585,6 +2079,7 @@
           if (applied) {
             rememberCheckoutDiscount(code);
             await refreshDrawer({ open: true });
+            closeDiscountPopup();
             toast({ message: `Discount “${code}” applied.`, type: 'success' });
           } else if (entry) {
             // The code is recognized but doesn't apply to the current cart — usually
@@ -1594,6 +2089,7 @@
             rememberCheckoutDiscount(code);
             loader.hidden = true;
             syncPendingDiscount();
+            closeDiscountPopup();
             toast({
               message: `“${code}” can’t be applied to your cart yet — it may require a higher order total or other conditions.`,
               type: 'info',
@@ -1612,6 +2108,7 @@
         rememberCheckoutDiscount(code);
         loader.hidden = true;
         syncPendingDiscount();
+        closeDiscountPopup();
         toast({ message: `“${code}” will be applied at checkout.`, type: 'info' });
       } catch (error) {
         loader.hidden = true;
@@ -1716,6 +2213,18 @@
         return;
       }
 
+      if (event.target.closest('[data-cart-discount-open]')) {
+        event.preventDefault();
+        openDiscountPopup();
+        return;
+      }
+
+      if (event.target.closest('[data-cart-discount-close]')) {
+        event.preventDefault();
+        closeDiscountPopup();
+        return;
+      }
+
       if (event.target.closest('[data-cart-drawer-close]')) {
         closeDrawer();
         return;
@@ -1780,6 +2289,11 @@
 
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') {
+        const discountPopup = getDiscountPopup();
+        if (discountPopup && !discountPopup.hidden) {
+          closeDiscountPopup();
+          return;
+        }
         const removePopup = document.querySelector('[data-cart-remove-popup]');
         if (removePopup && !removePopup.hidden) {
           removePopup.hidden = true;
