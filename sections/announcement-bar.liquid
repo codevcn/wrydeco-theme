@@ -1,61 +1,228 @@
-{%- if section.blocks.size > 0 -%}
-  <div class="announcement-bar" role="region" aria-label="Announcement">
-    {% comment %} <div class="announcement-bar__inner">
-      {%- for block in section.blocks -%}
-        <div class="announcement-bar__message" {{ block.shopify_attributes }}>
-          {%- if block.settings.link != blank -%}
-            <a href="{{ block.settings.link }}" class="announcement-bar__link">
-              {{ block.settings.text | escape }}
-            </a>
-          {%- else -%}
-            <p>{{ block.settings.text | escape }}</p>
-          {%- endif -%}
+{%- comment -%}
+  Top Bar Announcement (slim marquee)
+
+  Content is driven by the "Top Bar Announcement" metaobject (type: top_bar_announcement):
+    - html_message : raw HTML injected straight into the bar (server-rendered for SEO/SSR)
+    - active       : integer, > 0 shows the bar
+    - except_pages : list of page keys on which the bar is hidden. Each entry is matched
+                     against template.name (e.g. "index", "product", "cart") and request.path
+                     (exact or partial, e.g. "/cart", "/products").
+
+  The bar renders on every page because this section belongs to the header-group.
+  An infinite scrolling marquee is applied by the <wd-announcement-bar> custom element.
+{%- endcomment -%}
+
+{%- liquid
+  assign ann = null
+  for entry in metaobjects.top_bar_announcement.values
+    if entry.active.value > 0
+      assign ann = entry
+      break
+    endif
+  endfor
+-%}
+
+{%- if ann != null and ann.html_message.value != blank -%}
+  {%- liquid
+    assign show_bar = true
+    assign except = ann.except_pages.value
+    if except != blank and except.size > 0
+      assign tpl = template.name | downcase
+      assign path = request.path | downcase
+      for raw in except
+        assign key = raw | downcase | strip
+        if key == blank
+          continue
+        endif
+        if key == tpl or key == path
+          assign show_bar = false
+          break
+        endif
+        if path contains key
+          assign show_bar = false
+          break
+        endif
+      endfor
+    endif
+  -%}
+
+  {%- if show_bar -%}
+    <wd-announcement-bar
+      class="wd-topbar"
+      role="region"
+      aria-label="Announcement"
+      data-speed="{{ section.settings.speed | default: 60 }}"
+    >
+      <div class="wd-topbar__viewport">
+        <div class="wd-topbar__track">
+          <div class="wd-topbar__group">{{ ann.html_message.value }}</div>
         </div>
-      {%- endfor -%}
-    </div> {% endcomment %}
-  </div>
+      </div>
+    </wd-announcement-bar>
+  {%- endif -%}
 {%- endif -%}
 
 {% stylesheet %}
-  .announcement-bar {
-    /* Using design token for dark background and light text */
-    background-color: var(--color-1, #000);
-    color: var(--color-10, #fff);
-    text-align: center;
-    padding: var(--space-2, 6px) var(--space-4, 10px);
+  .wd-topbar {
+    display: block;
+    width: 100%;
+    overflow: hidden;
+    background-color: var(--color-earth-brown, #4a2c18);
+    color: var(--color-milk, #f7f2ec);
+    font-family: var(--font-primary--family, sans-serif);
+  }
+
+  .wd-topbar__viewport {
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .wd-topbar__track {
+    display: flex;
+    align-items: center;
+    width: max-content;
+    gap: 128px;
+    will-change: transform;
+    padding-block: var(--space-1, 4px);
+  }
+
+  .wd-topbar[data-ready] .wd-topbar__track {
+    animation: wd-topbar-marquee var(--wd-marquee-duration, 30s) linear infinite;
+  }
+
+  .wd-topbar__group {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+    padding-block: var(--space-2, 6px);
     font-size: var(--text-xs, 12px);
-    font-weight: var(--font-weight-600, 600);
     line-height: 1.2;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    display:none;
+    letter-spacing: 0.08em;
   }
 
-  .announcement-bar__inner {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: var(--space-4, 10px);
+  /* Normalise the merchant-authored html_message so it flows inline for the ticker.
+     Width/background are neutralised so the bar stays one uniform espresso colour. */
+  .wd-topbar__group > * {
+    width: auto !important;
+    max-width: none !important;
+    margin: 0 !important;
+    background: transparent !important;
   }
 
-  .announcement-bar__message p,
-  .announcement-bar__link {
-    margin: 0;
-    color: inherit;
-    text-decoration: none;
-    padding: 0;
+  .wd-topbar__sep {
+    flex: 0 0 auto;
+    padding: 0 var(--space-11, 24px);
+    color: var(--color-milk, #f7f2ec);
+    opacity: 0.5;
   }
 
-  .announcement-bar__link:hover {
-    text-decoration: underline;
+  .wd-topbar:hover .wd-topbar__track {
+    animation-play-state: paused;
+  }
+
+  @keyframes wd-topbar-marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(calc(-1 * var(--wd-marquee-distance, 50%)));
+    }
+  }
+
+  /* Desktop-first: tighten spacing on smaller screens (rule #1) */
+  @media (max-width: 749px) {
+    .wd-topbar__group {
+      font-size: var(--text-xs, 11px);
+      letter-spacing: 0.05em;
+    }
+
+    .wd-topbar__sep {
+      padding: 0 var(--space-8, 16px);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .wd-topbar[data-ready] .wd-topbar__track {
+      animation: none;
+    }
   }
 {% endstylesheet %}
+
+{% javascript %}
+  class WdAnnouncementBar extends HTMLElement {
+    connectedCallback() {
+      this.viewport = this.querySelector('.wd-topbar__viewport');
+      this.track = this.querySelector('.wd-topbar__track');
+      const group = this.track && this.track.querySelector('.wd-topbar__group');
+      if (!this.viewport || !this.track || !group) return;
+
+      // One repeatable unit = the message group followed by a separator.
+      this.unitHTML = group.outerHTML;
+      this.speed = parseFloat(this.getAttribute('data-speed')) || 60; // px per second
+
+      this.build = this.build.bind(this);
+      this.build();
+
+      this._onResize = this.debounce(this.build, 200);
+      window.addEventListener('resize', this._onResize);
+    }
+
+    disconnectedCallback() {
+      if (this._onResize) window.removeEventListener('resize', this._onResize);
+    }
+
+    build() {
+      const viewportWidth = this.viewport.offsetWidth || window.innerWidth;
+
+      // Fill one set until it is at least as wide as the viewport (avoids gaps).
+      this.track.innerHTML = this.unitHTML;
+      let guard = 0;
+      while (this.track.scrollWidth < viewportWidth && guard < 60) {
+        this.track.insertAdjacentHTML('beforeend', this.unitHTML);
+        guard++;
+      }
+
+      const setWidth = this.track.scrollWidth;
+
+      // Duplicate the whole set once so the animation can loop seamlessly.
+      this.track.insertAdjacentHTML('beforeend', this.track.innerHTML);
+
+      this.style.setProperty('--wd-marquee-distance', setWidth + 'px');
+      this.style.setProperty('--wd-marquee-duration', Math.max(setWidth / this.speed, 12) + 's');
+      this.setAttribute('data-ready', '');
+    }
+
+    debounce(fn, wait) {
+      let timer;
+      return function () {
+        clearTimeout(timer);
+        timer = setTimeout(fn, wait);
+      };
+    }
+  }
+
+  if (!customElements.get('wd-announcement-bar')) {
+    customElements.define('wd-announcement-bar', WdAnnouncementBar);
+  }
+{% endjavascript %}
 
 {% schema %}
 {
   "name": "Announcement Bar",
-  "max_blocks": 3,
+  "settings": [
+    {
+      "type": "range",
+      "id": "speed",
+      "label": "Marquee speed",
+      "min": 20,
+      "max": 200,
+      "step": 5,
+      "unit": "px",
+      "default": 60,
+      "info": "Scroll speed in pixels per second. Content is managed via the Top Bar Announcement metaobject."
+    }
+  ],
   "blocks": [
     {
       "type": "announcement",
@@ -64,23 +231,15 @@
         {
           "type": "text",
           "id": "text",
-          "default": "5% Off Code: WRYDECO5",
-          "label": "Text"
+          "label": "Text (unused — content comes from the metaobject)"
         },
         {
           "type": "url",
           "id": "link",
-          "label": "Link"
+          "label": "Link (unused)"
         }
       ]
     }
-  ],
-  "default": {
-    "blocks": [
-      {
-        "type": "announcement"
-      }
-    ]
-  }
+  ]
 }
 {% endschema %}

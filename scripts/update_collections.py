@@ -357,8 +357,8 @@ def main():
 
     parser.add_argument(
         "--json",
-        default=str(SCRIPT_DIR / "collections.json"),
-        help="Path to collections JSON file. Default: scripts/collections.json",
+        default=str(SCRIPT_DIR / "updated_collections.json"),
+        help="Path to collections JSON file. Default: scripts/updated_collections.json",
     )
 
     parser.add_argument(

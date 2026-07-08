@@ -5,6 +5,7 @@ from urllib.parse import urlparse
 
 import requests
 from dotenv import load_dotenv
+from requests import HTTPError
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -123,7 +124,7 @@ def main() -> None:
                 print("Access token:")
                 print(SHOPIFY_ADMIN_TOKEN)
                 return
-            except ValueError as error:
+            except (ValueError, HTTPError) as error:
                 if not SHOPIFY_CLIENT_ID or not SHOPIFY_CLIENT_SECRET:
                     raise
 

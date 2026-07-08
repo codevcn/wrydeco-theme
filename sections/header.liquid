@@ -1,15 +1,12 @@
 <header class="header page-width">
   <div class="header__left">
     {%- comment -%}
-      The logo is the page H1 only on the homepage. On every other template the page's own
-      title (product, collection, article, page…) is the H1, so the logo uses a plain <div>
-      to avoid two H1s. See doc/SEO-diagnose.md #1.
+      The logo is never an H1. Each template already exposes its own single H1: the homepage uses
+      the hero headline (hero-banner), and other templates use the page's own title
+      (product, collection, article, page…). Wrapping the logo in a plain <div> keeps every page
+      to exactly one H1. See doc/SEO-diagnose.md #1 and audit SEO-01.
     {%- endcomment -%}
-    {%- if request.page_type == 'index' -%}
-      {%- assign header_heading_tag = 'h1' -%}
-    {%- else -%}
-      {%- assign header_heading_tag = 'div' -%}
-    {%- endif -%}
+    {%- assign header_heading_tag = 'div' -%}
     {%- assign logo_alt = section.settings.logo.alt | default: shop.name -%}
     <{{ header_heading_tag }} class="header__heading">
       <a href="{{ routes.root_url }}" class="header__heading-link">
@@ -29,7 +26,6 @@
             src="{{ section.settings.logo_asset | file_url }}"
             class="header__heading-logo"
             alt="{{ shop.name | escape }}"
-            width="150"
             height="auto"
           >
         {%- else -%}
@@ -155,21 +151,28 @@
                     <a class="cmega__nav-link" href="/collections/all" data-mobile-menu-close>Explore All Pieces</a>
                   </li>
                   <li class="cmega__nav-item">
-                    <a class="cmega__nav-link" href="{{ pages['faq'].url | default: '/pages/faq' }}?view=faq" data-mobile-menu-close>FAQ</a>
+                    <a
+                      class="cmega__nav-link"
+                      href="{{ pages['faq'].url | default: '/pages/faq' }}?view=faq"
+                      data-mobile-menu-close
+                      >FAQ</a
+                    >
                   </li>
                   <li class="cmega__nav-item">
                     <a
                       class="cmega__nav-link"
                       href="{{ pages['about-us'].url | default: '/pages/about-us' }}?view=about-us"
                       data-mobile-menu-close
-                    >About Us</a>
+                      >About Us</a
+                    >
                   </li>
                   <li class="cmega__nav-item">
                     <a
                       class="cmega__nav-link"
                       href="{{ pages['contact'].url | default: '/pages/contact' }}"
                       data-mobile-menu-close
-                    >Contact</a>
+                      >Contact</a
+                    >
                   </li>
                 </ul>
               </nav>
@@ -1347,7 +1350,7 @@
   .header__heading-logo {
     max-width: 100%;
     height: auto;
-    width: 150px;
+    height: 52px;
   }
 
   .header__icon {

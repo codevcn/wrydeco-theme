@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Announcement Bar Fixture</title>
+    <style>
+      /* Design tokens mirrored from assets/base.css */
+      :root {
+        --color-earth-brown: #4a2c18;
+        --color-milk: #f7f2ec;
+        --font-primary--family: 'Plus Jakarta Sans', Arial, sans-serif;
+        --text-xs: 12px;
+        --space-2: 6px;
+        --space-8: 16px;
+        --space-11: 24px;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { background: #f5f1ea; }
+
+      /* --- copied verbatim from sections/announcement-bar.liquid {% stylesheet %} --- */
+      .wd-topbar {
+        display: block;
+        width: 100%;
+        overflow: hidden;
+        background-color: var(--color-earth-brown, #4a2c18);
+        color: var(--color-milk, #f7f2ec);
+        font-family: var(--font-primary--family, sans-serif);
+      }
+      .wd-topbar__viewport { width: 100%; overflow: hidden; }
+      .wd-topbar__track {
+        display: flex;
+        align-items: center;
+        width: max-content;
+        will-change: transform;
+      }
+      .wd-topbar[data-ready] .wd-topbar__track {
+        animation: wd-topbar-marquee var(--wd-marquee-duration, 30s) linear infinite;
+      }
+      .wd-topbar__group {
+        flex: 0 0 auto;
+        display: flex;
+        align-items: center;
+        white-space: nowrap;
+        padding-block: var(--space-2, 6px);
+        font-size: var(--text-xs, 12px);
+        line-height: 1.2;
+        letter-spacing: 0.08em;
+      }
+      .wd-topbar__group > * {
+        width: auto !important;
+        max-width: none !important;
+        margin: 0 !important;
+        background: transparent !important;
+      }
+      .wd-topbar__sep {
+        flex: 0 0 auto;
+        padding: 0 var(--space-11, 24px);
+        color: var(--color-milk, #f7f2ec);
+        opacity: 0.5;
+      }
+      .wd-topbar:hover .wd-topbar__track { animation-play-state: paused; }
+      @keyframes wd-topbar-marquee {
+        from { transform: translateX(0); }
+        to { transform: translateX(calc(-1 * var(--wd-marquee-distance, 50%))); }
+      }
+      @media (max-width: 749px) {
+        .wd-topbar__group { font-size: var(--text-xs, 11px); letter-spacing: 0.05em; }
+        .wd-topbar__sep { padding: 0 var(--space-8, 16px); }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Represents the metaobject html_message injected server-side into .wd-topbar__group -->
+    <wd-announcement-bar class="wd-topbar" role="region" aria-label="Announcement" data-speed="60">
+      <div class="wd-topbar__viewport">
+        <div class="wd-topbar__track">
+          <div class="wd-topbar__group"><div style="width:100%; background:#5a321e; color:#ffffff; box-sizing:border-box; display:flex; align-items:center; justify-content:center; gap:32px; padding:10px 24px; font-size:12px; letter-spacing:0.08em;"><span>Free US Shipping</span><span>&bull;</span><span>Handcrafted to Order</span><span>&bull;</span><span>White-Glove Delivery</span></div></div>
+        </div>
+      </div>
+    </wd-announcement-bar>
+
+    <div style="height:1200px"></div>
+
+    <script>
+      /* --- copied verbatim from sections/announcement-bar.liquid {% javascript %} --- */
+      class WdAnnouncementBar extends HTMLElement {
+        connectedCallback() {
+          this.viewport = this.querySelector('.wd-topbar__viewport');
+          this.track = this.querySelector('.wd-topbar__track');
+          const group = this.track && this.track.querySelector('.wd-topbar__group');
+          if (!this.viewport || !this.track || !group) return;
+          this.unitHTML = group.outerHTML + '<span class="wd-topbar__sep" aria-hidden="true">•</span>';
+          this.speed = parseFloat(this.getAttribute('data-speed')) || 60;
+          this.build = this.build.bind(this);
+          this.build();
+          this._onResize = this.debounce(this.build, 200);
+          window.addEventListener('resize', this._onResize);
+        }
+        disconnectedCallback() {
+          if (this._onResize) window.removeEventListener('resize', this._onResize);
+        }
+        build() {
+          const viewportWidth = this.viewport.offsetWidth || window.innerWidth;
+          this.track.innerHTML = this.unitHTML;
+          let guard = 0;
+          while (this.track.scrollWidth < viewportWidth && guard < 60) {
+            this.track.insertAdjacentHTML('beforeend', this.unitHTML);
+            guard++;
+          }
+          const setWidth = this.track.scrollWidth;
+          this.track.insertAdjacentHTML('beforeend', this.track.innerHTML);
+          this.style.setProperty('--wd-marquee-distance', setWidth + 'px');
+          this.style.setProperty('--wd-marquee-duration', Math.max(setWidth / this.speed, 12) + 's');
+          this.setAttribute('data-ready', '');
+        }
+        debounce(fn, wait) {
+          let timer;
+          return function () { clearTimeout(timer); timer = setTimeout(fn, wait); };
+        }
+      }
+      if (!customElements.get('wd-announcement-bar')) {
+        customElements.define('wd-announcement-bar', WdAnnouncementBar);
+      }
+    </script>
+  </body>
+</html>
