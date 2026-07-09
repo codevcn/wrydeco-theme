@@ -1,8 +1,8 @@
 {% comment %}
   Renders the product variant picker as labelled card tiles (FINISH / SIZE).
 
-  Colour/finish options render a thumbnail image taken from each variant's
-  `custom.color_pattern` metafield (an image URL); size options render text.
+  Colour/finish and surface options render thumbnail images from the first
+  relevant metaobject entry; size options render text.
   Each tile is a <label> wrapping a native radio, so selecting one checks the
   matching radio and fires a `change` event — the existing variant logic
   (price + inventory + gallery below, and the Section Rendering API in
@@ -14,6 +14,9 @@
 {% endcomment %}
 
 {% unless product.has_only_default_variant %}
+  {% assign finish_color_entry = metaobjects.variant_finish_color.values | first %}
+  {% assign wood_surface_entry = metaobjects.variant_wood_surface.values | first %}
+
   {% style %}
     .product-variant-picker {
       margin: 0;
@@ -159,6 +162,66 @@
       white-space: nowrap;
     }
 
+    /* ---- Custom color upload tile ---- */
+    /* Keep [hidden] authoritative over the display rules below (icon/preview). */
+    .variant-tile--upload [hidden] {
+      display: none;
+    }
+    .variant-tile--upload .variant-tile__file {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .variant-tile--upload .variant-tile__media {
+      display: grid;
+      place-items: center;
+      border: var(--border-width) dashed var(--color-clay);
+      background: var(--color-milk);
+    }
+    .variant-tile__upload-icon {
+      display: flex;
+      color: var(--color-clay);
+    }
+    .variant-tile__upload-icon svg {
+      width: var(--sp-5);
+      height: var(--sp-5);
+    }
+    .variant-tile__upload-spinner {
+      width: var(--sp-5);
+      height: var(--sp-5);
+      border: calc(var(--border-width) * 2) solid var(--border-default);
+      border-top-color: var(--color-earth-brown);
+      border-radius: var(--radius-full);
+      animation: variant-upload-spin 0.7s linear infinite;
+    }
+    @keyframes variant-upload-spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+    .variant-tile--upload.is-loading {
+      cursor: progress;
+    }
+    .variant-tile--upload.is-uploaded {
+      border-color: var(--color-earth-brown);
+      box-shadow: inset 0 0 0 var(--border-width) var(--color-earth-brown);
+    }
+    .variant-tile--upload.is-uploaded .variant-tile__media {
+      border-style: solid;
+      border-color: var(--border-default);
+    }
+    .variant-tile--upload.is-uploaded .variant-tile__check {
+      opacity: 1;
+      transform: scale(1);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .variant-tile__upload-spinner {
+        animation: none;
+      }
+    }
+
     /* ---- Size tile ---- */
     .variant-tile--size {
       align-items: center;
@@ -229,12 +292,22 @@
     {% for option in product.options_with_values %}
       {% assign downcased_option = option.name | downcase %}
       {% assign is_color = false %}
+      {% assign is_surface = false %}
+      {% if downcased_option contains 'surface' %}
+        {% assign is_surface = true %}
+      {% endif %}
       {% if downcased_option contains 'color'
         or downcased_option contains 'màu'
         or downcased_option contains 'canvas'
         or downcased_option contains 'finish'
       %}
         {% assign is_color = true %}
+      {% endif %}
+      {% assign is_finish = false %}
+      {% if downcased_option contains 'finish' %}
+        {% unless is_surface %}
+          {% assign is_finish = true %}
+        {% endunless %}
       {% endif %}
       {% assign option_prop = 'option' | append: option.position %}
 
@@ -267,8 +340,21 @@
             {% assign color_image = '' %}
             {% if is_color %}
               {% capture value_str %}{{ value }}{% endcapture %}
-              {% assign matched_variant = product.variants | where: option_prop, value_str | first %}
-              {% assign color_image = matched_variant.metafields.custom.color_pattern %}
+              {% assign finish_key = value_str | handleize | replace: '-', '_' %}
+              {% assign thumbnail_entry = finish_color_entry %}
+              {% if is_surface %}
+                {% assign thumbnail_entry = wood_surface_entry %}
+              {% endif %}
+              {% if thumbnail_entry != blank %}
+                {% assign finish_field = thumbnail_entry[finish_key] %}
+                {% if finish_field != blank %}
+                  {% assign color_image = finish_field.value | default: finish_field %}
+                {% endif %}
+              {% endif %}
+              {% if color_image == blank %}
+                {% assign matched_variant = product.variants | where: option_prop, value_str | first %}
+                {% assign color_image = matched_variant.metafields.custom.color_pattern %}
+              {% endif %}
             {% endif %}
 
             <label
@@ -325,6 +411,58 @@
               </span>
             </label>
           {% endfor %}
+
+          {% if is_finish %}
+            <label class="variant-tile variant-tile--color variant-tile--upload" data-custom-color>
+              <input
+                type="file"
+                class="variant-tile__file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                data-custom-color-input
+              >
+              <span class="variant-tile__media">
+                <span class="variant-tile__upload-icon" data-custom-color-icon aria-hidden="true">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 48 48">
+                    <path d="M0 0h48v48H0z" fill="none" />
+                    <path fill="currentColor" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 24L24 6l19 18H31v18H17V24z" />
+                  </svg>
+                </span>
+                <span class="variant-tile__upload-spinner" data-custom-color-spinner aria-hidden="true" hidden></span>
+                <img
+                  class="variant-tile__upload-preview"
+                  data-custom-color-preview
+                  alt="Custom color preview"
+                  width="160"
+                  height="100"
+                  draggable="false"
+                  hidden
+                >
+              </span>
+
+              <span class="variant-tile__label" data-custom-color-label>Custom color</span>
+
+              <span class="variant-tile__check" aria-hidden="true">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="3"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </span>
+
+              <input
+                type="hidden"
+                name="properties[Custom color]"
+                form="{{ 'ProductForm-' | append: section_id }}"
+                data-custom-color-property
+                disabled
+              >
+            </label>
+          {% endif %}
         </div>
       </div>
     {% endfor %}
@@ -426,17 +564,59 @@
         {% endfor %}
       };
 
+      const getSelectedOptions = () => {
+        const nextSelectedOptions = {};
+        document.querySelectorAll('.product-variant-picker input[type="radio"]:checked').forEach(input => {
+          nextSelectedOptions[input.dataset.index] = input.value;
+        });
+        return nextSelectedOptions;
+      };
+
+      const findVariantForOptions = (options) => {
+        return productVariants.find(variant => {
+          return Object.keys(options).every(key => {
+            return variant[key] === options[key];
+          });
+        });
+      };
+
+      const isOptionValuePickable = (input) => {
+        const candidateOptions = Object.assign({}, selectedOptions);
+        candidateOptions[input.dataset.index] = input.value;
+
+        return productVariants.some(variant => {
+          if (!variant.available) return false;
+
+          return Object.keys(candidateOptions).every(key => {
+            return variant[key] === candidateOptions[key];
+          });
+        });
+      };
+
+      const syncOptionAvailability = () => {
+        Object.assign(selectedOptions, getSelectedOptions());
+
+        variantInputs.forEach(input => {
+          const tile = input.closest('.variant-tile');
+          const isCurrentSelection = input.checked;
+          const isPickable = isCurrentSelection || isOptionValuePickable(input);
+
+          input.disabled = !isPickable;
+          input.setAttribute('aria-disabled', isPickable ? 'false' : 'true');
+          if (tile) tile.classList.toggle('is-disabled', !isPickable);
+        });
+      };
+
+      syncOptionAvailability();
+
       for (const input of variantInputs) {
         input.addEventListener('change', function () {
           // 3. Cập nhật giá trị mới khi user chọn
           selectedOptions[input.dataset.index] = input.value;
+          syncOptionAvailability();
 
           // 4. Tìm variant khớp với toàn bộ lựa chọn
-          const selectedVariant = productVariants.find(variant => {
-            return Object.keys(selectedOptions).every(key => {
-              return variant[key] === selectedOptions[key];
-            });
-          });
+          const selectedVariant = findVariantForOptions(selectedOptions);
 
           if (selectedVariant) {
             // Instant, no-API updates the moment a variant is picked:
@@ -553,6 +733,107 @@
         });
       }
     });
+  </script>
+
+  <script>
+    (function () {
+      // Uploads a custom colour image to the server and attaches the returned
+      // image URL to the product form as a `Custom color` line-item property, so
+      // it travels with the variant into the cart like the preset wood finishes.
+      var UPLOAD_ENDPOINT = 'https://vnote.io.vn/api/upload-image';
+      var MAX_BYTES = 10 * 1024 * 1024;
+
+      function toast(message, type) {
+        if (window.showToast) {
+          window.showToast({ message: message, type: type, position: 'bottom-right', duration: 4000 });
+        }
+      }
+
+      function initCustomColorUpload() {
+        document.querySelectorAll('[data-custom-color]:not([data-custom-color-init])').forEach(function (tile) {
+          tile.dataset.customColorInit = 'true';
+
+          var input = tile.querySelector('[data-custom-color-input]');
+          var icon = tile.querySelector('[data-custom-color-icon]');
+          var spinner = tile.querySelector('[data-custom-color-spinner]');
+          var preview = tile.querySelector('[data-custom-color-preview]');
+          var label = tile.querySelector('[data-custom-color-label]');
+          var property = tile.querySelector('[data-custom-color-property]');
+          if (!input) return;
+
+          var defaultLabel = label ? label.textContent : 'Custom color';
+
+          function setLoading(loading) {
+            tile.classList.toggle('is-loading', loading);
+            input.disabled = loading;
+            if (spinner) spinner.hidden = !loading;
+            if (icon) icon.hidden = loading || tile.classList.contains('is-uploaded');
+            if (label) label.textContent = loading ? 'Uploading…' : defaultLabel;
+          }
+
+          input.addEventListener('change', function () {
+            var file = input.files && input.files[0];
+            if (!file) return;
+
+            if (file.size > MAX_BYTES) {
+              input.value = '';
+              toast('Image exceeds 10MB limit.', 'error');
+              return;
+            }
+
+            setLoading(true);
+
+            var formData = new FormData();
+            formData.append('image', file);
+
+            // Do not set Content-Type: let the browser add the multipart boundary.
+            fetch(UPLOAD_ENDPOINT, { method: 'POST', body: formData })
+              .then(function (response) {
+                return response
+                  .json()
+                  .catch(function () {
+                    return {};
+                  })
+                  .then(function (data) {
+                    return { ok: response.ok, data: data };
+                  });
+              })
+              .then(function (result) {
+                if (result.ok && result.data && result.data.image_url) {
+                  var url = result.data.image_url;
+                  if (preview) {
+                    preview.src = url;
+                    preview.hidden = false;
+                  }
+                  if (icon) icon.hidden = true;
+                  if (property) {
+                    property.value = url;
+                    property.disabled = false;
+                  }
+                  tile.classList.add('is-uploaded');
+                  toast('Custom color uploaded.', 'success');
+                } else {
+                  var detail = (result.data && result.data.detail) || 'Upload failed. Please try again.';
+                  toast(detail, 'error');
+                }
+              })
+              .catch(function () {
+                toast('Upload failed. Please try again.', 'error');
+              })
+              .finally(function () {
+                setLoading(false);
+                input.value = ''; // allow re-picking the same file
+              });
+          });
+        });
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initCustomColorUpload);
+      } else {
+        initCustomColorUpload();
+      }
+    })();
   </script>
 {% endunless %}
 
