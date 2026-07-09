@@ -334,6 +334,10 @@
         <button type="submit" class="cart-drawer__discount-apply" data-cart-discount-apply>Apply</button>
       </div>
     </form>
+    <div class="cart-drawer__voucher-loading" data-cart-discount-loading hidden aria-live="polite">
+      <span class="cart-drawer__spinner"></span>
+      <span class="cart-drawer__visually-hidden">Applying discount</span>
+    </div>
   </div>
 </div>
 
@@ -1456,6 +1460,21 @@
     text-align: center;
   }
 
+  /* Spinner overlay shown inside the discount popup while a code is validated. */
+  .cart-drawer__voucher-loading {
+    position: absolute;
+    inset: var(--sp-0);
+    display: grid;
+    place-items: center;
+    border-radius: var(--radius-xl);
+    background: color-mix(in srgb, var(--surface-elevated) 72%, transparent);
+    z-index: 1;
+  }
+
+  .cart-drawer__voucher-loading[hidden] {
+    display: none;
+  }
+
   .cart-drawer__voucher-close {
     position: absolute;
     inset-block-start: var(--sp-5);
@@ -2041,78 +2060,68 @@
     const applyDiscount = async (form) => {
       const input = form.querySelector('[data-cart-discount-input]');
       const code = (input?.value || '').trim();
-      const shell = getShell();
-      const loader = shell?.querySelector('[data-cart-drawer-loading]');
-      if (!loader) return;
       if (!code) {
         input?.focus();
         return;
       }
-      loader.hidden = false;
+      const popup = getDiscountPopup();
+      const popupLoader = popup?.querySelector('[data-cart-discount-loading]');
+      const applyBtn = form.querySelector('[data-cart-discount-apply]');
       const root = window.Shopify?.routes?.root || '/';
       const toast = (options) => {
         if (window.showToast) window.showToast(Object.assign({ position: 'bottom-right' }, options));
       };
 
+      // The spinner shows inside the popup (not the cart drawer) while we validate.
+      if (popupLoader) popupLoader.hidden = false;
+      if (applyBtn) applyBtn.disabled = true;
+
       try {
-        // Shopify's AJAX cart API can't apply discount codes; visiting /discount/CODE
-        // applies the code to the cart session server-side (302 -> storefront).
-        let response = null;
-        try {
-          response = await fetch(`${root}discount/${encodeURIComponent(code)}`, { redirect: 'follow' });
-        } catch (error) {
-          response = null;
-        }
+        // POST /cart/update.js with a discount applies the code to the cart session on
+        // BOTH the live store and the theme dev preview — unlike /discount/CODE, which the
+        // preview blocks with 401. The returned cart reports each code's `applicable`
+        // flag, so we can give a definitive success/fail result (no vague "at checkout").
+        const res = await fetch(`${root}cart/update.js`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ discount: code }),
+        });
+        const cart = res.ok ? await res.json() : null;
+        const entry = cart
+          ? (cart.discount_codes || []).find(
+              (discount) => (discount.code || '').toLowerCase() === code.toLowerCase()
+            )
+          : null;
+        // `applicable` is Shopify's validity signal in the update response. We don't read
+        // `total_discount` here — the cart/update.js body doesn't populate it yet; the
+        // real reduced totals come from refreshDrawer's server-rendered cart below.
+        const applied = !!entry && entry.applicable === true;
 
-        if (response && response.ok) {
-          // Confirm via /cart.js: entered codes appear in `discount_codes`, each
-          // with an `applicable` flag (Shopify's validity signal). There is no
-          // top-level `discount_applications` in /cart.js — that's Liquid-only.
-          const cart = await (
-            await fetch(`${root}cart.js`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-          ).json();
-          const entry = (cart.discount_codes || []).find(
-            (discount) => (discount.code || '').toLowerCase() === code.toLowerCase()
-          );
-          const applied = entry ? entry.applicable !== false : (cart.total_discount || 0) > 0;
-
-          if (applied) {
-            rememberCheckoutDiscount(code);
-            await refreshDrawer({ open: true });
-            closeDiscountPopup();
-            toast({ message: `Discount “${code}” applied.`, type: 'success' });
-          } else if (entry) {
-            // The code is recognized but doesn't apply to the current cart — usually
-            // an unmet minimum spend, or it isn't active/eligible yet. Keep it: it
-            // stays on the cart and Shopify applies it automatically once the cart
-            // qualifies (so raising the quantity can make it kick in).
-            rememberCheckoutDiscount(code);
-            loader.hidden = true;
-            syncPendingDiscount();
-            closeDiscountPopup();
-            toast({
-              message: `“${code}” can’t be applied to your cart yet — it may require a higher order total or other conditions.`,
-              type: 'info',
-            });
-          } else {
-            // The code isn't recognized at all.
-            forgetCheckoutDiscount();
-            loader.hidden = true;
-            toast({ message: `“${code}” isn’t a valid discount code.`, type: 'error' });
+        if (applied) {
+          // Really applied and reducing the cart — re-render the drawer so the discount
+          // row and the reduced subtotal show immediately.
+          await refreshDrawer({ open: true });
+          closeDiscountPopup();
+          toast({ message: `Discount “${code}” applied.`, type: 'success' });
+        } else {
+          // Invalid or not applicable — drop the code so it doesn't linger on the cart,
+          // then report a clear failure.
+          await fetch(`${root}cart/update.js`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({ discount: '' }),
+          });
+          if (input) {
+            input.focus();
+            input.select();
           }
-          return;
+          toast({ message: `“${code}” isn’t a valid discount code.`, type: 'error' });
         }
-
-        // /discount isn't reachable here (theme dev preview blocks it). We can't
-        // validate in-page, so carry the code to checkout where it gets applied.
-        rememberCheckoutDiscount(code);
-        loader.hidden = true;
-        syncPendingDiscount();
-        closeDiscountPopup();
-        toast({ message: `“${code}” will be applied at checkout.`, type: 'info' });
       } catch (error) {
-        loader.hidden = true;
         toast({ message: 'We couldn’t apply that code. Please try again.', type: 'error' });
+      } finally {
+        if (popupLoader) popupLoader.hidden = true;
+        if (applyBtn) applyBtn.disabled = false;
       }
     };
 
