@@ -82,7 +82,6 @@
   }
   .main-product__subtitle {
     margin: 0;
-    max-width: 46ch;
     font-size: var(--font-size-body-lg);
     line-height: var(--line-height-relaxed);
     color: var(--text-secondary);
@@ -570,6 +569,50 @@
       transition: none;
     }
   }
+
+  /* Judge.me star rating, placed right under the price */
+  .main-product__rating {
+    display: flex;
+    gap: var(--sp-5);
+    align-items: center;
+    line-height: 1;
+  }
+  .main-product__rating:empty {
+    display: none;
+  }
+  .main-product__rating .jdgm-preview-badge {
+    display: inline-flex;
+    align-items: center;
+  }
+  .main-product__rating .jdgm-prev-badge {
+    display: inline-flex !important;
+    gap: 8px;
+  }
+
+  .main-product__rating .free-shipping-included {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--font-size-body-sm);
+    padding: var(--sp-1) var(--sp-3);
+    background-color: #b2e6b2;
+    color: #333;
+    width: fit-content;
+    border-radius: 99px;
+  }
+
+  .main-product__rating .free-shipping-included svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  @media screen and (max-width: 400px) {
+    .main-product__rating {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 4px;
+    }
+  }
 {% endstylesheet %}
 
 {% liquid
@@ -618,7 +661,24 @@
 
       {% render 'product-price', product: product, current_variant: current_variant %}
 
-      <div id="judgeme_product_reviews_preview_badge_{{ product.id }}"></div>
+      {%- comment -%}
+        Judge.me star rating rendered from the product's judgeme.badge metafield so it appears
+        right under the price — independent of Judge.me's automatic JS placement (which otherwise
+        injects the badge elsewhere and leaves the preview placeholder empty). The Judge.me script
+        re-hydrates this .jdgm-preview-badge with live data on load.
+      {%- endcomment -%}
+      <div class="main-product__rating">
+        <div class="jdgm-widget jdgm-preview-badge" data-id="{{ product.id }}">
+          {{ product.metafields.judgeme.badge }}
+        </div>
+        <div class="free-shipping-included">
+          <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24">
+            <path d="M0 0h24v24H0z" fill="none"></path>
+            <path fill="currentColor" d="M18 8h-2V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10h2a3 3 0 1 0 6 0h4a3 3 0 1 0 6 0h2v-5zM7 18.5a1.5 1.5 0 1 1 .001-3.001A1.5 1.5 0 0 1 7 18.5M4 14V7h10v7zm13 4.5a1.5 1.5 0 1 1 .001-3.001A1.5 1.5 0 0 1 17 18.5"></path>
+          </svg>
+          <span class="free-shipping-included-text">Free shipping included</span>
+        </div>
+      </div>
 
       <ul class="main-product__features">
         <li class="main-product__feature">
