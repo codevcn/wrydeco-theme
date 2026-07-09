@@ -34,12 +34,14 @@
         -%}
         {%- assign material = product.metafields.custom.material.value | default: section.settings.material_default -%}
         {%- assign finish = product.metafields.custom.finish.value | default: section.settings.finish_default -%}
-        {%- assign badge_label = section.settings.made_to_order_badge -%}
-        {%- assign badge_icon = 'clock' -%}
-        {%- if forloop.index == 1 or forloop.index == 4 -%}
-          {%- assign badge_label = section.settings.best_seller_badge -%}
-          {%- assign badge_icon = 'star' -%}
-        {%- endif -%}
+        {%- comment -%} Show a "New" badge for products in the "new-arrivals" collection. {%- endcomment -%}
+        {%- assign is_new = false -%}
+        {%- for coll in product.collections -%}
+          {%- if coll.handle == 'new-arrivals' -%}
+            {%- assign is_new = true -%}
+            {%- break -%}
+          {%- endif -%}
+        {%- endfor -%}
 
         <article class="signature-pieces__card" role="listitem">
           <div class="signature-pieces__media">
@@ -67,19 +69,14 @@
               {%- endif -%}
             </a>
 
-            {%- if badge_label != blank -%}
-              <span class="signature-pieces__badge">
-                {%- if badge_icon == 'star' -%}
-                  <svg aria-hidden="true" viewBox="0 0 16 16">
-                    <path d="m8 1.7 1.7 3.5 3.9.6-2.8 2.7.7 3.9L8 10.6l-3.5 1.8.7-3.9-2.8-2.7 3.9-.6L8 1.7Z"/>
-                  </svg>
-                {%- else -%}
-                  <svg aria-hidden="true" viewBox="0 0 16 16" fill="none">
-                    <circle cx="8" cy="8" r="5.6" stroke="currentColor" stroke-width="1.2"/>
-                    <path d="M8 4.8v3.4l2.2 1.2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                {%- endif -%}
-                {{ badge_label | escape }}
+            {%- if is_new -%}
+              <span class="signature-pieces__new">
+                <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 36 36">
+                  <path d="M0 0h36v36H0z" fill="none" />
+                  <path fill="currentColor" d="m34.11 24.49l-3.92-6.62l3.88-6.35a1 1 0 0 0-.85-1.52H2a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h31.25a1 1 0 0 0 .86-1.51m-23.6-3.31H9.39l-3.26-4.34v4.35H5V15h1.13l3.27 4.35V15h1.12ZM16.84 16h-3.53v1.49h3.2v1h-3.2v1.61h3.53v1h-4.66V15h4.65Zm8.29 5.16H24l-1.55-4.59l-1.55 4.61h-1.12l-2-6.18H19l1.32 4.43L21.84 15h1.22l1.46 4.43L25.85 15h1.23Z" class="clr-i-solid clr-i-solid-path-1" />
+                  <path fill="none" d="M0 0h36v36H0z" />
+                </svg>
+                <span class="signature-pieces__new-text">New</span>
               </span>
             {%- endif -%}
 
@@ -106,6 +103,15 @@
             </h3>
             {%- if artist != blank -%}
               <p class="signature-pieces__artist">by {{ artist | escape }}</p>
+            {%- endif -%}
+            {%- comment -%}
+              Judge.me star rating, server-rendered from the product's judgeme.badge metafield.
+              Judge.me hides the badge for products with no reviews; the CSS collapses the row then.
+            {%- endcomment -%}
+            {%- if product.metafields.judgeme.badge != blank -%}
+              <div class="signature-pieces__rating">
+                {{ product.metafields.judgeme.badge }}
+              </div>
             {%- endif -%}
             <p class="signature-pieces__meta">
               {{ material | escape }}
@@ -458,6 +464,31 @@
     opacity: 0.7;
   }
 
+  .signature-pieces__new {
+    position: absolute;
+    top: 13px;
+    left: 13px;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    border-radius: 99px;
+    background: var(--color-milk, #fffdf9);
+    color: var(--color-earth-brown, #4a2c18);
+    font-family: var(--font-body);
+    font-weight: var(--font-weight-bold);
+    font-size: 14px;
+    line-height: 1;
+    letter-spacing: 0.02em;
+  }
+  .signature-pieces__new svg {
+    display: flex;
+    width: 24px;
+    height: 24px;
+    margin-right: 4px;
+    fill: currentColor;
+  }
+
   .signature-pieces__quick svg {
     width: 18px;
     height: 18px;
@@ -499,6 +530,45 @@
     font-weight: var(--font-weight-regular);
     line-height: 1.2;
     color: var(--color-muted, #6a625c);
+  }
+
+  .signature-pieces__rating {
+    margin: 0 0 10px;
+    line-height: 1;
+    /* Colour the Judge.me stars with the theme's star-rating token. */
+    --jm-review-widget-star-and-histogram-color: var(--color-star-rating, #cba077);
+  }
+
+  /* The judgeme.badge metafield ships the badge as display:none (meant to be revealed
+     by Judge.me's own widget JS, which doesn't hydrate this static copy). Reveal it here
+     so the server-rendered stars show immediately. */
+  .signature-pieces__rating .jdgm-prev-badge {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 5px;
+    font-size: 13px;
+  }
+
+  .signature-pieces__rating .jdgm-star {
+    color: var(--color-star-rating, #cba077) !important;
+  }
+
+  /* Replace Judge.me's verbose "N reviews" label with a compact count, e.g. (11). */
+  .signature-pieces__rating .jdgm-prev-badge__text {
+    display: none;
+  }
+
+  .signature-pieces__rating .jdgm-prev-badge::after {
+    content: '(' attr(data-number-of-reviews) ')';
+    font-family: var(--font-body);
+    font-size: 13px;
+    line-height: 1;
+    color: var(--color-muted, #6a625c);
+  }
+
+  /* Hide the row entirely for products with no reviews (don't show empty stars). */
+  .signature-pieces__rating:has(.jdgm-prev-badge[data-number-of-reviews='0']) {
+    display: none;
   }
 
   .signature-pieces__meta {

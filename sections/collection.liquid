@@ -413,6 +413,15 @@
 
               assign material = product.metafields.custom.material
               assign ptype = product.type
+
+              # Flag products in the "new-arrivals" collection for the "New" badge.
+              assign is_new = false
+              for coll in product.collections
+                if coll.handle == 'new-arrivals'
+                  assign is_new = true
+                  break
+                endif
+              endfor
             %}
             {% assign card_variant = product.selected_or_first_available_variant | default: product.variants.first %}
             <article class="pcard">
@@ -476,6 +485,17 @@
                     <path d="M.5 1a.5.5 0 0 0 0 1h1.11l.401 1.607 1.498 7.985A.5.5 0 0 0 4 12h1a2 2 0 1 0 0 4 2 2 0 0 0 0-4h7a2 2 0 1 0 0 4 2 2 0 0 0 0-4h1a.5.5 0 0 0 .491-.408l1.5-8A.5.5 0 0 0 14.5 3H2.89l-.405-1.621A.5.5 0 0 0 2 1zM6 14a1 1 0 1 1-2 0 1 1 0 0 1 2 0m7 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0M9 5.5V7h1.5a.5.5 0 0 1 0 1H9v1.5a.5.5 0 0 1-1 0V8H6.5a.5.5 0 0 1 0-1H8V5.5a.5.5 0 0 1 1 0"/>
                   </svg>
                 </button>
+
+                {%- if is_new -%}
+                  <span class="pcard__new">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 36 36">
+                      <path d="M0 0h36v36H0z" fill="none" />
+                      <path fill="currentColor" d="m34.11 24.49l-3.92-6.62l3.88-6.35a1 1 0 0 0-.85-1.52H2a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h31.25a1 1 0 0 0 .86-1.51m-23.6-3.31H9.39l-3.26-4.34v4.35H5V15h1.13l3.27 4.35V15h1.12ZM16.84 16h-3.53v1.49h3.2v1h-3.2v1.61h3.53v1h-4.66V15h4.65Zm8.29 5.16H24l-1.55-4.59l-1.55 4.61h-1.12l-2-6.18H19l1.32 4.43L21.84 15h1.22l1.46 4.43L25.85 15h1.23Z" class="clr-i-solid clr-i-solid-path-1" />
+                      <path fill="none" d="M0 0h36v36H0z" />
+                    </svg>
+                    <span class="pcard__new-text">New</span>
+                  </span>
+                {%- endif -%}
               </div>
 
               <div class="pcard__info">
@@ -494,6 +514,16 @@
                 {% if artist != blank %}
                   <p class="pcard__artist">Crafted By {{ artist | escape }}</p>
                 {% endif %}
+
+                {%- comment -%}
+                  Judge.me star rating from the product's judgeme.badge metafield (server-rendered).
+                  Hidden by CSS for products with no reviews.
+                {%- endcomment -%}
+                {%- if product.metafields.judgeme.badge != blank -%}
+                  <div class="pcard__rating">
+                    {{ product.metafields.judgeme.badge }}
+                  </div>
+                {%- endif -%}
 
                 <p class="pcard__price">
                   <span style="font-weight: var(--font-weight-light);">From</span> {{ product.price | money }}
@@ -1129,6 +1159,64 @@
     opacity: 0.6;
   }
 
+  .pcard__new {
+    position: absolute;
+    top: var(--sp-3);
+    left: var(--sp-3);
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    border-radius: 99px;
+    background: var(--color-milk, #fffdf9);
+    color: var(--color-earth-brown, #4a2c18);
+    font-family: var(--font-body);
+    font-weight: var(--font-weight-bold);
+    font-size: 14px;
+    line-height: 1;
+    letter-spacing: 0.02em;
+  }
+  .pcard__new svg {
+    display: flex;
+    width: 24px;
+    height: 24px;
+    margin-right: 4px;
+    fill: currentColor;
+  }
+
+  .pcard__rating {
+    margin: var(--sp-2) 0 0;
+    line-height: 1;
+    /* Colour the Judge.me stars with the theme's star-rating token. */
+    --jm-review-widget-star-and-histogram-color: var(--color-star-rating, #cba077);
+  }
+  /* The judgeme.badge metafield ships display:none (meant for Judge.me's own JS, which
+     doesn't hydrate this static copy) — reveal it so the SSR stars show. */
+  .pcard__rating .jdgm-prev-badge {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 5px;
+    font-size: 13px;
+  }
+  .pcard__rating .jdgm-star {
+    color: var(--color-star-rating, #cba077) !important;
+  }
+  /* Replace Judge.me's verbose "N reviews" label with a compact count, e.g. (11). */
+  .pcard__rating .jdgm-prev-badge__text {
+    display: none;
+  }
+  .pcard__rating .jdgm-prev-badge::after {
+    content: '(' attr(data-number-of-reviews) ')';
+    font-family: var(--font-body);
+    font-size: 13px;
+    line-height: 1;
+    color: var(--color-muted, #6a625c);
+  }
+  /* Hide the row entirely for products with no reviews. */
+  .pcard__rating:has(.jdgm-prev-badge[data-number-of-reviews='0']) {
+    display: none;
+  }
+
   .pcard__info {
     display: flex;
     flex-direction: column;
@@ -1163,9 +1251,9 @@
     letter-spacing: 0.01em;
   }
   .pcard__artist {
-    margin: var(--sp-3) 0 0;
-    font-size: var(--font-size-body-md);
-    font-family: var(--font-roboto);
+    margin: var(--sp-2) 0 0;
+    font-size: var(--font-size-body-sm);
+    font-family: var(--font-body);
     color: var(--color-clay);
   }
   .pcard__meta-item {
@@ -1192,7 +1280,7 @@
     background-color: var(--color-orange);
   }
   .pcard__price {
-    margin: var(--sp-4) 0 0;
+    margin: var(--sp-1) 0 0;
     font-family: var(--font-body);
     font-size: var(--font-size-body-lg);
     font-weight: var(--font-weight-semibold);

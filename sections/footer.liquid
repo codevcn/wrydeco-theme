@@ -106,7 +106,7 @@
               <path d="M16 8.049c0-4.446-3.582-8.05-8-8.05C3.58 0-.002 3.603-.002 8.05c0 4.017 2.926 7.347 6.75 7.951v-5.625h-2.03V8.05H6.75V6.275c0-2.017 1.195-3.131 3.022-3.131.876 0 1.791.157 1.791.157v1.98h-1.009c-.993 0-1.303.621-1.303 1.258v1.51h2.218l-.354 2.326H9.25V16c3.824-.604 6.75-3.934 6.75-7.951"/>
             </svg>
           </a>
-          <a href="https://www.instagram.com/" aria-label="Instagram" target="_blank" rel="noopener noreferrer">
+          <a href="https://www.instagram.com/wrydeco/" aria-label="Instagram" target="_blank" rel="noopener noreferrer">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="16"
@@ -175,7 +175,10 @@
             autocomplete="email"
             required
           >
-          <button type="submit" class="footer-custom__submit">Subscribe</button>
+          <button type="submit" class="footer-custom__submit" data-newsletter-submit>
+            <span class="footer-custom__submit-label">Subscribe</span>
+            <span class="footer-custom__submit-spinner" aria-hidden="true"></span>
+          </button>
         </div>
       {% endform %}
       <p class="footer-custom__privacy">
@@ -1169,7 +1172,96 @@
       gap: 18px 26px;
     }
   }
+
+  /* Newsletter submit loading state (AJAX in-place submit) */
+  .footer-custom__submit[aria-busy='true'] {
+    cursor: default;
+  }
+  .footer-custom__submit-spinner {
+    display: none;
+    width: var(--sp-4);
+    height: var(--sp-4);
+    border: 2px solid color-mix(in srgb, var(--color-dark-clay, #72482d) 35%, transparent);
+    border-top-color: var(--color-dark-clay, #72482d);
+    border-radius: var(--radius-full);
+    animation: footer-newsletter-spin var(--timing-extra-long, 0.7s) linear infinite;
+  }
+  .footer-custom__submit[aria-busy='true'] .footer-custom__submit-label {
+    display: none;
+  }
+  .footer-custom__submit[aria-busy='true'] .footer-custom__submit-spinner {
+    display: inline-block;
+  }
+  @keyframes footer-newsletter-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
 {% endstylesheet %}
+
+{% javascript %}
+  (function () {
+    var form = document.querySelector('.footer-custom__form');
+    if (!form || form.dataset.newsletterAjax === 'true') return;
+    form.dataset.newsletterAjax = 'true';
+
+    var btn = form.querySelector('[data-newsletter-submit]');
+    if (!btn) return;
+
+    function toast(message, type) {
+      if (window.showToast) {
+        window.showToast({ message: message, type: type, position: 'bottom-right' });
+      }
+    }
+
+    function setLoading(state) {
+      if (state) {
+        btn.setAttribute('aria-busy', 'true');
+        btn.disabled = true;
+      } else {
+        btn.removeAttribute('aria-busy');
+        btn.disabled = false;
+      }
+    }
+
+    form.addEventListener('submit', function (event) {
+      // Let the browser's native validation handle empty/invalid emails first.
+      if (typeof form.checkValidity === 'function' && !form.checkValidity()) return;
+      if (btn.getAttribute('aria-busy') === 'true') return;
+
+      event.preventDefault();
+      setLoading(true);
+
+      var action = (form.getAttribute('action') || '/contact').split('#')[0];
+      var data = new FormData(form);
+
+      fetch(action, { method: 'POST', body: data, redirect: 'follow' })
+        .then(function (res) {
+          // Shopify 302-redirects on a successful customer signup (adds
+          // ?customer_posted=true); a validation error re-renders in place (no redirect).
+          var success = res.ok && (res.redirected || /customer_posted=true/.test(res.url));
+          if (success) {
+            setLoading(false);
+            form.reset();
+            toast('Thanks for subscribing.', 'success');
+            return;
+          }
+          if (res.ok) {
+            setLoading(false);
+            toast('We couldn’t subscribe that email. Please try again.', 'error');
+            return;
+          }
+          // Endpoint not reachable via AJAX (e.g. some preview environments) —
+          // degrade gracefully to the normal full-page form submission.
+          form.submit();
+        })
+        .catch(function () {
+          // Network/AJAX failure — fall back to the native submission.
+          form.submit();
+        });
+    });
+  })();
+{% endjavascript %}
 
 {% schema %}
 {
