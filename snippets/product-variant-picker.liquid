@@ -340,7 +340,7 @@
                 options it stays hidden but present, keeping the variant matrix intact.
               {% endcomment %}
               {% if is_finish %}
-                <div class="variant-tile variant-tile--color variant-tile--upload" data-custom-color>
+                <div class="variant-tile variant-tile--color variant-tile--upload{% unless value.available %} is-disabled{% endunless %}" data-custom-color>
                   <input
                     type="radio"
                     class="variant-tile__input"
@@ -352,6 +352,9 @@
                     {% if option.selected_value == value %}
                       checked="checked"
                     {% endif %}
+                    {% unless value.available %}
+                      disabled
+                    {% endunless %}
                   >
 
                   <span class="variant-tile__media">
@@ -628,33 +631,10 @@
         });
       };
 
-      const customFinishRadio = document.querySelector('[data-custom-color-radio]');
-
       const syncOptionAvailability = () => {
         Object.assign(selectedOptions, getSelectedOptions());
 
-        // The custom finish is made-to-order: always keep it selectable.
-        if (customFinishRadio) {
-          customFinishRadio.disabled = false;
-          const customTile = customFinishRadio.closest('.variant-tile');
-          if (customTile) customTile.classList.remove('is-disabled');
-        }
-
-        // When custom is chosen there is no stock matrix to honour, so leave
-        // every other option freely selectable.
-        if (customFinishRadio && customFinishRadio.checked) {
-          variantInputs.forEach(input => {
-            if (input.dataset.customColorRadio) return;
-            input.disabled = false;
-            input.setAttribute('aria-disabled', 'false');
-            const tile = input.closest('.variant-tile');
-            if (tile) tile.classList.remove('is-disabled');
-          });
-          return;
-        }
-
         variantInputs.forEach(input => {
-          if (input.dataset.customColorRadio) return;
           const tile = input.closest('.variant-tile');
           const isCurrentSelection = input.checked;
           const isPickable = isCurrentSelection || isOptionValuePickable(input);
@@ -689,12 +669,8 @@
 
             const addText = document.querySelector('[data-add-to-cart-text]');
             const addBtn = document.querySelector('form[data-type="add-to-cart-form"] button[name="add"]');
-            // The custom finish is made-to-order, so it is purchasable regardless
-            // of the placeholder variant's stock availability.
-            const isCustomFinishSelected = customFinishRadio ? customFinishRadio.checked : false;
-            const purchasable = selectedVariant.available || isCustomFinishSelected;
-            if (addText) addText.textContent = purchasable ? 'ADD TO CART' : 'SOLD OUT';
-            if (addBtn) addBtn.disabled = !purchasable;
+            if (addText) addText.textContent = selectedVariant.available ? 'ADD TO CART' : 'SOLD OUT';
+            if (addBtn) addBtn.disabled = !selectedVariant.available;
 
             if (window.history && window.history.replaceState) {
               const nextUrl = new URL(window.location.href);
@@ -909,8 +885,10 @@
 
           // Empty → pick a file. Uploaded but not selected → select it.
           // Already the active choice → pick again to replace the image.
+          // Unavailable for the current size/surface → behave like a disabled tile.
           tile.addEventListener('click', function () {
             if (tile.classList.contains('is-loading')) return;
+            if (radio.disabled || tile.classList.contains('is-disabled')) return;
             if (!uploadedUrl || radio.checked) {
               fileInput.click();
             } else {
