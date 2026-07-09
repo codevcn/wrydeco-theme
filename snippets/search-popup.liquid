@@ -2,7 +2,11 @@
   Renders the global product search dialog with recent searches and predictive results.
 {% enddoc %}
 
-<search-popup class="search-popup-wrapper">
+<search-popup
+  class="search-popup-wrapper"
+  data-currency-code="{{ localization.country.currency.iso_code | default: cart.currency.iso_code | default: shop.currency | escape }}"
+  data-locale="{{ request.locale.iso_code | default: 'en' | escape }}"
+>
   <div class="search-popup__overlay">
     <div class="search-popup__content" role="dialog" aria-modal="true" aria-labelledby="SearchPopupTitle">
       <div class="search-popup__header">
@@ -109,7 +113,7 @@
                     {{- default_product.type | default: 'Handcrafted furniture' | escape -}}
                   </span>
                   <span class="search-product-card__title">{{ default_product.title | escape }}</span>
-                  <span class="search-product-card__price">{{ default_product.price | money }}</span>
+                  <span class="search-product-card__price">{{ default_product.price | money_without_trailing_zeros }}</span>
                 </div>
               </a>
             {% endfor %}
@@ -145,6 +149,65 @@
 </search-popup>
 
 <script src="{{ 'search-popup.js' | file_url }}" defer></script>
+<script>
+  window.addEventListener('DOMContentLoaded', () => {
+    customElements.whenDefined('search-popup').then(() => {
+      const SearchPopup = customElements.get('search-popup');
+      if (!SearchPopup || SearchPopup.prototype.localizedPricePatched) return;
+
+      const getCurrencyMeta = (element) => {
+        const root = element?.closest?.('search-popup') || document.querySelector('search-popup');
+        return {
+          code: root?.dataset.currencyCode || window.Shopify?.currency?.active || 'VND',
+          locale: root?.dataset.locale || document.documentElement.lang || 'en',
+        };
+      };
+
+      const formatPrice = (rawPrice, element) => {
+        const value = String(rawPrice || '').trim();
+        if (!value) return '';
+
+        const { code, locale } = getCurrencyMeta(element);
+        const isVnd = code.toUpperCase() === 'VND' || value.includes('₫');
+        const digits = value.replace(/[^\d]/g, '');
+
+        if (isVnd && digits) {
+          return `${Number(digits).toLocaleString('vi-VN')}₫`;
+        }
+
+        const numericValue = Number(value.replace(/[^\d.]/g, ''));
+        if (!Number.isFinite(numericValue)) return value;
+
+        return new Intl.NumberFormat(locale, {
+          style: 'currency',
+          currency: code,
+          maximumFractionDigits: code.toUpperCase() === 'VND' ? 0 : 2,
+        }).format(numericValue);
+      };
+
+      const normalizeRenderedPrices = (root) => {
+        root.querySelectorAll('.search-product-card__price').forEach((price) => {
+          price.textContent = formatPrice(price.textContent, price);
+        });
+      };
+
+      const originalCreateProductCardHtml = SearchPopup.prototype.createProductCardHtml;
+      SearchPopup.prototype.createProductCardHtml = function (product, index = 0, query = '') {
+        const html = originalCreateProductCardHtml.call(this, product, index, query);
+        const formattedPrice = formatPrice(product?.price, this);
+        if (!formattedPrice) return html;
+
+        return html.replace(
+          /<span class="search-product-card__price">[\s\S]*?<\/span>/,
+          `<span class="search-product-card__price">${this.escapeHtml(formattedPrice)}</span>`
+        );
+      };
+
+      SearchPopup.prototype.localizedPricePatched = true;
+      document.querySelectorAll('search-popup').forEach(normalizeRenderedPrices);
+    });
+  });
+</script>
 
 {% stylesheet %}
   search-popup {

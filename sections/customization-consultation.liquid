@@ -8,9 +8,17 @@
 {% liquid
   assign form_id = 'CustomizationConsultation-' | append: section.id
   assign privacy_url = shop.privacy_policy.url | default: routes.root_url
+  assign api_endpoint = section.settings.api_endpoint | default: 'https://vnote.io.vn/api/consultations'
 %}
 
-<section class="custom-inquiry" id="custom-inquiry" aria-labelledby="CustomInquiryTitle-{{ section.id }}">
+<section
+  class="custom-inquiry"
+  id="custom-inquiry"
+  aria-labelledby="CustomInquiryTitle-{{ section.id }}"
+  data-consultation-endpoint="{{ api_endpoint | escape }}"
+  data-success-message="{{ section.settings.success_message | escape }}"
+  data-error-message="{{ section.settings.error_message | escape }}"
+>
   <div class="custom-inquiry__inner">
     <div class="custom-inquiry__story">
       <p class="custom-inquiry__eyebrow">
@@ -61,45 +69,14 @@
         <h3>{{ section.settings.form_heading | escape }}</h3>
       </header>
 
-      {% form 'contact', id: form_id, class: 'custom-inquiry__form', enctype: 'multipart/form-data' %}
-        <input type="hidden" name="contact[tags]" value="custom-design-consultation">
-        <input type="hidden" name="contact[attachment_names]" value="" data-custom-file-names>
-
-        {% if form.posted_successfully? %}
-          <p
-            class="custom-inquiry__visually-hidden"
-            role="status"
-            data-custom-inquiry-toast
-            data-toast-type="success"
-            data-toast-message="{{ section.settings.success_message | escape }}"
-          >
-            {{ section.settings.success_message | escape }}
-          </p>
-          <noscript>
-            <p class="custom-inquiry__noscript-status">{{ section.settings.success_message | escape }}</p>
-          </noscript>
-        {% endif %}
-
-        {% if form.errors %}
-          <div
-            class="custom-inquiry__errors"
-            role="alert"
-            data-custom-inquiry-toast
-            data-toast-type="error"
-            data-toast-message="{{ section.settings.error_message | escape }}"
-          >
-            <p>{{ section.settings.error_message | escape }}</p>
-            {{ form.errors | default_errors }}
-          </div>
-        {% endif %}
-
+      <form id="{{ form_id }}" class="custom-inquiry__form" novalidate>
         <div class="custom-inquiry__field">
           <label for="{{ form_id }}-name">{{ section.settings.name_label | escape }}</label>
           <input
             id="{{ form_id }}-name"
             type="text"
-            name="contact[name]"
-            value="{{ form.name | default: customer.name | escape }}"
+            name="name"
+            value="{{ customer.name | escape }}"
             autocomplete="name"
             placeholder="{{ section.settings.name_placeholder | escape }}"
             required
@@ -111,16 +88,13 @@
           <input
             id="{{ form_id }}-email"
             type="email"
-            name="contact[email]"
-            value="{{ form.email | default: customer.email | escape }}"
+            name="email"
+            value="{{ customer.email | escape }}"
             autocomplete="email"
             autocorrect="off"
             autocapitalize="off"
             placeholder="{{ section.settings.email_placeholder | escape }}"
             required
-            {% if form.errors contains 'email' %}
-              aria-invalid="true"
-            {% endif %}
           >
         </div>
 
@@ -129,10 +103,11 @@
           <input
             id="{{ form_id }}-phone"
             type="tel"
-            name="contact[phone]"
-            value="{{ form.phone | default: customer.phone | escape }}"
+            name="phone"
+            value="{{ customer.phone | escape }}"
             autocomplete="tel"
             placeholder="{{ section.settings.phone_placeholder | escape }}"
+            required
           >
         </div>
 
@@ -140,27 +115,65 @@
           <label for="{{ form_id }}-request">{{ section.settings.request_label | escape }}</label>
           <textarea
             id="{{ form_id }}-request"
-            name="contact[body]"
+            name="message"
             placeholder="{{ section.settings.request_placeholder | escape }}"
             required
-          >{{ form.body }}</textarea>
+          ></textarea>
         </div>
 
         <div class="custom-inquiry__field custom-inquiry__field--full">
           <span class="custom-inquiry__field-label">{{ section.settings.attachment_label | escape }}</span>
-          <label class="custom-inquiry__upload" for="{{ form_id }}-files">
-            <input
-              id="{{ form_id }}-files"
-              type="file"
-              name="consultation_files"
-              accept=".jpg,.jpeg,.png,.pdf"
-              multiple
-              data-custom-files
+          <div class="custom-inquiry__upload-row">
+            <label class="custom-inquiry__upload" for="{{ form_id }}-files">
+              <input
+                id="{{ form_id }}-files"
+                type="file"
+                name="file"
+                accept=".jpg,.jpeg,.png,.pdf"
+                multiple
+                data-custom-files
+              >
+              <svg class="custom-inquiry__upload-icon" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 48 48">
+                <path d="M0 0h48v48H0z" fill="none" />
+                <path fill="currentColor" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 24L24 6l19 18H31v18H17V24z" />
+              </svg>
+              <span data-custom-file-copy>{{ section.settings.attachment_prompt | escape }}</span>
+              <small>{{ section.settings.attachment_help | escape }}</small>
+            </label>
+
+            <button
+              type="button"
+              class="custom-inquiry__file-count"
+              data-file-count-trigger
+              hidden
+              aria-haspopup="dialog"
+              aria-expanded="false"
+              aria-controls="{{ form_id }}-files-popup"
+              aria-label="View selected files"
             >
-            <span class="custom-inquiry__upload-icon" aria-hidden="true">&#8679;</span>
-            <span data-custom-file-copy>{{ section.settings.attachment_prompt | escape }}</span>
-            <small>{{ section.settings.attachment_help | escape }}</small>
-          </label>
+              <strong data-file-count-number>0</strong>
+              <small data-file-count-label>files</small>
+            </button>
+          </div>
+
+          <div class="custom-inquiry__files-popup" id="{{ form_id }}-files-popup" data-files-popup hidden>
+            <div class="custom-inquiry__files-scrim" data-files-popup-close></div>
+            <div
+              class="custom-inquiry__files-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="{{ form_id }}-files-title"
+              tabindex="-1"
+            >
+              <header class="custom-inquiry__files-head">
+                <h4 id="{{ form_id }}-files-title">Selected files</h4>
+                <button type="button" class="custom-inquiry__files-close" data-files-popup-close aria-label="Close">
+                  <span aria-hidden="true">&times;</span>
+                </button>
+              </header>
+              <ul class="custom-inquiry__files-list" data-files-list></ul>
+            </div>
+          </div>
         </div>
 
         <p class="custom-inquiry__security">
@@ -177,7 +190,7 @@
           {{ section.settings.privacy_prefix | escape }}
           <a href="{{ privacy_url }}">{{ section.settings.privacy_label | escape }}</a>.
         </p>
-      {% endform %}
+      </form>
     </div>
   </div>
 </section>
@@ -364,9 +377,9 @@
   .custom-inquiry__form-header h3 {
     margin: var(--sp-0);
     color: var(--color-earth-brown);
-    font-family: var(--font-display);
+    font-family: var(--font-body);
     font-size: var(--font-size-body-sm);
-    font-weight: var(--font-weight-semibold);
+    font-weight: var(--font-weight-bold);
     letter-spacing: calc(var(--letter-spacing-wide) * 4);
     text-transform: uppercase;
   }
@@ -380,9 +393,7 @@
   .custom-inquiry__field--full,
   .custom-inquiry__security,
   .custom-inquiry__submit,
-  .custom-inquiry__privacy,
-  .custom-inquiry__errors,
-  .custom-inquiry__noscript-status {
+  .custom-inquiry__privacy {
     grid-column: 1 / -1;
   }
 
@@ -437,9 +448,17 @@
     border-color: var(--color-error);
   }
 
+  .custom-inquiry__upload-row {
+    display: flex;
+    align-items: stretch;
+    gap: var(--sp-3);
+  }
+
   .custom-inquiry__upload {
     position: relative;
     display: flex;
+    flex: 1 1 auto;
+    min-inline-size: 0;
     flex-direction: column;
     align-items: center;
     justify-content: center;
@@ -467,18 +486,186 @@
 
   .custom-inquiry__upload-icon {
     color: var(--color-clay);
-    font-size: var(--font-size-body-xl);
-    line-height: var(--line-height-tight);
-  }
-
-  .custom-inquiry__upload > span:not(.custom-inquiry__upload-icon) {
-    font-size: var(--font-size-body-sm);
-    line-height: var(--line-height-relaxed);
+    height: var(--sp-6);
+    width: var(--sp-6);
   }
 
   .custom-inquiry__upload small {
     margin-block-start: var(--sp-2);
     font-size: var(--font-size-caption);
+  }
+
+  /* Square box showing the number of picked files; opens the files popup. */
+  .custom-inquiry__file-count {
+    display: flex;
+    flex: 0 0 auto;
+    align-self: stretch;
+    aspect-ratio: 1;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-1);
+    padding: var(--sp-2);
+    border: var(--border-width) solid var(--color-clay);
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--color-milk) 84%, transparent);
+    color: var(--color-earth-brown);
+    line-height: var(--line-height-tight);
+    cursor: pointer;
+    transition: var(--transition-fast);
+  }
+
+  .custom-inquiry__file-count[hidden] {
+    display: none;
+  }
+
+  .custom-inquiry__file-count:hover {
+    border-color: var(--color-earth-brown);
+    background: var(--color-earth-brown);
+    color: var(--text-inverse);
+  }
+
+  .custom-inquiry__file-count:focus-visible {
+    outline: calc(var(--border-width) * 2) solid var(--color-sage);
+    outline-offset: var(--sp-1);
+  }
+
+  .custom-inquiry__file-count strong {
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-2xl);
+    font-weight: var(--font-weight-semibold);
+  }
+
+  .custom-inquiry__file-count small {
+    font-size: var(--font-size-caption);
+    letter-spacing: calc(var(--letter-spacing-wide) * 2);
+    text-transform: uppercase;
+  }
+
+  /* Files popup */
+  .custom-inquiry__files-popup {
+    position: fixed;
+    inset: var(--sp-0);
+    z-index: var(--z-drawer);
+    display: grid;
+    place-items: center;
+    padding: var(--sp-4);
+  }
+
+  .custom-inquiry__files-popup[hidden] {
+    display: none;
+  }
+
+  .custom-inquiry__files-scrim {
+    position: absolute;
+    inset: var(--sp-0);
+    background: var(--bg-overlay);
+    opacity: 0;
+    transition: opacity var(--timing-base) var(--ease-standard);
+  }
+
+  .custom-inquiry__files-dialog {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    inline-size: min(26rem, 100%);
+    max-block-size: min(70vh, 32rem);
+    overflow: hidden;
+    border: var(--border-width) solid var(--border-default);
+    border-radius: var(--radius-lg);
+    background: var(--surface-overlay);
+    box-shadow: var(--shadow-modal);
+    opacity: 0;
+    transform: translateY(var(--sp-3)) scale(0.96);
+    transition: opacity var(--timing-base) var(--ease-standard), transform var(--timing-base) var(--ease-standard);
+  }
+
+  .custom-inquiry__files-popup.is-open .custom-inquiry__files-scrim {
+    opacity: 1;
+  }
+
+  .custom-inquiry__files-popup.is-open .custom-inquiry__files-dialog {
+    opacity: 1;
+    transform: none;
+  }
+
+  .custom-inquiry__files-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-3);
+    padding: var(--sp-3) var(--sp-4);
+    border-block-end: var(--border-width) solid var(--border-default);
+  }
+
+  .custom-inquiry__files-head h4 {
+    margin: var(--sp-0);
+    color: var(--color-earth-brown);
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: calc(var(--letter-spacing-wide) * 3);
+    text-transform: uppercase;
+  }
+
+  .custom-inquiry__files-close {
+    display: grid;
+    place-items: center;
+    height: var(--sp-6);
+    width: var(--sp-6);
+    border: 0;
+    border-radius: var(--radius-full);
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: var(--font-size-body-2xl);
+    line-height: var(--line-height-tight);
+    cursor: pointer;
+    transition: var(--transition-fast);
+  }
+
+  .custom-inquiry__files-close:hover {
+    background: var(--bg-secondary);
+    color: var(--color-earth-brown);
+  }
+
+  .custom-inquiry__files-close:focus-visible {
+    outline: calc(var(--border-width) * 2) solid var(--color-sage);
+    outline-offset: calc(var(--border-width) * -2);
+  }
+
+  .custom-inquiry__files-list {
+    display: grid;
+    gap: var(--sp-2);
+    margin: var(--sp-0);
+    padding: var(--sp-4);
+    overflow-y: auto;
+    list-style: none;
+  }
+
+  .custom-inquiry__files-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-3);
+    padding: var(--sp-2) var(--sp-3);
+    border: var(--border-width) solid var(--border-default);
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--color-milk) 60%, transparent);
+  }
+
+  .custom-inquiry__files-item .custom-inquiry__files-name {
+    overflow: hidden;
+    color: var(--text-primary);
+    font-size: var(--font-size-body-sm);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .custom-inquiry__files-item .custom-inquiry__files-size {
+    flex: 0 0 auto;
+    color: var(--text-secondary);
+    font-size: var(--font-size-caption);
+    white-space: nowrap;
   }
 
   .custom-inquiry__security {
@@ -535,31 +722,6 @@
   .custom-inquiry__privacy a {
     color: var(--text-secondary);
     text-decoration: underline;
-  }
-
-  .custom-inquiry__errors,
-  .custom-inquiry__noscript-status {
-    padding: var(--sp-4);
-    border: var(--border-width) solid var(--color-error);
-    border-radius: var(--radius-md);
-    font-size: var(--font-size-body-sm);
-  }
-
-  .custom-inquiry__errors p,
-  .custom-inquiry__noscript-status {
-    margin: var(--sp-0);
-  }
-
-  .custom-inquiry__visually-hidden {
-    position: absolute;
-    inline-size: var(--border-width);
-    block-size: var(--border-width);
-    padding: var(--sp-0);
-    margin: calc(var(--border-width) * -1);
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
   }
 
   @media screen and (max-width: 64rem) {
@@ -678,43 +840,178 @@
 
 {% javascript %}
   const initializeCustomizationInquiry = () => {
-    document.querySelectorAll('[data-custom-inquiry-toast]:not([data-toast-shown])').forEach((feedback) => {
-      if (!window.showToast) return;
-      feedback.dataset.toastShown = 'true';
-      window.showToast({
-        message: feedback.dataset.toastMessage,
-        type: feedback.dataset.toastType,
-        position: 'bottom-right',
-        duration: 4000,
+    const notify = (message, type) => {
+      if (window.showToast) {
+        window.showToast({ message, type, position: 'bottom-right', duration: 4000 });
+      }
+    };
+
+    document.querySelectorAll('.custom-inquiry__form:not([data-submit-initialized])').forEach((form) => {
+      form.dataset.submitInitialized = 'true';
+
+      const section = form.closest('.custom-inquiry');
+      const endpoint = section?.dataset.consultationEndpoint;
+      if (!endpoint) return;
+
+      const successMessage = section.dataset.successMessage || 'Thank you. Your consultation request has been sent.';
+      const errorMessage = section.dataset.errorMessage || 'Something went wrong. Please try again.';
+
+      form.addEventListener('submit', async (event) => {
+        // Fully AJAX: never let the browser navigate/reload.
+        event.preventDefault();
+
+        // Validate in JS (form is novalidate) and surface native hints.
+        if (!form.reportValidity()) return;
+
+        const submitButton = form.querySelector('.custom-inquiry__submit');
+        const labelSpan = submitButton?.querySelector('span:first-child');
+        const originalLabel = labelSpan?.textContent;
+
+        const getValue = (name) => form.querySelector(`[name="${name}"]`)?.value.trim() || '';
+
+        const formData = new FormData();
+        formData.append('name', getValue('name'));
+        formData.append('email', getValue('email'));
+        formData.append('phone', getValue('phone'));
+        formData.append('message', getValue('message'));
+
+        const fileInput = form.querySelector('[data-custom-files]');
+        if (fileInput?.files?.length) {
+          // Send every selected file under the same `file` key (List[UploadFile]).
+          Array.from(fileInput.files).forEach((file) => formData.append('file', file));
+        }
+
+        if (submitButton) {
+          submitButton.disabled = true;
+          submitButton.setAttribute('aria-busy', 'true');
+        }
+        if (labelSpan) labelSpan.textContent = 'Sending…';
+
+        try {
+          // Do not set Content-Type: let the browser add the multipart boundary.
+          const response = await fetch(endpoint, { method: 'POST', body: formData });
+
+          if (response.ok) {
+            notify(successMessage, 'success');
+            form.reset();
+            // Re-sync the file UI (count box, popup, dropzone copy) to the now-empty input.
+            if (fileInput) fileInput.dispatchEvent(new Event('change'));
+          } else {
+            notify(errorMessage, 'error');
+          }
+        } catch (error) {
+          notify(errorMessage, 'error');
+        } finally {
+          if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.removeAttribute('aria-busy');
+          }
+          if (labelSpan && originalLabel != null) labelSpan.textContent = originalLabel;
+        }
       });
     });
 
     document.querySelectorAll('[data-custom-files]:not([data-file-initialized])').forEach((input) => {
       input.dataset.fileInitialized = 'true';
+
+      const form = input.closest('form');
+      const fileCopy = form?.querySelector('[data-custom-file-copy]');
+      const countBtn = form?.querySelector('[data-file-count-trigger]');
+      const countNumber = form?.querySelector('[data-file-count-number]');
+      const countLabel = form?.querySelector('[data-file-count-label]');
+      const popup = form?.querySelector('[data-files-popup]');
+      const dialog = popup?.querySelector('.custom-inquiry__files-dialog');
+      const list = form?.querySelector('[data-files-list]');
+
+      if (fileCopy && !fileCopy.dataset.defaultCopy) {
+        fileCopy.dataset.defaultCopy = fileCopy.textContent;
+      }
+
+      const plural = (n) => (n === 1 ? 'file' : 'files');
+
+      const formatSize = (bytes) => {
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+      };
+
+      const renderList = (files) => {
+        if (!list) return;
+        list.textContent = '';
+        files.forEach((file) => {
+          const item = document.createElement('li');
+          item.className = 'custom-inquiry__files-item';
+          const name = document.createElement('span');
+          name.className = 'custom-inquiry__files-name';
+          name.textContent = file.name;
+          const size = document.createElement('span');
+          size.className = 'custom-inquiry__files-size';
+          size.textContent = formatSize(file.size);
+          item.append(name, size);
+          list.append(item);
+        });
+      };
+
+      const onKeydown = (event) => {
+        if (event.key === 'Escape') closePopup();
+      };
+
+      function openPopup() {
+        if (!popup || !popup.hidden) return;
+        popup.hidden = false;
+        // Two frames so the browser paints the hidden state before transitioning.
+        requestAnimationFrame(() => requestAnimationFrame(() => popup.classList.add('is-open')));
+        countBtn?.setAttribute('aria-expanded', 'true');
+        document.addEventListener('keydown', onKeydown);
+        dialog?.focus();
+      }
+
+      function closePopup() {
+        if (!popup || popup.hidden) return;
+        popup.classList.remove('is-open');
+        countBtn?.setAttribute('aria-expanded', 'false');
+        document.removeEventListener('keydown', onKeydown);
+
+        let done = false;
+        const finish = () => {
+          if (done) return;
+          done = true;
+          dialog?.removeEventListener('transitionend', onEnd);
+          popup.hidden = true;
+        };
+        const onEnd = (event) => {
+          if (event.target === dialog) finish();
+        };
+        dialog?.addEventListener('transitionend', onEnd);
+        // Fallback when transitionend does not fire (e.g. reduced motion).
+        setTimeout(finish, 400);
+      }
+
+      const syncUi = () => {
+        const files = Array.from(input.files || []);
+        const count = files.length;
+
+        if (countNumber) countNumber.textContent = count;
+        if (countLabel) countLabel.textContent = plural(count);
+        if (countBtn) countBtn.hidden = count === 0;
+        if (fileCopy) {
+          fileCopy.textContent = count > 0 ? `${count} ${plural(count)} selected` : fileCopy.dataset.defaultCopy || '';
+        }
+        renderList(files);
+        if (count === 0) closePopup();
+      };
+
+      countBtn?.addEventListener('click', openPopup);
+      popup?.querySelectorAll('[data-files-popup-close]').forEach((el) => el.addEventListener('click', closePopup));
+
       input.addEventListener('change', () => {
         const files = Array.from(input.files || []);
-        const invalidFile = files.find((file) => file.size > 10 * 1024 * 1024);
-        const form = input.closest('form');
-        const fileNames = form?.querySelector('[data-custom-file-names]');
-        const fileCopy = form?.querySelector('[data-custom-file-copy]');
-
-        if (invalidFile) {
+        const tooBig = files.find((file) => file.size > 10 * 1024 * 1024);
+        if (tooBig) {
           input.value = '';
-          if (fileNames) fileNames.value = '';
-          if (window.showToast) {
-            window.showToast({
-              message: 'Each file must be 10MB or smaller.',
-              type: 'error',
-              position: 'bottom-right',
-              duration: 4000,
-            });
-          }
-          return;
+          notify('Each file must be 10MB or smaller.', 'error');
         }
-
-        const names = files.map((file) => file.name);
-        if (fileNames) fileNames.value = names.join(', ');
-        if (fileCopy && names.length) fileCopy.textContent = names.join(', ');
+        syncUi();
       });
     });
   };
@@ -768,6 +1065,13 @@
       "default": "Support from concept to completion."
     },
     { "type": "header", "content": "Consultation form" },
+    {
+      "type": "text",
+      "id": "api_endpoint",
+      "label": "Consultation API endpoint",
+      "default": "https://vnote.io.vn/api/consultations",
+      "info": "Endpoint that receives the consultation FormData (name, email, phone, message, file)."
+    },
     { "type": "text", "id": "form_heading", "label": "Form heading", "default": "Consultation form" },
     { "type": "text", "id": "name_label", "label": "Name label", "default": "Name" },
     { "type": "text", "id": "name_placeholder", "label": "Name placeholder", "default": "Your full name" },
