@@ -162,17 +162,15 @@
       white-space: nowrap;
     }
 
-    /* ---- Custom color upload tile ---- */
-    /* Keep [hidden] authoritative over the display rules below (icon/preview). */
-    .variant-tile--upload [hidden] {
+    /* Hidden "Custom" option values on non-finish options. */
+    .variant-tile--hidden {
       display: none;
     }
-    .variant-tile--upload .variant-tile__file {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      opacity: 0;
-      pointer-events: none;
+
+    /* ---- Custom color upload tile ---- */
+    /* Keep [hidden] authoritative over the display rules below (icon/preview/file). */
+    .variant-tile--upload [hidden] {
+      display: none;
     }
     .variant-tile--upload .variant-tile__media {
       display: grid;
@@ -204,17 +202,11 @@
     .variant-tile--upload.is-loading {
       cursor: progress;
     }
-    .variant-tile--upload.is-uploaded {
-      border-color: var(--color-earth-brown);
-      box-shadow: inset 0 0 0 var(--border-width) var(--color-earth-brown);
-    }
+    /* Once an image is uploaded the dashed dropzone becomes a solid thumbnail.
+       Selection styling (border + check) comes from the shared :has(:checked) rule. */
     .variant-tile--upload.is-uploaded .variant-tile__media {
       border-style: solid;
       border-color: var(--border-default);
-    }
-    .variant-tile--upload.is-uploaded .variant-tile__check {
-      opacity: 1;
-      transform: scale(1);
     }
     @media (prefers-reduced-motion: reduce) {
       .variant-tile__upload-spinner {
@@ -337,132 +329,175 @@
 
         <div class="variant-group__list custom-scrollbar" role="radiogroup" aria-label="{{ option.name | escape }}">
           {% for value in option.values %}
-            {% assign color_image = '' %}
-            {% if is_color %}
-              {% capture value_str %}{{ value }}{% endcapture %}
-              {% assign finish_key = value_str | handleize | replace: '-', '_' %}
-              {% assign thumbnail_entry = finish_color_entry %}
-              {% if is_surface %}
-                {% assign thumbnail_entry = wood_surface_entry %}
-              {% endif %}
-              {% if thumbnail_entry != blank %}
-                {% assign finish_field = thumbnail_entry[finish_key] %}
-                {% if finish_field != blank %}
-                  {% assign color_image = finish_field.value | default: finish_field %}
-                {% endif %}
-              {% endif %}
-              {% if color_image == blank %}
-                {% assign matched_variant = product.variants | where: option_prop, value_str | first %}
-                {% assign color_image = matched_variant.metafields.custom.color_pattern %}
-              {% endif %}
-            {% endif %}
+            {% assign value_downcased = value | downcase | strip %}
 
-            <label
-              class="variant-tile variant-tile--{% if is_color %}color{% else %}size{% endif %}{% unless value.available %} is-disabled{% endunless %}"
-            >
-              <input
-                type="radio"
-                class="variant-tile__input"
-                id="Option-{{ section_id }}-{{ option.position }}-{{ forloop.index0 }}"
-                name="options[{{ option.name | escape }}]"
-                value="{{ value | escape }}"
-                data-index="option{{ option.position }}"
-                {% if option.selected_value == value %}
-                  checked="checked"
-                {% endif %}
-                {% unless value.available %}
-                  disabled
-                {% endunless %}
-              >
+            {% if value_downcased == 'custom' %}
+              {% comment %}
+                The "Custom" option value is never shown as a normal tile.
+                On the wood finish it becomes the custom-colour upload tile (which
+                still holds the real `Custom` radio so it selects the Custom variant
+                and behaves as a single, mutually-exclusive choice). On the other
+                options it stays hidden but present, keeping the variant matrix intact.
+              {% endcomment %}
+              {% if is_finish %}
+                <div class="variant-tile variant-tile--color variant-tile--upload" data-custom-color>
+                  <input
+                    type="radio"
+                    class="variant-tile__input"
+                    id="Option-{{ section_id }}-{{ option.position }}-{{ forloop.index0 }}"
+                    name="options[{{ option.name | escape }}]"
+                    value="{{ value | escape }}"
+                    data-index="option{{ option.position }}"
+                    data-custom-color-radio
+                    {% if option.selected_value == value %}
+                      checked="checked"
+                    {% endif %}
+                  >
 
-              {% if is_color %}
-                <span class="variant-tile__media">
-                  {% if color_image != blank %}
+                  <span class="variant-tile__media">
+                    <span class="variant-tile__upload-icon" data-custom-color-icon aria-hidden="true">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 48 48">
+                        <path d="M0 0h48v48H0z" fill="none" />
+                        <path fill="currentColor" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 24L24 6l19 18H31v18H17V24z" />
+                      </svg>
+                    </span>
+                    <span class="variant-tile__upload-spinner" data-custom-color-spinner aria-hidden="true" hidden></span>
                     <img
-                      src="{{ color_image }}"
-                      alt="{{ value | escape }}"
+                      class="variant-tile__upload-preview"
+                      data-custom-color-preview
+                      alt="Custom color preview"
                       width="160"
                       height="100"
-                      loading="lazy"
                       draggable="false"
+                      hidden
                     >
-                  {% else %}
-                    <span
-                      class="variant-tile__swatch"
-                      style="background-color: {{ value | downcase | remove: ' ' }};"
-                    ></span>
-                  {% endif %}
-                </span>
+                  </span>
+
+                  <span class="variant-tile__label" data-custom-color-label>Custom color</span>
+
+                  <span class="variant-tile__check" aria-hidden="true">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="3"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                  </span>
+
+                  <input
+                    type="file"
+                    class="variant-tile__file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    data-custom-color-input
+                    hidden
+                  >
+                  <input
+                    type="hidden"
+                    name="properties[added_url_image]"
+                    form="{{ 'ProductForm-' | append: section_id }}"
+                    data-custom-color-property
+                    disabled
+                  >
+                </div>
+              {% else %}
+                <label class="variant-tile variant-tile--hidden" aria-hidden="true">
+                  <input
+                    type="radio"
+                    class="variant-tile__input"
+                    id="Option-{{ section_id }}-{{ option.position }}-{{ forloop.index0 }}"
+                    name="options[{{ option.name | escape }}]"
+                    value="{{ value | escape }}"
+                    data-index="option{{ option.position }}"
+                    {% if option.selected_value == value %}
+                      checked="checked"
+                    {% endif %}
+                    {% unless value.available %}
+                      disabled
+                    {% endunless %}
+                  >
+                </label>
               {% endif %}
 
-              <span class="variant-tile__label">{{ value }}</span>
+            {% else %}
+              {% assign color_image = '' %}
+              {% if is_color %}
+                {% capture value_str %}{{ value }}{% endcapture %}
+                {% assign finish_key = value_str | handleize | replace: '-', '_' %}
+                {% assign thumbnail_entry = finish_color_entry %}
+                {% if is_surface %}
+                  {% assign thumbnail_entry = wood_surface_entry %}
+                {% endif %}
+                {% if thumbnail_entry != blank %}
+                  {% assign finish_field = thumbnail_entry[finish_key] %}
+                  {% if finish_field != blank %}
+                    {% assign color_image = finish_field.value | default: finish_field %}
+                  {% endif %}
+                {% endif %}
+                {% if color_image == blank %}
+                  {% assign matched_variant = product.variants | where: option_prop, value_str | first %}
+                  {% assign color_image = matched_variant.metafields.custom.color_pattern %}
+                {% endif %}
+              {% endif %}
 
-              <span class="variant-tile__check" aria-hidden="true">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="3"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <polyline points="20 6 9 17 4 12"></polyline>
-                </svg>
-              </span>
-            </label>
-          {% endfor %}
-
-          {% if is_finish %}
-            <label class="variant-tile variant-tile--color variant-tile--upload" data-custom-color>
-              <input
-                type="file"
-                class="variant-tile__file"
-                accept="image/jpeg,image/png,image/webp,image/gif"
-                data-custom-color-input
+              <label
+                class="variant-tile variant-tile--{% if is_color %}color{% else %}size{% endif %}{% unless value.available %} is-disabled{% endunless %}"
               >
-              <span class="variant-tile__media">
-                <span class="variant-tile__upload-icon" data-custom-color-icon aria-hidden="true">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 48 48">
-                    <path d="M0 0h48v48H0z" fill="none" />
-                    <path fill="currentColor" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 24L24 6l19 18H31v18H17V24z" />
+                <input
+                  type="radio"
+                  class="variant-tile__input"
+                  id="Option-{{ section_id }}-{{ option.position }}-{{ forloop.index0 }}"
+                  name="options[{{ option.name | escape }}]"
+                  value="{{ value | escape }}"
+                  data-index="option{{ option.position }}"
+                  {% if option.selected_value == value %}
+                    checked="checked"
+                  {% endif %}
+                  {% unless value.available %}
+                    disabled
+                  {% endunless %}
+                >
+
+                {% if is_color %}
+                  <span class="variant-tile__media">
+                    {% if color_image != blank %}
+                      <img
+                        src="{{ color_image }}"
+                        alt="{{ value | escape }}"
+                        width="160"
+                        height="100"
+                        loading="lazy"
+                        draggable="false"
+                      >
+                    {% else %}
+                      <span
+                        class="variant-tile__swatch"
+                        style="background-color: {{ value | downcase | remove: ' ' }};"
+                      ></span>
+                    {% endif %}
+                  </span>
+                {% endif %}
+
+                <span class="variant-tile__label">{{ value }}</span>
+
+                <span class="variant-tile__check" aria-hidden="true">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="3"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <polyline points="20 6 9 17 4 12"></polyline>
                   </svg>
                 </span>
-                <span class="variant-tile__upload-spinner" data-custom-color-spinner aria-hidden="true" hidden></span>
-                <img
-                  class="variant-tile__upload-preview"
-                  data-custom-color-preview
-                  alt="Custom color preview"
-                  width="160"
-                  height="100"
-                  draggable="false"
-                  hidden
-                >
-              </span>
-
-              <span class="variant-tile__label" data-custom-color-label>Custom color</span>
-
-              <span class="variant-tile__check" aria-hidden="true">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="3"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <polyline points="20 6 9 17 4 12"></polyline>
-                </svg>
-              </span>
-
-              <input
-                type="hidden"
-                name="properties[Custom color]"
-                form="{{ 'ProductForm-' | append: section_id }}"
-                data-custom-color-property
-                disabled
-              >
-            </label>
-          {% endif %}
+              </label>
+            {% endif %}
+          {% endfor %}
         </div>
       </div>
     {% endfor %}
@@ -593,10 +628,33 @@
         });
       };
 
+      const customFinishRadio = document.querySelector('[data-custom-color-radio]');
+
       const syncOptionAvailability = () => {
         Object.assign(selectedOptions, getSelectedOptions());
 
+        // The custom finish is made-to-order: always keep it selectable.
+        if (customFinishRadio) {
+          customFinishRadio.disabled = false;
+          const customTile = customFinishRadio.closest('.variant-tile');
+          if (customTile) customTile.classList.remove('is-disabled');
+        }
+
+        // When custom is chosen there is no stock matrix to honour, so leave
+        // every other option freely selectable.
+        if (customFinishRadio && customFinishRadio.checked) {
+          variantInputs.forEach(input => {
+            if (input.dataset.customColorRadio) return;
+            input.disabled = false;
+            input.setAttribute('aria-disabled', 'false');
+            const tile = input.closest('.variant-tile');
+            if (tile) tile.classList.remove('is-disabled');
+          });
+          return;
+        }
+
         variantInputs.forEach(input => {
+          if (input.dataset.customColorRadio) return;
           const tile = input.closest('.variant-tile');
           const isCurrentSelection = input.checked;
           const isPickable = isCurrentSelection || isOptionValuePickable(input);
@@ -631,8 +689,12 @@
 
             const addText = document.querySelector('[data-add-to-cart-text]');
             const addBtn = document.querySelector('form[data-type="add-to-cart-form"] button[name="add"]');
-            if (addText) addText.textContent = selectedVariant.available ? 'ADD TO CART' : 'SOLD OUT';
-            if (addBtn) addBtn.disabled = !selectedVariant.available;
+            // The custom finish is made-to-order, so it is purchasable regardless
+            // of the placeholder variant's stock availability.
+            const isCustomFinishSelected = customFinishRadio ? customFinishRadio.checked : false;
+            const purchasable = selectedVariant.available || isCustomFinishSelected;
+            if (addText) addText.textContent = purchasable ? 'ADD TO CART' : 'SOLD OUT';
+            if (addBtn) addBtn.disabled = !purchasable;
 
             if (window.history && window.history.replaceState) {
               const nextUrl = new URL(window.location.href);
@@ -737,9 +799,11 @@
 
   <script>
     (function () {
-      // Uploads a custom colour image to the server and attaches the returned
-      // image URL to the product form as a `Custom color` line-item property, so
-      // it travels with the variant into the cart like the preset wood finishes.
+      // The custom-colour tile IS the "Custom" wood-finish value. Uploading an
+      // image selects that value (checking its real radio, so it stays a single,
+      // mutually-exclusive choice) and attaches the uploaded URL to the product
+      // form as the `added_url_image` line-item property, which travels into the
+      // cart alongside the chosen size and surface.
       var UPLOAD_ENDPOINT = 'https://vnote.io.vn/api/upload-image';
       var MAX_BYTES = 10 * 1024 * 1024;
 
@@ -753,30 +817,45 @@
         document.querySelectorAll('[data-custom-color]:not([data-custom-color-init])').forEach(function (tile) {
           tile.dataset.customColorInit = 'true';
 
-          var input = tile.querySelector('[data-custom-color-input]');
+          var fileInput = tile.querySelector('[data-custom-color-input]');
+          var radio = tile.querySelector('[data-custom-color-radio]');
           var icon = tile.querySelector('[data-custom-color-icon]');
           var spinner = tile.querySelector('[data-custom-color-spinner]');
           var preview = tile.querySelector('[data-custom-color-preview]');
           var label = tile.querySelector('[data-custom-color-label]');
           var property = tile.querySelector('[data-custom-color-property]');
-          if (!input) return;
+          if (!fileInput || !radio) return;
 
+          var uploadedUrl = '';
           var defaultLabel = label ? label.textContent : 'Custom color';
+
+          // Attach the URL only while the custom finish is the active choice.
+          function syncProperty() {
+            if (!property) return;
+            if (radio.checked && uploadedUrl) {
+              property.value = uploadedUrl;
+              property.disabled = false;
+            } else {
+              property.value = '';
+              property.disabled = true;
+            }
+          }
+
+          function selectCustom() {
+            radio.checked = true;
+            radio.dispatchEvent(new Event('change', { bubbles: true }));
+            syncProperty();
+          }
 
           function setLoading(loading) {
             tile.classList.toggle('is-loading', loading);
-            input.disabled = loading;
             if (spinner) spinner.hidden = !loading;
             if (icon) icon.hidden = loading || tile.classList.contains('is-uploaded');
             if (label) label.textContent = loading ? 'Uploading…' : defaultLabel;
           }
 
-          input.addEventListener('change', function () {
-            var file = input.files && input.files[0];
-            if (!file) return;
-
+          function upload(file) {
             if (file.size > MAX_BYTES) {
-              input.value = '';
               toast('Image exceeds 10MB limit.', 'error');
               return;
             }
@@ -800,17 +879,14 @@
               })
               .then(function (result) {
                 if (result.ok && result.data && result.data.image_url) {
-                  var url = result.data.image_url;
+                  uploadedUrl = result.data.image_url;
                   if (preview) {
-                    preview.src = url;
+                    preview.src = uploadedUrl;
                     preview.hidden = false;
                   }
                   if (icon) icon.hidden = true;
-                  if (property) {
-                    property.value = url;
-                    property.disabled = false;
-                  }
                   tile.classList.add('is-uploaded');
+                  selectCustom(); // the uploaded image becomes the selected custom finish
                   toast('Custom color uploaded.', 'success');
                 } else {
                   var detail = (result.data && result.data.detail) || 'Upload failed. Please try again.';
@@ -822,9 +898,33 @@
               })
               .finally(function () {
                 setLoading(false);
-                input.value = ''; // allow re-picking the same file
+                fileInput.value = ''; // allow re-picking the same file
               });
+          }
+
+          fileInput.addEventListener('change', function () {
+            var file = fileInput.files && fileInput.files[0];
+            if (file) upload(file);
           });
+
+          // Empty → pick a file. Uploaded but not selected → select it.
+          // Already the active choice → pick again to replace the image.
+          tile.addEventListener('click', function () {
+            if (tile.classList.contains('is-loading')) return;
+            if (!uploadedUrl || radio.checked) {
+              fileInput.click();
+            } else {
+              selectCustom();
+            }
+          });
+
+          // Keep the property in step when the finish selection changes elsewhere.
+          var groupName = radio.getAttribute('name');
+          document.querySelectorAll('input[name="' + groupName + '"]').forEach(function (r) {
+            r.addEventListener('change', syncProperty);
+          });
+
+          syncProperty();
         });
       }
 
