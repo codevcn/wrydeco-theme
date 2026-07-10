@@ -16,6 +16,7 @@
 {% unless product.has_only_default_variant %}
   {% assign finish_color_entry = metaobjects.variant_finish_color.values | first %}
   {% assign wood_surface_entry = metaobjects.variant_wood_surface.values | first %}
+  {% assign customization_url = pages.customization.url | default: '/pages/customization' %}
 
   {% style %}
     .product-variant-picker {
@@ -101,10 +102,6 @@
     .variant-tile:hover {
       border-color: var(--border-dark);
     }
-    .variant-tile:focus-within {
-      outline: 2px solid var(--color-sage);
-      outline-offset: 2px;
-    }
 
     .variant-tile__input {
       position: absolute;
@@ -162,9 +159,32 @@
       white-space: nowrap;
     }
 
-    /* Hidden "Custom" option values on non-finish options. */
-    .variant-tile--hidden {
-      display: none;
+    /* ---- "Custom" call-to-action tile on size / surface (links to the
+       customization page instead of selecting a variant) ---- */
+    .variant-tile--custom-link {
+      gap: var(--sp-2);
+      text-decoration: none;
+      color: inherit;
+      margin-right: var(--sp-1);
+    }
+    .variant-tile__media--custom {
+      display: grid;
+      place-items: center;
+      border: var(--border-width) dashed var(--color-clay);
+      background: var(--color-milk);
+    }
+    .variant-tile__custom-plus {
+      color: var(--color-clay);
+      font-size: var(--font-size-body-2xl);
+      font-weight: var(--font-weight-light);
+      line-height: var(--line-height-tight);
+    }
+
+    .variant-tile--size .variant-tile__media--custom {
+      min-height: auto;
+      width: fit-content;
+      padding-inline: 6px;
+      aspect-ratio: unset;
     }
 
     /* ---- Custom color upload tile ---- */
@@ -216,6 +236,7 @@
 
     /* ---- Size tile ---- */
     .variant-tile--size {
+      flex-direction: row;
       align-items: center;
       justify-content: center;
       min-height: 42px;
@@ -285,8 +306,12 @@
       {% assign downcased_option = option.name | downcase %}
       {% assign is_color = false %}
       {% assign is_surface = false %}
+      {% assign is_size = false %}
       {% if downcased_option contains 'surface' %}
         {% assign is_surface = true %}
+      {% endif %}
+      {% if downcased_option contains 'size' %}
+        {% assign is_size = true %}
       {% endif %}
       {% if downcased_option contains 'color'
         or downcased_option contains 'màu'
@@ -340,7 +365,10 @@
                 options it stays hidden but present, keeping the variant matrix intact.
               {% endcomment %}
               {% if is_finish %}
-                <div class="variant-tile variant-tile--color variant-tile--upload{% unless value.available %} is-disabled{% endunless %}" data-custom-color>
+                <div
+                  class="variant-tile variant-tile--color variant-tile--upload{% unless value.available %} is-disabled{% endunless %}"
+                  data-custom-color
+                >
                   <input
                     type="radio"
                     class="variant-tile__input"
@@ -364,7 +392,12 @@
                         <path fill="currentColor" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 24L24 6l19 18H31v18H17V24z" />
                       </svg>
                     </span>
-                    <span class="variant-tile__upload-spinner" data-custom-color-spinner aria-hidden="true" hidden></span>
+                    <span
+                      class="variant-tile__upload-spinner"
+                      data-custom-color-spinner
+                      aria-hidden="true"
+                      hidden
+                    ></span>
                     <img
                       class="variant-tile__upload-preview"
                       data-custom-color-preview
@@ -407,22 +440,31 @@
                   >
                 </div>
               {% else %}
-                <label class="variant-tile variant-tile--hidden" aria-hidden="true">
-                  <input
-                    type="radio"
-                    class="variant-tile__input"
-                    id="Option-{{ section_id }}-{{ option.position }}-{{ forloop.index0 }}"
-                    name="options[{{ option.name | escape }}]"
-                    value="{{ value | escape }}"
-                    data-index="option{{ option.position }}"
-                    {% if option.selected_value == value %}
-                      checked="checked"
-                    {% endif %}
-                    {% unless value.available %}
-                      disabled
-                    {% endunless %}
-                  >
-                </label>
+                {% comment %}
+                  On size and surface the "Custom" value is a call-to-action that
+                  sends the shopper to the customization page rather than selecting
+                  a variant.
+                {% endcomment %}
+                <a
+                  class="variant-tile variant-tile--{% if is_color %}color{% else %}size{% endif %} variant-tile--custom-link"
+                  href="{{ customization_url }}"
+                >
+                  {% if is_color or is_size %}
+                    <span class="variant-tile__media variant-tile__media--custom" aria-hidden="true">
+                      <svg
+                        class="variant-tile__custom-plus"
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="1em"
+                        height="1em"
+                        viewBox="0 0 24 24"
+                      >
+                        <path d="M0 0h24v24H0z" fill="none" />
+                        <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z" />
+                      </svg>
+                    </span>
+                  {% endif %}
+                  <span class="variant-tile__label">{{ value }}</span>
+                </a>
               {% endif %}
 
             {% else %}

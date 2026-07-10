@@ -20,7 +20,7 @@
   data-error-message="{{ section.settings.error_message | escape }}"
 >
   <div class="custom-inquiry__inner">
-    <div class="custom-inquiry__story">
+    <div class="custom-inquiry__story" id="custom-inquiry__story-telling">
       <p class="custom-inquiry__eyebrow">
         <span aria-hidden="true">&#10022;</span>
         {{ section.settings.eyebrow | escape }}
@@ -200,8 +200,10 @@
   if (mainProductSection && window.innerWidth < 768) {
     mainProductSection.closest('body').querySelector('.header__icon--search').style.color = 'var(--color-earth-brown)';
     mainProductSection.closest('body').querySelector('.header__icon--cart').style.color = 'var(--color-earth-brown)';
+    mainProductSection.closest('body').querySelector('.header__icon--menu').style.color = 'var(--color-earth-brown)';
   }
 </script>
+
 {% stylesheet %}
   .custom-inquiry {
     overflow: hidden;
@@ -385,24 +387,25 @@
   }
 
   .custom-inquiry__form {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
+    flex-wrap: wrap;
     gap: var(--sp-4) var(--sp-5);
   }
 
+  .custom-inquiry__field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-1);
+    flex: 1 1 calc(50% - (var(--sp-5) / 2));
+    min-inline-size: 0;
+  }
+
   .custom-inquiry__field--full,
+  .custom-inquiry__field.field-phone,
   .custom-inquiry__security,
   .custom-inquiry__submit,
   .custom-inquiry__privacy {
-    grid-column: 1 / -1;
-  }
-
-  .custom-inquiry__field {
-    display: grid;
-    gap: var(--sp-1);
-  }
-  .custom-inquiry__field.field-phone {
-    grid-column: 1 / 3;
+    flex: 1 1 100%;
   }
 
   .custom-inquiry__field label:not(.custom-inquiry__upload),
@@ -477,11 +480,6 @@
     inset: var(--sp-0);
     opacity: 0;
     cursor: pointer;
-  }
-
-  .custom-inquiry__upload:focus-within {
-    outline: calc(var(--border-width) * 2) solid var(--color-sage);
-    outline-offset: var(--sp-1);
   }
 
   .custom-inquiry__upload-icon {
@@ -746,8 +744,8 @@
       padding: var(--sp-5);
     }
 
-    .custom-inquiry__form {
-      grid-template-columns: minmax(0, 1fr);
+    .custom-inquiry__field {
+      flex: 1 1 100%;
     }
 
     .custom-inquiry__benefits {

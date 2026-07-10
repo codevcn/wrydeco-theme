@@ -4,7 +4,7 @@
 {% endcomment %}
 
 {% liquid
-  assign journey_url = section.settings.journey_url | default: '#custom-inquiry'
+  assign journey_url = section.settings.journey_url | default: '#custom-inquiry__story-telling'
 %}
 
 <section class="custom-process" id="custom-process" aria-labelledby="CustomProcessTitle-{{ section.id }}">
@@ -28,9 +28,7 @@
         <span>{{ section.settings.heading_first_line | escape }}</span>
         <span>{{ section.settings.heading_second_line | escape }}</span>
       </h2>
-      <div class="custom-process__heading-rule" aria-hidden="true">
-        <span></span><b>&#10022;</b><span></span>
-      </div>
+      <div class="custom-process__heading-rule" aria-hidden="true"><span></span><b>&#10022;</b><span></span></div>
       <p class="custom-process__intro">{{ section.settings.intro | escape }}</p>
     </header>
 
@@ -43,7 +41,16 @@
         <h3>{{ section.settings.step_one_title | escape }}</h3>
         <span class="custom-process__step-ornament" aria-hidden="true"><i></i>&#10022;<i></i></span>
         <p>{{ section.settings.step_one_text | escape }}</p>
-        <span class="custom-process__connector" aria-hidden="true">&rarr;</span>
+        <svg
+          class="custom-process__connector"
+          xmlns="http://www.w3.org/2000/svg"
+          width="1em"
+          height="1em"
+          viewBox="0 0 1024 1024"
+        >
+          <path d="M0 0h1024v1024H0z" fill="none" />
+          <path fill="currentColor" d="M754.8 480H160a32 32 0 1 0 0 64h594.8L521.3 777.3a32 32 0 0 0 45.4 45.4l288-288a32 32 0 0 0 0-45.4l-288-288a32 32 0 1 0-45.4 45.4z" />
+        </svg>
       </article>
 
       <article class="custom-process__step">
@@ -54,7 +61,16 @@
         <h3>{{ section.settings.step_two_title | escape }}</h3>
         <span class="custom-process__step-ornament" aria-hidden="true"><i></i>&#10022;<i></i></span>
         <p>{{ section.settings.step_two_text | escape }}</p>
-        <span class="custom-process__connector" aria-hidden="true">&rarr;</span>
+        <svg
+          class="custom-process__connector"
+          xmlns="http://www.w3.org/2000/svg"
+          width="1em"
+          height="1em"
+          viewBox="0 0 1024 1024"
+        >
+          <path d="M0 0h1024v1024H0z" fill="none" />
+          <path fill="currentColor" d="M754.8 480H160a32 32 0 1 0 0 64h594.8L521.3 777.3a32 32 0 0 0 45.4 45.4l288-288a32 32 0 0 0 0-45.4l-288-288a32 32 0 1 0-45.4 45.4z" />
+        </svg>
       </article>
 
       <article class="custom-process__step">
@@ -133,7 +149,10 @@
     display: grid;
     grid-template-rows: auto minmax(0, 1fr) auto;
     gap: var(--sp-4);
-    inline-size: min(calc(100% - (var(--layout-padding-desktop) * 2)), calc(var(--layout-showcase-max-width) + (var(--sp-12) * 2)));
+    inline-size: min(
+      calc(100% - (var(--layout-padding-desktop) * 2)),
+      calc(var(--layout-showcase-max-width) + (var(--sp-12) * 2))
+    );
     margin-inline: auto;
     padding-block: var(--sp-8);
   }
@@ -292,13 +311,13 @@
 
   .custom-process__connector {
     position: absolute;
-    top: 44%;
-    right: calc((var(--sp-4) + (var(--sp-7) / 2)) * -1);
+    top: 50%;
+    right: calc((var(--sp-4) + (var(--sp-4) / 2)) * -1);
     z-index: 2;
-    display: grid;
+    display: flex;
+    height: var(--sp-6);
+    width: var(--sp-6);
     place-items: center;
-    inline-size: var(--sp-7);
-    block-size: var(--sp-7);
     border: var(--border-width) solid var(--color-clay);
     border-radius: var(--radius-full);
     background: var(--color-milk);
@@ -308,7 +327,10 @@
 
   .custom-process__assurance {
     display: grid;
-    grid-template-columns: auto minmax(calc(var(--sp-12) + var(--sp-5)), 0.7fr) minmax(calc(var(--sp-12) * 2), 1.3fr) minmax(calc(var(--sp-12) * 2), 0.9fr);
+    grid-template-columns: auto minmax(calc(var(--sp-12) + var(--sp-5)), 0.7fr) minmax(calc(var(--sp-12) * 2), 1.3fr) minmax(
+        calc(var(--sp-12) * 2),
+        0.9fr
+      );
     align-items: center;
     gap: var(--sp-5);
     margin-block-start: var(--sp-0);
@@ -366,7 +388,8 @@
     font-weight: var(--font-weight-semibold);
     letter-spacing: var(--letter-spacing-wide);
     text-transform: uppercase;
-    transition: background-color var(--timing-short) var(--ease-standard), transform var(--timing-short) var(--ease-standard);
+    transition: background-color var(--timing-short) var(--ease-standard),
+      transform var(--timing-short) var(--ease-standard);
   }
 
   .custom-process__assurance a:hover {
@@ -495,20 +518,50 @@
   "settings": [
     { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "The custom process" },
     { "type": "text", "id": "heading_first_line", "label": "Heading first line", "default": "Crafted around you." },
-    { "type": "text", "id": "heading_second_line", "label": "Heading second line", "default": "Perfected in three steps." },
-    { "type": "textarea", "id": "intro", "label": "Introduction", "default": "From the first conversation to final placement, every detail is handled with care, precision, and an unwavering commitment to quality." },
+    {
+      "type": "text",
+      "id": "heading_second_line",
+      "label": "Heading second line",
+      "default": "Perfected in three steps."
+    },
+    {
+      "type": "textarea",
+      "id": "intro",
+      "label": "Introduction",
+      "default": "From the first conversation to final placement, every detail is handled with care, precision, and an unwavering commitment to quality."
+    },
     { "type": "header", "content": "Consultation" },
     { "type": "text", "id": "step_one_title", "label": "Title", "default": "Consultation" },
-    { "type": "textarea", "id": "step_one_text", "label": "Text", "default": "We begin with a personal consultation to understand your vision, space, and lifestyle. Together, we shape the right design direction." },
+    {
+      "type": "textarea",
+      "id": "step_one_text",
+      "label": "Text",
+      "default": "We begin with a personal consultation to understand your vision, space, and lifestyle. Together, we shape the right design direction."
+    },
     { "type": "header", "content": "Production" },
     { "type": "text", "id": "step_two_title", "label": "Title", "default": "Production" },
-    { "type": "textarea", "id": "step_two_text", "label": "Text", "default": "Our master artisans bring your piece to life using premium solid woods and time-honored techniques, with precision in every detail." },
+    {
+      "type": "textarea",
+      "id": "step_two_text",
+      "label": "Text",
+      "default": "Our master artisans bring your piece to life using premium solid woods and time-honored techniques, with precision in every detail."
+    },
     { "type": "header", "content": "Delivery and installation" },
     { "type": "text", "id": "step_three_title", "label": "Title", "default": "Delivery & installation" },
-    { "type": "textarea", "id": "step_three_text", "label": "Text", "default": "We deliver with white-glove care and install with precision, ensuring your piece is perfectly placed and ready to be enjoyed." },
+    {
+      "type": "textarea",
+      "id": "step_three_text",
+      "label": "Text",
+      "default": "We deliver with white-glove care and install with precision, ensuring your piece is perfectly placed and ready to be enjoyed."
+    },
     { "type": "header", "content": "Assurance" },
     { "type": "text", "id": "assurance_heading", "label": "Heading", "default": "Built to last. Backed by trust." },
-    { "type": "textarea", "id": "assurance_text", "label": "Text", "default": "Every WRYDECO piece is crafted with premium materials, expert craftsmanship, and a commitment to enduring quality." },
+    {
+      "type": "textarea",
+      "id": "assurance_text",
+      "label": "Text",
+      "default": "Every WRYDECO piece is crafted with premium materials, expert craftsmanship, and a commitment to enduring quality."
+    },
     { "type": "text", "id": "journey_label", "label": "Button label", "default": "Start your custom journey" },
     { "type": "url", "id": "journey_url", "label": "Button link" }
   ],

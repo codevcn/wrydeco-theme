@@ -1,0 +1,216 @@
+{% doc %}
+  Renders a popup confirmation dialog when clicking the "Custom" tile in the variant picker.
+  It intercepts the navigation and asks the user to confirm redirecting to the Customization page.
+
+  @example
+  {% render 'product-custom-link-popup' %}
+{% enddoc %}
+
+{% stylesheet %}
+  .custom-link-popup[hidden] {
+    display: flex !important;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .custom-link-popup {
+    position: fixed;
+    inset: var(--sp-0);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--sp-5);
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition: opacity var(--timing-short) var(--ease-standard), visibility var(--timing-short) var(--ease-standard);
+  }
+  .custom-link-popup__overlay {
+    position: absolute;
+    inset: 0;
+    border: 0;
+    padding: 0;
+    background: rgba(23, 21, 21, 0.4);
+    backdrop-filter: blur(4px);
+    cursor: pointer;
+  }
+  .custom-link-popup__dialog {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: min(100%, 420px);
+    max-height: calc(100dvh - var(--sp-8));
+    overflow: hidden;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    background: var(--surface-elevated);
+    box-shadow: var(--shadow-modal);
+    transform: scale(1) translateY(0);
+    transition: transform var(--timing-short) var(--ease-out);
+  }
+  .custom-link-popup[hidden] .custom-link-popup__dialog {
+    transform: scale(0.95) translateY(10px);
+  }
+  .custom-link-popup__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--sp-4) var(--sp-5);
+    border-bottom: 1px solid var(--border-light);
+    background: var(--color-milk);
+  }
+  .custom-link-popup__title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-xl);
+    font-weight: var(--font-weight-regular);
+    color: var(--text-primary);
+  }
+  .custom-link-popup__close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--sp-6);
+    height: var(--sp-6);
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-full);
+    background: transparent;
+    color: var(--text-primary);
+    cursor: pointer;
+  }
+  .custom-link-popup__close:hover {
+    background: var(--surface-tertiary);
+  }
+  .custom-link-popup__close svg {
+    width: 18px;
+    height: 18px;
+  }
+  .custom-link-popup__body {
+    padding: var(--sp-5);
+    overflow-y: auto;
+  }
+  .custom-link-popup__text {
+    margin: 0;
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-md);
+    line-height: var(--line-height-relaxed);
+    color: var(--text-secondary);
+  }
+  .custom-link-popup__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--sp-4) var(--sp-5);
+    border-top: 1px solid var(--border-light);
+    background: var(--color-milk);
+  }
+  .custom-link-popup__cancel {
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-medium);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    cursor: pointer;
+    padding: 0;
+  }
+  .custom-link-popup__continue {
+    background: var(--color-ebony);
+    color: var(--color-cream);
+    border: none;
+    border-radius: var(--radius-md);
+    padding: var(--sp-3) var(--sp-5);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-semibold);
+    cursor: pointer;
+    transition: transform var(--timing-micro) var(--ease-out);
+  }
+  .custom-link-popup__continue:hover {
+    transform: scale(0.98);
+  }
+{% endstylesheet %}
+
+<div class="custom-link-popup" id="CustomLinkPopup" hidden>
+  <div class="custom-link-popup__overlay" id="CustomLinkPopupOverlay"></div>
+  <div class="custom-link-popup__dialog" role="dialog" aria-modal="true" aria-labelledby="CustomLinkPopupTitle">
+    <div class="custom-link-popup__header">
+      <h2 id="CustomLinkPopupTitle" class="custom-link-popup__title">Custom Design Consultation</h2>
+      <button type="button" class="custom-link-popup__close" id="CustomLinkPopupClose" aria-label="Close">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+    <div class="custom-link-popup__body">
+      <p class="custom-link-popup__text">
+        We will redirect you to the Custom Design Consultation page. Here, you can contact or schedule a call with the Wrydeco design team to customize materials, colors, and dimensions as desired.
+      </p>
+    </div>
+    <div class="custom-link-popup__footer">
+      <button type="button" class="custom-link-popup__cancel" id="CustomLinkPopupCancel">Cancel</button>
+      <button type="button" class="custom-link-popup__continue" id="CustomLinkPopupContinue">Continue</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const popup = document.getElementById('CustomLinkPopup');
+    const overlay = document.getElementById('CustomLinkPopupOverlay');
+    const closeBtn = document.getElementById('CustomLinkPopupClose');
+    const cancelBtn = document.getElementById('CustomLinkPopupCancel');
+    const continueBtn = document.getElementById('CustomLinkPopupContinue');
+    
+    let redirectUrl = '';
+
+    const closePopup = () => {
+      popup.hidden = true;
+      document.documentElement.style.overflow = '';
+    };
+
+    const openPopup = (url) => {
+      redirectUrl = url;
+      popup.hidden = false;
+      document.documentElement.style.overflow = 'hidden';
+    };
+
+    // Attach click listeners to all custom link variant tiles
+    const customLinks = document.querySelectorAll('.variant-tile--custom-link');
+    customLinks.forEach(link => {
+      link.addEventListener('click', function(e) {
+        e.preventDefault();
+        const url = this.getAttribute('href');
+        if (url) {
+          openPopup(url);
+        }
+      });
+    });
+
+    if (overlay) overlay.addEventListener('click', closePopup);
+    if (closeBtn) closeBtn.addEventListener('click', closePopup);
+    if (cancelBtn) cancelBtn.addEventListener('click', closePopup);
+    
+    if (continueBtn) {
+      continueBtn.addEventListener('click', function() {
+        if (redirectUrl) {
+          const targetUrl = new URL(redirectUrl, window.location.origin);
+          targetUrl.hash = 'custom-inquiry__story-telling';
+          window.location.href = targetUrl.toString();
+        }
+      });
+    }
+  });
+</script>
