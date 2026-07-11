@@ -1,7 +1,7 @@
 @echo off
 setlocal
 
-set "VERSION=0.3.0"
+set "VERSION=1.1.0"
 set "ZIP_NAME=Skeleton-%VERSION%-upload.zip"
 
 if exist "%ZIP_NAME%" del /f /q "%ZIP_NAME%"
