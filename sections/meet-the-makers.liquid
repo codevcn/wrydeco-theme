@@ -1,5 +1,7 @@
 <div class="custom-section-divider"></div>
 
+{%- assign makers_authors = metaobjects.product_author.values -%}
+
 <div class="meet-makers">
   <div class="meet-makers__inner">
   <div class="meet-makers__header">
@@ -19,39 +21,21 @@
 
     <div class="meet-makers__track">
       <div class="meet-makers__slider" data-maker-slider>
-        {%- for block in section.blocks -%}
-          {%- assign maker_name = block.settings.name | default: 'WRYDECO Maker' -%}
-          {%- assign fallback_index = forloop.index -%}
-          {%- assign asset_name = 'sli-' | append: fallback_index | append: '.webp' -%}
-          {%- case maker_name -%}
-            {%- when 'Huan Ngo' -%}
-              {%- assign asset_name = 'artist-Huan_Ngo.webp' -%}
-            {%- when 'Trung Le' -%}
-              {%- assign asset_name = 'artist-Trung_Le.webp' -%}
-            {%- when 'Alex Nguyen' -%}
-              {%- assign asset_name = 'artist-Alex_Nguyen.webp' -%}
-            {%- when 'Dien Luc' -%}
-              {%- assign asset_name = 'artist-Dien_Luc.webp' -%}
-            {%- when 'Kiet Phac' -%}
-              {%- assign asset_name = 'artist-Kiet_Phac.webp' -%}
-            {%- when 'Ngoc Vo' -%}
-              {%- assign asset_name = 'artist-Ngoc_Vo.webp' -%}
-          {%- endcase -%}
-          <div class="maker-card" {{ block.shopify_attributes }}>
+        {%- for author in makers_authors -%}
+          {%- assign maker_name = author.author_name.value | default: 'WRYDECO Maker' -%}
+          {%- assign maker_bio = author.author_bio.value -%}
+          {%- assign maker_image = author.author_image_url.value -%}
+          {%- assign maker_slogan = author.author_slogan.value -%}
+          {%- assign maker_link = author.system.url -%}
+          <div class="maker-card">
             <div class="maker-card__body">
               <div class="maker-card__image-col">
-                {%- if block.settings.link != blank -%}
-                  <a href="{{ block.settings.link }}" class="maker-card__img-link" aria-label="View {{ maker_name | escape }}'s profile">
+                {%- if maker_link != blank -%}
+                  <a href="{{ maker_link }}" class="maker-card__img-link" aria-label="View {{ maker_name | escape }}'s profile">
                 {%- endif -%}
-                {%- if block.settings.image != blank -%}
-                  {{
-                    block.settings.image
-                    | image_url: width: 600
-                    | image_tag: class: 'maker-card__img', loading: 'lazy', draggable: 'false', alt: maker_name
-                  }}
-                {%- else -%}
+                {%- if maker_image != blank -%}
                   <img
-                    src="{{ asset_name | file_url }}"
+                    src="{{ maker_image }}"
                     alt="{{ maker_name | escape }}"
                     class="maker-card__img"
                     loading="lazy"
@@ -59,15 +43,19 @@
                     width="600"
                     height="600"
                   >
+                {%- else -%}
+                  {{ 'image' | placeholder_svg_tag: 'maker-card__img' }}
                 {%- endif -%}
-                {%- if block.settings.link != blank -%}
+                {%- if maker_link != blank -%}
                   </a>
                 {%- endif -%}
               </div>
               <div class="maker-card__text-col">
                 <h3 class="maker-card__name">{{ maker_name | escape }}</h3>
-                <p class="maker-card__role">{{ block.settings.role | default: 'Master Craftsperson' | upcase }}</p>
-                <p class="maker-card__bio">{{ block.settings.bio | newline_to_br }}</p>
+                <p class="maker-card__role">{{ 'Master Craftsperson' | upcase }}</p>
+                {%- if maker_slogan != blank -%}
+                  <p class="maker-card__slogan">{{ maker_slogan | escape }}</p>
+                {%- endif -%}
 
                 <div class="maker-card__features">
                   <div class="maker-feature">
@@ -75,7 +63,7 @@
                       <circle cx="12.5" cy="12.5" r="10.5" stroke="currentColor" stroke-width="1"/>
                       <path d="M12.5 5.7v7.1l4.2 2.5" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
-                    <span>{{ block.settings.feature_1 | newline_to_br }}</span>
+                    <span>20+ Years{% comment %}{% endcomment %}<br>Experience</span>
                   </div>
                   <div class="maker-feature">
                     <svg
@@ -93,7 +81,7 @@
                       <path d="M5.8 14.2c3.7.7 7.3-.3 10-3.2 1.9-2.1 2.8-4.5 3.2-7-3 .3-5.6 1.2-7.7 2.8-2.8 2.1-4.7 4.8-5.5 7.4Z"/>
                       <path d="M4.5 19.5c1.4-3.2 3.5-5.7 6.2-7.7"/>
                     </svg>
-                    <span>{{ block.settings.feature_2 | newline_to_br }}</span>
+                    <span>Hand<br>Finished</span>
                   </div>
                   <div class="maker-feature">
                     <svg
@@ -113,7 +101,7 @@
                       <path d="M9.5 5.5 8 3.2"/>
                       <path d="m14.5 5.5 1.5-2.3"/>
                     </svg>
-                    <span>{{ block.settings.feature_3 | newline_to_br }}</span>
+                    <span>Forest Sourced<br>Hardwood</span>
                   </div>
                 </div>
               </div>
@@ -123,7 +111,7 @@
       </div>
 
       <div class="meet-makers__dots" aria-label="Maker slides">
-        {%- for block in section.blocks -%}
+        {%- for author in makers_authors -%}
           {%- assign dot_remainder = forloop.index0 | modulo: 2 -%}
           {%- if dot_remainder == 0 -%}
             <button
@@ -158,9 +146,9 @@
       <script>
         function randomMakerRedirect() {
           var links = [];
-          {%- for block in section.blocks -%}
-            {%- if block.settings.link != blank -%}
-              links.push({{ block.settings.link | json }});
+          {%- for author in makers_authors -%}
+            {%- if author.system.url != blank -%}
+              links.push({{ author.system.url | json }});
             {%- endif -%}
           {%- endfor -%}
           
@@ -325,6 +313,7 @@
     position: relative;
     background-color: #e8e3df; /* placeholder color */
     overflow: hidden;
+    height: 460px; /* Default height for mobile */
   }
 
   @media screen and (min-width: 600px) {
@@ -343,6 +332,7 @@
     -webkit-user-drag: none; /* Disable image dragging */
     user-select: none;
     transition: transform var(--timing-long, 0.4s) var(--ease-out, ease-out);
+    border-radius: 8px;
   }
 
   .maker-card__img-link {
@@ -389,13 +379,13 @@
     margin-bottom: 16px;
   }
 
-  .maker-card__bio {
-    font-family: var(--font-body);
-    font-size: 14px;
-    line-height: 1.6;
-    color: var(--text-secondary, #6b5d52);
-    margin-bottom: 24px;
-    flex-grow: 1;
+  .maker-card__slogan {
+    font-family: var(--font-display-light, var(--font-display));
+    font-style: italic;
+    font-size: clamp(15px, 1.1vw, 18px);
+    line-height: 1.35;
+    color: var(--color-earth-brown, #4a2c18);
+    margin-bottom: 14px;
   }
 
   .maker-card__quote {
@@ -585,7 +575,6 @@
     .maker-card__img {
       min-height: 0;
       height: 100%;
-      filter: grayscale(1) contrast(1.06);
       object-position: center center;
     }
 
@@ -614,14 +603,6 @@
       margin-bottom: clamp(22px, 2.9svh, 28px);
       font-size: 15px;
       line-height: 1.45;
-    }
-
-    .maker-card__bio {
-      max-width: 34ch;
-      margin-bottom: clamp(18px, 2.6svh, 24px);
-      font-size: 14px;
-      line-height: 1.6;
-      flex-grow: 0;
     }
 
     .maker-card__quote {
@@ -825,12 +806,6 @@
       font-size: 13px;
     }
 
-    .maker-card__bio {
-      margin-bottom: 12px;
-      font-size: 12px;
-      line-height: 1.48;
-    }
-
     .maker-card__quote {
       margin-bottom: 14px;
     }
@@ -968,7 +943,6 @@
     aspect-ratio: 0.76;
     min-height: 0;
     height: auto;
-    filter: grayscale(1) contrast(1.06);
     object-fit: cover;
   }
 
@@ -987,11 +961,6 @@
   .maker-card__role {
     color: var(--color-earth-brown, #4a2c18);
     letter-spacing: 0.22em;
-  }
-
-  .maker-card__bio {
-    color: color-mix(in srgb, var(--color-earth-brown, #4a2c18) 78%, #6b5d52);
-    text-wrap: pretty;
   }
 
   .maker-card__features {
@@ -1184,13 +1153,6 @@
     .maker-card__role {
       margin-bottom: clamp(20px, 2.8svh, 34px);
       font-size: clamp(11px, 0.8vw, 14px);
-    }
-
-    .maker-card__bio {
-      max-width: 28ch;
-      margin-bottom: clamp(28px, 5svh, 58px);
-      font-size: clamp(13px, 0.95vw, 17px);
-      line-height: 1.48;
     }
 
     .maker-card__features {
