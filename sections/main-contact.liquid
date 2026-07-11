@@ -259,11 +259,15 @@
             <label for="{{ form_id }}-subject">{{ section.settings.subject_label | escape }}</label>
             <div class="contact-form__select">
               <select id="{{ form_id }}-subject" name="contact[subject]">
-                <option value="" disabled selected>{{ section.settings.subject_placeholder | escape }}</option>
+                <option value="" disabled {% if form.subject == blank %}selected{% endif %}>
+                  {{- section.settings.subject_placeholder | escape -}}
+                </option>
                 {% for option in subject_options %}
                   {% assign opt = option | strip %}
                   {% if opt != blank %}
-                    <option value="{{ opt | escape }}">{{ opt | escape }}</option>
+                    <option value="{{ opt | escape }}" {% if form.subject == opt %}selected{% endif %}>
+                      {{- opt | escape -}}
+                    </option>
                   {% endif %}
                 {% endfor %}
               </select>
@@ -289,7 +293,7 @@
               name="contact[body]"
               placeholder="{{ section.settings.message_placeholder | escape }}"
               required
-            >{{ form.body }}</textarea>
+            >{{ form.body | escape }}</textarea>
           </div>
         </div>
 

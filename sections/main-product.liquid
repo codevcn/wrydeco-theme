@@ -626,6 +626,14 @@
   assign product_form_id = 'ProductForm-' | append: section.id
 %}
 
+{%- liquid
+  assign delivery_time = null
+  for entry in metaobjects.store_legal_info.values limit: 1
+    assign delivery_time = entry
+  endfor
+  assign delivery_time_in_weeks = delivery_time.delivery_time_in_weeks.value | default: '3 weeks.'
+-%}
+
 <section
   id="MainProduct-{{ section.id }}"
   class="main-product"
@@ -728,7 +736,7 @@
             <line x1="8" y1="2" x2="8" y2="6"></line>
             <line x1="3" y1="10" x2="21" y2="10"></line>
           </svg>
-          Made to order in 3–5 weeks
+          Made to order in {{ delivery_time_in_weeks }}
         </li>
       </ul>
 

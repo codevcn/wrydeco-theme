@@ -1,3 +1,15 @@
+{%- liquid
+  assign legal_info = nil
+  for entry in metaobjects.store_legal_info.values limit: 1
+    assign legal_info = entry
+  endfor
+  assign legal_slogan = legal_info.slogan.value | default: 'Bespoke wooden furniture, handcrafted for timeless spaces and meaningful living.'
+  assign legal_phone = legal_info.phone_number.value | default: '+1 (415) 902-6735'
+  assign legal_email = legal_info.support_email.value | default: 'support@wrydeco.com'
+  assign legal_address = legal_info.business_address.value | default: 'San Francisco, California'
+  assign legal_phone_href = legal_phone | remove: ' ' | remove: '(' | remove: ')' | remove: '-'
+-%}
+
 <footer class="footer-custom">
   <div class="footer-custom__inner footer-custom__main">
     <section class="footer-custom__brand-panel" aria-label="WRYDECO contact details">
@@ -27,23 +39,37 @@
           <span class="footer-custom__wordmark-text">{{ shop.name }}</span>
         {%- endif -%}
       </h2>
-      <p class="footer-custom__tagline">
-        Bespoke wooden furniture, handcrafted for timeless spaces and meaningful living.
-      </p>
+      {%- if legal_slogan != blank -%}
+        <p class="footer-custom__tagline">
+          {{ legal_slogan | escape }}
+        </p>
+      {%- endif -%}
 
       <ul class="footer-custom__contact" aria-label="Contact information">
-        <li>
-          <span aria-hidden="true">☎</span>
-          <a href="tel:+14159026735">+1 (415) 902-6735</a>
-        </li>
-        <li>
-          <span aria-hidden="true">✉</span>
-          <a href="mailto:support@wrydeco.com">support@wrydeco.com</a>
-        </li>
-        <li>
-          <span aria-hidden="true">⌖</span>
-          <span>San Francisco, California</span>
-        </li>
+        {%- if legal_phone != blank -%}
+          <li>
+            <span class="footer-custom__contact-icon" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233a14 14 0 0 0 6.392 6.384"/></svg>
+            </span>
+            <a href="tel:{{ legal_phone_href }}">{{ legal_phone | escape }}</a>
+          </li>
+        {%- endif -%}
+        {%- if legal_email != blank -%}
+          <li>
+            <span class="footer-custom__contact-icon" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="m22 7l-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/><rect width="20" height="16" x="2" y="4" rx="2"/></g></svg>
+            </span>
+            <a href="mailto:{{ legal_email }}">{{ legal_email | escape }}</a>
+          </li>
+        {%- endif -%}
+        {%- if legal_address != blank -%}
+          <li>
+            <span class="footer-custom__contact-icon" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></g></svg>
+            </span>
+            <span>{{ legal_address | escape }}</span>
+          </li>
+        {%- endif -%}
       </ul>
 
       {% if section.settings.show_social %}
@@ -906,6 +932,12 @@
     width: 22px;
     color: var(--footer-ink);
     font-size: 17px;
+  }
+
+  .footer-custom__contact-icon svg {
+    width: 18px;
+    height: 18px;
+    display: block;
   }
 
   .footer-custom a {
