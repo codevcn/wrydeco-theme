@@ -1,3 +1,10 @@
+{%- liquid
+  assign lead_designer_entry = metaobjects.lead_designer.values | first
+  assign lead_designer_avatar_url = lead_designer_entry.avatar_img_url.value
+  assign lead_designer_name = lead_designer_entry.name.value
+  assign lead_designer_slogan = lead_designer_entry.slogan.value
+-%}
+
 {%- style -%}
   .section-{{ section.id }}-padding {
     padding-block: var(--section-padding-y-lg, 100px);
@@ -492,12 +499,15 @@
       <div class="advisor-card">
         <div class="advisor-card__top">
           <div class="advisor-card__img-wrapper">
-            {%- if section.settings.advisor_image != blank -%}
-              {{
-                section.settings.advisor_image
-                | image_url: width: 400
-                | image_tag: class: 'advisor-card__img', loading: 'lazy'
-              }}
+            {%- if lead_designer_avatar_url != blank -%}
+              <img
+                src="{{ lead_designer_avatar_url | escape }}"
+                alt="{{ lead_designer_name | default: 'WRYDECO lead designer' | escape }}"
+                class="advisor-card__img"
+                loading="lazy"
+                width="400"
+                height="533"
+              >
             {%- else -%}
               <img
                 src="{{ 'design-advisor.png' | file_url }}"
@@ -511,11 +521,11 @@
           </div>
           <div class="advisor-card__info">
             <span class="advisor-card__eyebrow">{{ section.settings.advisor_eyebrow }}</span>
-            <h3 class="advisor-card__name">{{ section.settings.advisor_name }}</h3>
+            <h3 class="advisor-card__name">{{ lead_designer_name | escape }}</h3>
             <p class="advisor-card__title">{{ section.settings.advisor_title }}</p>
             <span class="advisor-card__divider under-title"></span>
             <div class="advisor-card__quote-mark">“</div>
-            <p class="advisor-card__quote">{{ section.settings.advisor_quote }}</p>
+            <p class="advisor-card__quote">{{ lead_designer_slogan | escape }}</p>
           </div>
         </div>
 
@@ -600,11 +610,6 @@
       "content": "Advisor Card"
     },
     {
-      "type": "image_picker",
-      "id": "advisor_image",
-      "label": "Advisor Image"
-    },
-    {
       "type": "text",
       "id": "advisor_eyebrow",
       "label": "Advisor Eyebrow",
@@ -612,21 +617,9 @@
     },
     {
       "type": "text",
-      "id": "advisor_name",
-      "label": "Advisor Name",
-      "default": "Mr. Nguyen"
-    },
-    {
-      "type": "text",
       "id": "advisor_title",
       "label": "Advisor Title",
       "default": "Lead Design Consultant"
-    },
-    {
-      "type": "textarea",
-      "id": "advisor_quote",
-      "label": "Advisor Quote",
-      "default": "Every piece we create carries nature's story. My role is to help you find the one that belongs in your space."
     },
     {
       "type": "text",

@@ -763,9 +763,18 @@
 {% endstylesheet %}
 
 {% javascript %}
-  const showContactToasts = () => {
-    document.querySelectorAll('[data-contact-toast]:not([data-toast-shown])').forEach((feedback) => {
-      if (!window.showToast) return;
+  const showContactToasts = (attempt = 0) => {
+    const feedbackItems = document.querySelectorAll('[data-contact-toast]:not([data-toast-shown])');
+    if (!feedbackItems.length) return;
+
+    if (typeof window.showToast !== 'function') {
+      if (attempt < 20) {
+        window.setTimeout(() => showContactToasts(attempt + 1), 100);
+      }
+      return;
+    }
+
+    feedbackItems.forEach((feedback) => {
       feedback.dataset.toastShown = 'true';
       window.showToast({
         message: feedback.dataset.toastMessage,
@@ -781,6 +790,7 @@
   } else {
     showContactToasts();
   }
+  window.addEventListener('load', showContactToasts, { once: true });
   document.addEventListener('shopify:section:load', showContactToasts);
 {% endjavascript %}
 

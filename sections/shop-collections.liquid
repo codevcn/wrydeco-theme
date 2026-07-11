@@ -1,3 +1,9 @@
+{%- liquid
+  assign show_off_collections_entry = metaobjects.show_off_collections.values | first
+  assign collection_handles_value = show_off_collections_entry.collection_handle.value
+  assign collection_handles = collection_handles_value | split: ','
+-%}
+
 <div class="shop-collections">
   <div class="shop-collections__inner page-width">
     <div class="shop-collections__head">
@@ -34,44 +40,35 @@
     </div>
 
     <div class="shop-collections__grid">
-      {%- for block in section.blocks limit: 5 -%}
+      {%- for collection_handle_value in collection_handles -%}
         {%- liquid
-          assign col = block.settings.collection
-          assign card_title = block.settings.title
-          if card_title == blank and col != blank
-            assign card_title = col.title
+          assign collection_handle = collection_handle_value | strip
+          assign col = collections[collection_handle]
+          if collection_handle == blank or col == blank
+            continue
           endif
-          assign card_url = block.settings.link
-          if card_url == blank and col != blank
-            assign card_url = col.url
+
+          assign card_image = col.image
+          if card_image == blank
+            assign card_image = col.featured_image
           endif
-          if card_url == blank and card_title != blank
-            assign generated_handle = card_title | handleize
-            assign card_url = routes.collections_url | append: '/' | append: generated_handle
+          if card_image == blank
+            assign card_image = col.products.first.featured_image
           endif
-          assign card_url = card_url | default: routes.collections_url
+          assign card_alt = card_image.alt | default: col.title
         -%}
-        <a class="shop-collections__card" href="{{ card_url }}" {{ block.shopify_attributes }}>
+        <a class="shop-collections__card" href="{{ col.url }}">
           <div class="shop-collections__media">
-            {%- if block.settings.image != blank -%}
+            {%- if card_image != blank -%}
               {{
-                block.settings.image
+                card_image
                 | image_url: width: 900
                 | image_tag:
                   class: 'shop-collections__img',
                   loading: 'lazy',
                   sizes: '(min-width: 1200px) 18vw, (min-width: 768px) 32vw, 86vw',
-                  widths: '360, 540, 720, 900'
-              }}
-            {%- elsif col != blank and col.featured_image != blank -%}
-              {{
-                col.featured_image
-                | image_url: width: 900
-                | image_tag:
-                  class: 'shop-collections__img',
-                  loading: 'lazy',
-                  sizes: '(min-width: 1200px) 18vw, (min-width: 768px) 32vw, 86vw',
-                  widths: '360, 540, 720, 900'
+                  widths: '900, 1200',
+                  alt: card_alt
               }}
             {%- else -%}
               {%- case forloop.index -%}
@@ -87,8 +84,8 @@
                   {%- assign fallback_image = 'home-colle-avt-5.png' -%}
               {%- endcase -%}
               <img
-                src="{{ fallback_image | file_url }}"
-                alt="{{ card_title | default: 'Handcrafted wood furniture collection' | escape }}"
+                src="{{ fallback_image | file_url: width: 900 }}"
+                alt="{{ col.title | escape }}"
                 class="shop-collections__img"
                 loading="lazy"
                 width="900"
@@ -97,9 +94,11 @@
             {%- endif -%}
           </div>
           <div class="shop-collections__card-body">
-            <h3 class="shop-collections__card-title">{{ card_title | default: 'Collection' }}</h3>
-            {%- if block.settings.subtitle != blank -%}
-              <p class="shop-collections__card-subtitle">{{ block.settings.subtitle }}</p>
+            <h3 class="shop-collections__card-title">{{ col.title | escape }}</h3>
+            {%- if col.description != blank -%}
+              <p class="shop-collections__card-subtitle">
+                {{- col.description | strip_html | truncatewords: 10 -}}
+              </p>
             {%- endif -%}
             <span class="shop-collections__card-link">
               <span>{{ section.settings.explore_label | default: 'Explore Collection' | escape }}</span>
@@ -218,6 +217,9 @@
     min-height: 0;
     padding-left: clamp(12px, 1.1vw, 20px);
     border-left: 1px solid rgba(74, 44, 24, 0.16);
+  }
+  .shop-collections__card:first-child {
+    border-left: none;
   }
 
   .shop-collections__media {
@@ -363,46 +365,6 @@
     { "type": "url", "id": "view_all_link", "label": "View all link" },
     { "type": "text", "id": "explore_label", "label": "Card link label", "default": "Explore Collection" }
   ],
-  "blocks": [
-    {
-      "type": "collection_card",
-      "name": "Collection card",
-      "settings": [
-        { "type": "collection", "id": "collection", "label": "Collection" },
-        { "type": "image_picker", "id": "image", "label": "Image (overrides collection image)" },
-        { "type": "text", "id": "title", "label": "Title (overrides collection title)" },
-        { "type": "text", "id": "subtitle", "label": "Subtitle" },
-        { "type": "url", "id": "link", "label": "Link (overrides collection URL)" }
-      ]
-    }
-  ],
-  "presets": [
-    {
-      "name": "Shop Collections",
-      "blocks": [
-        {
-          "type": "collection_card",
-          "settings": { "title": "Bookshelves & Tree Bookcases", "subtitle": "Sculptural storage" }
-        },
-        {
-          "type": "collection_card",
-          "settings": { "title": "Floating & Wall Shelves", "subtitle": "Statement pieces" }
-        },
-        {
-          "type": "collection_card",
-          "settings": { "title": "Coffee & Console Tables", "subtitle": "Live-edge & organic" }
-        },
-        { "type": "collection_card", "settings": { "title": "Beds & Bedroom", "subtitle": "Branch headboards" } },
-        {
-          "type": "collection_card",
-          "settings": { "title": "Storage & Cabinets", "subtitle": "Organized with elegance" }
-        },
-        {
-          "type": "collection_card",
-          "settings": { "title": "Wood Décor & Accents", "subtitle": "Small details, big impact" }
-        }
-      ]
-    }
-  ]
+  "presets": [{ "name": "Shop Collections" }]
 }
 {% endschema %}

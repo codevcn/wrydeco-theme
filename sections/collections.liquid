@@ -1,11 +1,10 @@
 {% comment %}
   Renders the editorial collection index at /collections.
-  Collection content and links are server-rendered for crawlability.
+  All storefront collections, their content, and pagination links are server-rendered for crawlability.
 {% endcomment %}
 
 {% liquid
   assign consultation_url = section.settings.consultation_url | default: pages.customization.url | default: routes.root_url
-  assign mega_collection_handles = 'coffee-table,console-table,end-table,bookshelf,fireplace-mantel-shelf,floating-shelf,wall-shelf,coat-rack,entryway-shoe-bench-rack,storage-cabinet,tree-coat-rack,jewelry-tree-organizer-stand,wall-decorative-sculpture,wooden-floor-sculpture,wooden-fruit-bowl,wood-floor-lamp-base,wooden-lamp-base,wooden-plant-stand,rustic-wine-rack,tree-wine-rack,wall-mounted-wine-rack,cat-tree,parrot-tree,bedroom-furniture,bed-frame-with-headboard,bedside-table' | split: ','
   assign room_handles = 'living-room-furniture,dining-room-furniture,bedroom-furniture,home-office' | split: ','
   assign room_labels = 'Living Room,Dining Room,Bedroom,Home Office' | split: ','
 %}
@@ -31,7 +30,7 @@
     </div>
   </section>
 
-  <div class="collections-page__mantra" aria-hidden="true">
+  <div class="collections-page__mantra collections-page__mantra-collections" aria-hidden="true">
     <span></span>
     <p>The collections made your day.</p>
     <span></span>
@@ -39,55 +38,60 @@
 
   <main class="collections-page__main">
     <section class="collections-page__featured" aria-labelledby="FeaturedCollections-{{ section.id }}">
-      <h2 id="FeaturedCollections-{{ section.id }}" class="collections-page__visually-hidden">Featured collections</h2>
-      <div class="collections-page__grid">
-        {% for collection_handle in mega_collection_handles %}
-          {% assign menu_collection = collections[collection_handle] %}
-          {% if menu_collection == blank %}
-            {% continue %}
-          {% endif %}
-
-          {% assign card_image = menu_collection.image %}
-          {% if card_image == blank %}
-            {% assign card_image = menu_collection.featured_image %}
-          {% endif %}
-          {% if card_image == blank %}
-            {% assign card_image = menu_collection.products.first.featured_image %}
-          {% endif %}
-          {% if card_image == blank %}
-            {% assign card_image = menu_collection.products.first.featured_media.preview_image %}
-          {% endif %}
-          {% assign card_alt = card_image.alt | default: menu_collection.title %}
-
-          <a class="collections-page__card collections-page__card--{{ forloop.index }}" href="{{ menu_collection.url }}">
-            {% if card_image != blank %}
-              {{
-                card_image
-                | image_url: width: 1200
-                | image_tag:
-                  class: 'collections-page__card-image',
-                  loading: 'lazy',
-                  widths: '420, 640, 900, 1200',
-                  sizes: '(max-width: 767px) 100vw, (max-width: 1200px) 50vw, 34vw',
-                  alt: card_alt
-              }}
+      <h2 id="FeaturedCollections-{{ section.id }}" class="collections-page__visually-hidden">All collections</h2>
+      {% paginate collections by 48 %}
+        <div class="collections-page__grid">
+          {% for menu_collection in collections %}
+            {% assign card_image = menu_collection.image %}
+            {% if card_image == blank %}
+              {% assign card_image = menu_collection.featured_image %}
             {% endif %}
-            <span class="collections-page__card-shade" aria-hidden="true"></span>
-            <span class="collections-page__card-content">
-              <span class="collections-page__card-title">{{ menu_collection.title | escape }}</span>
-              {% if menu_collection.description != blank %}
-                <span class="collections-page__card-description">
-                  {{- menu_collection.description | strip_html | truncatewords: 11 -}}
-                </span>
+            {% if card_image == blank %}
+              {% assign card_image = menu_collection.products.first.featured_image %}
+            {% endif %}
+            {% if card_image == blank %}
+              {% assign card_image = menu_collection.products.first.featured_media.preview_image %}
+            {% endif %}
+            {% assign card_alt = card_image.alt | default: menu_collection.title %}
+
+            <a class="collections-page__card" href="{{ menu_collection.url }}">
+              {% if card_image != blank %}
+                {{
+                  card_image
+                  | image_url: width: 1200
+                  | image_tag:
+                    class: 'collections-page__card-image',
+                    loading: 'lazy',
+                    widths: '420, 640, 900, 1200',
+                    sizes: '(max-width: 767px) 100vw, (max-width: 1200px) 50vw, 34vw',
+                    alt: card_alt
+                }}
               {% endif %}
-            </span>
-            <span class="collections-page__arrow" aria-hidden="true">&#8594;</span>
-          </a>
-        {% endfor %}
-      </div>
+              <span class="collections-page__card-shade" aria-hidden="true"></span>
+              <span class="collections-page__card-content">
+                <span class="collections-page__card-title">{{ menu_collection.title | escape }}</span>
+                {% if menu_collection.description != blank %}
+                  <span class="collections-page__card-description">
+                    {{- menu_collection.description | strip_html | truncatewords: 11 -}}
+                  </span>
+                {% endif %}
+              </span>
+              <span class="collections-page__arrow" aria-hidden="true">&#8594;</span>
+            </a>
+          {% else %}
+            <p class="collections-page__empty">No collections are available yet.</p>
+          {% endfor %}
+        </div>
+
+        {% if paginate.pages > 1 %}
+          <nav class="collections-page__pagination" aria-label="Collections pagination">
+            {{ paginate | default_pagination }}
+          </nav>
+        {% endif %}
+      {% endpaginate %}
     </section>
 
-    <div class="collections-page__mantra" aria-hidden="true">
+    <div class="collections-page__mantra collections-page__mantra-designed-by-room" aria-hidden="true">
       <span></span>
       <p>Crafted by nature. Designed to endure.</p>
       <span></span>
@@ -299,6 +303,18 @@
     gap: var(--sp-3);
   }
 
+  .collections-page__empty {
+    grid-column: 1 / -1;
+    margin: 0;
+    color: var(--text-secondary);
+    text-align: center;
+  }
+
+  .collections-page__pagination {
+    margin-top: var(--sp-6);
+    text-align: center;
+  }
+
   .collections-page__card {
     position: relative;
     grid-column: span 4;
@@ -380,6 +396,9 @@
     margin: var(--sp-5) auto;
     color: var(--text-secondary);
   }
+  .collections-page__mantra.collections-page__mantra-designed-by-room {
+    display: none; /* để tạm, sau này đổi lại */
+  }
 
   .collections-page__mantra span {
     height: var(--border-width);
@@ -393,7 +412,7 @@
   }
 
   .collections-page__rooms {
-    display: grid;
+    display: none; /* để tạm, sau này đổi lại */
     grid-template-columns: 1.05fr repeat(4, minmax(0, 1fr)) 1.4fr;
     gap: var(--sp-3);
     align-items: stretch;
@@ -568,9 +587,7 @@
       grid-auto-rows: calc(var(--sp-12) * 2);
     }
 
-    .collections-page__card,
-    .collections-page__card--4,
-    .collections-page__card--5 {
+    .collections-page__card {
       grid-column: span 1;
     }
   }

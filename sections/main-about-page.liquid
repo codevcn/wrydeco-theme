@@ -87,23 +87,39 @@
         <p>{{ section.settings.team_intro | escape }}</p>
       </header>
 
+      {%- comment -%}
+        Team cards are populated from the first entries of the "Product Author"
+        metaobject (image, name, bio). Each block is paired with the metaobject
+        entry at the same index; role and tags stay on the block because the
+        metaobject does not expose them. Block values act as fallbacks.
+      {%- endcomment -%}
       <div class="about-new-team__grid">
-        {%- for block in section.blocks -%}
-          {%- if block.type == 'team_member' -%}
+        {%- for author in metaobjects.product_author.values limit: 3 -%}
+          {%- assign block = section.blocks[forloop.index0] -%}
+          {%- assign member_name = author.author_name.value | default: block.settings.name -%}
+          {%- assign member_image = author.author_image_url.value -%}
+          {%- assign member_bio = author.author_bio.value -%}
+          {%- if member_bio == blank -%}
+            {%- assign member_bio = block.settings.bio -%}
+          {%- endif -%}
             <article class="about-new-member" {{ block.shopify_attributes }}>
               <div class="about-new-member__media">
-                <img
-                  src="{{ block.settings.image_asset | file_url }}"
-                  width="1024"
-                  height="1024"
-                  alt="{{ block.settings.image_alt | default: block.settings.name | escape }}"
-                  loading="lazy"
-                >
+                {%- if member_image != blank -%}
+                  <img
+                    src="{{ member_image }}"
+                    width="1024"
+                    height="1024"
+                    alt="{{ member_name | escape }}"
+                    loading="lazy"
+                  >
+                {%- else -%}
+                  {{ 'image' | placeholder_svg_tag: 'placeholder-svg' }}
+                {%- endif -%}
               </div>
               <div class="about-new-member__content">
                 <p class="about-new-member__role">{{ block.settings.role | escape }}</p>
-                <h3>{{ block.settings.name | escape }}</h3>
-                <div class="about-new-member__bio rte">{{ block.settings.bio }}</div>
+                <h3>{{ member_name | escape }}</h3>
+                <div class="about-new-member__bio rte">{{ member_bio }}</div>
                 {%- assign member_tags = block.settings.tags | split: ',' -%}
                 <ul class="about-new-member__tags" aria-label="Specialties">
                   {%- for tag in member_tags -%}
@@ -115,7 +131,6 @@
                 </ul>
               </div>
             </article>
-          {%- endif -%}
         {%- endfor -%}
       </div>
     </div>
@@ -419,15 +434,20 @@
     overflow: hidden;
     border: var(--border-width) solid var(--border-light);
     border-radius: var(--radius-lg);
-    background: color-mix(in srgb, var(--bg-tertiary) 70%, transparent);
+    background-color: var(--color-milk);
   }
 
   .about-new-member__media {
-    aspect-ratio: 16 / 9;
+    aspect-ratio: 1 / 1;
     overflow: hidden;
   }
 
-  .about-new-member__media img {
+  .about-new-member__media img,
+  .about-new-member__media svg {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
     filter: sepia(0.1);
   }
 
@@ -452,8 +472,13 @@
   }
 
   .about-new-member__bio {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
     min-block-size: calc(var(--sp-8) + var(--sp-3));
     margin-block-start: var(--sp-2);
+    overflow: hidden;
     color: var(--color-charcoal);
     font-size: var(--font-size-caption);
     line-height: var(--line-height-generous);
