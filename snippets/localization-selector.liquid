@@ -7,7 +7,9 @@
   options are real submit buttons, so switching country works without JS.
   JavaScript only enhances it (open/close behaviour, live search, keyboard).
 
-  Renders nothing if the shop only has a single available country.
+  Renders the current country as a static indicator if the shop only has a
+  single available country. The indicator automatically becomes a picker
+  when more countries are available.
 
   @param {string} [variant] - Visual variant: 'header', 'footer' or 'drawer'. Defaults to 'header'.
   @param {string} [id] - Unique id suffix, required when rendering more than once on the same page.
@@ -124,6 +126,24 @@
       {% endform %}
     </div>
   </details>
+{%- else -%}
+  <div class="loc-picker loc-picker--{{ variant }} loc-picker--static">
+    <span
+      class="loc-picker__trigger no-select"
+      aria-label="{{ 'general.localization.country_label' | t }}: {{ current_country.name | escape }}"
+    >
+      <span class="loc-picker__flag loc-picker__flag--trigger">
+        <img
+          src="https://flagcdn.com/{{ current_country.iso_code | downcase }}.svg"
+          width="24"
+          height="18"
+          loading="lazy"
+          alt=""
+        >
+      </span>
+      <span class="loc-picker__code">{{ current_country.currency.iso_code }}</span>
+    </span>
+  </div>
 {%- endif -%}
 
 {% stylesheet %}
@@ -143,6 +163,10 @@
     list-style: none;
     transition: border-color var(--timing-short) var(--ease-standard),
       background-color var(--timing-short) var(--ease-standard);
+  }
+
+  .loc-picker--static .loc-picker__trigger {
+    cursor: default;
   }
 
   .loc-picker__trigger::-webkit-details-marker {
@@ -339,6 +363,9 @@
     font-family: var(--font-roboto);
     letter-spacing: var(--letter-spacing-wide);
     color: var(--text-secondary);
+  }
+  .loc-picker__code.loc-picker__code-footer {
+    color: var(--color-milk);
   }
 
   .loc-picker__symbol {
