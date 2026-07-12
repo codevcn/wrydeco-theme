@@ -61,14 +61,18 @@
             </div>
           </article>
           <article class="about-new-proof">
-            <span class="about-new-proof__icon" aria-hidden="true">{% render 'about-craft-icon', icon: 'handmade' %}</span>
+            <span class="about-new-proof__icon" aria-hidden="true">
+              {%- render 'about-craft-icon', icon: 'handmade' -%}
+            </span>
             <div>
               <h3>{{ section.settings.proof_two_heading | escape }}</h3>
               <p>{{ section.settings.proof_two_text | escape }}</p>
             </div>
           </article>
           <article class="about-new-proof">
-            <span class="about-new-proof__icon" aria-hidden="true">{% render 'about-craft-icon', icon: 'shield' %}</span>
+            <span class="about-new-proof__icon" aria-hidden="true">
+              {%- render 'about-craft-icon', icon: 'shield' -%}
+            </span>
             <div>
               <h3>{{ section.settings.proof_three_heading | escape }}</h3>
               <p>{{ section.settings.proof_three_text | escape }}</p>
@@ -102,35 +106,35 @@
           {%- if member_bio == blank -%}
             {%- assign member_bio = block.settings.bio -%}
           {%- endif -%}
-            <article class="about-new-member" {{ block.shopify_attributes }}>
-              <div class="about-new-member__media">
-                {%- if member_image != blank -%}
-                  <img
-                    src="{{ member_image }}"
-                    width="1024"
-                    height="1024"
-                    alt="{{ member_name | escape }}"
-                    loading="lazy"
-                  >
-                {%- else -%}
-                  {{ 'image' | placeholder_svg_tag: 'placeholder-svg' }}
-                {%- endif -%}
-              </div>
-              <div class="about-new-member__content">
-                <p class="about-new-member__role">{{ block.settings.role | escape }}</p>
-                <h3>{{ member_name | escape }}</h3>
-                <div class="about-new-member__bio rte">{{ member_bio }}</div>
-                {%- assign member_tags = block.settings.tags | split: ',' -%}
-                <ul class="about-new-member__tags" aria-label="Specialties">
-                  {%- for tag in member_tags -%}
-                    {%- assign clean_tag = tag | strip -%}
-                    {%- if clean_tag != blank -%}
-                      <li>{{ clean_tag | escape }}</li>
-                    {%- endif -%}
-                  {%- endfor -%}
-                </ul>
-              </div>
-            </article>
+          <article class="about-new-member" {{ block.shopify_attributes }}>
+            <div class="about-new-member__media">
+              {%- if member_image != blank -%}
+                <img
+                  src="{{ member_image }}"
+                  width="1024"
+                  height="1024"
+                  alt="{{ member_name | escape }}"
+                  loading="lazy"
+                >
+              {%- else -%}
+                {{ 'image' | placeholder_svg_tag: 'placeholder-svg' }}
+              {%- endif -%}
+            </div>
+            <div class="about-new-member__content">
+              <p class="about-new-member__role">{{ block.settings.role | escape }}</p>
+              <h3>{{ member_name | escape }}</h3>
+              <div class="about-new-member__bio rte">{{ member_bio }}</div>
+              {%- assign member_tags = block.settings.tags | split: ',' -%}
+              <ul class="about-new-member__tags" aria-label="Specialties">
+                {%- for tag in member_tags -%}
+                  {%- assign clean_tag = tag | strip -%}
+                  {%- if clean_tag != blank -%}
+                    <li>{{ clean_tag | escape }}</li>
+                  {%- endif -%}
+                {%- endfor -%}
+              </ul>
+            </div>
+          </article>
         {%- endfor -%}
       </div>
     </div>
@@ -148,10 +152,12 @@
 </script>
 
 <script>
-  const mainProductSection = document.getElementById('about-new-{{ section.id }}');
-  if (mainProductSection && window.innerWidth < 768) {
-    mainProductSection.closest('body').querySelector('.header__icon--search').style.color = 'var(--color-earth-brown)';
-    mainProductSection.closest('body').querySelector('.header__icon--cart').style.color = 'var(--color-earth-brown)';
+  const aboutNewEle = document.getElementById('about-new-{{ section.id }}');
+  if (aboutNewEle && window.innerWidth < 768) {
+    aboutNewEle.closest('body').querySelector('.header__icon--search').style.color = 'var(--color-earth-brown)';
+    aboutNewEle.closest('body').querySelector('.header__localization .loc-picker__code').style.color =
+      'var(--color-earth-brown)';
+    aboutNewEle.closest('body').querySelector('.header__icon--cart').style.color = 'var(--color-earth-brown)';
   }
 </script>
 {% stylesheet %}
@@ -188,7 +194,12 @@
   .about-new-hero__media::after {
     position: absolute;
     inset: var(--sp-0);
-    background: linear-gradient(90deg, var(--bg-primary) 0%, color-mix(in srgb, var(--bg-primary) 92%, transparent) 24%, transparent 62%);
+    background: linear-gradient(
+      90deg,
+      var(--bg-primary) 0%,
+      color-mix(in srgb, var(--bg-primary) 92%, transparent) 24%,
+      transparent 62%
+    );
     content: '';
   }
 
@@ -265,7 +276,8 @@
     letter-spacing: var(--letter-spacing-wide);
     text-decoration: none;
     text-transform: uppercase;
-    transition: background-color var(--timing-short) var(--ease-standard), transform var(--timing-short) var(--ease-standard);
+    transition: background-color var(--timing-short) var(--ease-standard),
+      transform var(--timing-short) var(--ease-standard);
   }
 
   .about-new__button:hover {
@@ -568,7 +580,12 @@
     }
 
     .about-new-hero__media::after {
-      background: linear-gradient(90deg, color-mix(in srgb, var(--bg-primary) 94%, transparent) 0%, color-mix(in srgb, var(--bg-primary) 78%, transparent) 72%, transparent 100%);
+      background: linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--bg-primary) 94%, transparent) 0%,
+        color-mix(in srgb, var(--bg-primary) 78%, transparent) 72%,
+        transparent 100%
+      );
     }
 
     .about-new-hero__media img {
@@ -625,30 +642,80 @@
   "settings": [
     { "type": "header", "content": "Hero" },
     { "type": "text", "id": "hero_eyebrow", "label": "Eyebrow", "default": "Our story" },
-    { "type": "text", "id": "hero_heading_first_line", "label": "Heading first line", "default": "A Gallery of Craft," },
+    {
+      "type": "text",
+      "id": "hero_heading_first_line",
+      "label": "Heading first line",
+      "default": "A Gallery of Craft,"
+    },
     { "type": "text", "id": "hero_heading_second_line", "label": "Heading second line", "default": "Character, and" },
     { "type": "text", "id": "hero_heading_third_line", "label": "Heading third line", "default": "Natural Wood" },
-    { "type": "richtext", "id": "hero_text", "label": "Text", "default": "<p>WRYDECO celebrates handcrafted furniture made from solid natural wood. Each piece is a collectible expression of form, function, and the quiet beauty of nature.</p>" },
+    {
+      "type": "richtext",
+      "id": "hero_text",
+      "label": "Text",
+      "default": "<p>WRYDECO celebrates handcrafted furniture made from solid natural wood. Each piece is a collectible expression of form, function, and the quiet beauty of nature.</p>"
+    },
     { "type": "text", "id": "hero_button_label", "label": "Button label", "default": "Explore our collections" },
     { "type": "url", "id": "collections_url", "label": "Collections page" },
-    { "type": "text", "id": "hero_image_alt", "label": "Image alt text", "default": "A gallery of sculptural natural wood furniture in a calm interior" },
+    {
+      "type": "text",
+      "id": "hero_image_alt",
+      "label": "Image alt text",
+      "default": "A gallery of sculptural natural wood furniture in a calm interior"
+    },
     { "type": "header", "content": "Brand story" },
     { "type": "text", "id": "story_eyebrow", "label": "Eyebrow", "default": "Brand story" },
     { "type": "text", "id": "story_heading_first_line", "label": "Heading first line", "default": "Rooted in Nature." },
     { "type": "text", "id": "story_heading_second_line", "label": "Heading second line", "default": "Made to Endure." },
-    { "type": "richtext", "id": "story_text", "label": "Text", "default": "<p>Born from a deep respect for nature and tradition, WRYDECO creates sculptural furniture that brings warmth, soul, and calm into everyday life.</p><p>We work with solid hardwoods, selected for their strength and character, and shape each piece by hand with intention and care. Our designs are timeless—made not for trends, but to be lived with and passed on.</p><p>Transparency, honest materials, and meaningful relationships guide everything we do. This is our commitment to a more thoughtful way of living.</p>" },
-    { "type": "text", "id": "story_image_alt", "label": "Image alt text", "default": "Solid natural wood dining furniture shaped to endure for generations" },
-    { "type": "text", "id": "proofs_label", "label": "Proof points label", "default": "WRYDECO craftsmanship principles" },
+    {
+      "type": "richtext",
+      "id": "story_text",
+      "label": "Text",
+      "default": "<p>Born from a deep respect for nature and tradition, WRYDECO creates sculptural furniture that brings warmth, soul, and calm into everyday life.</p><p>We work with solid hardwoods, selected for their strength and character, and shape each piece by hand with intention and care. Our designs are timeless—made not for trends, but to be lived with and passed on.</p><p>Transparency, honest materials, and meaningful relationships guide everything we do. This is our commitment to a more thoughtful way of living.</p>"
+    },
+    {
+      "type": "text",
+      "id": "story_image_alt",
+      "label": "Image alt text",
+      "default": "Solid natural wood dining furniture shaped to endure for generations"
+    },
+    {
+      "type": "text",
+      "id": "proofs_label",
+      "label": "Proof points label",
+      "default": "WRYDECO craftsmanship principles"
+    },
     { "type": "text", "id": "proof_one_heading", "label": "Proof one heading", "default": "Solid wood only" },
-    { "type": "textarea", "id": "proof_one_text", "label": "Proof one text", "default": "No veneers. No shortcuts. Just honest materials." },
+    {
+      "type": "textarea",
+      "id": "proof_one_text",
+      "label": "Proof one text",
+      "default": "No veneers. No shortcuts. Just honest materials."
+    },
     { "type": "text", "id": "proof_two_heading", "label": "Proof two heading", "default": "Handcrafted" },
-    { "type": "textarea", "id": "proof_two_text", "label": "Proof two text", "default": "Shaped by skilled hands. Finished with care." },
+    {
+      "type": "textarea",
+      "id": "proof_two_text",
+      "label": "Proof two text",
+      "default": "Shaped by skilled hands. Finished with care."
+    },
     { "type": "text", "id": "proof_three_heading", "label": "Proof three heading", "default": "Built to endure" },
-    { "type": "textarea", "id": "proof_three_text", "label": "Proof three text", "default": "Furniture that ages beautifully and lasts for generations." },
+    {
+      "type": "textarea",
+      "id": "proof_three_text",
+      "label": "Proof three text",
+      "default": "Furniture that ages beautifully and lasts for generations."
+    },
     { "type": "header", "content": "Team" },
     { "type": "text", "id": "team_eyebrow", "label": "Eyebrow", "default": "Our team" },
     { "type": "text", "id": "team_heading", "label": "Heading", "default": "Meet the People Behind WRYDECO" },
-    { "type": "text", "id": "team_intro", "label": "Introduction", "default": "A small team with big respect—for wood, for craft, and for you." }
+    {
+      "type": "text",
+      "id": "team_intro",
+      "label": "Introduction",
+      "default": "A small team with big respect—for wood, for craft, and for you."
+    }
   ],
   "blocks": [
     {
@@ -659,7 +726,12 @@
         { "type": "text", "id": "image_alt", "label": "Image alt text" },
         { "type": "text", "id": "role", "label": "Role", "default": "Creative artisan" },
         { "type": "text", "id": "name", "label": "Name", "default": "Ngoc Vo" },
-        { "type": "richtext", "id": "bio", "label": "Biography", "default": "<p>Ngoc brings a thoughtful eye to materials, proportion, and the details that make a space feel personal.</p>" },
+        {
+          "type": "richtext",
+          "id": "bio",
+          "label": "Biography",
+          "default": "<p>Ngoc brings a thoughtful eye to materials, proportion, and the details that make a space feel personal.</p>"
+        },
         { "type": "text", "id": "tags", "label": "Tags separated by commas", "default": "Design, Materials, Detail" }
       ]
     }

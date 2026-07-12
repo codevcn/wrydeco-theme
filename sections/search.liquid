@@ -134,13 +134,6 @@
             {{- 'search.sort_relevance' | t -}}
           </a>
           <a
-            href="{{ search_base_url }}&sort_by=created-descending"
-            data-sort="created-descending"
-            class="srp-sort__pill{% if current_sort == 'created-descending' %} is-active{% endif %}"
-          >
-            {{- 'search.sort_newest' | t -}}
-          </a>
-          <a
             href="{{ search_base_url }}&sort_by=price-ascending"
             data-sort="price-ascending"
             class="srp-sort__pill{% if current_sort == 'price-ascending' %} is-active{% endif %}"
@@ -153,13 +146,6 @@
             class="srp-sort__pill{% if current_sort == 'price-descending' %} is-active{% endif %}"
           >
             {{- 'search.sort_price_high_low' | t -}}
-          </a>
-          <a
-            href="{{ search_base_url }}&sort_by=best-selling"
-            data-sort="best-selling"
-            class="srp-sort__pill{% if current_sort == 'best-selling' %} is-active{% endif %}"
-          >
-            {{- 'search.sort_best_selling' | t -}}
           </a>
         </div>
       </div>
@@ -470,7 +456,7 @@
     padding: 0 var(--sp-7) 0 calc(var(--sp-6) + var(--sp-2));
     border: 1px solid var(--border-default);
     border-radius: var(--radius-lg);
-    background-color: var(--color-milk);
+    background-color: #fffaf6;
     outline: none;
     font-family: var(--font-body);
     font-size: var(--font-size-body-md);
@@ -917,38 +903,7 @@
 
 <script>
   (function () {
-    // Shopify's native search sort_by only recognizes relevance/price-ascending/
-    // price-descending. "Newest" is reproduced client-side (re-sorts the cards on
-    // the current page by their rendered created date) so the pill still works;
-    // "Best Selling" has no sales-rank data available in storefront Liquid, so it
-    // only gets its active state synced and otherwise behaves like Relevance.
-    function syncSortPills() {
-      var pills = document.querySelectorAll('[data-sort-pills] [data-sort]');
-      if (!pills.length) return;
-      var params = new URLSearchParams(window.location.search);
-      var sortBy = params.get('sort_by') || 'relevance';
-
-      pills.forEach(function (pill) {
-        pill.classList.toggle('is-active', pill.dataset.sort === sortBy);
-      });
-
-      if (sortBy === 'created-descending') {
-        var grid = document.querySelector('[data-srp-grid]');
-        if (!grid) return;
-        var cards = Array.prototype.slice.call(grid.querySelectorAll('.srp-card'));
-        cards
-          .sort(function (a, b) {
-            return Number(b.dataset.created) - Number(a.dataset.created);
-          })
-          .forEach(function (card) {
-            grid.appendChild(card);
-          });
-      }
-    }
-
     function initSearchPage() {
-      syncSortPills();
-
       document.querySelectorAll('[data-view-toggle]').forEach(function (toggle) {
         if (toggle.dataset.init === 'true') return;
         toggle.dataset.init = 'true';
@@ -990,12 +945,14 @@
     }
   })();
 
-  const mainProductSection = document.getElementById('Search-{{ section.id }}');
-  if (mainProductSection) {
-    mainProductSection.closest('body').querySelector('.header__icon--search').style.color = 'var(--color-earth-brown)';
-    mainProductSection.closest('body').querySelector('.header__icon--cart').style.color = 'var(--color-earth-brown)';
-    mainProductSection.closest('body').querySelector('.header__icon--menu').style.color = 'var(--color-earth-brown)';
-    mainProductSection.closest('body').querySelector('.header__icon--account').style.color = 'var(--color-earth-brown)';
+  const searchEle = document.getElementById('Search-{{ section.id }}');
+  if (searchEle) {
+    searchEle.closest('body').querySelector('.header__icon--search').style.color = 'var(--color-earth-brown)';
+    searchEle.closest('body').querySelector('.header__icon--cart').style.color = 'var(--color-earth-brown)';
+    searchEle.closest('body').querySelector('.header__icon--menu').style.color = 'var(--color-earth-brown)';
+    searchEle.closest('body').querySelector('.header__localization .loc-picker__code').style.color =
+      'var(--color-milk)';
+    searchEle.closest('body').querySelector('.header__icon--account').style.color = 'var(--color-earth-brown)';
   }
 </script>
 

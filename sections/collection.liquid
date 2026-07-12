@@ -10,6 +10,7 @@
 <section class="collection-page" id="Collection-{{ section.id }}">
   {%- liquid
     assign collection_is_empty = false
+    assign per_page = 24
     if collection.all_products_count == 0
       assign collection_is_empty = true
     endif
@@ -150,9 +151,9 @@
         {%- endif -%}
 
         {%- comment -%}
-          Wood Type — native storefront filter when the custom.wood_type metafield
-          filter is enabled; otherwise built from the product metafield and toggled
-          client-side (see the <script> below and doc/implement-filter-by-wood-type.md).
+          Wood Type is rendered only when the custom.wood_type metafield filter is
+          enabled in Shopify Search & Discovery. A client-side fallback would only
+          filter the current pagination page and would produce incomplete results.
         {%- endcomment -%}
         {%- if wood_native != blank -%}
           <div
@@ -194,49 +195,6 @@
               {%- endif -%}
             </div>
           </div>
-        {%- else -%}
-          {%- liquid
-            assign wood_types = ''
-            for product in collection.products limit: 250
-              assign wv = product.metafields.custom.wood_type.value
-              if wv != blank
-                assign wj = wv | join: '~'
-                assign wood_types = wood_types | append: '~' | append: wj
-              endif
-            endfor
-            assign wood_list = wood_types | split: '~' | uniq | sort
-          -%}
-          {%- if wood_list.size > 0 -%}
-            <div
-              class="col-dropdown col-dropdown--left col-toolbar__facet"
-              data-dropdown
-              data-wood-filter
-              data-wood-param="filter.p.m.custom.wood_type"
-            >
-              <button
-                type="button"
-                class="col-dropdown__trigger"
-                data-dropdown-toggle
-                aria-expanded="false"
-                aria-haspopup="true"
-              >
-                <span>Wood Type</span>
-                {{ col_caret }}
-              </button>
-              <div class="col-dropdown__menu">
-                {%- for wt in wood_list -%}
-                  {%- if wt != blank -%}
-                    <a href="#" class="col-dropdown__option" data-wood-option data-wood-value="{{ wt | escape }}">
-                      <input type="checkbox" class="visually-hidden" tabindex="-1" aria-hidden="true">
-                      {{ col_check }}
-                      <span class="col-dropdown__option-label">{{ wt | escape }}</span>
-                    </a>
-                  {%- endif -%}
-                {%- endfor -%}
-                <a href="#" class="col-dropdown__clear" data-wood-clear hidden>Clear</a>
-              </div>
-            </div>
-          {%- endif -%}
         {%- endif -%}
       </div>
     </div>
@@ -244,11 +202,10 @@
     <div class="col-toolbar__right">
       {% liquid
         assign sort_by = collection.sort_by | default: collection.default_sort_by
-        assign current_sort_label = 'Featured'
-        if sort_by contains 'price'
-          assign current_sort_label = 'Price: Low to High'
-        elsif sort_by contains 'created'
-          assign current_sort_label = 'Newest'
+        assign current_sort_option = collection.sort_options | find: 'value', sort_by
+        assign current_sort_label = current_sort_option.name | default: 'Featured'
+        if sort_by == 'manual'
+          assign current_sort_label = 'Featured'
         endif
       %}
       <div class="col-dropdown col-dropdown--right col-toolbar__sort" data-dropdown>
@@ -283,30 +240,37 @@
           </button>
           <button
             type="button"
-            class="col-dropdown__option{% if sort_by contains 'price' %} is-active{% endif %}"
+            class="col-dropdown__option{% if sort_by == 'best-selling' %} is-active{% endif %}"
+            data-sort-value="best-selling"
+          >
+            <span class="col-dropdown__option-label">Best Selling</span>
+          </button>
+          <button
+            type="button"
+            class="col-dropdown__option{% if sort_by == 'price-ascending' %} is-active{% endif %}"
             data-sort-value="price-ascending"
           >
             <span class="col-dropdown__option-label">Price: Low to High</span>
           </button>
           <button
             type="button"
-            class="col-dropdown__option{% if sort_by contains 'created' %} is-active{% endif %}"
+            class="col-dropdown__option{% if sort_by == 'price-descending' %} is-active{% endif %}"
+            data-sort-value="price-descending"
+          >
+            <span class="col-dropdown__option-label">Price: High to Low</span>
+          </button>
+          <button
+            type="button"
+            class="col-dropdown__option{% if sort_by == 'created-descending' %} is-active{% endif %}"
             data-sort-value="created-descending"
           >
             <span class="col-dropdown__option-label">Newest</span>
           </button>
         </div>
       </div>
-      {%- liquid
-        assign per_page = 24
-        assign cur_page = current_page | default: 1
-        assign page_offset = cur_page | minus: 1 | times: per_page
-        assign items_on_page = collection.products_count | minus: page_offset | at_most: per_page
-        if items_on_page < 0
-          assign items_on_page = 0
-        endif
-      -%}
-      <div class="col-toolbar__count">{{ items_on_page }} items</div>
+      <div class="col-toolbar__count">
+        {{ collection.products_count }} {{ collection.products_count | pluralize: 'item', 'items' }}
+      </div>
     </div>
   </div>
   {%- endunless -%}
@@ -1678,57 +1642,6 @@
         });
       });
 
-      // Wood Type (metafield-based fallback): reflect + toggle the filter param
-      // client-side so it combines with the native availability/price filters.
-      document.querySelectorAll('[data-wood-filter]').forEach(function (wrap) {
-        if (wrap.dataset.initWood === 'true') return;
-        wrap.dataset.initWood = 'true';
-        var param = wrap.dataset.woodParam;
-        var options = wrap.querySelectorAll('[data-wood-option]');
-        var clear = wrap.querySelector('[data-wood-clear]');
-        var current = new URLSearchParams(window.location.search).getAll(param);
-        var anyActive = false;
-        options.forEach(function (opt) {
-          if (current.indexOf(opt.dataset.woodValue) !== -1) {
-            opt.classList.add('is-active');
-            var cb = opt.querySelector('input');
-            if (cb) cb.checked = true;
-            anyActive = true;
-          }
-        });
-        wrap.classList.toggle('has-active', anyActive);
-        if (clear) clear.hidden = !anyActive;
-
-        function navigate(values) {
-          var params = new URLSearchParams(window.location.search);
-          params.delete(param);
-          params.delete('page');
-          values.forEach(function (v) {
-            params.append(param, v);
-          });
-          window.location.search = params.toString();
-        }
-        options.forEach(function (opt) {
-          opt.addEventListener('click', function (e) {
-            e.preventDefault();
-            var values = new URLSearchParams(window.location.search).getAll(param);
-            var val = opt.dataset.woodValue;
-            var idx = values.indexOf(val);
-            if (idx === -1) {
-              values.push(val);
-            } else {
-              values.splice(idx, 1);
-            }
-            navigate(values);
-          });
-        });
-        if (clear) {
-          clear.addEventListener('click', function (e) {
-            e.preventDefault();
-            navigate([]);
-          });
-        }
-      });
     }
 
     if (document.readyState === 'loading') {
