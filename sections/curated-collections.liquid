@@ -20,17 +20,18 @@
         {{ block.shopify_attributes }}
       >
         <div class="curated-collections__card-bg">
+          {%- assign collection_image_alt = block.settings.image.alt | default: block.settings.title -%}
           {%- if block.settings.image != blank -%}
             {{
               block.settings.image
               | image_url: width: 800
-              | image_tag: class: 'curated-collections__img', loading: 'lazy'
+              | image_tag: class: 'curated-collections__img', loading: 'lazy', alt: collection_image_alt
             }}
           {%- else -%}
             {%- assign asset_img = 'curated-collections-img-' | append: forloop.index | append: '.png' -%}
             <img
               src="{{ asset_img | file_url }}"
-              alt="{{ block.settings.title }}"
+              alt="{{ collection_image_alt | escape }}"
               class="curated-collections__img"
               loading="lazy"
               width="800"

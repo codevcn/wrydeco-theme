@@ -1,0 +1,872 @@
+{% doc %}
+  Renders the homepage lead capture popup and submits natively to Shopify's
+  customer newsletter endpoint so the response state is rendered by Liquid.
+
+  @example
+  {% render 'lead-capture-popup' %}
+{% enddoc %}
+
+<button
+  type="button"
+  class="lead-capture-test-toggle"
+  data-lead-capture-test-toggle
+  aria-controls="LeadCaptureDialog"
+  aria-expanded="false"
+  hidden
+>
+  Test lead popup
+</button>
+
+<div
+  class="lead-capture"
+  data-lead-capture
+  data-storage-key="wrydeco_lead_capture_seen_v1"
+  aria-hidden="true"
+  hidden
+>
+  <div
+    id="LeadCaptureDialog"
+    class="lead-capture__dialog"
+    data-lead-capture-dialog
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="LeadCaptureTitle"
+    aria-describedby="LeadCaptureDescription"
+  >
+    <button
+      type="button"
+      class="lead-capture__close"
+      data-lead-capture-close
+      aria-label="Close newsletter invitation"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          fill="none"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M18 6L6 18M6 6l12 12"
+        />
+      </svg>
+    </button>
+
+    <div class="lead-capture__content">
+      <div data-lead-capture-form-state>
+        <div class="lead-capture__mark" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24">
+            <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+              <path d="M18.9 7a8 8 0 0 1 1.1 5v1a6 6 0 0 0 .8 3M8 11a4 4 0 0 1 8 0v1a10 10 0 0 0 2 6"/>
+              <path d="M12 11v2a14 14 0 0 0 2.5 8M8 15a18 18 0 0 0 1.8 6m-4.9-2a22 22 0 0 1-.9-7v-1a8 8 0 0 1 12-6.95"/>
+            </g>
+          </svg>
+        </div>
+
+        <div class="lead-capture__eyebrow" aria-hidden="true">
+          <span></span>
+          <p>A quiet note from our studio</p>
+          <span></span>
+        </div>
+
+        <h2 id="LeadCaptureTitle" class="lead-capture__title">Complimentary Shipping</h2>
+        <p id="LeadCaptureDescription" class="lead-capture__description">
+          Every piece you choose arrives with complimentary shipping — our way of honoring the art you welcome home.
+        </p>
+
+        {% form 'customer', class: 'lead-capture__form', id: 'LeadCaptureForm', novalidate: 'novalidate' %}
+          <input type="hidden" name="contact[tags]" value="newsletter">
+          {% if form.posted_successfully? %}
+            <span data-lead-capture-response-success hidden></span>
+          {% elsif form.errors %}
+            <div data-lead-capture-response-error hidden>{{ form.errors | default_errors }}</div>
+          {% endif %}
+          <div class="lead-capture__field">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+              <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+                <path d="M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                <path d="m3 7l9 6l9-6"/>
+              </g>
+            </svg>
+            <label class="lead-capture__visually-hidden" for="LeadCaptureEmail">Email address</label>
+            <input
+              id="LeadCaptureEmail"
+              class="lead-capture__input"
+              type="email"
+              name="contact[email]"
+              value="{{ form.email | escape }}"
+              placeholder="Enter your email"
+              autocomplete="email"
+              inputmode="email"
+              aria-describedby="LeadCaptureError"
+              required
+            >
+          </div>
+          <p id="LeadCaptureError" class="lead-capture__error" data-lead-capture-error role="alert" hidden></p>
+          <button class="lead-capture__submit" type="submit" data-lead-capture-submit>
+            <span data-lead-capture-submit-label>Join our list</span>
+            <span class="lead-capture__spinner" aria-hidden="true"></span>
+          </button>
+        {% endform %}
+
+        <div class="lead-capture__divider" aria-hidden="true">
+          <span></span>
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+            <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+              <path d="M5 21c.5-4.5 2.5-8 7-10"/>
+              <path d="M9 18c6.218 0 10.5-3.288 11-12V4h-4.014c-9 0-11.986 4-12 9c0 1 0 3 2 5z"/>
+            </g>
+          </svg>
+          <span></span>
+        </div>
+        <button type="button" class="lead-capture__decline" data-lead-capture-close>
+          No thanks, I will explore on my own.
+        </button>
+      </div>
+
+      <div class="lead-capture__success" data-lead-capture-success hidden>
+        <div class="lead-capture__mark" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24">
+            <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+              <path d="M18.9 7a8 8 0 0 1 1.1 5v1a6 6 0 0 0 .8 3M8 11a4 4 0 0 1 8 0v1a10 10 0 0 0 2 6"/>
+              <path d="M12 11v2a14 14 0 0 0 2.5 8M8 15a18 18 0 0 0 1.8 6m-4.9-2a22 22 0 0 1-.9-7v-1a8 8 0 0 1 12-6.95"/>
+            </g>
+          </svg>
+        </div>
+
+        <div class="lead-capture__eyebrow" aria-hidden="true">
+          <span></span>
+          <p>You're in</p>
+          <span></span>
+        </div>
+        <h2 id="LeadCaptureSuccessTitle" class="lead-capture__title lead-capture__title--success">
+          Complimentary shipping is on its way
+        </h2>
+        <p id="LeadCaptureSuccessDescription" class="lead-capture__description">
+          Thank you for joining us.<br>Every work you choose includes complimentary shipping.
+        </p>
+
+        <div class="lead-capture__divider" aria-hidden="true">
+          <span></span>
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+            <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+              <path d="M5 21c.5-4.5 2.5-8 7-10"/>
+              <path d="M9 18c6.218 0 10.5-3.288 11-12V4h-4.014c-9 0-11.986 4-12 9c0 1 0 3 2 5z"/>
+            </g>
+          </svg>
+          <span></span>
+        </div>
+        <p class="lead-capture__success-note">We'll share new pieces, quiet stories, and timeless arrivals.</p>
+        <a class="lead-capture__shop" href="{{ routes.all_products_collection_url }}" data-lead-capture-shop>
+          Exploring the all pieces
+        </a>
+        <button type="button" class="lead-capture__decline" data-lead-capture-close>
+          Starting your own journey
+        </button>
+      </div>
+    </div>
+
+    <div class="lead-capture__gallery" aria-hidden="true">
+      <img
+        src="{{ 'curated-collections-img-4.png' | file_url | append: '&width=480' }}"
+        alt=""
+        width="480"
+        height="320"
+        loading="lazy"
+      >
+      <img
+        src="{{ 'curated-collections-img-2.png' | file_url | append: '&width=480' }}"
+        alt=""
+        width="480"
+        height="320"
+        loading="lazy"
+      >
+      <img
+        src="{{ 'curated-collections-img-1.png' | file_url | append: '&width=480' }}"
+        alt=""
+        width="480"
+        height="320"
+        loading="lazy"
+      >
+      <img
+        src="{{ 'curated-collections-img-3.png' | file_url | append: '&width=480' }}"
+        alt=""
+        width="480"
+        height="320"
+        loading="lazy"
+      >
+    </div>
+  </div>
+</div>
+
+{% stylesheet %}
+  .lead-capture-test-toggle[hidden] {
+    display: none;
+  }
+
+  .lead-capture-test-toggle {
+    position: fixed;
+    z-index: calc(var(--z-drawer) + 11);
+    bottom: var(--sp-4);
+    left: var(--sp-4);
+    min-height: var(--sp-7);
+    padding: var(--sp-2) var(--sp-4);
+    border: var(--border-width) solid var(--color-clay);
+    border-radius: var(--radius-full);
+    background: var(--color-brown-dark);
+    box-shadow: var(--shadow-elevation-2);
+    color: var(--text-inverse);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-semibold);
+    cursor: pointer;
+  }
+
+  .lead-capture-test-toggle:hover {
+    background: var(--color-brown);
+  }
+
+  .lead-capture-test-toggle:focus-visible {
+    outline: var(--border-width) solid var(--color-sage);
+    outline-offset: var(--sp-1);
+  }
+
+  html.lead-capture-is-open,
+  body.lead-capture-is-open {
+    overflow: hidden;
+  }
+
+  .lead-capture[hidden] {
+    display: none;
+  }
+
+  .lead-capture {
+    position: fixed;
+    inset: var(--sp-0);
+    z-index: calc(var(--z-drawer) + 10);
+    display: grid;
+    place-items: center;
+    overflow-y: auto;
+    padding: var(--sp-4);
+    background: color-mix(in srgb, var(--color-ebony) 66%, transparent);
+    backdrop-filter: blur(0.375rem);
+    opacity: 0;
+    transition: opacity var(--timing-base) var(--ease-standard);
+  }
+
+  .lead-capture.is-open {
+    opacity: 1;
+  }
+
+  .lead-capture__dialog {
+    position: relative;
+    width: min(52rem, calc(100vw - var(--sp-6)));
+    max-height: calc(100dvh - var(--sp-6));
+    overflow-y: auto;
+    border: var(--border-width) solid var(--color-clay);
+    border-radius: var(--radius-xl);
+    outline: var(--border-width) solid var(--surface-elevated);
+    outline-offset: calc(var(--sp-1) * -1);
+    background: var(--color-bg);
+    box-shadow: var(--shadow-modal);
+    color: var(--color-text);
+    transform: translateY(var(--sp-3)) scale(0.98);
+    transition: transform var(--timing-base) var(--ease-out);
+  }
+
+  .lead-capture.is-open .lead-capture__dialog {
+    transform: translateY(var(--sp-0)) scale(1);
+  }
+
+  .lead-capture__dialog::before {
+    position: absolute;
+    bottom: var(--sp-8);
+    left: calc(var(--sp-8) * -1);
+    width: var(--sp-12);
+    height: var(--sp-12);
+    border-radius: 44% 56% 58% 42%;
+    background: repeating-radial-gradient(
+      ellipse at center,
+      transparent var(--sp-0),
+      transparent var(--sp-2),
+      color-mix(in srgb, var(--color-clay) 24%, transparent) var(--sp-2),
+      color-mix(in srgb, var(--color-clay) 24%, transparent) var(--sp-3)
+    );
+    content: '';
+    pointer-events: none;
+  }
+
+  .lead-capture__close {
+    position: absolute;
+    z-index: 2;
+    top: var(--sp-5);
+    right: var(--sp-5);
+    display: grid;
+    width: var(--sp-7);
+    height: var(--sp-7);
+    place-items: center;
+    padding: var(--sp-0);
+    border: var(--border-width) solid var(--color-clay);
+    border-radius: var(--radius-full);
+    background: transparent;
+    color: var(--color-brown);
+    cursor: pointer;
+    transition: var(--transition-fast);
+  }
+
+  .lead-capture__close:hover {
+    background: color-mix(in srgb, var(--color-clay) 10%, transparent);
+  }
+
+  .lead-capture__close:focus-visible,
+  .lead-capture__input:focus-visible,
+  .lead-capture__submit:focus-visible,
+  .lead-capture__decline:focus-visible,
+  .lead-capture__shop:focus-visible {
+    outline: var(--border-width) solid var(--color-sage);
+    outline-offset: var(--sp-1);
+  }
+
+  .lead-capture__content {
+    position: relative;
+    z-index: 1;
+    padding: var(--sp-7) var(--sp-8) var(--sp-5);
+    text-align: center;
+  }
+
+  .lead-capture__mark {
+    display: grid;
+    width: var(--sp-7);
+    height: var(--sp-7);
+    margin: var(--sp-0) auto var(--sp-3);
+    place-items: center;
+    color: var(--color-dark-clay);
+  }
+
+  .lead-capture__mark svg {
+    width: var(--sp-6);
+    height: var(--sp-6);
+  }
+
+  .lead-capture__eyebrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-4);
+    margin-bottom: var(--sp-4);
+    color: var(--color-brown);
+  }
+
+  .lead-capture__eyebrow span {
+    width: var(--sp-8);
+    height: var(--border-width);
+    background: var(--color-clay);
+  }
+
+  .lead-capture__eyebrow p {
+    margin: var(--sp-0);
+    font-family: var(--font-body);
+    font-size: var(--eyebrow-size);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--eyebrow-tracking);
+    line-height: var(--line-height-normal);
+    text-transform: uppercase;
+  }
+
+  .lead-capture__title {
+    margin: var(--sp-0);
+    color: var(--color-dark-clay);
+    font-family: var(--font-heading);
+    font-size: clamp(var(--font-size-display-sm), 5vw, var(--font-size-display-md));
+    font-weight: var(--font-weight-light);
+    letter-spacing: var(--letter-spacing-snug);
+    line-height: var(--line-height-display);
+  }
+
+  .lead-capture__description {
+    max-width: 38rem;
+    margin: var(--sp-4) auto var(--sp-5);
+    color: var(--color-text);
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-xl);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-relaxed);
+  }
+
+  .lead-capture__form {
+    display: grid;
+    gap: var(--sp-3);
+    max-width: 42rem;
+    margin: var(--sp-0) auto;
+  }
+
+  .lead-capture__field {
+    display: flex;
+    min-height: var(--sp-7);
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-3) var(--sp-4);
+    border: var(--border-width) solid var(--color-dark-clay);
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--surface-elevated) 80%, transparent);
+    color: var(--color-dark-clay);
+  }
+
+  .lead-capture__field:focus-within {
+    border-color: var(--color-sage);
+    box-shadow: var(--shadow-focus);
+  }
+
+  .lead-capture__field svg {
+    flex: 0 0 auto;
+  }
+
+  .lead-capture__input {
+    width: 100%;
+    min-width: var(--sp-0);
+    padding: var(--sp-0);
+    border: var(--sp-0);
+    outline: var(--sp-0);
+    background: transparent;
+    color: var(--color-text);
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-lg);
+    line-height: var(--line-height-normal);
+  }
+
+  .lead-capture__input::placeholder {
+    color: var(--color-muted);
+    opacity: 0.8;
+  }
+
+  .lead-capture__field:has(.lead-capture__input[aria-invalid='true']) {
+    border-color: var(--color-error);
+  }
+
+  .lead-capture__error {
+    margin: var(--sp-0);
+    color: var(--color-error);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-normal);
+    text-align: left;
+  }
+
+  .lead-capture__submit,
+  .lead-capture__shop {
+    display: flex;
+    min-height: var(--sp-7);
+    align-items: center;
+    justify-content: center;
+    padding: var(--sp-2) var(--sp-5);
+    border: var(--border-width) solid var(--color-brown-dark);
+    border-radius: var(--radius-md);
+    background: var(--color-brown-dark);
+    box-shadow: inset var(--sp-0) var(--sp-0) var(--sp-6) color-mix(in srgb, var(--color-clay) 18%, transparent);
+    color: var(--text-inverse);
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-md);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.05rem;
+    line-height: var(--line-height-normal);
+    text-align: center;
+    text-decoration: none;
+    text-transform: uppercase;
+    transition: var(--transition-fast);
+  }
+
+  .lead-capture__submit:hover,
+  .lead-capture__shop:hover {
+    background: var(--color-brown);
+    transform: translateY(calc(var(--sp-0) - var(--sp-1)));
+  }
+
+  .lead-capture__submit[aria-busy='true'] {
+    cursor: wait;
+  }
+
+  .lead-capture__submit[aria-busy='true'] [data-lead-capture-submit-label] {
+    opacity: 0.72;
+  }
+
+  .lead-capture__spinner {
+    display: none;
+    width: var(--sp-4);
+    height: var(--sp-4);
+    margin-left: var(--sp-3);
+    border: var(--border-width) solid color-mix(in srgb, var(--text-inverse) 35%, transparent);
+    border-top-color: var(--text-inverse);
+    border-radius: var(--radius-full);
+    animation: lead-capture-spin var(--timing-extra-long) linear infinite;
+  }
+
+  .lead-capture__submit[aria-busy='true'] .lead-capture__spinner {
+    display: block;
+  }
+
+  .lead-capture__divider {
+    display: flex;
+    max-width: 28rem;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-4);
+    margin: var(--sp-4) auto var(--sp-2);
+    color: var(--color-clay);
+  }
+
+  .lead-capture__divider span {
+    width: 100%;
+    height: var(--border-width);
+    background: color-mix(in srgb, var(--color-clay) 42%, transparent);
+  }
+
+  .lead-capture__decline {
+    min-height: var(--sp-7);
+    padding: var(--sp-2);
+    border: var(--sp-0);
+    background: transparent;
+    color: var(--color-muted);
+    cursor: pointer;
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-md);
+    line-height: var(--line-height-normal);
+    text-decoration: underline;
+    text-underline-offset: var(--sp-1);
+  }
+
+  .lead-capture__success-note {
+    margin: var(--sp-0) auto var(--sp-5);
+    color: var(--color-muted);
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-lg);
+    line-height: var(--line-height-relaxed);
+  }
+
+  .lead-capture__success .lead-capture__divider {
+    margin-top: var(--sp-4);
+  }
+
+  .lead-capture__success .lead-capture__decline {
+    margin-top: var(--sp-3);
+  }
+
+  .lead-capture__gallery {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    align-content: center;
+    grid-template-columns: repeat(4, minmax(var(--sp-0), 1fr));
+    height: var(--sp-12);
+    overflow: hidden;
+    border-radius: var(--sp-0) var(--sp-0) var(--radius-xl) var(--radius-xl);
+    background: var(--color-stone);
+  }
+
+  .lead-capture__gallery img {
+    width: 100%;
+    height: 100%;
+    border-right: var(--border-width) solid var(--surface-elevated);
+    object-fit: cover;
+  }
+
+  .lead-capture__gallery img:last-child {
+    border-right: var(--sp-0);
+  }
+
+  .lead-capture__visually-hidden {
+    position: absolute;
+    width: var(--border-width);
+    height: var(--border-width);
+    overflow: hidden;
+    clip: rect(var(--sp-0), var(--sp-0), var(--sp-0), var(--sp-0));
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  @keyframes lead-capture-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @media (max-width: 48rem) {
+    .lead-capture {
+      padding: var(--sp-3);
+    }
+
+    .lead-capture__dialog {
+      width: min(100%, 36rem);
+      max-height: calc(100dvh - var(--sp-5));
+    }
+
+    .lead-capture__content {
+      padding: var(--sp-6) var(--sp-5) var(--sp-4);
+    }
+
+    .lead-capture__close {
+      top: var(--sp-4);
+      right: var(--sp-4);
+    }
+
+    .lead-capture__title {
+      font-size: var(--font-size-display-lg);
+    }
+
+    .lead-capture__description {
+      margin-top: var(--sp-3);
+      font-size: var(--font-size-body-lg);
+    }
+
+    .lead-capture__eyebrow {
+      gap: var(--sp-3);
+    }
+
+    .lead-capture__eyebrow span {
+      width: var(--sp-6);
+    }
+
+    .lead-capture__gallery {
+      height: var(--sp-10);
+    }
+  }
+
+  @media (max-width: 30rem) {
+    .lead-capture__content {
+      padding: var(--sp-6) var(--sp-4) var(--sp-3);
+    }
+
+    .lead-capture__mark {
+      margin-bottom: var(--sp-2);
+    }
+
+    .lead-capture__eyebrow {
+      margin-bottom: var(--sp-3);
+    }
+
+    .lead-capture__eyebrow span {
+      width: var(--sp-5);
+    }
+
+    .lead-capture__eyebrow p {
+      letter-spacing: var(--letter-spacing-wide);
+    }
+
+    .lead-capture__title {
+      font-size: var(--font-size-display-md);
+    }
+
+    .lead-capture__description,
+    .lead-capture__success-note {
+      font-size: var(--font-size-body-md);
+    }
+
+    .lead-capture__field,
+    .lead-capture__submit,
+    .lead-capture__shop {
+      min-height: var(--sp-7);
+    }
+
+    .lead-capture__input,
+    .lead-capture__decline {
+      font-size: var(--font-size-body-md);
+    }
+
+    .lead-capture__gallery {
+      height: var(--sp-9);
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  (function () {
+    var root = document.querySelector('[data-lead-capture]');
+    if (!root || root.dataset.initialized === 'true') return;
+    root.dataset.initialized = 'true';
+
+    var testToggle = document.querySelector('[data-lead-capture-test-toggle]');
+    var dialog = root.querySelector('[data-lead-capture-dialog]');
+    var form = root.querySelector('form');
+    var emailInput = root.querySelector('input[type="email"]');
+    var submitButton = root.querySelector('[data-lead-capture-submit]');
+    var submitLabel = root.querySelector('[data-lead-capture-submit-label]');
+    var errorMessage = root.querySelector('[data-lead-capture-error]');
+    var formState = root.querySelector('[data-lead-capture-form-state]');
+    var successState = root.querySelector('[data-lead-capture-success]');
+    var storageKey = root.dataset.storageKey;
+    var isSubmitting = false;
+    var isOpen = false;
+    var lastFocusedElement = null;
+    var closeTimer = null;
+
+    function hasBeenSeen() {
+      try {
+        return window.localStorage.getItem(storageKey) === 'true';
+      } catch (error) {
+        return false;
+      }
+    }
+
+    function rememberVisit() {
+      try {
+        window.localStorage.setItem(storageKey, 'true');
+      } catch (error) {
+        // The popup still works when storage is blocked by the browser.
+      }
+    }
+
+    function focusableElements() {
+      return Array.prototype.slice.call(
+        dialog.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])')
+      ).filter(function (element) {
+        return !element.hidden && element.offsetParent !== null;
+      });
+    }
+
+    function setError(message) {
+      errorMessage.textContent = message || '';
+      errorMessage.hidden = !message;
+      emailInput.setAttribute('aria-invalid', message ? 'true' : 'false');
+    }
+
+    function setLoading(loading) {
+      isSubmitting = loading;
+      submitButton.disabled = loading;
+      if (loading) {
+        submitButton.setAttribute('aria-busy', 'true');
+        submitLabel.textContent = 'Joining...';
+      } else {
+        submitButton.removeAttribute('aria-busy');
+        submitLabel.textContent = 'Join our list';
+      }
+    }
+
+    function openPopup(forceOpen) {
+      if ((!forceOpen && hasBeenSeen()) || isOpen) return;
+      rememberVisit();
+      isOpen = true;
+      if (testToggle) testToggle.setAttribute('aria-expanded', 'true');
+      lastFocusedElement = document.activeElement;
+      root.hidden = false;
+      root.setAttribute('aria-hidden', 'false');
+      document.documentElement.classList.add('lead-capture-is-open');
+      document.body.classList.add('lead-capture-is-open');
+      window.requestAnimationFrame(function () {
+        root.classList.add('is-open');
+        var initialFocus = successState.hidden
+          ? emailInput
+          : root.querySelector('[data-lead-capture-shop]');
+        initialFocus.focus({ preventScroll: true });
+      });
+    }
+
+    function closePopup() {
+      if (!isOpen) return;
+      isOpen = false;
+      if (testToggle) testToggle.setAttribute('aria-expanded', 'false');
+      root.classList.remove('is-open');
+      root.setAttribute('aria-hidden', 'true');
+      document.documentElement.classList.remove('lead-capture-is-open');
+      document.body.classList.remove('lead-capture-is-open');
+      window.clearTimeout(closeTimer);
+      closeTimer = window.setTimeout(function () {
+        root.hidden = true;
+      }, 300);
+      if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') {
+        lastFocusedElement.focus({ preventScroll: true });
+      }
+    }
+
+    function showSuccess() {
+      setLoading(false);
+      setError('');
+      form.reset();
+      formState.hidden = true;
+      successState.hidden = false;
+      dialog.setAttribute('aria-labelledby', 'LeadCaptureSuccessTitle');
+      dialog.setAttribute('aria-describedby', 'LeadCaptureSuccessDescription');
+    }
+
+    function handleKeydown(event) {
+      if (!isOpen) return;
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closePopup();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+
+      var focusable = focusableElements();
+      if (!focusable.length) return;
+      var first = focusable[0];
+      var last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    root.addEventListener('click', function (event) {
+      if (event.target === root || event.target.closest('[data-lead-capture-close]')) {
+        closePopup();
+      }
+    });
+
+    emailInput.addEventListener('input', function () {
+      if (emailInput.validity.valid) setError('');
+    });
+
+    form.addEventListener('submit', function (event) {
+      if (isSubmitting) {
+        event.preventDefault();
+        return;
+      }
+
+      emailInput.value = emailInput.value.trim();
+      if (!emailInput.value || !emailInput.validity.valid) {
+        event.preventDefault();
+        setError('Enter a valid email address.');
+        emailInput.focus();
+        return;
+      }
+
+      setError('');
+      setLoading(true);
+    });
+
+    document.addEventListener('keydown', handleKeydown);
+
+    if (testToggle && new URLSearchParams(window.location.search).get('lead_popup_test') === '1') {
+      testToggle.hidden = false;
+      testToggle.addEventListener('click', function () {
+        if (isOpen) {
+          closePopup();
+        } else {
+          openPopup(true);
+        }
+      });
+    }
+
+    var responseParameters = new URLSearchParams(window.location.search);
+    var redirectedSuccessfully = responseParameters.get('customer_posted') === 'true'
+      && window.location.hash === '#LeadCaptureForm';
+    var postedSuccessfully = Boolean(root.querySelector('[data-lead-capture-response-success]'))
+      || redirectedSuccessfully;
+    var serverError = root.querySelector('[data-lead-capture-response-error]');
+
+    if (postedSuccessfully) {
+      showSuccess();
+      openPopup(true);
+    } else if (serverError) {
+      setError(serverError.textContent.trim());
+      openPopup(true);
+    } else if (!hasBeenSeen()) {
+      var navigationElapsed = window.performance && typeof window.performance.now === 'function'
+        ? window.performance.now()
+        : 0;
+      window.setTimeout(openPopup, Math.max(0, 2000 - navigationElapsed));
+    }
+  })();
+{% endjavascript %}

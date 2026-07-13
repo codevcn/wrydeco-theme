@@ -36,11 +36,12 @@
             data-location="{{ block.settings.author_location | escape }}"
             {{ block.shopify_attributes }}
           >
+            {%- assign review_image_alt = block.settings.image.alt | default: block.settings.author_name | default: 'WRYDECO client home' -%}
             {%- if block.settings.image != blank -%}
               {{
                 block.settings.image
                 | image_url: width: 800
-                | image_tag: class: 'client-reviews__img', loading: 'lazy', draggable: 'false'
+                | image_tag: class: 'client-reviews__img', loading: 'lazy', draggable: 'false', alt: review_image_alt
               }}
             {%- else -%}
               {%- assign fallback_asset = block.settings.fallback_image -%}
@@ -51,7 +52,7 @@
               {%- endif -%}
               <img
                 src="{{ fallback_asset | file_url }}"
-                alt="{{ block.settings.author_name }}"
+                alt="{{ review_image_alt | escape }}"
                 class="client-reviews__img"
                 loading="lazy"
                 draggable="false"

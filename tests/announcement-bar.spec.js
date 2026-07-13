@@ -7,7 +7,7 @@ const fixtureUrl = pathToFileURL(
   path.resolve(process.cwd(), 'tests/fixtures/announcement-bar.html')
 ).href;
 
-test.describe('Top Bar Announcement (marquee)', () => {
+test.describe('Top Bar Announcement (static)', () => {
   test('server-rendered content is present for SEO/SSR', async ({ page }) => {
     await page.goto(fixtureUrl);
     const bar = page.locator('wd-announcement-bar.wd-topbar');
@@ -26,36 +26,39 @@ test.describe('Top Bar Announcement (marquee)', () => {
     await expect(bar).toHaveCSS('color', 'rgb(247, 242, 236)');
   });
 
-  test('marquee is initialised: duplicated track, distance set, and animates', async ({ page }) => {
+  test('message is static: a single group, no marquee animation or movement', async ({ page }) => {
     await page.goto(fixtureUrl);
     const bar = page.locator('.wd-topbar');
-    await expect(bar).toHaveAttribute('data-ready', '');
 
-    // Track should contain more than the single original group (filled + duplicated).
-    const groupCount = await page.locator('.wd-topbar__group').count();
-    expect(groupCount).toBeGreaterThan(1);
+    // No marquee: the bar is never marked ready and the message is not duplicated.
+    await expect(bar).not.toHaveAttribute('data-ready', '');
+    await expect(page.locator('.wd-topbar__group')).toHaveCount(1);
 
-    // Marquee distance variable is set to a positive pixel value.
-    const distance = await bar.evaluate((el) =>
-      parseFloat(getComputedStyle(el).getPropertyValue('--wd-marquee-distance'))
-    );
-    expect(distance).toBeGreaterThan(0);
+    // The track has no running animation.
+    const animationName = await page
+      .locator('.wd-topbar__track')
+      .evaluate((el) => getComputedStyle(el).animationName);
+    expect(animationName).toBe('none');
 
-    // The track actually moves: transform changes over time.
+    // The track does not move over time (transform stays constant).
     const track = page.locator('.wd-topbar__track');
     const t0 = await track.evaluate((el) => getComputedStyle(el).transform);
     await page.waitForTimeout(700);
     const t1 = await track.evaluate((el) => getComputedStyle(el).transform);
-    expect(t0).not.toBe(t1);
+    expect(t0).toBe(t1);
   });
 
-  test('track is wider than the viewport so it can scroll infinitely', async ({ page }) => {
+  test('the message sits centered within the bar', async ({ page }) => {
     await page.goto(fixtureUrl);
-    const metrics = await page.locator('.wd-topbar__track').evaluate((el) => ({
-      trackWidth: el.scrollWidth,
-      viewportWidth: el.parentElement.offsetWidth,
-    }));
-    expect(metrics.trackWidth).toBeGreaterThan(metrics.viewportWidth);
+    const centering = await page.locator('.wd-topbar__track').evaluate((el) => {
+      const track = el.getBoundingClientRect();
+      const group = el.querySelector('.wd-topbar__group').getBoundingClientRect();
+      const leftGap = group.left - track.left;
+      const rightGap = track.right - group.right;
+      return { leftGap, rightGap };
+    });
+    // Left and right gaps around the message should be roughly equal (centered).
+    expect(Math.abs(centering.leftGap - centering.rightGap)).toBeLessThan(2);
   });
 
   test('is responsive on mobile (375px) with no horizontal page overflow', async ({ page }) => {
@@ -64,7 +67,6 @@ test.describe('Top Bar Announcement (marquee)', () => {
 
     const bar = page.locator('.wd-topbar');
     await expect(bar).toBeVisible();
-    await expect(bar).toHaveAttribute('data-ready', '');
 
     // The bar spans the full viewport width.
     const barWidth = await bar.evaluate((el) => el.getBoundingClientRect().width);

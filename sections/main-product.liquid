@@ -13,6 +13,18 @@
 <script src="{{ 'sale-event.js' | file_url }}" defer="defer"></script>
 
 {% stylesheet %}
+  /* Product pages: the site header is transparent and its icons are light, which
+     would be illegible over the product page's light background. Recolor them (and
+     add the subtle header border) here via CSS — replaces a parser-blocking inline
+     script that used to reach out of the section on every load. */
+  body:has(.main-product) .header__icon--search,
+  body:has(.main-product) .header__icon--cart {
+    color: var(--color-earth-brown);
+  }
+  body:has(.main-product) .header {
+    border: 1px solid var(--border-light);
+  }
+
   .judgeme-reviews__divider {
     display: flex;
     align-items: center;
@@ -841,21 +853,6 @@
       </div>
     </div>
   </aside>
-
-  {%- comment -%}
-    Product state for product-info.js. Must live INSIDE the section: the script
-    resolves it via `container.querySelector('[data-product-state]')` (container =
-    this section), so if it sits outside, variant switching — including the price
-    update via the Section Rendering API — silently never runs.
-  {%- endcomment -%}
-  <script type="application/json" data-product-state>
-    {
-      "id": {{ product.id | json }},
-      "url": {{ product.url | json }},
-      "selectedVariantId": {{ current_variant.id | json }},
-      "hasOnlyDefaultVariant": {{ product.has_only_default_variant | json }}
-    }
-  </script>
 </section>
 
 {%- liquid
@@ -867,6 +864,7 @@
   data-mp-sticky
   data-form-id="{{ product_form_id }}"
   aria-hidden="true"
+  inert
   hidden
 >
   <div class="mp-sticky-bar__inner">
@@ -964,22 +962,13 @@
 
 {% render 'product-consultation-popup' %}
 
-<script>
-  const mainProductSection = document.getElementById('MainProduct-{{ section.id }}');
-  if (mainProductSection) {
-    mainProductSection.closest('body').querySelector('.header__icon--search').style.color = 'var(--color-earth-brown)';
-    mainProductSection.closest('body').querySelector('.header__icon--cart').style.color = 'var(--color-earth-brown)';
-    mainProductSection.closest('body').querySelector('.header').style.border = '1px solid #cfcbc7b4';
-  }
-</script>
-
 {%- comment -%}
   Product JSON-LD is rendered once in snippets/meta-tags.liquid (inside <head>).
   Do not duplicate it here — duplicate structured data triggers Search Console warnings.
   See doc/SEO-diagnose.md #2.
 {%- endcomment -%}
 
-<script>
+{% javascript %}
   (function () {
     function initStickyAddToCart() {
       var bar = document.querySelector('[data-mp-sticky]');
@@ -1089,6 +1078,11 @@
               var scrolledPast = entry.boundingClientRect.bottom <= 0;
               bar.classList.toggle('is-visible', scrolledPast);
               bar.setAttribute('aria-hidden', scrolledPast ? 'false' : 'true');
+              if (scrolledPast) {
+                bar.removeAttribute('inert');
+              } else {
+                bar.setAttribute('inert', '');
+              }
             });
           },
           { root: null, rootMargin: '0px', threshold: 0 }
@@ -1103,7 +1097,7 @@
       initStickyAddToCart();
     }
   })();
-</script>
+{% endjavascript %}
 
 {% schema %}
 {

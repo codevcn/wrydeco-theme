@@ -113,7 +113,9 @@
                   <span>MAX</span>
                 </div>
                 <div class="col-price-form__inputs">
+                  <label class="visually-hidden" for="CollectionPriceMin-{{ section.id }}">Minimum price</label>
                   <input
+                    id="CollectionPriceMin-{{ section.id }}"
                     name="{{ price_filter.min_value.param_name }}"
                     type="number"
                     placeholder="0"
@@ -121,7 +123,9 @@
                     step="0.01"
                     min="0"
                   >
+                  <label class="visually-hidden" for="CollectionPriceMax-{{ section.id }}">Maximum price</label>
                   <input
+                    id="CollectionPriceMax-{{ section.id }}"
                     name="{{ price_filter.max_value.param_name }}"
                     type="number"
                     placeholder="{{ price_filter.range_max | money_without_currency | replace: ',', '' }}"
@@ -336,6 +340,7 @@
               <a class="col-empty-state__other-link" href="{{ other.url }}">
                 <span class="col-empty-state__other-media">
                   {%- if other.featured_image != blank -%}
+                    {%- assign other_image_alt = other.featured_image.alt | default: other.title -%}
                     {{
                       other.featured_image
                       | image_url: width: 640
@@ -344,7 +349,7 @@
                         loading: 'lazy',
                         widths: '280, 420, 640',
                         sizes: '(min-width: 768px) 25vw, 45vw',
-                        alt: other.featured_image.alt | default: other.title
+                        alt: other_image_alt
                     }}
                   {%- else -%}
                     {{ 'collection-1' | placeholder_svg_tag: 'col-empty-state__other-img placeholder-svg' }}

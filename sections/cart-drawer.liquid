@@ -5,6 +5,7 @@
   data-section-id="{{ section.id }}"
   data-cart-count="{{ cart.item_count }}"
   aria-hidden="true"
+  inert
 >
   <button
     type="button"
@@ -123,7 +124,26 @@
                   {% for property in item.properties %}
                     {% assign property_first_character = property.first | slice: 0 %}
                     {% if property.last != blank and property_first_character != '_' and property.first != 'Note' %}
-                      <p class="cart-drawer__property">{{ property.first | escape }}: {{ property.last | escape }}</p>
+                      {% if property.first == 'added_url_image' %}
+                        {% comment %}
+                          The custom-colour upload stores the raw image URL as the
+                          `added_url_image` line property. Showing the long URL looks
+                          messy, so render a friendly "Custom Finish" label with a
+                          highlighted link to the uploaded reference image instead.
+                        {% endcomment %}
+                        <p class="cart-drawer__property">
+                          Custom Finish:
+                          <a
+                            class="drawer-cart__custom-img-url-highlight"
+                            href="{{ property.last | escape }}"
+                            target="_blank"
+                            rel="noopener"
+                            title="{{ property.last | escape }}"
+                          >Image Url</a>
+                        </p>
+                      {% else %}
+                        <p class="cart-drawer__property">{{ property.first | escape }}: {{ property.last | escape }}</p>
+                      {% endif %}
                     {% endif %}
                   {% endfor %}
 
@@ -705,6 +725,27 @@
     margin: var(--sp-2) var(--sp-0) var(--sp-0);
     color: var(--text-secondary);
     font: var(--type-caption);
+  }
+
+  /* Highlighted link that replaces the raw custom-finish image URL in the
+     line-item properties (see the `added_url_image` branch in the markup). */
+  .drawer-cart__custom-img-url-highlight {
+    display: inline-block;
+    padding: 0 var(--sp-2);
+    border-radius: var(--radius-sm);
+    background: color-mix(in srgb, var(--color-earth-brown) 12%, transparent);
+    color: var(--color-earth-brown);
+    font-weight: var(--font-weight-semibold);
+    text-decoration: none;
+    transition: background-color var(--timing-short) var(--ease-standard),
+      color var(--timing-short) var(--ease-standard);
+  }
+
+  .drawer-cart__custom-img-url-highlight:hover,
+  .drawer-cart__custom-img-url-highlight:focus-visible {
+    background: var(--color-earth-brown);
+    color: var(--color-cream);
+    outline: none;
   }
 
   .cart-drawer__note-button {
@@ -1930,6 +1971,7 @@
       lastFocusedElement = document.activeElement;
       shell.classList.add('is-open');
       shell.setAttribute('aria-hidden', 'false');
+      shell.removeAttribute('inert');
       document.documentElement.classList.add('cart-drawer-is-open');
       document.body.classList.add('cart-drawer-is-open');
       hideCartDrawerFloatingWidgets();
@@ -1942,6 +1984,7 @@
       if (!shell) return;
       shell.classList.remove('is-open');
       shell.setAttribute('aria-hidden', 'true');
+      shell.setAttribute('inert', '');
       document.documentElement.classList.remove('cart-drawer-is-open');
       document.body.classList.remove('cart-drawer-is-open');
       restoreCartDrawerFloatingWidgets();

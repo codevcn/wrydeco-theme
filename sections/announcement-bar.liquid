@@ -1,5 +1,5 @@
 {%- comment -%}
-  Top Bar Announcement (slim marquee)
+  Top Bar Announcement (slim, static)
 
   Content is driven by the "Top Bar Announcement" metaobject (type: top_bar_announcement):
     - html_message : raw HTML injected straight into the bar (server-rendered for SEO/SSR)
@@ -9,7 +9,7 @@
                      (exact or partial, e.g. "/cart", "/products").
 
   The bar renders on every page because this section belongs to the header-group.
-  An infinite scrolling marquee is applied by the <wd-announcement-bar> custom element.
+  The message sits still, centered in the bar (no scrolling marquee).
 {%- endcomment -%}
 
 {%- liquid
@@ -51,7 +51,6 @@
       class="wd-topbar"
       role="region"
       aria-label="Announcement"
-      data-speed="{{ section.settings.speed | default: 60 }}"
     >
       <div class="wd-topbar__viewport">
         <div class="wd-topbar__track">
@@ -80,14 +79,9 @@
   .wd-topbar__track {
     display: flex;
     align-items: center;
-    width: max-content;
-    gap: 128px;
-    will-change: transform;
+    justify-content: center;
+    width: 100%;
     padding-block: var(--space-1, 4px);
-  }
-
-  .wd-topbar[data-ready] .wd-topbar__track {
-    animation: wd-topbar-marquee var(--wd-marquee-duration, 30s) linear infinite;
   }
 
   .wd-topbar__group {
@@ -110,26 +104,6 @@
     background: transparent !important;
   }
 
-  .wd-topbar__sep {
-    flex: 0 0 auto;
-    padding: 0 var(--space-11, 24px);
-    color: var(--color-milk, #f7f2ec);
-    opacity: 0.5;
-  }
-
-  .wd-topbar:hover .wd-topbar__track {
-    animation-play-state: paused;
-  }
-
-  @keyframes wd-topbar-marquee {
-    from {
-      transform: translateX(0);
-    }
-    to {
-      transform: translateX(calc(-1 * var(--wd-marquee-distance, 50%)));
-    }
-  }
-
   /* Desktop-first: tighten spacing on smaller screens (rule #1) */
   @media (max-width: 749px) {
     .wd-topbar__group {
@@ -141,93 +115,13 @@
       font-size: 12px;
       font-weight: 400;
     }
-
-    .wd-topbar__sep {
-      padding: 0 var(--space-8, 16px);
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .wd-topbar[data-ready] .wd-topbar__track {
-      animation: none;
-    }
   }
 {% endstylesheet %}
-
-{% javascript %}
-  class WdAnnouncementBar extends HTMLElement {
-    connectedCallback() {
-      this.viewport = this.querySelector('.wd-topbar__viewport');
-      this.track = this.querySelector('.wd-topbar__track');
-      const group = this.track && this.track.querySelector('.wd-topbar__group');
-      if (!this.viewport || !this.track || !group) return;
-
-      // One repeatable unit = the message group followed by a separator.
-      this.unitHTML = group.outerHTML;
-      this.speed = parseFloat(this.getAttribute('data-speed')) || 60; // px per second
-
-      this.build = this.build.bind(this);
-      this.build();
-
-      this._onResize = this.debounce(this.build, 200);
-      window.addEventListener('resize', this._onResize);
-    }
-
-    disconnectedCallback() {
-      if (this._onResize) window.removeEventListener('resize', this._onResize);
-    }
-
-    build() {
-      const viewportWidth = this.viewport.offsetWidth || window.innerWidth;
-
-      // Fill one set until it is at least as wide as the viewport (avoids gaps).
-      this.track.innerHTML = this.unitHTML;
-      let guard = 0;
-      while (this.track.scrollWidth < viewportWidth && guard < 60) {
-        this.track.insertAdjacentHTML('beforeend', this.unitHTML);
-        guard++;
-      }
-
-      const setWidth = this.track.scrollWidth;
-
-      // Duplicate the whole set once so the animation can loop seamlessly.
-      this.track.insertAdjacentHTML('beforeend', this.track.innerHTML);
-
-      this.style.setProperty('--wd-marquee-distance', setWidth + 'px');
-      this.style.setProperty('--wd-marquee-duration', Math.max(setWidth / this.speed, 12) + 's');
-      this.setAttribute('data-ready', '');
-    }
-
-    debounce(fn, wait) {
-      let timer;
-      return function () {
-        clearTimeout(timer);
-        timer = setTimeout(fn, wait);
-      };
-    }
-  }
-
-  if (!customElements.get('wd-announcement-bar')) {
-    customElements.define('wd-announcement-bar', WdAnnouncementBar);
-  }
-{% endjavascript %}
 
 {% schema %}
 {
   "name": "Announcement Bar",
-  "settings": [
-    {
-      "type": "range",
-      "id": "speed",
-      "label": "Marquee speed",
-      "min": 20,
-      "max": 200,
-      "step": 5,
-      "unit": "px",
-      "default": 60,
-      "info": "Scroll speed in pixels per second. Content is managed via the Top Bar Announcement metaobject."
-    }
-  ],
+  "settings": [],
   "blocks": [
     {
       "type": "announcement",

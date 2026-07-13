@@ -36,7 +36,7 @@
     <span></span>
   </div>
 
-  <main class="collections-page__main">
+  <div class="collections-page__main">
     <section class="collections-page__featured" aria-labelledby="FeaturedCollections-{{ section.id }}">
       <h2 id="FeaturedCollections-{{ section.id }}" class="collections-page__visually-hidden">All collections</h2>
       {% paginate collections by 48 %}
@@ -110,6 +110,7 @@
         {% assign room_url = room_collection.url | default: routes.collections_url %}
         <a class="collections-page__room" href="{{ room_url }}">
           {% if room_collection.featured_image != blank %}
+            {% assign room_image_alt = room_collection.featured_image.alt | default: room_label %}
             {{
               room_collection.featured_image
               | image_url: width: 720
@@ -118,8 +119,7 @@
                 loading: 'lazy',
                 widths: '360, 540, 720',
                 sizes: '(max-width: 767px) 100vw, (max-width: 1200px) 25vw, 16vw',
-                alt: room_collection.featured_image.alt
-              | default: room_label
+                alt: room_image_alt
             }}
           {% else %}
             {% case forloop.index %}
@@ -178,7 +178,7 @@
         </a>
       </aside>
     </section>
-  </main>
+  </div>
 
   {% if section.settings.show_trust_bar %}
     <section class="collections-page__trust" aria-label="Our craft commitments">

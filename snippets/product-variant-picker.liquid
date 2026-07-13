@@ -375,6 +375,7 @@
                     id="Option-{{ section_id }}-{{ option.position }}-{{ forloop.index0 }}"
                     name="options[{{ option.name | escape }}]"
                     value="{{ value | escape }}"
+                    aria-label="Custom {{ option.name | escape }}"
                     data-index="option{{ option.position }}"
                     data-custom-color-radio
                     {% if option.selected_value == value %}
@@ -428,6 +429,7 @@
                     type="file"
                     class="variant-tile__file"
                     accept="image/jpeg,image/png,image/webp,image/gif"
+                    aria-label="Upload a custom finish reference image"
                     data-custom-color-input
                     hidden
                   >
@@ -548,463 +550,29 @@
     {% endfor %}
   </div>
 
-  <script>
-    (function () {
-      // Press-and-hold to scroll the variant lists horizontally — mirrors the
-      // drag logic used by .product-gallery__thumbnails.
-      function initVariantDragScroll() {
-        document.querySelectorAll('.variant-group__list').forEach(function (list) {
-          if (list.dataset.dragInit === 'true') return;
-          list.dataset.dragInit = 'true';
-
-          var isDown = false;
-          var startX = 0;
-          var scrollLeft = 0;
-          var isDragging = false;
-
-          // Never let a press-and-hold start a native image/element drag.
-          list.addEventListener('dragstart', function (e) {
-            e.preventDefault();
-          });
-
-          list.addEventListener('mousedown', function (e) {
-            isDown = true;
-            isDragging = false;
-            list.classList.add('is-active-drag');
-            startX = e.pageX - list.offsetLeft;
-            scrollLeft = list.scrollLeft;
-          });
-          list.addEventListener('mouseleave', function () {
-            isDown = false;
-            list.classList.remove('is-active-drag');
-          });
-          list.addEventListener('mouseup', function () {
-            isDown = false;
-            list.classList.remove('is-active-drag');
-          });
-          list.addEventListener('mousemove', function (e) {
-            if (!isDown) return;
-            e.preventDefault();
-            var x = e.pageX - list.offsetLeft;
-            var walk = (x - startX) * 2; // scroll speed multiplier
-            if (Math.abs(walk) > 5) isDragging = true;
-            list.scrollLeft = scrollLeft - walk;
-          });
-          // Swallow the click that ends a drag so it doesn't select a variant.
-          list.addEventListener(
-            'click',
-            function (e) {
-              if (isDragging) {
-                e.stopPropagation();
-                e.preventDefault();
-              }
-            },
-            true
-          );
-        });
+  {% comment %}
+    Trimmed variant data for the picker JS. Only the fields the script reads are
+    emitted (id, availability, the three option values, and the per-variant
+    `variant_images` metafield) instead of the full `product.variants | json`
+    dump — a large HTML-weight saving on products with many variants. All picker
+    JS logic now lives in the single compiled script block at the end of this
+    file (deferred + compiled, no longer parser-blocking).
+  {% endcomment %}
+  <script type="application/json" data-variant-picker-data>
+    {
+      "variants": [
+        {%- for v in product.variants -%}
+          {%- unless forloop.first %},{% endunless -%}
+          {"id":{{ v.id | json }},"available":{{ v.available | json }},"option1":{{ v.option1 | json }},"option2":{{ v.option2 | json }},"option3":{{ v.option3 | json }}}
+        {%- endfor -%}
+      ],
+      "variantImages": {
+        {%- for v in product.variants -%}
+          {%- unless forloop.first %},{% endunless -%}
+          "{{ v.id }}":{{ v.metafields.custom.variant_images.value | default: v.metafields.custom.variant_images | json }}
+        {%- endfor -%}
       }
-
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initVariantDragScroll);
-      } else {
-        initVariantDragScroll();
-      }
-    })();
-  </script>
-
-  <script>
-    document.addEventListener('DOMContentLoaded', function () {
-      const selectedOptions = {};
-
-      // 1. Khởi tạo giá trị ban đầu dựa vào các input đã được check
-      const checkedInputs = document.querySelectorAll('.product-variant-picker input[type="radio"]:checked');
-      checkedInputs.forEach(input => {
-        selectedOptions[input.dataset.index] = input.value;
-      });
-
-      const variantInputs = document.querySelectorAll('.product-variant-picker input[type="radio"]');
-      const productVariants = {{ product.variants | json }};
-
-      // 2. Bắt buộc: Tự map dữ liệu Metafield bằng Liquid vì bộ lọc `| json` của Shopify sẽ xóa mất Metafield
-      const variantMetafieldsMap = {
-        {% for v in product.variants %}
-          "{{ v.id }}": {{ v.metafields.custom.variant_images.value | default: v.metafields.custom.variant_images | json }}{% unless forloop.last %},{% endunless %}
-        {% endfor %}
-      };
-
-      // Tự map dữ liệu Inventory vì API/json đôi khi không trả về inventory_quantity
-      const variantInventoryMap = {
-        {% for v in product.variants %}
-          "{{ v.id }}": {
-             "qty": {{ v.inventory_quantity | default: 0 }},
-             "policy": {{ v.inventory_policy | json }},
-             "management": {{ v.inventory_management | json }},
-             "available": {{ v.available | json }}
-          }{% unless forloop.last %},{% endunless %}
-        {% endfor %}
-      };
-
-      const getSelectedOptions = () => {
-        const nextSelectedOptions = {};
-        document.querySelectorAll('.product-variant-picker input[type="radio"]:checked').forEach(input => {
-          nextSelectedOptions[input.dataset.index] = input.value;
-        });
-        return nextSelectedOptions;
-      };
-
-      const findVariantForOptions = (options) => {
-        return productVariants.find(variant => {
-          return Object.keys(options).every(key => {
-            return variant[key] === options[key];
-          });
-        });
-      };
-
-      const isOptionValuePickable = (input) => {
-        const candidateOptions = Object.assign({}, selectedOptions);
-        candidateOptions[input.dataset.index] = input.value;
-
-        return productVariants.some(variant => {
-          if (!variant.available) return false;
-
-          return Object.keys(candidateOptions).every(key => {
-            return variant[key] === candidateOptions[key];
-          });
-        });
-      };
-
-      const syncOptionAvailability = () => {
-        Object.assign(selectedOptions, getSelectedOptions());
-
-        variantInputs.forEach(input => {
-          const tile = input.closest('.variant-tile');
-          const isCurrentSelection = input.checked;
-          const isPickable = isCurrentSelection || isOptionValuePickable(input);
-
-          input.disabled = !isPickable;
-          input.setAttribute('aria-disabled', isPickable ? 'false' : 'true');
-          if (tile) tile.classList.toggle('is-disabled', !isPickable);
-        });
-      };
-
-      syncOptionAvailability();
-
-      for (const input of variantInputs) {
-        input.addEventListener('change', function () {
-          // 3. Cập nhật giá trị mới khi user chọn
-          selectedOptions[input.dataset.index] = input.value;
-          syncOptionAvailability();
-
-          // 4. Tìm variant khớp với toàn bộ lựa chọn
-          const selectedVariant = findVariantForOptions(selectedOptions);
-
-          if (selectedVariant) {
-            // Instant, no-API updates the moment a variant is picked:
-            // price + compare + "Save", the hidden variant id used by the form,
-            // the add-to-cart button state, and the ?variant= URL param.
-            if (window.updateProductPrice) {
-              window.updateProductPrice(selectedVariant.id);
-            }
-
-            const variantIdInput = document.querySelector('[data-variant-id]');
-            if (variantIdInput) variantIdInput.value = selectedVariant.id;
-
-            const addText = document.querySelector('[data-add-to-cart-text]');
-            const addBtn = document.querySelector('form[data-type="add-to-cart-form"] button[name="add"]');
-            if (addText) addText.textContent = selectedVariant.available ? 'ADD TO CART' : 'SOLD OUT';
-            if (addBtn) addBtn.disabled = !selectedVariant.available;
-
-            if (window.history && window.history.replaceState) {
-              const nextUrl = new URL(window.location.href);
-              nextUrl.searchParams.set('variant', selectedVariant.id);
-              window.history.replaceState({}, '', nextUrl);
-            }
-
-            // Gắn thêm metafield vào selectedVariant để tiện sử dụng
-            selectedVariant.metafields = {
-              custom: {
-                variant_images: variantMetafieldsMap[selectedVariant.id]
-              }
-            };
-
-            // Logic lọc ảnh theo variant-images
-            const variantImagesRaw = selectedVariant.metafields.custom.variant_images;
-            if (variantImagesRaw) {
-              // Phân tích ra thành 1 mảng variant-image[] (string[])
-              const variantImages = variantImagesRaw.split('\n').map(s => s.trim().replace(/<br\s*\/?>/g, '')).filter(s => s !== '');
-
-              if (variantImages.length > 0) {
-                const thumbnails = document.querySelectorAll('.product-gallery__thumbnail');
-                const mainItems = document.querySelectorAll('.product-gallery__main-item');
-
-                let firstMatchedThumbnail = null;
-
-                // Lọc thumbnails
-                thumbnails.forEach(thumb => {
-                  const alt = thumb.dataset.alt || '';
-                  // Kiểm tra alt có chứa bất kỳ string nào trong mảng variantImages không
-                  const isMatch = variantImages.some(vImg => alt.includes(vImg));
-
-                  if (isMatch) {
-                    thumb.style.display = ''; // Show
-                    if (!firstMatchedThumbnail) firstMatchedThumbnail = thumb;
-                  } else {
-                    thumb.style.display = 'none'; // Hide
-                    thumb.classList.remove('is-active');
-                  }
-                });
-
-                // Xóa active khỏi các main items không khớp
-                mainItems.forEach(item => {
-                  const alt = item.dataset.alt || '';
-                  const isMatch = variantImages.some(vImg => alt.includes(vImg));
-                  if (!isMatch) {
-                     item.classList.remove('is-active');
-                  }
-                });
-
-                // Chọn ảnh đầu tiên trong pickedMediaList
-                if (firstMatchedThumbnail) {
-                  firstMatchedThumbnail.click();
-                }
-              } else {
-                // Nếu mảng rỗng thì show hết
-                document.querySelectorAll('.product-gallery__thumbnail').forEach(t => t.style.display = '');
-              }
-            } else {
-              // Không có metafield -> show hết
-              document.querySelectorAll('.product-gallery__thumbnail').forEach(t => t.style.display = '');
-            }
-
-            // Cập nhật Inventory Status
-            const invInfo = variantInventoryMap[selectedVariant.id];
-            const invStatusEl = document.querySelector('[data-inventory-status]');
-            if (invStatusEl && invInfo) {
-               let status = 'in-stock';
-               let label = 'In stock';
-               const threshold = 10;
-
-               if (!invInfo.available) {
-                 status = 'out';
-                 label = 'Out of stock';
-               } else if (!invInfo.management) {
-                 status = 'in-stock';
-                 label = 'In stock';
-               } else {
-                 if (invInfo.qty > 0) {
-                   if (invInfo.qty <= threshold) {
-                     status = 'low';
-                     label = 'Only ' + invInfo.qty + ' left in stock';
-                   } else {
-                     status = 'in-stock';
-                     label = invInfo.qty + ' in stock';
-                   }
-                 } else {
-                   status = 'backorder';
-                   label = 'Available to order';
-                 }
-               }
-
-               invStatusEl.className = 'product-inventory product-inventory--' + status;
-               const textEl = invStatusEl.querySelector('.product-inventory__text');
-               if (textEl) textEl.textContent = label;
-            }
-          }
-        });
-      }
-    });
-  </script>
-
-  <script>
-    (function () {
-      // The custom-colour tile IS the "Custom" wood-finish value. Uploading an
-      // image selects that value (checking its real radio, so it stays a single,
-      // mutually-exclusive choice) and attaches the uploaded URL to the product
-      // form as the `added_url_image` line-item property, which travels into the
-      // cart alongside the chosen size and surface.
-      var UPLOAD_ENDPOINT = 'https://vnote.io.vn/api/upload-image';
-      var MAX_BYTES = 10 * 1024 * 1024;
-
-      function toast(message, type) {
-        if (window.showToast) {
-          window.showToast({ message: message, type: type, position: 'bottom-right', duration: 4000 });
-        }
-      }
-
-      function initCustomColorUpload() {
-        // Shared guidance popup — shown before the real file picker opens.
-        var guide = document.querySelector('[data-custom-color-guide]');
-        var pendingContinue = null;
-        function closeGuide() {
-          if (!guide) return;
-          guide.classList.remove('is-open');
-          document.documentElement.style.overflow = '';
-          pendingContinue = null;
-        }
-        function openGuide(onContinue) {
-          // No popup in the DOM → keep the original behaviour (open the file dialog directly).
-          if (!guide) {
-            if (onContinue) onContinue();
-            return;
-          }
-          pendingContinue = onContinue;
-          guide.classList.add('is-open');
-          document.documentElement.style.overflow = 'hidden';
-          var btn = guide.querySelector('[data-custom-color-guide-continue]');
-          if (btn) btn.focus();
-        }
-        if (guide && guide.dataset.guideInit !== 'true') {
-          guide.dataset.guideInit = 'true';
-          guide.querySelectorAll('[data-custom-color-guide-close]').forEach(function (el) {
-            el.addEventListener('click', closeGuide);
-          });
-          var continueBtn = guide.querySelector('[data-custom-color-guide-continue]');
-          if (continueBtn) {
-            continueBtn.addEventListener('click', function () {
-              // Capture before closing (close clears it); running it here keeps the
-              // user gesture, so the browser allows the file dialog to open.
-              var next = pendingContinue;
-              closeGuide();
-              if (next) next();
-            });
-          }
-          document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape' && guide.classList.contains('is-open')) closeGuide();
-          });
-        }
-
-        document.querySelectorAll('[data-custom-color]:not([data-custom-color-init])').forEach(function (tile) {
-          tile.dataset.customColorInit = 'true';
-
-          var fileInput = tile.querySelector('[data-custom-color-input]');
-          var radio = tile.querySelector('[data-custom-color-radio]');
-          var icon = tile.querySelector('[data-custom-color-icon]');
-          var spinner = tile.querySelector('[data-custom-color-spinner]');
-          var preview = tile.querySelector('[data-custom-color-preview]');
-          var label = tile.querySelector('[data-custom-color-label]');
-          var property = tile.querySelector('[data-custom-color-property]');
-          if (!fileInput || !radio) return;
-
-          // The file input lives inside the tile, so a programmatic fileInput.click()
-          // would bubble back to the tile's click handler and re-open the guide popup.
-          // Stop it here so opening the file dialog never re-triggers the tile.
-          fileInput.addEventListener('click', function (e) {
-            e.stopPropagation();
-          });
-
-          var uploadedUrl = '';
-          var defaultLabel = label ? label.textContent : 'Custom color';
-
-          // Attach the URL only while the custom finish is the active choice.
-          function syncProperty() {
-            if (!property) return;
-            if (radio.checked && uploadedUrl) {
-              property.value = uploadedUrl;
-              property.disabled = false;
-            } else {
-              property.value = '';
-              property.disabled = true;
-            }
-          }
-
-          function selectCustom() {
-            radio.checked = true;
-            radio.dispatchEvent(new Event('change', { bubbles: true }));
-            syncProperty();
-          }
-
-          function setLoading(loading) {
-            tile.classList.toggle('is-loading', loading);
-            if (spinner) spinner.hidden = !loading;
-            if (icon) icon.hidden = loading || tile.classList.contains('is-uploaded');
-            if (label) label.textContent = loading ? 'Uploading…' : defaultLabel;
-          }
-
-          function upload(file) {
-            if (file.size > MAX_BYTES) {
-              toast('Image exceeds 10MB limit.', 'error');
-              return;
-            }
-
-            setLoading(true);
-
-            var formData = new FormData();
-            formData.append('image', file);
-
-            // Do not set Content-Type: let the browser add the multipart boundary.
-            fetch(UPLOAD_ENDPOINT, { method: 'POST', body: formData })
-              .then(function (response) {
-                return response
-                  .json()
-                  .catch(function () {
-                    return {};
-                  })
-                  .then(function (data) {
-                    return { ok: response.ok, data: data };
-                  });
-              })
-              .then(function (result) {
-                if (result.ok && result.data && result.data.image_url) {
-                  uploadedUrl = result.data.image_url;
-                  if (preview) {
-                    preview.src = uploadedUrl;
-                    preview.hidden = false;
-                  }
-                  if (icon) icon.hidden = true;
-                  tile.classList.add('is-uploaded');
-                  selectCustom(); // the uploaded image becomes the selected custom finish
-                  toast('Custom color uploaded.', 'success');
-                } else {
-                  var detail = (result.data && result.data.detail) || 'Upload failed. Please try again.';
-                  toast(detail, 'error');
-                }
-              })
-              .catch(function () {
-                toast('Upload failed. Please try again.', 'error');
-              })
-              .finally(function () {
-                setLoading(false);
-                fileInput.value = ''; // allow re-picking the same file
-              });
-          }
-
-          fileInput.addEventListener('change', function () {
-            var file = fileInput.files && fileInput.files[0];
-            if (file) upload(file);
-          });
-
-          // Empty → pick a file. Uploaded but not selected → select it.
-          // Already the active choice → pick again to replace the image.
-          // Unavailable for the current size/surface → behave like a disabled tile.
-          tile.addEventListener('click', function () {
-            if (tile.classList.contains('is-loading')) return;
-            if (radio.disabled || tile.classList.contains('is-disabled')) return;
-            if (!uploadedUrl || radio.checked) {
-              // Show the guidance popup first; the file dialog opens only on "Continue".
-              openGuide(function () {
-                fileInput.click();
-              });
-            } else {
-              selectCustom();
-            }
-          });
-
-          // Keep the property in step when the finish selection changes elsewhere.
-          var groupName = radio.getAttribute('name');
-          document.querySelectorAll('input[name="' + groupName + '"]').forEach(function (r) {
-            r.addEventListener('change', syncProperty);
-          });
-
-          syncProperty();
-        });
-      }
-
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initCustomColorUpload);
-      } else {
-        initCustomColorUpload();
-      }
-    })();
+    }
   </script>
 
   {% comment %} Guidance popup shown before the real file picker (wired in the custom-colour upload script). {% endcomment %}
@@ -1164,7 +732,7 @@
 {% endunless %}
 
 {% if product.metafields.custom.size_guide != blank %}
-  <size-guide-popup class="size-guide-popup-wrapper">
+  <size-guide-popup class="size-guide-popup-wrapper" aria-hidden="true" inert>
     <div class="size-guide-popup__overlay">
       <div class="size-guide-popup__content" role="dialog" aria-modal="true" aria-labelledby="SizeGuideTitle">
         <div class="size-guide-popup__header">
@@ -1192,6 +760,8 @@
           <img
             src="{{ product.metafields.custom.size_guide }}"
             alt="Size Guide for {{ product.title | escape }}"
+            width="1200"
+            height="900"
             loading="lazy"
             style="max-width: 100%; height: auto; display: block; margin: 0 auto;"
           >
@@ -1199,45 +769,6 @@
       </div>
     </div>
   </size-guide-popup>
-
-  <script>
-    class SizeGuidePopup extends HTMLElement {
-      constructor() {
-        super();
-        this.overlay = this.querySelector('.size-guide-popup__overlay');
-        this.closeBtn = this.querySelector('.size-guide-popup__close');
-
-        if (this.closeBtn) this.closeBtn.addEventListener('click', this.close.bind(this));
-        if (this.overlay) {
-          this.overlay.addEventListener('click', (e) => {
-            if (e.target === this.overlay) this.close();
-          });
-        }
-        document.addEventListener('keydown', (e) => {
-          if (e.key === 'Escape' && this.hasAttribute('open')) this.close();
-        });
-
-        window.openSizeGuidePopup = (e) => {
-          if (e) e.preventDefault();
-          this.open();
-        };
-      }
-
-      open() {
-        this.setAttribute('open', '');
-        document.body.style.overflow = 'hidden';
-      }
-
-      close() {
-        this.removeAttribute('open');
-        document.body.style.overflow = '';
-      }
-    }
-
-    if (!customElements.get('size-guide-popup')) {
-      customElements.define('size-guide-popup', SizeGuidePopup);
-    }
-  </script>
 
   <style>
     size-guide-popup {
@@ -1344,3 +875,469 @@
     }
   </style>
 {% endif %}
+
+{% comment %}
+  All product-variant-picker JS, consolidated into the single compiled script
+  tag Shopify allows per snippet. Compiled + deferred (not parser-blocking) and
+  cached across page views. No Liquid is used here — the per-product variant data
+  is read from the `[data-variant-picker-data]` JSON island rendered above.
+{% endcomment %}
+{% javascript %}
+  (function () {
+    // --- 1. Press-and-hold to scroll the variant lists horizontally ---
+    // Mirrors the drag logic used by .product-gallery__thumbnails.
+    function initVariantDragScroll() {
+      document.querySelectorAll('.variant-group__list').forEach(function (list) {
+        if (list.dataset.dragInit === 'true') return;
+        list.dataset.dragInit = 'true';
+
+        var isDown = false;
+        var startX = 0;
+        var scrollLeft = 0;
+        var isDragging = false;
+
+        // Never let a press-and-hold start a native image/element drag.
+        list.addEventListener('dragstart', function (e) {
+          e.preventDefault();
+        });
+
+        list.addEventListener('mousedown', function (e) {
+          isDown = true;
+          isDragging = false;
+          list.classList.add('is-active-drag');
+          startX = e.pageX - list.offsetLeft;
+          scrollLeft = list.scrollLeft;
+        });
+        list.addEventListener('mouseleave', function () {
+          isDown = false;
+          list.classList.remove('is-active-drag');
+        });
+        list.addEventListener('mouseup', function () {
+          isDown = false;
+          list.classList.remove('is-active-drag');
+        });
+        list.addEventListener('mousemove', function (e) {
+          if (!isDown) return;
+          e.preventDefault();
+          var x = e.pageX - list.offsetLeft;
+          var walk = (x - startX) * 2; // scroll speed multiplier
+          if (Math.abs(walk) > 5) isDragging = true;
+          list.scrollLeft = scrollLeft - walk;
+        });
+        // Swallow the click that ends a drag so it doesn't select a variant.
+        list.addEventListener(
+          'click',
+          function (e) {
+            if (isDragging) {
+              e.stopPropagation();
+              e.preventDefault();
+            }
+          },
+          true
+        );
+      });
+    }
+
+    // --- 2. Variant selection: instant price / gallery / URL updates ---
+    function initVariantSelect() {
+      var picker = document.querySelector('.product-variant-picker');
+      if (!picker) return;
+
+      // Variant data + per-variant images come from the JSON island (rendered
+      // by Liquid) instead of a large inline `product.variants | json` dump.
+      var dataEl = document.querySelector('[data-variant-picker-data]');
+      var pickerData = {};
+      try {
+        pickerData = JSON.parse((dataEl && dataEl.textContent) || '{}');
+      } catch (e) {
+        pickerData = {};
+      }
+      var productVariants = pickerData.variants || [];
+      var variantMetafieldsMap = pickerData.variantImages || {};
+
+      var selectedOptions = {};
+
+      // Initialise from the inputs that are already checked.
+      document.querySelectorAll('.product-variant-picker input[type="radio"]:checked').forEach(function (input) {
+        selectedOptions[input.dataset.index] = input.value;
+      });
+
+      var variantInputs = document.querySelectorAll('.product-variant-picker input[type="radio"]');
+
+      var getSelectedOptions = function () {
+        var nextSelectedOptions = {};
+        document.querySelectorAll('.product-variant-picker input[type="radio"]:checked').forEach(function (input) {
+          nextSelectedOptions[input.dataset.index] = input.value;
+        });
+        return nextSelectedOptions;
+      };
+
+      var findVariantForOptions = function (options) {
+        return productVariants.find(function (variant) {
+          return Object.keys(options).every(function (key) {
+            return variant[key] === options[key];
+          });
+        });
+      };
+
+      var isOptionValuePickable = function (input) {
+        var candidateOptions = Object.assign({}, selectedOptions);
+        candidateOptions[input.dataset.index] = input.value;
+
+        return productVariants.some(function (variant) {
+          if (!variant.available) return false;
+
+          return Object.keys(candidateOptions).every(function (key) {
+            return variant[key] === candidateOptions[key];
+          });
+        });
+      };
+
+      var syncOptionAvailability = function () {
+        Object.assign(selectedOptions, getSelectedOptions());
+
+        variantInputs.forEach(function (input) {
+          var tile = input.closest('.variant-tile');
+          var isCurrentSelection = input.checked;
+          var isPickable = isCurrentSelection || isOptionValuePickable(input);
+
+          input.disabled = !isPickable;
+          input.setAttribute('aria-disabled', isPickable ? 'false' : 'true');
+          if (tile) tile.classList.toggle('is-disabled', !isPickable);
+        });
+      };
+
+      syncOptionAvailability();
+
+      variantInputs.forEach(function (input) {
+        input.addEventListener('change', function () {
+          // Update the newly-picked value.
+          selectedOptions[input.dataset.index] = input.value;
+          syncOptionAvailability();
+
+          // Find the variant matching the full set of selected options.
+          var selectedVariant = findVariantForOptions(selectedOptions);
+          if (!selectedVariant) return;
+
+          // Instant, no-API updates the moment a variant is picked:
+          // price + compare + "Save", the hidden variant id used by the form,
+          // the add-to-cart button state, and the ?variant= URL param.
+          if (window.updateProductPrice) {
+            window.updateProductPrice(selectedVariant.id);
+          }
+
+          var variantIdInput = document.querySelector('[data-variant-id]');
+          if (variantIdInput) variantIdInput.value = selectedVariant.id;
+
+          var addText = document.querySelector('[data-add-to-cart-text]');
+          var addBtn = document.querySelector('form[data-type="add-to-cart-form"] button[name="add"]');
+          if (addText) addText.textContent = selectedVariant.available ? 'ADD TO CART' : 'SOLD OUT';
+          if (addBtn) addBtn.disabled = !selectedVariant.available;
+
+          if (window.history && window.history.replaceState) {
+            var nextUrl = new URL(window.location.href);
+            nextUrl.searchParams.set('variant', selectedVariant.id);
+            window.history.replaceState({}, '', nextUrl);
+          }
+
+          // Filter the gallery by the variant's `variant_images` metafield.
+          var variantImagesRaw = variantMetafieldsMap[selectedVariant.id];
+          if (variantImagesRaw) {
+            var variantImages = variantImagesRaw
+              .split('\n')
+              .map(function (s) {
+                return s.trim().replace(/<br\s*\/?>/g, '');
+              })
+              .filter(function (s) {
+                return s !== '';
+              });
+
+            if (variantImages.length > 0) {
+              var thumbnails = document.querySelectorAll('.product-gallery__thumbnail');
+              var mainItems = document.querySelectorAll('.product-gallery__main-item');
+
+              var firstMatchedThumbnail = null;
+
+              thumbnails.forEach(function (thumb) {
+                var alt = thumb.dataset.alt || '';
+                var isMatch = variantImages.some(function (vImg) {
+                  return alt.includes(vImg);
+                });
+
+                if (isMatch) {
+                  thumb.style.display = '';
+                  if (!firstMatchedThumbnail) firstMatchedThumbnail = thumb;
+                } else {
+                  thumb.style.display = 'none';
+                  thumb.classList.remove('is-active');
+                }
+              });
+
+              mainItems.forEach(function (item) {
+                var alt = item.dataset.alt || '';
+                var isMatch = variantImages.some(function (vImg) {
+                  return alt.includes(vImg);
+                });
+                if (!isMatch) {
+                  item.classList.remove('is-active');
+                }
+              });
+
+              if (firstMatchedThumbnail) {
+                firstMatchedThumbnail.click();
+              }
+            } else {
+              document.querySelectorAll('.product-gallery__thumbnail').forEach(function (t) {
+                t.style.display = '';
+              });
+            }
+          } else {
+            document.querySelectorAll('.product-gallery__thumbnail').forEach(function (t) {
+              t.style.display = '';
+            });
+          }
+        });
+      });
+    }
+
+    // --- 3. Custom-colour upload tile ---
+    // The custom-colour tile IS the "Custom" wood-finish value. Uploading an
+    // image selects that value (checking its real radio, so it stays a single,
+    // mutually-exclusive choice) and attaches the uploaded URL to the product
+    // form as the `added_url_image` line-item property, which travels into the
+    // cart alongside the chosen size and surface.
+    function initCustomColorUpload() {
+      var UPLOAD_ENDPOINT = 'https://vnote.io.vn/api/upload-image';
+      var MAX_BYTES = 10 * 1024 * 1024;
+
+      function toast(message, type) {
+        if (window.showToast) {
+          window.showToast({ message: message, type: type, position: 'bottom-right', duration: 4000 });
+        }
+      }
+
+      // Shared guidance popup — shown before the real file picker opens.
+      var guide = document.querySelector('[data-custom-color-guide]');
+      var pendingContinue = null;
+      function closeGuide() {
+        if (!guide) return;
+        guide.classList.remove('is-open');
+        document.documentElement.style.overflow = '';
+        pendingContinue = null;
+      }
+      function openGuide(onContinue) {
+        // No popup in the DOM → keep the original behaviour (open the file dialog directly).
+        if (!guide) {
+          if (onContinue) onContinue();
+          return;
+        }
+        pendingContinue = onContinue;
+        guide.classList.add('is-open');
+        document.documentElement.style.overflow = 'hidden';
+        var btn = guide.querySelector('[data-custom-color-guide-continue]');
+        if (btn) btn.focus();
+      }
+      if (guide && guide.dataset.guideInit !== 'true') {
+        guide.dataset.guideInit = 'true';
+        guide.querySelectorAll('[data-custom-color-guide-close]').forEach(function (el) {
+          el.addEventListener('click', closeGuide);
+        });
+        var continueBtn = guide.querySelector('[data-custom-color-guide-continue]');
+        if (continueBtn) {
+          continueBtn.addEventListener('click', function () {
+            // Capture before closing (close clears it); running it here keeps the
+            // user gesture, so the browser allows the file dialog to open.
+            var next = pendingContinue;
+            closeGuide();
+            if (next) next();
+          });
+        }
+        document.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape' && guide.classList.contains('is-open')) closeGuide();
+        });
+      }
+
+      document.querySelectorAll('[data-custom-color]:not([data-custom-color-init])').forEach(function (tile) {
+        tile.dataset.customColorInit = 'true';
+
+        var fileInput = tile.querySelector('[data-custom-color-input]');
+        var radio = tile.querySelector('[data-custom-color-radio]');
+        var icon = tile.querySelector('[data-custom-color-icon]');
+        var spinner = tile.querySelector('[data-custom-color-spinner]');
+        var preview = tile.querySelector('[data-custom-color-preview]');
+        var label = tile.querySelector('[data-custom-color-label]');
+        var property = tile.querySelector('[data-custom-color-property]');
+        if (!fileInput || !radio) return;
+
+        // The file input lives inside the tile, so a programmatic fileInput.click()
+        // would bubble back to the tile's click handler and re-open the guide popup.
+        // Stop it here so opening the file dialog never re-triggers the tile.
+        fileInput.addEventListener('click', function (e) {
+          e.stopPropagation();
+        });
+
+        var uploadedUrl = '';
+        var defaultLabel = label ? label.textContent : 'Custom color';
+
+        // Attach the URL only while the custom finish is the active choice.
+        function syncProperty() {
+          if (!property) return;
+          if (radio.checked && uploadedUrl) {
+            property.value = uploadedUrl;
+            property.disabled = false;
+          } else {
+            property.value = '';
+            property.disabled = true;
+          }
+        }
+
+        function selectCustom() {
+          radio.checked = true;
+          radio.dispatchEvent(new Event('change', { bubbles: true }));
+          syncProperty();
+        }
+
+        function setLoading(loading) {
+          tile.classList.toggle('is-loading', loading);
+          if (spinner) spinner.hidden = !loading;
+          if (icon) icon.hidden = loading || tile.classList.contains('is-uploaded');
+          if (label) label.textContent = loading ? 'Uploading…' : defaultLabel;
+        }
+
+        function upload(file) {
+          if (file.size > MAX_BYTES) {
+            toast('Image exceeds 10MB limit.', 'error');
+            return;
+          }
+
+          setLoading(true);
+
+          var formData = new FormData();
+          formData.append('image', file);
+
+          // Do not set Content-Type: let the browser add the multipart boundary.
+          fetch(UPLOAD_ENDPOINT, { method: 'POST', body: formData })
+            .then(function (response) {
+              return response
+                .json()
+                .catch(function () {
+                  return {};
+                })
+                .then(function (data) {
+                  return { ok: response.ok, data: data };
+                });
+            })
+            .then(function (result) {
+              if (result.ok && result.data && result.data.image_url) {
+                uploadedUrl = result.data.image_url;
+                if (preview) {
+                  preview.src = uploadedUrl;
+                  preview.hidden = false;
+                }
+                if (icon) icon.hidden = true;
+                tile.classList.add('is-uploaded');
+                selectCustom(); // the uploaded image becomes the selected custom finish
+                toast('Custom color uploaded.', 'success');
+              } else {
+                var detail = (result.data && result.data.detail) || 'Upload failed. Please try again.';
+                toast(detail, 'error');
+              }
+            })
+            .catch(function () {
+              toast('Upload failed. Please try again.', 'error');
+            })
+            .finally(function () {
+              setLoading(false);
+              fileInput.value = ''; // allow re-picking the same file
+            });
+        }
+
+        fileInput.addEventListener('change', function () {
+          var file = fileInput.files && fileInput.files[0];
+          if (file) upload(file);
+        });
+
+        // Empty → pick a file. Uploaded but not selected → select it.
+        // Already the active choice → pick again to replace the image.
+        // Unavailable for the current size/surface → behave like a disabled tile.
+        tile.addEventListener('click', function () {
+          if (tile.classList.contains('is-loading')) return;
+          if (radio.disabled || tile.classList.contains('is-disabled')) return;
+          if (!uploadedUrl || radio.checked) {
+            // Show the guidance popup first; the file dialog opens only on "Continue".
+            openGuide(function () {
+              fileInput.click();
+            });
+          } else {
+            selectCustom();
+          }
+        });
+
+        // Keep the property in step when the finish selection changes elsewhere.
+        var groupName = radio.getAttribute('name');
+        document.querySelectorAll('input[name="' + groupName + '"]').forEach(function (r) {
+          r.addEventListener('change', syncProperty);
+        });
+
+        syncProperty();
+      });
+    }
+
+    // --- 4. Size-guide popup custom element ---
+    function initSizeGuide() {
+      if (customElements.get('size-guide-popup')) return;
+      customElements.define(
+        'size-guide-popup',
+        class extends HTMLElement {
+          constructor() {
+            super();
+            this.overlay = this.querySelector('.size-guide-popup__overlay');
+            this.closeBtn = this.querySelector('.size-guide-popup__close');
+
+            if (this.closeBtn) this.closeBtn.addEventListener('click', this.close.bind(this));
+            if (this.overlay) {
+              this.overlay.addEventListener('click', (e) => {
+                if (e.target === this.overlay) this.close();
+              });
+            }
+            document.addEventListener('keydown', (e) => {
+              if (e.key === 'Escape' && this.hasAttribute('open')) this.close();
+            });
+
+            window.openSizeGuidePopup = (e) => {
+              if (e) e.preventDefault();
+              this.open();
+            };
+          }
+
+          open() {
+            this.setAttribute('open', '');
+            this.setAttribute('aria-hidden', 'false');
+            this.removeAttribute('inert');
+            document.body.style.overflow = 'hidden';
+          }
+
+          close() {
+            this.removeAttribute('open');
+            this.setAttribute('aria-hidden', 'true');
+            this.setAttribute('inert', '');
+            document.body.style.overflow = '';
+          }
+        }
+      );
+    }
+
+    function init() {
+      initVariantDragScroll();
+      initVariantSelect();
+      initCustomColorUpload();
+      initSizeGuide();
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  })();
+{% endjavascript %}

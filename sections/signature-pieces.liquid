@@ -18,7 +18,7 @@
     {%- endif -%}
 
     <div class="signature-pieces__grid" role="list">
-      {%- for product in collection.products limit: 4 -%}
+      {%- for product in collection.products limit: 12 -%}
         {%- assign display_title = product.metafields.custom.artwork_name.value | default: product.title -%}
         {%- liquid
           assign artist = ''
@@ -44,6 +44,7 @@
           <div class="signature-pieces__media">
             <a class="signature-pieces__image-link" href="{{ product.url }}" aria-label="{{ display_title | escape }}">
               {%- if product.featured_media != blank -%}
+                {%- assign featured_media_alt = product.featured_media.alt | default: display_title -%}
                 {{
                   product.featured_media.preview_image
                   | image_url: width: 900
@@ -51,7 +52,8 @@
                     class: 'signature-pieces__image',
                     loading: 'lazy',
                     widths: '360, 540, 720, 900',
-                    sizes: '(min-width: 80rem) 23vw, (min-width: 48rem) 46vw, 88vw'
+                    sizes: '(min-width: 80rem) 23vw, (min-width: 48rem) 46vw, 88vw',
+                    alt: featured_media_alt
                 }}
               {%- else -%}
                 {%- assign fallback_asset = 'sli-' | append: forloop.index | append: '.webp' -%}

@@ -13,6 +13,7 @@
   @param {number} [width] - The highest resolution width of the image to be rendered
   @param {number} [height] - The highest resolution height of the image to be rendered
   @param {string} [crop] - The crop position of the image
+  @param {string} [alt] - Optional image alt text fallback
 
   @example
   {% render 'image', image: product.featured_image %}
@@ -37,6 +38,8 @@
   else
     assign wrapper = 'div'
   endif
+
+  assign image_alt = alt | default: image.alt
 %}
 
 <{{ wrapper }}
@@ -45,7 +48,7 @@
     href="{{ url }}"
   {% endif %}
 >
-  {{ image | image_url: width: width, height: height, crop: crop | image_tag }}
+  {{ image | image_url: width: width, height: height, crop: crop | image_tag: alt: image_alt }}
 </{{ wrapper }}>
 
 {% stylesheet %}
