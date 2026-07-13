@@ -832,6 +832,47 @@
       }
 
       function initCustomColorUpload() {
+        // Shared guidance popup — shown before the real file picker opens.
+        var guide = document.querySelector('[data-custom-color-guide]');
+        var pendingContinue = null;
+        function closeGuide() {
+          if (!guide) return;
+          guide.classList.remove('is-open');
+          document.documentElement.style.overflow = '';
+          pendingContinue = null;
+        }
+        function openGuide(onContinue) {
+          // No popup in the DOM → keep the original behaviour (open the file dialog directly).
+          if (!guide) {
+            if (onContinue) onContinue();
+            return;
+          }
+          pendingContinue = onContinue;
+          guide.classList.add('is-open');
+          document.documentElement.style.overflow = 'hidden';
+          var btn = guide.querySelector('[data-custom-color-guide-continue]');
+          if (btn) btn.focus();
+        }
+        if (guide && guide.dataset.guideInit !== 'true') {
+          guide.dataset.guideInit = 'true';
+          guide.querySelectorAll('[data-custom-color-guide-close]').forEach(function (el) {
+            el.addEventListener('click', closeGuide);
+          });
+          var continueBtn = guide.querySelector('[data-custom-color-guide-continue]');
+          if (continueBtn) {
+            continueBtn.addEventListener('click', function () {
+              // Capture before closing (close clears it); running it here keeps the
+              // user gesture, so the browser allows the file dialog to open.
+              var next = pendingContinue;
+              closeGuide();
+              if (next) next();
+            });
+          }
+          document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && guide.classList.contains('is-open')) closeGuide();
+          });
+        }
+
         document.querySelectorAll('[data-custom-color]:not([data-custom-color-init])').forEach(function (tile) {
           tile.dataset.customColorInit = 'true';
 
@@ -843,6 +884,13 @@
           var label = tile.querySelector('[data-custom-color-label]');
           var property = tile.querySelector('[data-custom-color-property]');
           if (!fileInput || !radio) return;
+
+          // The file input lives inside the tile, so a programmatic fileInput.click()
+          // would bubble back to the tile's click handler and re-open the guide popup.
+          // Stop it here so opening the file dialog never re-triggers the tile.
+          fileInput.addEventListener('click', function (e) {
+            e.stopPropagation();
+          });
 
           var uploadedUrl = '';
           var defaultLabel = label ? label.textContent : 'Custom color';
@@ -932,7 +980,10 @@
             if (tile.classList.contains('is-loading')) return;
             if (radio.disabled || tile.classList.contains('is-disabled')) return;
             if (!uploadedUrl || radio.checked) {
-              fileInput.click();
+              // Show the guidance popup first; the file dialog opens only on "Continue".
+              openGuide(function () {
+                fileInput.click();
+              });
             } else {
               selectCustom();
             }
@@ -955,6 +1006,161 @@
       }
     })();
   </script>
+
+  {% comment %} Guidance popup shown before the real file picker (wired in the custom-colour upload script). {% endcomment %}
+  <div class="custom-color-guide" data-custom-color-guide>
+    <div class="custom-color-guide__backdrop" data-custom-color-guide-close></div>
+    <div class="custom-color-guide__dialog" role="dialog" aria-modal="true" aria-labelledby="CustomColorGuideTitle">
+      <button type="button" class="custom-color-guide__close" data-custom-color-guide-close aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+      <span class="custom-color-guide__icon" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+          <circle cx="8.5" cy="8.5" r="1.5"></circle>
+          <path d="m21 15-5-5L5 21"></path>
+        </svg>
+      </span>
+      <h2 class="custom-color-guide__title" id="CustomColorGuideTitle">Upload Your Custom Color</h2>
+      <p class="custom-color-guide__text">
+        Choose Custom Color to have your piece hand-finished in your preferred shade.
+        In the next step, upload one clear, well-lit, unfiltered reference photo—such as a paint chip, fabric swatch, or wood sample—for the closest possible color match.
+      </p>
+      <button type="button" class="custom-color-guide__continue" data-custom-color-guide-continue>Continue</button>
+    </div>
+  </div>
+
+  <style>
+    .custom-color-guide {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--sp-5);
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity var(--timing-short) var(--ease-standard), visibility var(--timing-short) var(--ease-standard);
+    }
+    .custom-color-guide.is-open {
+      opacity: 1;
+      visibility: visible;
+    }
+    .custom-color-guide__backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(23, 21, 21, 0.45);
+      backdrop-filter: blur(4px);
+      cursor: pointer;
+    }
+    .custom-color-guide__dialog {
+      position: relative;
+      z-index: 1;
+      width: min(100%, 440px);
+      max-height: calc(100dvh - var(--sp-8));
+      overflow-y: auto;
+      padding: var(--sp-7) var(--sp-6) var(--sp-6);
+      border: var(--border-width) solid var(--border-light);
+      border-radius: var(--radius-lg);
+      background: var(--color-milk);
+      box-shadow: var(--shadow-modal);
+      text-align: center;
+      transform: translateY(-8px);
+      transition: transform var(--timing-short) var(--ease-standard);
+    }
+    .custom-color-guide.is-open .custom-color-guide__dialog {
+      transform: translateY(0);
+    }
+    .custom-color-guide__close {
+      position: absolute;
+      top: var(--sp-2);
+      right: var(--sp-2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: var(--sp-7);
+      height: var(--sp-7);
+      padding: 0;
+      border: 0;
+      border-radius: var(--radius-full);
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: background-color var(--timing-short) var(--ease-standard), color var(--timing-short) var(--ease-standard);
+    }
+    .custom-color-guide__close:hover {
+      background: var(--color-cream);
+      color: var(--text-primary);
+    }
+    .custom-color-guide__close svg {
+      width: 18px;
+      height: 18px;
+    }
+    .custom-color-guide__icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: var(--sp-8);
+      height: var(--sp-8);
+      margin-bottom: var(--sp-4);
+      border-radius: var(--radius-full);
+      background: var(--color-cream);
+      color: var(--color-earth-brown);
+    }
+    .custom-color-guide__icon svg {
+      width: var(--sp-6);
+      height: var(--sp-6);
+    }
+    .custom-color-guide__title {
+      margin: 0 0 var(--sp-3);
+      font-family: var(--font-display);
+      font-size: var(--font-size-body-xl);
+      font-weight: var(--font-weight-regular);
+      color: var(--text-primary);
+    }
+    .custom-color-guide__text {
+      margin: 0 0 var(--sp-5);
+      font-size: var(--font-size-body-sm);
+      line-height: var(--line-height-generous);
+      color: var(--text-secondary);
+    }
+    .custom-color-guide__continue {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      min-height: var(--sp-7);
+      padding-inline: var(--sp-6);
+      border: 0;
+      border-radius: var(--radius-md);
+      background: var(--color-earth-brown);
+      color: var(--text-inverse);
+      font-family: var(--font-roboto);
+      font-size: var(--font-size-body-sm);
+      font-weight: var(--font-weight-semibold);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background-color var(--timing-short) var(--ease-standard);
+    }
+    .custom-color-guide__continue:hover {
+      background: var(--color-charcoal);
+    }
+    .custom-color-guide__continue:focus-visible,
+    .custom-color-guide__close:focus-visible {
+      outline: 2px solid var(--color-sage);
+      outline-offset: 2px;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .custom-color-guide,
+      .custom-color-guide__dialog {
+        transition: none;
+      }
+    }
+  </style>
 {% endunless %}
 
 {% if product.metafields.custom.size_guide != blank %}

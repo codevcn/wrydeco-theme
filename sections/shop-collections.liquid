@@ -56,9 +56,25 @@
             assign card_image = col.products.first.featured_image
           endif
           assign card_alt = card_image.alt | default: col.title
+
+          # Per-card destination, mapped by the source collection handle.
+          # Defaults to the collection's own URL; the wall-shelf card is routed
+          # to the gothic collection per the curated mapping.
+          assign card_url = col.url
+          case collection_handle
+            when 'bookshelf-modern'
+              assign card_url = '/collections/bookshelf-modern'
+            when 'wall-shelf-rustic'
+              assign card_url = '/collections/wall-shelf-gothic'
+            when 'floating-shelf-rustic'
+              assign card_url = '/collections/floating-shelf-rustic'
+            when 'bookshelf-rustic'
+              assign card_url = '/collections/bookshelf-rustic'
+            when 'floating-shelf-boho'
+              assign card_url = '/collections/floating-shelf-boho'
+          endcase
         -%}
-        {%- comment -%} Temporary: all cards link to /collections/all (metaobject logic below is unchanged). {%- endcomment -%}
-        <a class="shop-collections__card" href="/collections/all">
+        <a class="shop-collections__card" href="{{ card_url }}">
           <div class="shop-collections__media">
             {%- if card_image != blank -%}
               {{

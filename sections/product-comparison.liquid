@@ -637,11 +637,7 @@
               </div>
               <div class="dm-tabs__body custom-scrollbar">
                 <div class="dm-tabs__rte">
-                  {% if block.settings.use_product_description %}
-                    {{ product.description }}
-                  {% else %}
-                    {{ block.settings.content }}
-                  {% endif %}
+                  {% render 'product-detail-tab-content', block: block, product: product %}
                 </div>
               </div>
             </div>
@@ -824,6 +820,20 @@
           "default": "Heading"
         },
         {
+          "type": "select",
+          "id": "content_source",
+          "label": "Content source",
+          "info": "Auto sources are written once and reused for every product. 'Dimensions' also lists this product's Size options.",
+          "default": "custom",
+          "options": [
+            { "value": "custom", "label": "Custom content / product description" },
+            { "value": "dimensions", "label": "Dimensions (auto)" },
+            { "value": "delivery", "label": "Delivery & Refunds (auto)" },
+            { "value": "care", "label": "Care Guide (auto)" },
+            { "value": "customization", "label": "Customization (auto)" }
+          ]
+        },
+        {
           "type": "checkbox",
           "id": "use_product_description",
           "label": "Use product description as content",
@@ -879,28 +889,28 @@
           "type": "accordion",
           "settings": {
             "heading": "Dimensions",
-            "content": "<p>24\" L x 8\" D x 2.5\" H. Custom dimensions available on request.</p>"
+            "content_source": "dimensions"
           }
         },
         {
           "type": "accordion",
           "settings": {
             "heading": "Delivery & Refunds",
-            "content": "<p>White-glove delivery is available. This product is non-returnable, but if it arrives damaged or defective, you may request a refund or replacement.</p>"
+            "content_source": "delivery"
           }
         },
         {
           "type": "accordion",
           "settings": {
             "heading": "Care Guide",
-            "content": "<p>Wipe clean with a soft, dry cloth. Keep away from direct sunlight and extreme temperatures to preserve the finish.</p>"
+            "content_source": "care"
           }
         },
         {
           "type": "accordion",
           "settings": {
             "heading": "Customization",
-            "content": "<p>Choose your slab and finish, or work with our design concierge to tailor dimensions to your space.</p>"
+            "content_source": "customization"
           }
         }
       ]

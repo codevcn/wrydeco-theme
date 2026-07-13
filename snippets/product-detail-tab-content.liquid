@@ -1,0 +1,238 @@
+{% doc %}
+  Renders the body of a "Details, Materials & Care" accordion tab.
+
+  For the auto content sources (dimensions / delivery / care / customization) it
+  renders a rich, brand-consistent layout that is authored once and reused for
+  every product. "dimensions" additionally lists the product's own Size option
+  values (mirroring the variant picker). Any other source falls back to the
+  block's own rich-text content, or the product description.
+
+  @param {block} block - The accordion block (content_source / content / use_product_description)
+  @param {product} product - The current product (for description and Size options)
+
+  @example
+  {% render 'product-detail-tab-content', block: block, product: product %}
+{% enddoc %}
+
+{%- liquid
+  assign source = block.settings.content_source | default: 'custom'
+-%}
+
+{%- case source -%}
+  {%- when 'dimensions' -%}
+    {%- assign size_option = null -%}
+    {%- for opt in product.options_with_values -%}
+      {%- assign opt_name = opt.name | downcase -%}
+      {%- if opt_name contains 'size' -%}
+        {%- assign size_option = opt -%}
+        {%- break -%}
+      {%- endif -%}
+    {%- endfor -%}
+    <div class="dm-desc">
+      <div class="dm-desc__intro">
+        <p class="dm-desc__eyebrow">Dimensions &amp; sizing</p>
+        <p>Every WRYDECO piece is crafted to order in the sizes shown here. Choose the option that best suits your space — and because each piece is handmade, dimensions can be tailored to fit exactly where it will live.</p>
+      </div>
+      <div class="dm-desc__block">
+        <h4>Available sizes</h4>
+        {%- if size_option and size_option.values.size > 0 -%}
+          <p>Pick your size for this piece from the options below (matching the Size selector above):</p>
+          <div class="dm-desc__chips">
+            {%- for val in size_option.values -%}
+              {%- assign val_clean = val | strip -%}
+              {%- if val_clean != blank and val_clean != 'Custom' -%}
+                <span class="dm-desc__chip">{{ val_clean | escape }}</span>
+              {%- endif -%}
+            {%- endfor -%}
+          </div>
+        {%- else -%}
+          <p>This piece is made in a single standard size. Custom dimensions are available on request.</p>
+        {%- endif -%}
+      </div>
+      <p class="dm-desc__note">Measurements are approximate and handcrafted to order, so slight variation is a natural part of solid wood. Need a different size? We can tailor the dimensions to your space.</p>
+    </div>
+
+  {%- when 'delivery' -%}
+    <div class="dm-desc">
+      <div class="dm-desc__intro">
+        <p class="dm-desc__eyebrow">Delivery &amp; refunds</p>
+        <p>Every piece is handcrafted and made to order, so all sales are final. Non-returnable does not mean unsupported — if your order arrives damaged, defective, or incorrect, we will make it right.</p>
+      </div>
+      <div class="dm-desc__item">
+        <span class="dm-desc__num" aria-hidden="true">1</span>
+        <div>
+          <h4>All sales are final</h4>
+          <p>Custom, made-to-order, used, and sale items are not eligible for return. The natural variation of solid wood — grain, tone, knots, and texture — is part of its character, not a defect.</p>
+        </div>
+      </div>
+      <div class="dm-desc__item">
+        <span class="dm-desc__num" aria-hidden="true">2</span>
+        <div>
+          <h4>Damaged or defective on arrival</h4>
+          <p>If a piece arrives damaged, defective, or different from what you ordered, you may request a refund or replacement.</p>
+        </div>
+      </div>
+      <div class="dm-desc__item">
+        <span class="dm-desc__num" aria-hidden="true">3</span>
+        <div>
+          <h4>Report within 7 days</h4>
+          <p>Contact us within 7 days of delivery with your order number and clear photos or video. Please keep all packaging and wait for written instructions before returning anything.</p>
+        </div>
+      </div>
+      <div class="dm-desc__item">
+        <span class="dm-desc__num" aria-hidden="true">4</span>
+        <div>
+          <h4>Refund timing</h4>
+          <p>Approved refunds are issued to your original payment method, typically within 10 business days of approval.</p>
+        </div>
+      </div>
+      <a class="dm-desc__link" href="/policies/refund-policy">Read the full Return &amp; Refund Policy</a>
+    </div>
+
+  {%- when 'care' -%}
+    <div class="dm-desc">
+      <div class="dm-desc__intro">
+        <p class="dm-desc__eyebrow">Care guide</p>
+        <p>Solid wood is alive — it moves with the seasons and grows more beautiful with time. A few simple habits keep your piece stunning for generations.</p>
+      </div>
+      <div class="dm-desc__item">
+        <span class="dm-desc__num" aria-hidden="true">1</span>
+        <div>
+          <h4>The essentials</h4>
+          <p>Wipe with a soft, dry or slightly damp cloth, use coasters, mats, and trivets, and keep the piece away from direct sunlight and heat sources.</p>
+        </div>
+      </div>
+      <div class="dm-desc__item">
+        <span class="dm-desc__num" aria-hidden="true">2</span>
+        <div>
+          <h4>A rhythm of care</h4>
+          <p>Daily: dust and wipe spills promptly. Seasonal: clean gently and re-nourish oiled finishes. Long-term: inspect occasionally and seek professional care when needed.</p>
+        </div>
+      </div>
+      <div class="dm-desc__item">
+        <span class="dm-desc__num" aria-hidden="true">3</span>
+        <div>
+          <h4>Materials &amp; finishes</h4>
+          <p>Oil finish: re-oil every 6–12 months. Matte finish: clean gently and avoid waxes. Natural grain: embrace the unique markings that make each piece one of a kind.</p>
+        </div>
+      </div>
+      <div class="dm-desc__item">
+        <span class="dm-desc__num" aria-hidden="true">4</span>
+        <div>
+          <h4>What to avoid</h4>
+          <p>Skip abrasive pads, silicone sprays, and harsh chemicals, and never place hot items directly on the surface — always use a trivet.</p>
+        </div>
+      </div>
+      <a class="dm-desc__link" href="/pages/care-guide">See the full Care Guide</a>
+    </div>
+
+  {%- when 'customization' -%}
+    <div class="dm-desc">
+      <div class="dm-desc__intro">
+        <p class="dm-desc__eyebrow">Customization</p>
+        <p>Have something specific in mind? Every WRYDECO piece can be tailored to you — choose your slab and finish, adjust the dimensions, or work one-on-one with our design concierge to create a piece made entirely for your space.</p>
+      </div>
+      <p class="dm-desc__note">Share your space, style, and timeline, and we'll guide you from first sketch to finished piece.</p>
+      <a class="dm-desc__link" href="/pages/customization">Request a private consultation</a>
+    </div>
+
+  {%- else -%}
+    {%- if block.settings.use_product_description -%}
+      {{ product.description }}
+    {%- else -%}
+      {{ block.settings.content }}
+    {%- endif -%}
+{%- endcase -%}
+
+{% stylesheet %}
+  .dm-desc {
+    display: grid;
+    gap: var(--sp-4);
+  }
+  .dm-desc__intro {
+    padding: var(--sp-4);
+    border: var(--border-width) solid var(--border-light);
+    border-radius: var(--radius-lg);
+    background: color-mix(in srgb, var(--color-earth-brown) 6%, transparent);
+  }
+  /* Colours/fonts are prefixed with .dm-tabs__rte to outrank the panel's
+     `.dm-tabs__rte * { color/font !important }` reset. */
+  .dm-tabs__rte .dm-desc__eyebrow {
+    margin: 0 0 var(--sp-2) !important;
+    font-family: var(--font-roboto) !important;
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--letter-spacing-wide);
+    text-transform: uppercase;
+    color: var(--color-earth-brown) !important;
+  }
+  .dm-tabs__rte .dm-desc__intro p,
+  .dm-tabs__rte .dm-desc__item p,
+  .dm-tabs__rte .dm-desc__block p {
+    margin: 0;
+    color: var(--text-secondary) !important;
+    line-height: var(--line-height-generous);
+  }
+  .dm-desc__item {
+    display: grid;
+    grid-template-columns: var(--sp-6) 1fr;
+    gap: var(--sp-4);
+    padding-bottom: var(--sp-4);
+    border-bottom: var(--border-width) solid var(--border-light);
+  }
+  .dm-desc__item:last-of-type {
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+  .dm-tabs__rte .dm-desc__num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--sp-6);
+    height: var(--sp-6);
+    border-radius: var(--radius-full);
+    background: color-mix(in srgb, var(--color-earth-brown) 10%, transparent);
+    color: var(--color-earth-brown) !important;
+    font-family: var(--font-roboto) !important;
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-semibold);
+  }
+  .dm-tabs__rte .dm-desc__item h4,
+  .dm-tabs__rte .dm-desc__block h4 {
+    margin: 0 0 var(--sp-2) !important;
+  }
+  .dm-desc__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-2);
+    margin-top: var(--sp-3);
+  }
+  .dm-tabs__rte .dm-desc__chip {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--sp-1) var(--sp-3);
+    border: var(--border-width) solid var(--border-light);
+    border-radius: var(--radius-full);
+    background: color-mix(in srgb, var(--color-earth-brown) 5%, transparent);
+    color: var(--text-secondary) !important;
+    font-size: var(--font-size-caption);
+  }
+  .dm-tabs__rte .dm-desc__note {
+    margin: 0;
+    padding: var(--sp-3) var(--sp-4);
+    border: var(--border-width) solid var(--border-light);
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--color-earth-brown) 5%, transparent);
+    color: var(--text-secondary) !important;
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-generous);
+  }
+  .dm-tabs__rte .dm-desc__link {
+    display: inline-flex;
+    align-items: center;
+    color: var(--color-earth-brown) !important;
+    font-weight: var(--font-weight-semibold);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+{% endstylesheet %}
