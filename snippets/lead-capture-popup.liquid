@@ -17,6 +17,17 @@
   Test lead popup
 </button>
 
+<button
+  type="button"
+  class="lead-capture-test-toggle lead-capture-test-toggle--success"
+  data-lead-capture-test-success-toggle
+  aria-controls="LeadCaptureDialog"
+  aria-expanded="false"
+  hidden
+>
+  Test success popup
+</button>
+
 <div
   class="lead-capture"
   data-lead-capture
@@ -142,7 +153,8 @@
           Complimentary shipping is on its way
         </h2>
         <p id="LeadCaptureSuccessDescription" class="lead-capture__description">
-          Thank you for joining us.<br>Every work you choose includes complimentary shipping.
+          Thank you for joining us.<br>
+          Every work you choose includes complimentary shipping.
         </p>
 
         <div class="lead-capture__divider" aria-hidden="true">
@@ -159,9 +171,7 @@
         <a class="lead-capture__shop" href="{{ routes.all_products_collection_url }}" data-lead-capture-shop>
           Exploring the all pieces
         </a>
-        <button type="button" class="lead-capture__decline" data-lead-capture-close>
-          Starting your own journey
-        </button>
+        <button type="button" class="lead-capture__decline" data-lead-capture-close>Starting your own journey</button>
       </div>
     </div>
 
@@ -223,6 +233,10 @@
 
   .lead-capture-test-toggle:hover {
     background: var(--color-brown);
+  }
+
+  .lead-capture-test-toggle--success {
+    bottom: calc(var(--sp-4) * 2 + var(--sp-7));
   }
 
   .lead-capture-test-toggle:focus-visible {
@@ -315,15 +329,6 @@
 
   .lead-capture__close:hover {
     background: color-mix(in srgb, var(--color-clay) 10%, transparent);
-  }
-
-  .lead-capture__close:focus-visible,
-  .lead-capture__input:focus-visible,
-  .lead-capture__submit:focus-visible,
-  .lead-capture__decline:focus-visible,
-  .lead-capture__shop:focus-visible {
-    outline: var(--border-width) solid var(--color-sage);
-    outline-offset: var(--sp-1);
   }
 
   .lead-capture__content {
@@ -632,7 +637,7 @@
 
   @media (max-width: 30rem) {
     .lead-capture__content {
-      padding: var(--sp-6) var(--sp-4) var(--sp-3);
+      padding: var(--sp-4) var(--sp-5) var(--sp-3);
     }
 
     .lead-capture__mark {
@@ -652,7 +657,7 @@
     }
 
     .lead-capture__title {
-      font-size: var(--font-size-display-md);
+      font-size: var(--font-size-display-sm);
     }
 
     .lead-capture__description,
@@ -668,7 +673,7 @@
 
     .lead-capture__input,
     .lead-capture__decline {
-      font-size: var(--font-size-body-md);
+      font-size: var(--font-size-body-sm);
     }
 
     .lead-capture__gallery {
@@ -715,11 +720,15 @@
     }
 
     function focusableElements() {
-      return Array.prototype.slice.call(
-        dialog.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])')
-      ).filter(function (element) {
-        return !element.hidden && element.offsetParent !== null;
-      });
+      return Array.prototype.slice
+        .call(
+          dialog.querySelectorAll(
+            'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          )
+        )
+        .filter(function (element) {
+          return !element.hidden && element.offsetParent !== null;
+        });
     }
 
     function setError(message) {
@@ -752,9 +761,7 @@
       document.body.classList.add('lead-capture-is-open');
       window.requestAnimationFrame(function () {
         root.classList.add('is-open');
-        var initialFocus = successState.hidden
-          ? emailInput
-          : root.querySelector('[data-lead-capture-shop]');
+        var initialFocus = successState.hidden ? emailInput : root.querySelector('[data-lead-capture-shop]');
         initialFocus.focus({ preventScroll: true });
       });
     }
@@ -838,6 +845,8 @@
 
     document.addEventListener('keydown', handleKeydown);
 
+    var testSuccessToggle = document.querySelector('[data-lead-capture-test-success-toggle]');
+
     if (testToggle && new URLSearchParams(window.location.search).get('lead_popup_test') === '1') {
       testToggle.hidden = false;
       testToggle.addEventListener('click', function () {
@@ -847,13 +856,23 @@
           openPopup(true);
         }
       });
+
+      if (testSuccessToggle) {
+        testSuccessToggle.hidden = false;
+        testSuccessToggle.addEventListener('click', function () {
+          showSuccess();
+          if (!isOpen) {
+            openPopup(true);
+          }
+        });
+      }
     }
 
     var responseParameters = new URLSearchParams(window.location.search);
-    var redirectedSuccessfully = responseParameters.get('customer_posted') === 'true'
-      && window.location.hash === '#LeadCaptureForm';
-    var postedSuccessfully = Boolean(root.querySelector('[data-lead-capture-response-success]'))
-      || redirectedSuccessfully;
+    var redirectedSuccessfully =
+      responseParameters.get('customer_posted') === 'true' && window.location.hash === '#LeadCaptureForm';
+    var postedSuccessfully =
+      Boolean(root.querySelector('[data-lead-capture-response-success]')) || redirectedSuccessfully;
     var serverError = root.querySelector('[data-lead-capture-response-error]');
 
     if (postedSuccessfully) {
@@ -863,9 +882,8 @@
       setError(serverError.textContent.trim());
       openPopup(true);
     } else if (!hasBeenSeen()) {
-      var navigationElapsed = window.performance && typeof window.performance.now === 'function'
-        ? window.performance.now()
-        : 0;
+      var navigationElapsed =
+        window.performance && typeof window.performance.now === 'function' ? window.performance.now() : 0;
       window.setTimeout(openPopup, Math.max(0, 2000 - navigationElapsed));
     }
   })();
