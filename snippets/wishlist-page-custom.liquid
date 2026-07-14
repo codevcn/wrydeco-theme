@@ -1,0 +1,826 @@
+{% doc %}
+  Applies WRYDECO presentation and small DOM enhancements to the Wishlist by Square proxy page.
+
+  @example
+  {% render 'wishlist-page-custom' %}
+{% enddoc %}
+
+<script>
+  (function () {
+    document.documentElement.classList.add('wrydeco-wishlist-page');
+
+    function getWishlistPage() {
+      return document.querySelector('.vtl-proxy-page-wishlist .Vtl-WishlistPage');
+    }
+
+    function getProductCards(page) {
+      return Array.prototype.slice.call(page.querySelectorAll('.Vtl-WishlistProduct'));
+    }
+
+    function getProductCount(page) {
+      return getProductCards(page).length;
+    }
+
+    function getAssuranceHtml() {
+      return (
+        '<div class="wrydeco-wishlist__assurance-item"><span class="wrydeco-wishlist__assurance-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2m10 0H9m10 0h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></g></svg></span><p><strong>White-Glove Delivery</strong><span>Carefully delivered and placed in your home.</span></p></div>' +
+        '<div class="wrydeco-wishlist__assurance-item"><span class="wrydeco-wishlist__assurance-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12l2 2l4-4"/></g></svg></span><p><strong>Handcrafted to Last</strong><span>Timeless pieces built with integrity and intention.</span></p></div>' +
+        '<div class="wrydeco-wishlist__assurance-item"><span class="wrydeco-wishlist__assurance-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8c0 5.5-4.78 10-10 10"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></g></svg></span><p><strong>Sustainably Minded</strong><span>Responsibly sourced wood. Consciously made.</span></p></div>' +
+        '<div class="wrydeco-wishlist__assurance-item"><span class="wrydeco-wishlist__assurance-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/></svg></span><p><strong>Need Help Deciding?</strong><span>Book a complimentary consultation with our design experts.</span></p></div>'
+      );
+    }
+
+    function ensureMeta(page) {
+      var description = page.querySelector('.Vtl-WishlistPage__Description');
+      if (!description) return;
+
+      var descriptionCopy = 'A curated place for the pieces you love most.';
+      if (description.textContent.trim() !== descriptionCopy) {
+        description.textContent = descriptionCopy;
+      }
+
+      var count = getProductCount(page);
+      var meta = page.querySelector('[data-wishlist-count-copy]');
+      if (!meta) {
+        meta = document.createElement('p');
+        meta.className = 'wrydeco-wishlist__count';
+        meta.setAttribute('data-wishlist-count-copy', '');
+        description.insertAdjacentElement('afterend', meta);
+      }
+
+      var countCopy = count === 1 ? '1 saved piece' : count + ' saved pieces';
+      if (meta.textContent.trim() !== countCopy) {
+        meta.textContent = countCopy;
+      }
+    }
+
+    function ensureProductActions(card) {
+      if (card.querySelector('[data-wrydeco-wishlist-actions]')) return;
+
+      var productLink = card.querySelector('.Vtl-WishlistProduct__Link');
+      var productUrl = productLink ? productLink.getAttribute('href') : '#';
+      var actions = document.createElement('div');
+      actions.className = 'wrydeco-wishlist__actions';
+      actions.setAttribute('data-wrydeco-wishlist-actions', '');
+      actions.innerHTML =
+        '<a class="wrydeco-wishlist__details" href="' +
+        productUrl +
+        '">View Details</a>' +
+        '<span aria-hidden="true" class="wrydeco-wishlist__divider"></span>' +
+        '<a class="wrydeco-wishlist__consult" href="/pages/customization">Ask About Customization</a>' +
+        '<span aria-hidden="true" class="wrydeco-wishlist__chat">?</span>';
+
+      card.appendChild(actions);
+    }
+
+    function ensureAssuranceBar(page) {
+      var assurance = page.querySelector('[data-wrydeco-wishlist-assurance]');
+
+      if (!assurance) {
+        assurance = document.createElement('aside');
+        assurance.className = 'wrydeco-wishlist__assurance';
+        assurance.setAttribute('data-wrydeco-wishlist-assurance', '');
+        assurance.setAttribute('aria-label', 'Wishlist service assurances');
+        assurance.innerHTML = getAssuranceHtml();
+      }
+
+      if (page.lastElementChild !== assurance) {
+        page.appendChild(assurance);
+      }
+    }
+
+    function removeInitialPlaceholder() {
+      var initial = document.querySelector('[data-wrydeco-wishlist-initial]');
+      if (initial) initial.remove();
+    }
+
+    function toast(message, type) {
+      if (window.showToast) {
+        window.showToast({ message: message, type: type, position: 'bottom-left', duration: 4000 });
+      }
+    }
+
+    // Fallback hook for any app code path that *does* call vtlsCartDrawer.show()
+    // (e.g. "add all to cart"). The per-card Add to cart button does NOT call it —
+    // it is handled by the interceptor below instead.
+    function installWishlistCartToastAdapter() {
+      var previousDrawer = window.vtlsCartDrawer || {};
+      var lastToastAt = 0;
+
+      window.vtlsCartDrawer = Object.assign({}, previousDrawer, {
+        show: function () {
+          var now = Date.now();
+          if (now - lastToastAt > 1200) {
+            lastToastAt = now;
+            toast('Item added to your cart.', 'success');
+          }
+
+          document.dispatchEvent(new CustomEvent('cart:updated', { detail: { open: false } }));
+        },
+      });
+    }
+
+    // Drop the piece from the wishlist once it is safely in the cart.
+    //
+    // We deliberately click the app's own remove (X) control rather than calling its
+    // private API directly: the app owns the session token and item id, and it also
+    // updates its counter and card list for us. If the control isn't there we simply
+    // leave the piece saved — never fail the add because of the cleanup.
+    function removeCardFromWishlist(card) {
+      if (!card) return;
+      var closeButton = card.querySelector('.Vtl-WishlistProduct__CloseButton');
+      if (closeButton) closeButton.click();
+    }
+
+    function addVariantToCart(button, variantId) {
+      var root = (window.Shopify && window.Shopify.routes && window.Shopify.routes.root) || '/';
+      var card = button.closest('.Vtl-WishlistProduct');
+      var defaultLabel = button.textContent;
+
+      var restore = function () {
+        button.textContent = defaultLabel;
+        button.disabled = false;
+        delete button.dataset.wrydecoAdding;
+      };
+
+      button.dataset.wrydecoAdding = 'true';
+      button.disabled = true;
+      button.textContent = 'Adding…';
+
+      fetch(root + 'cart/add.js', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/javascript' },
+        body: JSON.stringify({ id: variantId, quantity: 1 }),
+      })
+        .then(function (response) {
+          return response.json().then(function (data) {
+            if (!response.ok || data.status) throw new Error(data.description || 'Could not add to cart.');
+            return data;
+          });
+        })
+        .then(function () {
+          toast('Item added to your cart.', 'success');
+          // Refresh the cart drawer + header count, but keep the drawer closed so the
+          // shopper stays on their wishlist.
+          document.dispatchEvent(new CustomEvent('cart:updated', { detail: { open: false } }));
+
+          // Show the confirmation briefly, then take the piece off the wishlist.
+          button.textContent = 'Added to cart';
+          window.setTimeout(function () {
+            removeCardFromWishlist(card);
+          }, 900);
+        })
+        .catch(function (error) {
+          toast(error.message || 'Could not add to cart.', 'error');
+          restore();
+        });
+    }
+
+    // Take over the wishlist card's Add to cart button.
+    //
+    // Left to itself the app adds the line, DELETEs the piece from the wishlist and
+    // then navigates to /cart (which this theme redirects to /collections/all and
+    // pops the cart drawer) — the shopper loses their place and the wishlist entry.
+    // We intercept in the capture phase (this snippet runs in <head>, so the listener
+    // is registered before the app's bundle) and handle the add ourselves: the
+    // shopper stays on the wishlist, the piece stays saved, and they get a toast.
+    function installWishlistAddToCartInterceptor() {
+      document.addEventListener(
+        'click',
+        function (event) {
+          var target = event.target;
+          if (!target || typeof target.closest !== 'function') return;
+
+          var button = target.closest('.Vtl-WishlistProduct__AddToCart');
+          if (!button) return;
+
+          // Stop the app's own handler (and its navigation) from ever running.
+          event.preventDefault();
+          event.stopImmediatePropagation();
+
+          if (button.dataset.wrydecoAdding === 'true') return;
+
+          // The wishlist stores an exact variant; it travels in the card link's ?variant=.
+          var card = button.closest('.Vtl-WishlistProduct');
+          var link = card ? card.querySelector('.Vtl-WishlistProduct__Link') : null;
+          var variantId = '';
+          if (link) {
+            try {
+              variantId = new URL(link.getAttribute('href'), window.location.origin).searchParams.get('variant') || '';
+            } catch (error) {
+              variantId = '';
+            }
+          }
+
+          if (!variantId) {
+            toast('Sorry, we could not add this piece to your cart.', 'error');
+            return;
+          }
+
+          addVariantToCart(button, variantId);
+        },
+        true // capture — must beat the app's listener on the button
+      );
+    }
+
+    installWishlistCartToastAdapter();
+    installWishlistAddToCartInterceptor();
+
+    function enhanceWishlistPage() {
+      var page = getWishlistPage();
+      if (!page) return;
+
+      ensureMeta(page);
+      getProductCards(page).forEach(ensureProductActions);
+      ensureAssuranceBar(page);
+      removeInitialPlaceholder();
+
+      var emptyMessage = page.querySelector('.Vtl-WishlistPage__EmptyMessage');
+      if (emptyMessage) {
+        var emptyCopy = 'Your wishlist is ready for the pieces that speak to you.';
+        if (emptyMessage.textContent.trim() !== emptyCopy) {
+          emptyMessage.textContent = emptyCopy;
+        }
+      }
+    }
+
+    function initWishlistEnhancements() {
+      enhanceWishlistPage();
+
+      var scheduled = false;
+      var scheduleEnhancement = function () {
+        if (scheduled) return;
+        scheduled = true;
+        window.requestAnimationFrame(function () {
+          scheduled = false;
+          enhanceWishlistPage();
+        });
+      };
+
+      var proxy = document.querySelector('.vtl-proxy-page-wishlist') || document.body;
+      var observer = new MutationObserver(scheduleEnhancement);
+      observer.observe(proxy, {
+        childList: true,
+        subtree: true,
+      });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initWishlistEnhancements);
+    } else {
+      initWishlistEnhancements();
+    }
+  })();
+</script>
+
+{% stylesheet %}
+  .Vtl-WishlistPage__ShareToolbar {
+    display: none;
+  }
+
+  .wrydeco-wishlist-page body {
+    background: radial-gradient(
+        circle at 0% 30%,
+        color-mix(in srgb, var(--color-clay) 14%, transparent) 0 10rem,
+        transparent 23rem
+      ),
+      linear-gradient(180deg, var(--color-milk) 0%, var(--surface-default) 56%, var(--color-milk) 100%);
+    color: var(--text-primary);
+  }
+
+  .wrydeco-wishlist-page .header {
+    background: color-mix(in srgb, var(--color-milk) 92%, transparent);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-earth-brown) 14%, transparent);
+  }
+
+  .wrydeco-wishlist-page .header__icon,
+  .wrydeco-wishlist-page .header__icon svg,
+  .wrydeco-wishlist-page .header__icon--search,
+  .wrydeco-wishlist-page .header__icon--cart,
+  .wrydeco-wishlist-page .header__icon--account,
+  .wrydeco-wishlist-page .header__icon--wishlist,
+  .wrydeco-wishlist-page .loc-picker .loc-picker__code,
+  .wrydeco-wishlist-page .loc-picker__chevron {
+    color: var(--color-earth-brown);
+  }
+
+  .wrydeco-wishlist-page .Vtl-WishlistHeader__HeartIconWrapper {
+    fill: var(--color-earth-brown) !important;
+  }
+
+  .wrydeco-wishlist-page #MainContent {
+    background: linear-gradient(90deg, color-mix(in srgb, var(--color-earth-brown) 12%, transparent), transparent 16rem),
+      transparent;
+  }
+
+  .wrydeco-wishlist__initial {
+    align-items: center;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-11);
+    min-height: 28rem;
+    padding: var(--space-17-bigger) calc(var(--space-13) + 72px) var(--space-13) !important;
+  }
+
+  .wrydeco-wishlist__initial-spinner {
+    animation: wrydeco-wishlist-spin var(--timing-extra-long) linear infinite;
+    border: 2px solid color-mix(in srgb, var(--color-earth-brown) 16%, transparent);
+    border-top-color: var(--color-earth-brown);
+    border-radius: var(--radius-full);
+    height: var(--space-14);
+    width: var(--space-14);
+  }
+
+  .wrydeco-wishlist__initial-text {
+    color: var(--text-secondary);
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-lg);
+    line-height: var(--line-height-normal);
+    margin: 0;
+    text-align: center;
+  }
+
+  .wrydeco-wishlist__initial .wrydeco-wishlist__assurance {
+    margin: var(--space-8) auto 0;
+  }
+
+  @keyframes wrydeco-wishlist-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .wrydeco-wishlist-page .vtl-proxy-page-wishlist {
+    margin: 0 auto;
+    min-height: 72vh;
+    overflow: hidden;
+    padding: var(--space-17-bigger) calc(var(--space-13) + 72px) var(--space-13) !important;
+    position: relative;
+  }
+
+  .wrydeco-wishlist-page .vtl-proxy-page-wishlist::before {
+    background: linear-gradient(
+        72deg,
+        transparent 0 42%,
+        color-mix(in srgb, var(--color-clay) 34%, transparent) 43% 45%,
+        transparent 46%
+      ),
+      radial-gradient(ellipse at center, color-mix(in srgb, var(--color-clay) 30%, transparent) 0 16%, transparent 18%);
+    content: '';
+    height: 20rem;
+    inset-block-start: var(--space-8);
+    inset-inline-start: calc(-1 * var(--space-11));
+    opacity: 0.38;
+    pointer-events: none;
+    position: absolute;
+    transform: rotate(-10deg);
+    width: 16rem;
+  }
+
+  .wrydeco-wishlist-page .Vtl-WishlistPage {
+    align-items: center;
+    display: flex;
+    flex-direction: column;
+    margin: 0 auto;
+    padding: 0;
+    position: relative;
+    z-index: 1;
+  }
+
+  .wrydeco-wishlist-page .Vtl-WishlistPage__Title {
+    color: var(--text-primary);
+    font-family: var(--font-display);
+    font-size: var(--font-size-display-lg);
+    font-weight: var(--font-weight-light);
+    letter-spacing: var(--letter-spacing-normal);
+    line-height: var(--line-height-tight);
+    margin: 0;
+    text-align: center;
+  }
+
+  .wrydeco-wishlist-page .Vtl-WishlistPage__Description {
+    color: var(--text-secondary);
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-xl);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-relaxed);
+    margin: var(--space-7) 0 0;
+    text-align: center;
+  }
+
+  .wrydeco-wishlist__count {
+    color: var(--color-clay);
+    font-family: var(--font-size-body-sm);
+    font-size: var(--font-size-body-md);
+    line-height: var(--line-height-normal);
+    margin: var(--space-3) 0 0;
+    text-align: center;
+  }
+
+  .wrydeco-wishlist-page .Vtl-WishlistPage__ShareToolbar {
+    align-items: center;
+    align-self: flex-end;
+    display: none;
+    gap: var(--space-8);
+    justify-content: flex-end;
+    margin: calc(-1 * var(--space-11)) 0 var(--space-13);
+    max-width: none;
+    min-height: 2rem;
+    width: auto;
+  }
+
+  .wrydeco-wishlist-page .Vtl-WishlistPage__ShareLabel {
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-medium);
+  }
+
+  .wrydeco-wishlist-page .Vtl-WishlistPage__ShareAction {
+    color: var(--color-bark);
+  }
+
+  .wrydeco-wishlist-page .Vtl-WishlistPage__Products {
+    display: grid;
+    gap: var(--space-13);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    justify-content: center;
+    justify-items: center;
+    margin-top: var(--space-14);
+    width: 100%;
+  }
+
+  .wrydeco-wishlist-page .Vtl-WishlistPage__Products:has(.Vtl-WishlistProduct:only-child) {
+    grid-template-columns: minmax(0, 30rem);
+  }
+
+  .wrydeco-wishlist-page .Vtl-WishlistProduct {
+    background: var(--color-milk);
+    border: 1px solid color-mix(in srgb, var(--color-earth-brown) 14%, transparent);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+    max-width: 21vw;
+    width: 100%;
+  }
+
+  .wrydeco-wishlist-page .Vtl-WishlistProduct__CloseButton {
+    align-items: center;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid color-mix(in srgb, var(--color-earth-brown) 12%, transparent);
+    border-radius: var(--radius-full);
+    color: var(--color-earth-brown);
+    display: flex;
+    height: 2.25rem;
+    justify-content: center;
+    position: absolute;
+    right: var(--space-8);
+    top: var(--space-8);
+    width: 2.25rem;
+    z-index: 2;
+    transition: transform 0.2s linear;
+  }
+  .wrydeco-wishlist-page .Vtl-WishlistProduct__CloseButton:hover {
+    transform: scale(1.1);
+  }
+
+  .wrydeco-wishlist-page .Vtl-WishlistProduct__Link {
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    text-decoration: none;
+  }
+
+  .wrydeco-wishlist-page .Vtl-WishlistProduct__ImageWrapper {
+    aspect-ratio: 1 / 1;
+    background: var(--surface-tertiary);
+    border: 0;
+    display: block;
+    height: auto;
+    margin: 0;
+    overflow: hidden;
+    width: 100%;
+    max-height: 303px;
+  }
+
+  .wrydeco-wishlist-page .Vtl-WishlistProduct__Image {
+    border-radius: 0;
+    height: 100%;
+    max-height: none;
+    object-fit: cover;
+    width: 100%;
+    transition: transform 0.2s ease-in-out;
+  }
+  .wrydeco-wishlist-page .Vtl-WishlistProduct__Image:hover {
+    transform: scale(1.05);
+  }
+
+  .wrydeco-wishlist-page .Vtl-WishlistProduct__Title {
+    color: var(--text-primary);
+    display: block;
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-lg);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-snug);
+    margin: var(--space-8) var(--space-11) var(--space-2);
+    text-align: center;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-height: 1.12;
+  }
+
+  .wrydeco-wishlist-page .Vtl-WishlistProduct__Variant {
+    color: var(--text-secondary);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-normal);
+    margin: 0 var(--space-11) var(--space-6);
+    text-align: center;
+  }
+
+  .wrydeco-wishlist-page .Vtl-WishlistProduct__PriceSection {
+    display: flex;
+    justify-content: center;
+    margin: 0 var(--space-11) var(--space-7);
+  }
+
+  .wrydeco-wishlist-page .Vtl-WishlistProduct__Price,
+  .wrydeco-wishlist-page .Vtl-WishlistProduct__OldPrice {
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-xl);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-normal);
+    text-align: center;
+  }
+
+  .wrydeco-wishlist-page .Vtl-WishlistProduct__OldPrice {
+    color: var(--text-secondary);
+  }
+
+  .wrydeco-wishlist-page .Vtl-WishlistProduct__AddToCart {
+    align-self: center;
+    background: var(--color-earth-brown) !important;
+    border: 1px solid var(--color-earth-brown) !important;
+    border-radius: var(--radius-md);
+    color: var(--color-milk) !important;
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--letter-spacing-relaxed);
+    line-height: var(--line-height-normal);
+    margin: 0 var(--space-11) var(--space-8);
+    min-height: 2.75rem;
+    padding: var(--space-4) var(--space-11);
+    text-transform: uppercase;
+    width: calc(100% - (var(--space-11) * 2));
+    transition: transform 0.2s ease-in-out;
+  }
+  .wrydeco-wishlist-page .Vtl-WishlistProduct__AddToCart:hover {
+    transform: scale(1.05);
+  }
+
+  .wrydeco-wishlist-page .Vtl-WishlistProduct__AddedToCart {
+    color: var(--color-earth-brown);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-sm);
+    margin: 0 var(--space-11) var(--space-8);
+    min-height: 2.75rem;
+  }
+
+  .wrydeco-wishlist__actions {
+    align-items: center;
+    border-top: 1px solid color-mix(in srgb, var(--color-earth-brown) 12%, transparent);
+    display: none;
+    gap: var(--space-9);
+    justify-content: center;
+    margin: auto var(--space-11) 0;
+    min-height: 3.75rem;
+    padding: var(--space-7) 0;
+  }
+
+  .wrydeco-wishlist__actions a {
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: 0.76rem;
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--letter-spacing-relaxed);
+    text-decoration: none;
+    text-transform: uppercase;
+  }
+
+  .wrydeco-wishlist__actions a:hover,
+  .wrydeco-wishlist__actions a:focus-visible {
+    color: var(--color-clay);
+    text-decoration: underline;
+    text-underline-offset: var(--space-2);
+  }
+
+  .wrydeco-wishlist__divider {
+    background: color-mix(in srgb, var(--color-earth-brown) 18%, transparent);
+    display: block;
+    height: 1.5rem;
+    width: 1px;
+  }
+
+  .wrydeco-wishlist__chat {
+    align-items: center;
+    border: 1px solid color-mix(in srgb, var(--color-earth-brown) 36%, transparent);
+    border-radius: var(--radius-full);
+    color: var(--color-bark);
+    display: inline-flex;
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-sm);
+    height: 1.25rem;
+    justify-content: center;
+    width: 1.25rem;
+  }
+
+  .wrydeco-wishlist-page .Vtl-WishlistPage__EmptyList {
+    align-items: center;
+    background: transparent;
+    border: 1px solid color-mix(in srgb, var(--color-earth-brown) 14%, transparent);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    justify-content: center;
+    margin-top: var(--space-14);
+    max-width: 34rem;
+    min-height: 14rem;
+    padding: var(--space-13);
+    width: 100%;
+  }
+
+  .wrydeco-wishlist-page .Vtl-WishlistPage__EmptyMessage {
+    color: var(--text-secondary);
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-xl);
+    line-height: var(--line-height-relaxed);
+    margin: 0;
+    text-align: center;
+  }
+
+  .wrydeco-wishlist__assurance {
+    align-items: stretch;
+    border: 1px solid color-mix(in srgb, var(--color-earth-brown) 14%, transparent);
+    border-radius: var(--radius-lg);
+    display: grid;
+    gap: 0;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin: var(--space-14) auto 0;
+    overflow: hidden;
+    width: 100%;
+    max-width: unset !important;
+  }
+
+  .wrydeco-wishlist__assurance-item {
+    align-items: center;
+    display: grid;
+    gap: var(--space-8);
+    grid-template-columns: 2.5rem 1fr;
+    padding: var(--space-9) var(--space-11);
+  }
+
+  .wrydeco-wishlist__assurance-item + .wrydeco-wishlist__assurance-item {
+    border-left: 1px solid color-mix(in srgb, var(--color-earth-brown) 14%, transparent);
+  }
+
+  .wrydeco-wishlist__assurance-icon {
+    align-items: center;
+    border: 1px solid color-mix(in srgb, var(--color-clay) 58%, transparent);
+    border-radius: var(--radius-full);
+    color: var(--color-clay);
+    display: flex;
+    height: 2.5rem;
+    justify-content: center;
+    width: 2.5rem;
+  }
+
+  .wrydeco-wishlist__assurance-icon svg {
+    display: block;
+    height: var(--space-11);
+    width: var(--space-11);
+  }
+
+  .wrydeco-wishlist__assurance p {
+    margin: 0;
+  }
+
+  .wrydeco-wishlist__assurance strong {
+    color: var(--text-primary);
+    display: block;
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-md);
+    font-weight: var(--font-weight-semibold);
+    line-height: var(--line-height-normal);
+  }
+
+  .wrydeco-wishlist__assurance span:not(.wrydeco-wishlist__assurance-icon) {
+    color: var(--text-secondary);
+    display: block;
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-normal);
+    margin-top: var(--space-1);
+  }
+
+  @media screen and (max-width: 989px) {
+    .wrydeco-wishlist-page .vtl-proxy-page-wishlist {
+      padding: var(--space-16) var(--space-8) var(--space-13);
+    }
+
+    .wrydeco-wishlist__initial {
+      padding: calc(var(--space-16) + var(--space-13)) var(--space-8) var(--space-13);
+    }
+
+    .wrydeco-wishlist-page .Vtl-WishlistPage__Title {
+      font-size: var(--font-size-display-xl);
+    }
+
+    .wrydeco-wishlist-page .Vtl-WishlistPage__ShareToolbar {
+      align-self: center;
+      margin: var(--space-8) 0 0;
+    }
+
+    .wrydeco-wishlist-page .Vtl-WishlistPage__Products {
+      gap: var(--space-11);
+      grid-template-columns: 1fr;
+      max-width: 34rem;
+    }
+
+    .wrydeco-wishlist__assurance {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      max-width: 44rem;
+    }
+
+    .wrydeco-wishlist__assurance-item:nth-child(odd) {
+      border-left: 0;
+    }
+
+    .wrydeco-wishlist__assurance-item:nth-child(n + 3) {
+      border-top: 1px solid color-mix(in srgb, var(--color-earth-brown) 14%, transparent);
+    }
+  }
+
+  @media screen and (max-width: 749px) {
+    .wrydeco-wishlist-page .vtl-proxy-page-wishlist {
+      padding: var(--space-16) var(--space-8) var(--space-11);
+    }
+
+    .wrydeco-wishlist__initial {
+      min-height: 24rem;
+      padding: calc(var(--space-16) + var(--space-11)) var(--space-8) var(--space-11);
+    }
+
+    .wrydeco-wishlist-page .vtl-proxy-page-wishlist::before {
+      opacity: 0.22;
+      transform: scale(0.7) rotate(-10deg);
+    }
+
+    .wrydeco-wishlist-page .Vtl-WishlistPage__Title {
+      font-size: var(--font-size-display-md);
+    }
+
+    .wrydeco-wishlist-page .Vtl-WishlistPage__Description {
+      font-size: var(--font-size-body-md);
+      max-width: 20rem;
+    }
+
+    .wrydeco-wishlist-page .Vtl-WishlistPage__Products {
+      margin-top: var(--space-11);
+    }
+
+    .wrydeco-wishlist-page .Vtl-WishlistProduct__Title {
+      font-size: var(--font-size-body-xl);
+      min-height: 0;
+    }
+
+    .wrydeco-wishlist__actions {
+      flex-wrap: wrap;
+      gap: var(--space-6);
+      min-height: 0;
+    }
+
+    .wrydeco-wishlist__divider {
+      display: none;
+    }
+
+    .wrydeco-wishlist__assurance {
+      grid-template-columns: 1fr;
+    }
+
+    .wrydeco-wishlist__assurance-item,
+    .wrydeco-wishlist__assurance-item + .wrydeco-wishlist__assurance-item {
+      border-left: 0;
+    }
+
+    .wrydeco-wishlist__assurance-item + .wrydeco-wishlist__assurance-item {
+      border-top: 1px solid color-mix(in srgb, var(--color-earth-brown) 14%, transparent);
+    }
+  }
+{% endstylesheet %}

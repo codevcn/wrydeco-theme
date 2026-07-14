@@ -74,6 +74,13 @@
 
   <div class="contact-body">
     <aside class="contact-info" aria-label="Contact details">
+      {% assign legal_info = shop.metaobjects.store_legal_info['store-legal-info-first'] %}
+      {% assign email_value = legal_info.support_email.value | default: section.settings.email_address %}
+      {% assign phone_value = legal_info.phone_number.value | default: section.settings.phone_number %}
+      {% assign address_value = legal_info.business_address.value | default: section.settings.address_text %}
+      {% assign hours_value = legal_info.online_store_hours.value | default: section.settings.hours_text %}
+      {% assign consultation_value = legal_info.consultation_hours.value %}
+
       <ul class="contact-info__list" role="list">
         <li class="contact-info__item">
           <span class="contact-info__icon" aria-hidden="true">
@@ -91,12 +98,12 @@
           </span>
           <span class="contact-info__text">
             <span class="contact-info__label">{{ section.settings.email_label | escape }}</span>
-            {% if section.settings.email_address != blank %}
+            {% if email_value != blank %}
               <a
                 class="contact-info__value contact-info__link"
-                href="mailto:{{ section.settings.email_address | escape }}"
+                href="mailto:{{ email_value | escape }}"
               >
-                {{- section.settings.email_address | escape -}}
+                {{- email_value | escape -}}
               </a>
             {% endif %}
           </span>
@@ -117,12 +124,12 @@
           </span>
           <span class="contact-info__text">
             <span class="contact-info__label">{{ section.settings.phone_label | escape }}</span>
-            {% if section.settings.phone_number != blank %}
+            {% if phone_value != blank %}
               <a
                 class="contact-info__value contact-info__link"
-                href="tel:{{ section.settings.phone_number | remove: ' ' | remove: '(' | remove: ')' | remove: '-' | escape }}"
+                href="tel:{{ phone_value | remove: ' ' | remove: '(' | remove: ')' | remove: '-' | escape }}"
               >
-                {{- section.settings.phone_number | escape -}}
+                {{- phone_value | escape -}}
               </a>
             {% endif %}
           </span>
@@ -144,7 +151,7 @@
           </span>
           <span class="contact-info__text">
             <span class="contact-info__label">{{ section.settings.address_label | escape }}</span>
-            <span class="contact-info__value">{{ section.settings.address_text | escape | newline_to_br }}</span>
+            <span class="contact-info__value">{{ address_value | escape | newline_to_br }}</span>
           </span>
         </li>
 
@@ -164,9 +171,33 @@
           </span>
           <span class="contact-info__text">
             <span class="contact-info__label">{{ section.settings.hours_label | escape }}</span>
-            <span class="contact-info__value">{{ section.settings.hours_text | escape | newline_to_br }}</span>
+            <span class="contact-info__value">{{ hours_value | escape | newline_to_br }}</span>
           </span>
         </li>
+
+        {% if consultation_value != blank %}
+        <li class="contact-info__item">
+          <span class="contact-info__icon" aria-hidden="true">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect>
+              <line x1="16" x2="16" y1="2" y2="6"></line>
+              <line x1="8" x2="8" y1="2" y2="6"></line>
+              <line x1="3" x2="21" y1="10" y2="10"></line>
+            </svg>
+          </span>
+          <span class="contact-info__text">
+            <span class="contact-info__label">PRIVATE CONSULTATION HOURS</span>
+            <span class="contact-info__value">{{ consultation_value | escape | newline_to_br }}</span>
+          </span>
+        </li>
+        {% endif %}
       </ul>
     </aside>
 
@@ -259,13 +290,24 @@
             <label for="{{ form_id }}-subject">{{ section.settings.subject_label | escape }}</label>
             <div class="contact-form__select">
               <select id="{{ form_id }}-subject" name="contact[subject]">
-                <option value="" disabled {% if form.subject == blank %}selected{% endif %}>
+                <option
+                  value=""
+                  disabled
+                  {% if form.subject == blank %}
+                    selected
+                  {% endif %}
+                >
                   {{- section.settings.subject_placeholder | escape -}}
                 </option>
                 {% for option in subject_options %}
                   {% assign opt = option | strip %}
                   {% if opt != blank %}
-                    <option value="{{ opt | escape }}" {% if form.subject == opt %}selected{% endif %}>
+                    <option
+                      value="{{ opt | escape }}"
+                      {% if form.subject == opt %}
+                        selected
+                      {% endif %}
+                    >
                       {{- opt | escape -}}
                     </option>
                   {% endif %}
@@ -342,7 +384,7 @@
     width: 100%;
     /* Clear the transparent, absolutely-positioned site header so the hero image
        sits below it (matching the design) instead of behind the nav. */
-    padding-top: var(--sp-10);
+    padding-top: 90px;
     background-color: var(--color-cream);
     color: var(--text-primary);
     font-family: var(--font-body);
@@ -458,7 +500,7 @@
   }
 
   .contact-info {
-    padding: var(--sp-6) var(--sp-7);
+    padding: var(--sp-5) var(--sp-7);
   }
   .contact-info__list {
     display: flex;
@@ -528,7 +570,7 @@
 
   /* Form card */
   .contact-form-card {
-    padding: var(--sp-7);
+    padding: var(--sp-6-bigger) var(--sp-7);
   }
   .contact-form__grid {
     display: grid;
@@ -781,7 +823,7 @@
       window.showToast({
         message: feedback.dataset.toastMessage,
         type: feedback.dataset.toastType,
-        position: 'bottom-right',
+        position: 'bottom-left',
         duration: 4000,
       });
     });
@@ -822,19 +864,20 @@
     { "type": "text", "id": "email_address", "label": "Email address", "default": "support@wrydeco.com" },
     { "type": "text", "id": "phone_label", "label": "Phone label", "default": "Phone" },
     { "type": "text", "id": "phone_number", "label": "Phone number", "default": "+1 (555) 240-1886" },
-    { "type": "text", "id": "address_label", "label": "Address label", "default": "Studio / Showroom" },
+    { "type": "text", "id": "address_label", "label": "Address label", "default": "Business Address" },
+    { "type": "text", "id": "consultation_label", "label": "Consultation label", "default": "Consultation Address" },
     {
       "type": "textarea",
       "id": "address_text",
       "label": "Address text",
       "default": "Private showroom visits by appointment"
     },
-    { "type": "text", "id": "hours_label", "label": "Hours label", "default": "Hours" },
+    { "type": "text", "id": "hours_label", "label": "Hours label", "default": "Online Store's Hours" },
     {
       "type": "textarea",
       "id": "hours_text",
       "label": "Hours text",
-      "default": "Mon – Sat 10:00 AM – 6:00 PM\nClosed Sundays"
+      "default": "Mon - Sat 9:00 AM - 5:00 PM"
     },
     { "type": "header", "content": "Form" },
     { "type": "text", "id": "name_label", "label": "Name label", "default": "Name" },

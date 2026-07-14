@@ -1,2 +1,2 @@
 # Access token để truy cập vào store
-access token được dùng để truy cập vào store, access token được lưu vào folder "scripts" trong project này, nếu token hết hạn thì dùng script python để lấy access token mới ngay trong cùng folder đó.
+access token được dùng để truy cập vào store, access token được lưu vào folder "admin" trong project này, nếu token hết hạn thì dùng script python để lấy access token mới ngay trong cùng folder đó.

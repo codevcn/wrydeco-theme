@@ -1,0 +1,94 @@
+{% doc %}
+  Renders the mount target for the Wishlist by Square header icon.
+
+  @example
+  {% render 'wishlist-heart' %}
+{% enddoc %}
+
+<div
+  id="vitals-wishlist-header"
+  class="header__icon header__icon--wishlist"
+  aria-label="Wishlist"
+></div>
+
+<script>
+  function onWishlistHeartMounted(callback) {
+    let wishlistRoot = document.getElementById('vitals-wishlist-header');
+    if (!wishlistRoot || wishlistRoot.dataset.wishlistObserverInit === 'true') return;
+    wishlistRoot.dataset.wishlistObserverInit = 'true';
+
+    function checkMounted() {
+      let heartIcon = wishlistRoot.querySelector('.Vtl-WishlistHeader__HeartIconWrapper');
+      if (!heartIcon || wishlistRoot.dataset.wishlistMounted === 'true') return;
+
+      wishlistRoot.dataset.wishlistMounted = 'true';
+      callback(wishlistRoot, heartIcon);
+    }
+
+    checkMounted();
+
+    let observer = new MutationObserver(checkMounted);
+    observer.observe(wishlistRoot, {
+      childList: true,
+      subtree: true,
+    });
+  }
+
+  onWishlistHeartMounted(function (root, heartIcon) {
+    const adjustIconColorPaths = ['/', '/collections/*', '/search'];
+
+    function normalizePath(path) {
+      if (!path) return '/';
+      if (path.length > 1 && path.endsWith('/')) return path.slice(0, -1);
+      return path;
+    }
+
+    function escapeRegExp(value) {
+      return value.replace(/[|\\{}()[\]^$+?.]/g, '\\$&');
+    }
+
+    function globToRegExp(glob) {
+      let normalizedGlob = normalizePath(glob);
+      let pattern = normalizedGlob
+        .split('*')
+        .map(escapeRegExp)
+        .join('.*');
+
+      if (normalizedGlob === '/') return /^\/$/;
+      return new RegExp('^' + pattern + '/?$');
+    }
+
+    let currentPath = normalizePath(window.location.pathname);
+    let shouldAdjustIconColor = adjustIconColorPaths.some(function (pathGlob) {
+      return globToRegExp(pathGlob).test(currentPath);
+    });
+
+    if (shouldAdjustIconColor) {
+      heartIcon.style.fill = 'var(--color-milk)';
+    }
+  });
+</script>
+
+{% stylesheet %}
+  .header__icon--wishlist {
+    color: var(--color-cream);
+  }
+
+  .header__icon--wishlist .Vtl-WishlistHeaderWrapper,
+  .header__icon--wishlist .Vtl-WishlistHeader {
+    align-items: center;
+    display: flex;
+    height: 100%;
+    justify-content: center;
+    width: 100%;
+  }
+
+  .header__icon--wishlist .Vtl-WishlistHeader {
+    color: currentColor;
+    text-decoration: none;
+  }
+
+  .header__icon--wishlist svg {
+    display: block;
+  }
+{% endstylesheet %}

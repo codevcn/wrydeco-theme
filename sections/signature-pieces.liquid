@@ -29,7 +29,9 @@
             assign artist = product.vendor
           endif
         -%}
-        {%- assign material = product.metafields.custom.product_material.value | default: section.settings.material_default -%}
+        {%- assign material = product.metafields.custom.product_material.value
+          | default: section.settings.material_default
+        -%}
         {%- assign finish = product.metafields.custom.finish.value | default: section.settings.finish_default -%}
         {%- comment -%} Show a "New" badge for products in the "new-arrivals" collection. {%- endcomment -%}
         {%- assign is_new = false -%}
@@ -40,7 +42,13 @@
           {%- endif -%}
         {%- endfor -%}
 
-        <article class="signature-pieces__card" role="listitem">
+        <article
+          class="signature-pieces__card"
+          role="listitem"
+          data-product-id="{{ product.id }}"
+          data-product-handle="{{ product.handle | escape }}"
+          data-variant-id="{{ product.variants.first.id }}"
+        >
           <div class="signature-pieces__media">
             <a class="signature-pieces__image-link" href="{{ product.url }}" aria-label="{{ display_title | escape }}">
               {%- if product.featured_media != blank -%}
@@ -79,21 +87,18 @@
               </span>
             {%- endif -%}
 
-            {%- if product.available -%}
-              <button
-                class="signature-pieces__quick"
-                data-add-to-cart-signature
-                data-variant-id="{{ product.variants.first.id }}"
-                aria-label="Add {{ display_title | escape }} to cart"
-                type="button"
-              >
-                {{ 'icon-cart.svg' | inline_asset_content }}
-              </button>
-            {%- else -%}
-              <span class="signature-pieces__quick" aria-hidden="true">
-                {{ 'icon-cart.svg' | inline_asset_content }}
-              </span>
-            {%- endif -%}
+            <div
+              class="signature-pieces__quick signature-pieces__wishlist Vtl-WishlistIcon__Wrapper Vtl-WishlistIcon__Wrapper--Id-{{ product.id }}-{{ product.handle | escape }} Vtl-CollectionCardWidget"
+              data-signature-wishlist
+              data-source="os2"
+              data-app-block="wishlist-button"
+              data-product-id="{{ product.id }}"
+              data-product-handle="{{ product.handle | escape }}"
+              data-variant-id="{{ product.variants.first.id }}"
+              aria-label="Add {{ display_title | escape }} to wishlist"
+            >
+              <span class="signature-pieces__wishlist-icon" aria-hidden="true">&hearts;</span>
+            </div>
           </div>
 
           <div class="signature-pieces__content">
@@ -210,8 +215,8 @@
                 </span>
               {%- endif -%}
 
-              <span class="signature-pieces__quick" aria-hidden="true">
-                {{ 'icon-cart.svg' | inline_asset_content }}
+              <span class="signature-pieces__quick signature-pieces__wishlist" aria-hidden="true">
+                <span class="signature-pieces__wishlist-icon" aria-hidden="true">&hearts;</span>
               </span>
             </div>
 
@@ -435,8 +440,8 @@
 
   .signature-pieces__quick {
     position: absolute;
-    top: 13px;
-    right: 13px;
+    top: 10px;
+    left: 10px;
     z-index: 1;
     display: inline-flex;
     align-items: center;
@@ -452,6 +457,7 @@
     cursor: pointer;
     transition: background-color var(--timing-short) var(--ease-standard),
       color var(--timing-short) var(--ease-standard), transform var(--timing-short) var(--ease-standard);
+    overflow: hidden;
   }
 
   .signature-pieces__quick.is-loading {
@@ -462,7 +468,7 @@
   .signature-pieces__new {
     position: absolute;
     top: 13px;
-    left: 13px;
+    right: 13px;
     z-index: 1;
     display: flex;
     align-items: center;
@@ -487,6 +493,41 @@
   .signature-pieces__quick svg {
     width: 18px;
     height: 18px;
+  }
+
+  .signature-pieces__wishlist-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-body-lg);
+    line-height: 1;
+    transform: translateY(-1px);
+  }
+
+  .signature-pieces__wishlist:has(.Vtl-WishlistButton) .signature-pieces__wishlist-icon {
+    display: none;
+  }
+
+  .signature-pieces__wishlist[aria-pressed='true'] {
+    background: var(--color-earth-brown);
+    color: var(--color-cream);
+  }
+
+  .signature-pieces__wishlist .Vtl-WishlistButton,
+  .signature-pieces__wishlist .Vtl-WishlistButton__AddToWishlist {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+  }
+
+  .signature-pieces__wishlist .Vtl-WishlistButton__AddToWishlist {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    color: currentColor;
+    display: flex;
+    justify-content: center;
+    padding: 0;
   }
 
   .signature-pieces__content {
@@ -674,9 +715,7 @@
     }
 
     .signature-pieces__quick:hover {
-      transform: scale(1.04);
-      background: #4a2c18;
-      color: #fff8f0;
+      transform: scale(1.05);
     }
 
     .signature-pieces__primary:hover,
@@ -1135,7 +1174,7 @@
     var cartRoot = (window.Shopify && window.Shopify.routes && window.Shopify.routes.root) || '/';
 
     function toast(message, type) {
-      if (window.showToast) window.showToast({ message: message, type: type, position: 'bottom-right' });
+      if (window.showToast) window.showToast({ message: message, type: type, position: 'bottom-left' });
     }
 
     function addVariantToCart(variantId, button, onDone) {
@@ -1159,21 +1198,22 @@
         });
     }
 
-    // --- Quick add (cart icon on the card) ---
-    document.querySelectorAll('[data-add-to-cart-signature]').forEach(function (btn) {
+    function requestWishlistRender() {
+      document.dispatchEvent(new CustomEvent('vitals:ProductCardsDetected'));
+      document.dispatchEvent(new CustomEvent('vitals:RenderWishlistIcons'));
+      window.dispatchEvent(new CustomEvent('vitals:ProductCardsDetected'));
+      window.dispatchEvent(new CustomEvent('vitals:RenderWishlistIcons'));
+    }
+
+    // --- Wishlist hooks (heart icon on the card) ---
+    document.querySelectorAll('[data-signature-wishlist]').forEach(function (btn) {
       if (btn.dataset.init === 'true') return;
       btn.dataset.init = 'true';
       btn.addEventListener('click', function (e) {
-        e.preventDefault();
-        if (btn.disabled || btn.classList.contains('is-loading')) return;
-        var variantId = btn.dataset.variantId;
-        if (!variantId) return;
-        btn.classList.add('is-loading');
-        addVariantToCart(variantId, btn, function () {
-          btn.classList.remove('is-loading');
-        });
+        requestWishlistRender();
       });
     });
+    requestWishlistRender();
 
     // --- Quick customize popup (variant picker + price + add to cart) ---
     var modal = document.querySelector('[data-quick-modal]');
