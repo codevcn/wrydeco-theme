@@ -1,0 +1,448 @@
+{%- liquid
+  assign showroom_entries = shop.metaobjects.showroom.values
+  if showroom_entries == blank
+    assign showroom_entries = metaobjects.showroom.values
+  endif
+  assign room_count = 0
+-%}
+
+<style>
+  @keyframes showroom-first-room-media-reveal {
+    from {
+      opacity: 0.18;
+      transform: scale(1.04);
+    }
+
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes showroom-first-room-content-reveal {
+    from {
+      opacity: 0;
+      transform: translateY(var(--sp-5));
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(var(--sp-0));
+    }
+  }
+
+  .showroom-page--reveal-ready .showroom-room:first-of-type.showroom-room--is-visible .showroom-room__media {
+    animation: showroom-first-room-media-reveal calc(var(--timing-short) * 4) var(--ease-standard) both;
+  }
+
+  .showroom-page--reveal-ready .showroom-room:first-of-type.showroom-room--is-visible .showroom-room__title,
+  .showroom-page--reveal-ready .showroom-room:first-of-type.showroom-room--is-visible .showroom-room__description,
+  .showroom-page--reveal-ready .showroom-room:first-of-type.showroom-room--is-visible .showroom-room__button {
+    animation: showroom-first-room-content-reveal calc(var(--timing-short) * 4) var(--ease-standard) both;
+  }
+</style>
+
+<section class="showroom-page" id="ShowroomPage-{{ section.id }}" aria-labelledby="ShowroomTitle-{{ section.id }}">
+  <h1 class="showroom-page__title" id="ShowroomTitle-{{ section.id }}">{{ page.title | default: 'Showroom' | escape }}</h1>
+
+  {%- for entry in showroom_entries -%}
+    {%- liquid
+      assign collection_handle = entry.collection_handle.value | default: entry.collection_handle | strip
+      assign room_collection = collections[collection_handle]
+
+      if collection_handle == blank or room_collection == blank
+        continue
+      endif
+
+      assign room_count = room_count | plus: 1
+      assign room_image = room_collection.image
+      if room_image == blank
+        assign room_image = room_collection.featured_image
+      endif
+      if room_image == blank
+        assign room_image = room_collection.products.first.featured_image
+      endif
+
+      assign room_title = room_collection.title | remove_first: 'Showroom ' | strip
+      assign room_description = room_collection.description | strip_html | strip
+      assign room_alt = room_image.alt | default: room_title | escape
+      assign image_loading = 'lazy'
+      assign image_priority = 'auto'
+      if room_count == 1
+        assign image_loading = 'eager'
+        assign image_priority = 'high'
+      endif
+    -%}
+
+    <article
+      class="showroom-room"
+      id="ShowroomRoom-{{ section.id }}-{{ room_count }}"
+      aria-labelledby="ShowroomRoomTitle-{{ section.id }}-{{ room_count }}"
+    >
+      {%- if room_image != blank -%}
+        <div class="showroom-room__media">
+          {{
+            room_image
+            | image_url: width: 2400
+            | image_tag:
+              class: 'showroom-room__image',
+              loading: image_loading,
+              fetchpriority: image_priority,
+              sizes: '100vw',
+              widths: '750, 1000, 1400, 1800, 2200, 2400',
+              alt: room_alt
+          }}
+        </div>
+      {%- endif -%}
+
+      <div class="showroom-room__shade" aria-hidden="true"></div>
+
+      <div class="showroom-room__content">
+        <h2 class="showroom-room__title" id="ShowroomRoomTitle-{{ section.id }}-{{ room_count }}">
+          {{- room_title | escape -}}
+        </h2>
+
+        {%- if room_description != blank -%}
+          <p class="showroom-room__description">
+            {{- room_description -}}
+          </p>
+        {%- endif -%}
+
+        <a class="showroom-room__button" href="{{ room_collection.url }}">
+          {{- 'Shop ' | append: room_title | escape -}}
+        </a>
+      </div>
+    </article>
+  {%- endfor -%}
+
+  {%- if room_count == 0 -%}
+    <article class="showroom-room showroom-room--empty" aria-labelledby="ShowroomEmptyTitle-{{ section.id }}">
+      <div class="showroom-room__content">
+        <h2 class="showroom-room__title" id="ShowroomEmptyTitle-{{ section.id }}">Showroom</h2>
+        <p class="showroom-room__description">
+          Add showroom metaobject entries with collection handles to publish room sections here.
+        </p>
+      </div>
+    </article>
+  {%- endif -%}
+</section>
+
+{% stylesheet %}
+  body:has(.showroom-page) .header__heading-logo {
+    filter: brightness(0) invert(1);
+  }
+
+  body:has(.showroom-page) .header__heading-link,
+  body:has(.showroom-page) .header__nav-item,
+  body:has(.showroom-page) .header__icon,
+  body:has(.showroom-page) .header__icon--search,
+  body:has(.showroom-page) .header__icon--cart,
+  body:has(.showroom-page) .header__icon--account,
+  body:has(.showroom-page) .header__icon--menu,
+  body:has(.showroom-page) .header__icon--wishlist,
+  body:has(.showroom-page) .loc-picker .loc-picker__code,
+  body:has(.showroom-page) .loc-picker__chevron {
+    color: var(--color-milk);
+  }
+
+  body:has(.showroom-page) .header__consultation-link {
+    background-color: transparent;
+    border-color: color-mix(in srgb, var(--color-milk) 72%, transparent);
+    color: var(--color-milk);
+  }
+
+  body:has(.showroom-page) .Vtl-WishlistHeader__HeartIconWrapper {
+    fill: var(--color-milk) !important;
+  }
+
+  .showroom-page {
+    background: var(--color-ebony);
+    color: var(--color-milk);
+    overflow: hidden;
+  }
+
+  .showroom-page__title {
+    block-size: 1px;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    inline-size: 1px;
+    margin: calc(-1 * var(--border-width));
+    overflow: hidden;
+    position: absolute;
+    white-space: nowrap;
+  }
+
+  .showroom-room {
+    align-items: center;
+    block-size: 100svh;
+    display: grid;
+    isolation: isolate;
+    min-block-size: 100svh;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .showroom-room:first-of-type::before {
+    background:
+      linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--color-ebony) 82%, transparent) 0%,
+        color-mix(in srgb, var(--color-ebony) 24%, transparent) 38%,
+        transparent 100%
+      );
+    content: '';
+    inset: var(--sp-0);
+    pointer-events: none;
+    position: absolute;
+    z-index: 0;
+  }
+
+  .showroom-room__media,
+  .showroom-room__shade {
+    inset: var(--sp-0);
+    position: absolute;
+  }
+
+  .showroom-room__media {
+    z-index: -2;
+  }
+
+  .showroom-room__image {
+    block-size: 100%;
+    display: block;
+    inline-size: 100%;
+    object-fit: cover;
+    object-position: center center;
+  }
+
+  .showroom-room__shade {
+    z-index: -1;
+  }
+
+  .showroom-room__media,
+  .showroom-room__title,
+  .showroom-room__description,
+  .showroom-room__button {
+    transition:
+      opacity calc(var(--timing-short) * 4) var(--ease-standard),
+      transform calc(var(--timing-short) * 4) var(--ease-standard);
+  }
+
+  .showroom-page--reveal-ready .showroom-room:not(.showroom-room--is-visible) .showroom-room__media {
+    opacity: 0.18;
+    transform: scale(1.04);
+  }
+
+  .showroom-page--reveal-ready .showroom-room:not(.showroom-room--is-visible) .showroom-room__title,
+  .showroom-page--reveal-ready .showroom-room:not(.showroom-room--is-visible) .showroom-room__description,
+  .showroom-page--reveal-ready .showroom-room:not(.showroom-room--is-visible) .showroom-room__button {
+    opacity: 0;
+    transform: translateY(var(--sp-5));
+  }
+
+  .showroom-page--reveal-ready .showroom-room--is-visible .showroom-room__description {
+    transition-delay: var(--timing-short);
+  }
+
+  .showroom-page--reveal-ready .showroom-room--is-visible .showroom-room__button {
+    transition-delay: calc(var(--timing-short) * 2);
+  }
+
+  @keyframes showroom-first-room-media-reveal {
+    from {
+      opacity: 0.18;
+      transform: scale(1.04);
+    }
+
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes showroom-first-room-content-reveal {
+    from {
+      opacity: 0;
+      transform: translateY(var(--sp-5));
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(var(--sp-0));
+    }
+  }
+
+  .showroom-page--reveal-ready .showroom-room:first-of-type.showroom-room--is-visible .showroom-room__media {
+    animation: showroom-first-room-media-reveal calc(var(--timing-short) * 4) var(--ease-standard) both;
+  }
+
+  .showroom-page--reveal-ready .showroom-room:first-of-type.showroom-room--is-visible .showroom-room__title,
+  .showroom-page--reveal-ready .showroom-room:first-of-type.showroom-room--is-visible .showroom-room__description,
+  .showroom-page--reveal-ready .showroom-room:first-of-type.showroom-room--is-visible .showroom-room__button {
+    animation: showroom-first-room-content-reveal calc(var(--timing-short) * 4) var(--ease-standard) both;
+  }
+
+  .showroom-room__content {
+    align-items: center;
+    display: flex;
+    flex-direction: column;
+    inline-size: min(100%, calc(var(--sp-12) * 10));
+    justify-self: center;
+    padding: var(--sp-12) var(--layout-padding);
+    position: relative;
+    text-align: center;
+    transform: translateY(18svh);
+    z-index: 1;
+  }
+
+  .showroom-room__title {
+    color: var(--color-milk);
+    font-family: var(--font-body);
+    font-size: clamp(var(--font-size-display-xl), 5vw, calc(var(--font-size-display-2xl) * 1.25));
+    font-weight: var(--font-weight-bold);
+    letter-spacing: var(--letter-spacing-normal);
+    line-height: var(--line-height-tight);
+    margin: var(--sp-0);
+    text-shadow: 0 var(--sp-1) var(--sp-8) color-mix(in srgb, var(--color-ebony) 54%, transparent);
+  }
+
+  .showroom-room__description {
+    color: var(--color-milk);
+    display: -webkit-box;
+    font-family: var(--font-body);
+    font-size: clamp(var(--font-size-body-lg), 1.35vw, var(--font-size-body-xl));
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    line-height: var(--line-height-relaxed);
+    margin: var(--sp-5) auto var(--sp-0);
+    max-inline-size: calc(var(--sp-12) * 8);
+    overflow: hidden;
+    text-shadow: 0 var(--border-width) var(--sp-5) color-mix(in srgb, var(--color-ebony) 58%, transparent);
+  }
+
+  .showroom-room__button {
+    align-items: center;
+    border: var(--border-width) solid color-mix(in srgb, var(--color-milk) 86%, transparent);
+    border-radius: var(--radius-sm);
+    color: var(--color-milk);
+    display: inline-flex;
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-md);
+    font-weight: var(--font-weight-bold);
+    justify-content: center;
+    letter-spacing: var(--letter-spacing-relaxed);
+    line-height: var(--line-height-snug);
+    margin-block-start: var(--sp-6);
+    min-block-size: var(--sp-8);
+    min-inline-size: calc(var(--sp-12) * 3);
+    padding-inline: var(--sp-8);
+    text-decoration: none;
+    text-transform: uppercase;
+    transition:
+      background-color var(--timing-short) var(--ease-standard),
+      border-color var(--timing-short) var(--ease-standard),
+      color var(--timing-short) var(--ease-standard);
+  }
+
+  .showroom-room__button:hover,
+  .showroom-room__button:focus-visible {
+    background-color: var(--color-milk);
+    border-color: var(--color-milk);
+    color: var(--color-earth-brown);
+  }
+
+  .showroom-room__button:focus-visible {
+    outline: calc(var(--border-width) * 2) solid var(--color-milk);
+    outline-offset: var(--sp-1);
+  }
+
+  .showroom-room--empty {
+    background: linear-gradient(135deg, var(--color-earth-brown), var(--color-ebony));
+  }
+
+  @media screen and (max-width: 989px) {
+    .showroom-room__content {
+      inline-size: min(100%, calc(var(--sp-12) * 7));
+      transform: translateY(10svh);
+    }
+
+    .showroom-room__title {
+      font-size: clamp(var(--font-size-display-lg), 8vw, var(--font-size-display-xl));
+    }
+  }
+
+  @media screen and (max-width: 749px) {
+    .showroom-room__shade {
+      background:
+        linear-gradient(180deg, color-mix(in srgb, var(--color-ebony) 8%, transparent) 0 36%, color-mix(in srgb, var(--color-ebony) 46%, transparent) 72%, color-mix(in srgb, var(--color-ebony) 64%, transparent) 100%),
+        linear-gradient(90deg, color-mix(in srgb, var(--color-ebony) 18%, transparent), transparent 52%, color-mix(in srgb, var(--color-ebony) 12%, transparent));
+    }
+
+    .showroom-room__content {
+      inline-size: 100%;
+      padding: var(--sp-12) var(--layout-padding-mobile) var(--sp-10);
+      transform: translateY(8svh);
+    }
+
+    .showroom-room__title {
+      font-size: clamp(var(--font-size-display-md), 13vw, var(--font-size-display-xl));
+    }
+
+    .showroom-room__description {
+      font-size: clamp(var(--font-size-body-xl), 6.4vw, var(--font-size-display-sm));
+      line-height: var(--line-height-relaxed);
+      margin-block-start: var(--sp-6);
+      max-inline-size: calc(var(--sp-12) * 6);
+    }
+
+    .showroom-room__button {
+      font-size: var(--font-size-body-xl);
+      margin-block-start: var(--sp-8);
+      min-block-size: var(--sp-9);
+      min-inline-size: 0;
+      padding-inline: var(--sp-6);
+      width: min(100%, calc(var(--sp-12) * 5));
+    }
+  }
+
+  @media screen and (max-width: 390px) {
+    .showroom-room__title {
+      font-size: clamp(var(--font-size-display-sm), 12vw, var(--font-size-display-lg));
+    }
+
+    .showroom-room__description {
+      font-size: var(--font-size-body-xl);
+    }
+
+    .showroom-room__button {
+      font-size: var(--font-size-body-lg);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .showroom-room__media,
+    .showroom-room__title,
+    .showroom-room__description,
+    .showroom-room__button {
+      transition: none;
+      animation: none;
+    }
+
+    .showroom-page--reveal-ready .showroom-room:not(.showroom-room--is-visible) .showroom-room__media,
+    .showroom-page--reveal-ready .showroom-room:not(.showroom-room--is-visible) .showroom-room__title,
+    .showroom-page--reveal-ready .showroom-room:not(.showroom-room--is-visible) .showroom-room__description,
+    .showroom-page--reveal-ready .showroom-room:not(.showroom-room--is-visible) .showroom-room__button {
+      opacity: 1;
+      transform: none;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Showroom rooms",
+  "settings": [],
+  "presets": [{ "name": "Showroom rooms" }]
+}
+{% endschema %}

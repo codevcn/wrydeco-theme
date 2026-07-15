@@ -11,9 +11,13 @@
 
 {% liquid
   assign heading = section.settings.heading | default: collection.title
+  assign banner_image = collection.image
+  if banner_image == blank
+    assign banner_image = section.settings.background_image
+  endif
 
-  if section.settings.background_image != blank
-    assign bg_alt = section.settings.background_image.alt | default: heading
+  if banner_image != blank
+    assign bg_alt = banner_image.alt | default: heading
   else
     assign bg_alt = heading
   endif
@@ -41,9 +45,9 @@
   {% endif %}
 
   <div class="col-banner__media">
-    {% if section.settings.background_image != blank %}
+    {% if banner_image != blank %}
       {{
-        section.settings.background_image
+        banner_image
         | image_url: width: 2400
         | image_tag:
           class: 'col-banner__bg',
@@ -100,7 +104,7 @@
     width: 100%;
     display: flex;
     align-items: center;
-    min-height: clamp(520px, 35vw, 640px);
+    min-height: clamp(520px, 40vw, 640px);
     overflow: hidden;
     background-color: var(--color-cream);
     font-family: var(--font-body);
@@ -156,7 +160,7 @@
     letter-spacing: 0.05em;
     text-transform: uppercase;
     color: var(--text-secondary);
-    top: calc(76px + 18px);
+    top: calc(76px + 28px);
     position: absolute;
     left: var(--sp-9);
     z-index: 10;
@@ -200,11 +204,12 @@
   }
 
   .col-banner__desc {
-    max-width: 600px;
+    max-width: 500px;
     width: max-content;
     font-size: 1.18vw;
     line-height: var(--line-height-generous);
     color: var(--text-secondary);
+    padding-top: var(--sp-1);
   }
   .col-banner__desc > * {
     margin: 0;
