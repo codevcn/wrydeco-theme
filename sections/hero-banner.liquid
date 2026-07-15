@@ -21,22 +21,19 @@
   </div>
 
   <div class="hero-new__shade" aria-hidden="true"></div>
+  <div class="hero-new__shade-front" aria-hidden="true"></div>
 
   <div class="hero-new__inner">
     <div class="hero-new__content">
       {%- for block in section.blocks -%}
         {%- case block.type -%}
-          {%- when 'eyebrow' -%}
-            <p class="hero-new__eyebrow" {{ block.shopify_attributes }}>
-              {{- block.settings.text | escape | replace: '. ', '.<br>' -}}
-            </p>
           {%- when 'heading' -%}
             <h1 class="hero-new__heading" {{ block.shopify_attributes }}>
               {{-
                 block.settings.text
                 | escape
-                | replace: 'Wooden Furniture,', 'Wooden<br>Furniture,'
-                | replace: ' Sculpted for ', ' Sculpted<br>for '
+                | replace: 'Wooden Furniture,', 'Wooden Furniture,'
+                | replace: ' Sculpted for ', ' Sculpted for '
               -}}
             </h1>
           {%- when 'subtext' -%}
@@ -65,55 +62,11 @@
             </div>
         {%- endcase -%}
       {%- endfor -%}
-
-      {%- assign features = section.blocks | where: 'type', 'feature' -%}
-      {%- if features.size > 0 -%}
-        <ul class="hero-new__features" aria-label="WRYDECO craft commitments">
-          {%- for block in features -%}
-            {%- if block.settings.icon == 'consult' -%}
-              {%- continue -%}
-            {%- endif -%}
-            {%- liquid
-              assign feature_title = block.settings.text
-              assign feature_subtitle = ''
-              case block.settings.icon
-                when 'wood'
-                  assign feature_title = 'Solid Wood'
-                  assign feature_subtitle = 'Only'
-                when 'ruler'
-                  assign feature_title = 'Made to Measure'
-                  assign feature_subtitle = 'Just for You'
-                when 'truck'
-                  assign feature_title = 'White-Glove'
-                  assign feature_subtitle = 'Delivery US'
-              endcase
-            -%}
-            <li class="hero-new__feature" {{ block.shopify_attributes }}>
-              <span class="hero-new__feature-icon" aria-hidden="true">
-                {%- render 'hero-feature-icon', icon: block.settings.icon -%}
-              </span>
-              <span class="hero-new__feature-copy">
-                <span class="hero-new__feature-title">{{ feature_title | escape }}</span>
-                {%- if feature_subtitle != blank -%}
-                  <span class="hero-new__feature-subtitle">{{ feature_subtitle | escape }}</span>
-                {%- endif -%}
-              </span>
-            </li>
-          {%- endfor -%}
-        </ul>
-      {%- endif -%}
     </div>
   </div>
 </div>
 
 {% stylesheet %}
-  body:has(.hero-new) .announcement-bar,
-  body:has(.hero-new) .announce-bar,
-  body:has(.hero-new) .wd-topbar__viewport,
-  body:has(.hero-new) .wd-topbar__track {
-    display: none;
-  }
-
   body:has(.hero-new) .header__heading-logo {
     filter: brightness(0) invert(1);
   }
@@ -155,10 +108,23 @@
   }
 
   .hero-new__background,
+  .hero-new__shade,
+  .hero-new__shade-front {
+    position: relative;
+    inset: 0;
+    z-index: -2;
+  }
   .hero-new__shade {
     position: absolute;
     inset: 0;
-    z-index: -2;
+    z-index: 1;
+    background-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.22) 24%, rgba(0, 0, 0, 0) 100%);
+  }
+  .hero-new__shade-front {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    background-color: rgba(0, 0, 0, 0.1);
   }
 
   .hero-new__picture {
@@ -175,48 +141,28 @@
     object-position: center center;
   }
 
-  .hero-new__shade {
-    z-index: -1;
-    background: linear-gradient(
-        90deg,
-        color-mix(in srgb, var(--color-ebony) 90%, transparent) 0%,
-        color-mix(in srgb, var(--color-ebony) 70%, transparent) 27%,
-        color-mix(in srgb, var(--color-ebony) 22%, transparent) 55%,
-        color-mix(in srgb, var(--color-ebony) 12%, transparent) 100%
-      ),
-      linear-gradient(
-        180deg,
-        color-mix(in srgb, var(--color-ebony) 42%, transparent) 0%,
-        transparent 42%,
-        color-mix(in srgb, var(--color-ebony) 78%, transparent) 100%
-      );
-  }
-
   .hero-new__inner {
     display: flex;
     align-items: center;
+    justify-content: center;
     width: 100%;
     min-height: 100svh;
     max-width: none;
     margin-inline: auto;
-    padding: var(--sp-12) clamp(var(--sp-7), 7vw, calc(var(--sp-12) + var(--sp-2))) var(--sp-7);
+    padding: var(--sp-12) clamp(var(--sp-7), 7vw, calc(var(--sp-12) + var(--sp-2))) var(--sp-12);
+    z-index: 10;
+    position: absolute;
+    inset: 0;
   }
 
   .hero-new__content {
-    width: min(100%, calc((var(--sp-12) * 5) + var(--sp-8)));
-    margin-top: var(--sp-5);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: min(100%, calc((var(--sp-12) * 6) + var(--sp-8)));
+    margin: 0 auto;
     padding-inline: var(--sp-5);
-  }
-
-  .hero-new__eyebrow {
-    margin: 0 0 var(--sp-5);
-    font-family: var(--font-body);
-    font-size: var(--font-size-body-sm);
-    font-weight: var(--font-weight-medium);
-    line-height: var(--line-height-generous);
-    letter-spacing: 0.28em;
-    text-transform: uppercase;
-    color: var(--color-star-rating);
+    text-align: center;
   }
 
   .hero-new__heading {
@@ -224,7 +170,7 @@
     font-family: var(--font-display-light);
     font-size: clamp(var(--font-size-display-lg), 3.45vw, var(--font-size-display-2xl));
     font-weight: var(--font-weight-light);
-    line-height: 0.98;
+    line-height: 1.1;
     letter-spacing: var(--letter-spacing-normal);
     color: var(--color-cream);
     text-wrap: balance;
@@ -241,21 +187,24 @@
     font-size: var(--font-size-body-lg);
     line-height: var(--line-height-generous);
     color: var(--color-cream);
+    text-align: center;
   }
 
   .hero-new__subtext::before {
     content: '';
     position: absolute;
     top: 0;
-    left: 0;
+    left: 50%;
     width: var(--sp-10);
     height: var(--border-width);
     background-color: var(--color-star-rating);
+    transform: translateX(-50%);
   }
 
   .hero-new__actions {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: var(--sp-4);
     margin-top: var(--sp-6);
   }
@@ -309,75 +258,13 @@
     line-height: 1;
   }
 
-  .hero-new__features {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0;
-    width: min(100%, calc((var(--sp-12) * 4) + var(--sp-2)));
-    margin: var(--sp-6) 0 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  .hero-new__feature {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    min-width: 0;
-    margin: 0;
-    padding-inline: var(--sp-5);
-    text-align: center;
-  }
-
-  .hero-new__feature + .hero-new__feature {
-    border-left: var(--border-width) solid color-mix(in srgb, var(--color-cream) 28%, transparent);
-  }
-
-  .hero-new__feature-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: var(--sp-7);
-    height: var(--sp-7);
-    margin-bottom: var(--sp-3);
-    color: var(--color-star-rating);
-  }
-
-  .hero-new__feature-icon svg {
-    width: var(--sp-7);
-    height: var(--sp-7);
-  }
-
-  .hero-new__feature-copy {
-    display: flex;
-    flex-direction: column;
-    gap: var(--sp-1);
-    color: var(--color-cream);
-  }
-
-  .hero-new__feature-title {
-    font-family: var(--font-body);
-    font-size: var(--font-size-body-sm);
-    font-weight: var(--font-weight-bold);
-    letter-spacing: 0.09em;
-    line-height: var(--line-height-snug);
-    text-transform: uppercase;
-  }
-
-  .hero-new__feature-subtitle {
-    font-family: var(--font-body);
-    font-size: var(--font-size-body-sm);
-    line-height: var(--line-height-snug);
-    color: var(--color-cream);
-  }
-
   @media screen and (max-width: 1180px) {
     .hero-new__content {
-      width: min(100%, calc((var(--sp-12) * 4) + var(--sp-7)));
+      width: min(100%, calc((var(--sp-12) * 5) + var(--sp-7)));
     }
 
     .hero-new__heading {
-      font-size: clamp(var(--font-size-display-lg), 6.4vw, 72px);
+      font-size: clamp(var(--font-size-display-lg), 6.4vw, var(--font-size-display-2xl));
     }
   }
 
@@ -402,13 +289,8 @@
     }
 
     .hero-new__inner {
-      align-items: flex-end;
       padding-top: var(--sp-11);
-      padding-bottom: var(--sp-7);
-    }
-
-    .hero-new__content {
-      margin-top: 0;
+      padding-bottom: var(--sp-11);
     }
   }
 
@@ -444,13 +326,6 @@
       width: 100%;
     }
 
-    .hero-new__eyebrow {
-      margin-bottom: var(--sp-4);
-      font-size: var(--font-size-caption);
-      letter-spacing: 0.2em;
-      color: #ffffff83;
-    }
-
     .hero-new__heading {
       font-size: clamp(var(--font-size-display-sm), 8vw, var(--font-size-display-md));
       line-height: 1;
@@ -475,65 +350,17 @@
       min-height: var(--sp-7);
       min-width: 0;
     }
-
-    .hero-new__features {
-      width: calc(100% - var(--sp-8));
-      max-width: calc((var(--sp-12) * 7) + var(--sp-2));
-      margin-top: var(--sp-5);
-    }
-
-    .hero-new__feature {
-      padding-inline: var(--sp-1);
-    }
-
-    .hero-new__feature-icon,
-    .hero-new__feature-icon svg {
-      width: var(--sp-6);
-      height: var(--sp-6);
-    }
-
-    .hero-new__feature-title,
-    .hero-new__feature-subtitle {
-      font-size: var(--font-size-caption);
-      overflow-wrap: anywhere;
-    }
   }
 
   @media screen and (max-width: 380px) {
     .hero-new__inner {
       padding-top: var(--sp-9);
     }
-
-    .hero-new__features {
-      grid-template-columns: 1fr;
-      gap: var(--sp-3);
-    }
-
-    .hero-new__feature {
-      flex-direction: row;
-      justify-content: flex-start;
-      gap: var(--sp-3);
-      padding: var(--sp-2) 0;
-      text-align: left;
-    }
-
-    .hero-new__feature + .hero-new__feature {
-      border-left: 0;
-      border-top: var(--border-width) solid color-mix(in srgb, var(--color-cream) 24%, transparent);
-    }
-
-    .hero-new__feature-icon {
-      margin-bottom: 0;
-    }
   }
 
   @media screen and (max-height: 720px) and (min-width: 641px) {
     .hero-new__inner {
-      padding-bottom: var(--sp-5);
-    }
-
-    .hero-new__features {
-      margin-top: var(--sp-5);
+      padding-block: var(--sp-9);
     }
 
     .hero-new__actions {
@@ -553,41 +380,27 @@
     }
   }
 
-  .hero-new__eyebrow {
-    opacity: 0;
-    animation: heroReveal 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-  }
-
   .hero-new__heading {
     opacity: 0;
     animation: heroReveal 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-    animation-delay: 0.15s;
   }
 
   .hero-new__subtext {
     opacity: 0;
     animation: heroReveal 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-    animation-delay: 0.3s;
+    animation-delay: 0.15s;
   }
 
   .hero-new__actions {
     opacity: 0;
     animation: heroReveal 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-    animation-delay: 0.4s;
-  }
-
-  .hero-new__features {
-    opacity: 0;
-    animation: heroReveal 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-    animation-delay: 0.55s;
+    animation-delay: 0.3s;
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .hero-new__eyebrow,
     .hero-new__heading,
     .hero-new__subtext,
-    .hero-new__actions,
-    .hero-new__features {
+    .hero-new__actions {
       animation: none;
       opacity: 1;
       transform: none;

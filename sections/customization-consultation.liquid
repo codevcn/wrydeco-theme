@@ -78,35 +78,6 @@
             <span aria-hidden="true">&#10022;</span>
             <h3>{{ section.settings.form_heading | escape }}</h3>
           </div>
-          <div class="custom-inquiry__schedule">
-            <input type="hidden" name="consultation_time" data-schedule-value>
-            <button
-              type="button"
-              class="custom-inquiry__schedule-open"
-              data-schedule-open
-              data-scheduled-label="{{ section.settings.schedule_completed_label | escape }}"
-              aria-haspopup="dialog"
-              aria-expanded="false"
-            >
-              <span class="custom-inquiry__schedule-icon" data-schedule-default-icon aria-hidden="true">
-                <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24">
-                  <path d="M0 0h24v24H0z" fill="none" />
-                  <path fill="currentColor" d="M19 4h-1V3c0-.6-.4-1-1-1s-1 .4-1 1v1H8V3c0-.6-.4-1-1-1s-1 .4-1 1v1H5C3.3 4 2 5.3 2 7v1h20V7c0-1.7-1.3-3-3-3M2 19c0 1.7 1.3 3 3 3h14c1.7 0 3-1.3 3-3v-9H2zm15-7c.6 0 1 .4 1 1s-.4 1-1 1s-1-.4-1-1s.4-1 1-1m0 4c.6 0 1 .4 1 1s-.4 1-1 1s-1-.4-1-1s.4-1 1-1m-5-4c.6 0 1 .4 1 1s-.4 1-1 1s-1-.4-1-1s.4-1 1-1m0 4c.6 0 1 .4 1 1s-.4 1-1 1s-1-.4-1-1s.4-1 1-1m-5-4c.6 0 1 .4 1 1s-.4 1-1 1s-1-.4-1-1s.4-1 1-1m0 4c.6 0 1 .4 1 1s-.4 1-1 1s-1-.4-1-1s.4-1 1-1" />
-                </svg>
-              </span>
-              <span data-schedule-button-label>{{ section.settings.schedule_button_label | escape }}</span>
-              <span class="custom-inquiry__schedule-icon" data-schedule-complete-icon aria-hidden="true" hidden>
-                <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24">
-                  <path d="M0 0h24v24H0z" fill="none" />
-                  <path fill="currentColor" fill-rule="evenodd" d="M12 21a9 9 0 1 0 0-18a9 9 0 0 0 0 18m-.232-5.36l5-6l-1.536-1.28l-4.3 5.159l-2.225-2.226l-1.414 1.414l3 3l.774.774z" clip-rule="evenodd" />
-                </svg>
-              </span>
-            </button>
-            <p class="custom-inquiry__schedule-current" data-schedule-current hidden>
-              <span>{{ section.settings.schedule_selected_label | escape }}</span>
-              <strong data-schedule-current-value></strong>
-            </p>
-          </div>
         </header>
         <div class="custom-inquiry__field">
           <label for="{{ form_id }}-name">{{ section.settings.name_label | escape }}</label>
@@ -117,8 +88,11 @@
             value="{{ customer.name | escape }}"
             autocomplete="name"
             placeholder="{{ section.settings.name_placeholder | escape }}"
+            maxlength="120"
+            aria-describedby="{{ form_id }}-name-error"
             required
           >
+          <p class="custom-inquiry__field-error" id="{{ form_id }}-name-error" data-field-error="name" hidden></p>
         </div>
 
         <div class="custom-inquiry__field field-contact">
@@ -132,8 +106,15 @@
             autocapitalize="off"
             spellcheck="false"
             placeholder="{{ section.settings.contact_placeholder | escape }}"
+            aria-describedby="{{ form_id }}-phone-or-email-error"
             required
           >
+          <p
+            class="custom-inquiry__field-error"
+            id="{{ form_id }}-phone-or-email-error"
+            data-field-error="phone_or_email"
+            hidden
+          ></p>
         </div>
 
         <div class="custom-inquiry__field custom-inquiry__field--full field-request">
@@ -142,8 +123,12 @@
             id="{{ form_id }}-request"
             name="message"
             placeholder="{{ section.settings.request_placeholder | escape }}"
+            minlength="10"
+            maxlength="10000"
+            aria-describedby="{{ form_id }}-message-error"
             required
           ></textarea>
+          <p class="custom-inquiry__field-error" id="{{ form_id }}-message-error" data-field-error="message" hidden></p>
         </div>
 
         <div class="custom-inquiry__field custom-inquiry__field--full">
@@ -237,6 +222,10 @@
               </button>
             </header>
 
+            <p class="consultation-scheduler__intro">
+              Choose a date and time for a live online consultation with our design team. We'll confirm the meeting to discuss your project, space, and custom options. Scheduling is optional.
+            </p>
+
             <div class="consultation-scheduler__body custom-scrollbar">
               <section class="consultation-scheduler__section" aria-labelledby="{{ form_id }}-date-heading">
                 <div class="consultation-scheduler__section-head">
@@ -272,22 +261,12 @@
                   <span>2</span>
                   <h5 id="{{ form_id }}-time-heading">Choose a preferred time</h5>
                 </div>
-                <div class="consultation-clock" data-schedule-clock>
-                  <div class="consultation-clock__controls">
-                    <div class="consultation-clock__display" aria-live="polite">
-                      <button type="button" data-clock-mode="hour" class="is-active" aria-label="Choose hour">
-                        --
-                      </button>
-                      <span>:</span>
-                      <button type="button" data-clock-mode="minute" aria-label="Choose minutes">--</button>
-                    </div>
-                    <div class="consultation-clock__period" role="group" aria-label="Choose AM or PM">
-                      <button type="button" data-clock-period="AM" class="is-active">AM</button>
-                      <button type="button" data-clock-period="PM">PM</button>
-                    </div>
-                  </div>
-                  <div class="consultation-clock__face" data-clock-face aria-label="Clock time picker"></div>
-                </div>
+                <div
+                  class="consultation-slots"
+                  data-schedule-slots
+                  role="listbox"
+                  aria-label="Available consultation times"
+                ></div>
               </section>
 
               <section
@@ -308,6 +287,39 @@
                 Confirm appointment time
               </button>
             </footer>
+          </div>
+        </div>
+
+        <div class="custom-inquiry__schedule-cta">
+          <p class="custom-inquiry__schedule-cta-label">Would you like to book a specific appointment time?</p>
+          <div class="custom-inquiry__schedule">
+            <input type="hidden" name="consultation_time" data-schedule-value>
+            <button
+              type="button"
+              class="custom-inquiry__schedule-open"
+              data-schedule-open
+              data-scheduled-label="{{ section.settings.schedule_completed_label | escape }}"
+              aria-haspopup="dialog"
+              aria-expanded="false"
+            >
+              <span class="custom-inquiry__schedule-icon" data-schedule-default-icon aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24">
+                  <path d="M0 0h24v24H0z" fill="none" />
+                  <path fill="currentColor" d="M19 4h-1V3c0-.6-.4-1-1-1s-1 .4-1 1v1H8V3c0-.6-.4-1-1-1s-1 .4-1 1v1H5C3.3 4 2 5.3 2 7v1h20V7c0-1.7-1.3-3-3-3M2 19c0 1.7 1.3 3 3 3h14c1.7 0 3-1.3 3-3v-9H2zm15-7c.6 0 1 .4 1 1s-.4 1-1 1s-1-.4-1-1s.4-1 1-1m0 4c.6 0 1 .4 1 1s-.4 1-1 1s-1-.4-1-1s.4-1 1-1m-5-4c.6 0 1 .4 1 1s-.4 1-1 1s-1-.4-1-1s.4-1 1-1m0 4c.6 0 1 .4 1 1s-.4 1-1 1s-1-.4-1-1s.4-1 1-1m-5-4c.6 0 1 .4 1 1s-.4 1-1 1s-1-.4-1-1s.4-1 1-1m0 4c.6 0 1 .4 1 1s-.4 1-1 1s-1-.4-1-1s.4-1 1-1" />
+                </svg>
+              </span>
+              <span data-schedule-button-label>{{ section.settings.schedule_button_label | escape }}</span>
+              <span class="custom-inquiry__schedule-icon" data-schedule-complete-icon aria-hidden="true" hidden>
+                <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24">
+                  <path d="M0 0h24v24H0z" fill="none" />
+                  <path fill="currentColor" fill-rule="evenodd" d="M12 21a9 9 0 1 0 0-18a9 9 0 0 0 0 18m-.232-5.36l5-6l-1.536-1.28l-4.3 5.159l-2.225-2.226l-1.414 1.414l3 3l.774.774z" clip-rule="evenodd" />
+                </svg>
+              </span>
+            </button>
+            <p class="custom-inquiry__schedule-current" data-schedule-current hidden>
+              <span>{{ section.settings.schedule_selected_label | escape }}</span>
+              <strong data-schedule-current-value></strong>
+            </p>
           </div>
         </div>
 
@@ -523,7 +535,6 @@
     justify-content: space-between;
     gap: var(--sp-4);
     flex: 1 1 100%;
-    margin-block-end: var(--sp-4);
   }
 
   .custom-inquiry__form-title {
@@ -603,8 +614,23 @@
     box-shadow: var(--shadow-focus);
   }
 
-  .custom-inquiry__field input[aria-invalid='true'] {
+  .custom-inquiry__field input[aria-invalid='true'],
+  .custom-inquiry__field textarea[aria-invalid='true'] {
     border-color: var(--color-error);
+  }
+
+  .custom-inquiry__field-error {
+    margin: var(--sp-0) var(--sp-0) var(--sp-0);
+    padding-left: var(--sp-1);
+    color: var(--color-error);
+    font-family: var(--font-body);
+    font-weight: var(--font-weight-bold);
+    font-size: var(--font-size-caption);
+    line-height: var(--line-height-normal);
+  }
+
+  .custom-inquiry__field-error[hidden] {
+    display: none;
   }
 
   .custom-inquiry__upload-row {
@@ -629,6 +655,15 @@
     color: var(--text-secondary);
     text-align: center;
     cursor: pointer;
+    transition: background-color 0.2s ease ;
+  }
+  .custom-inquiry__upload:hover {
+    border-color: var(--color-earth-brown);
+    background-color: var(--color-earth-brown);
+    color: var(--color-milk);
+  }
+  .custom-inquiry__upload:hover svg {
+    color: var(--color-milk);
   }
 
   .custom-inquiry__upload input {
@@ -860,18 +895,38 @@
     background: var(--color-charcoal);
   }
 
+  /* Scheduler call-to-action, sitting above the submit button. */
+  .custom-inquiry__schedule-cta {
+    display: grid;
+    gap: var(--sp-2);
+    flex: 1 1 100%;
+    padding: var(--sp-4);
+    border: var(--border-width) dashed var(--color-clay);
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--color-milk) 70%, transparent);
+  }
+
+  .custom-inquiry__schedule-cta-label {
+    margin: var(--sp-0);
+    color: var(--color-earth-brown);
+    font-family: var(--font-body);
+    font-weight: var(--font-weight-bold);
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-normal);
+    text-align: center;
+  }
+
   .custom-inquiry__schedule {
     display: grid;
     gap: var(--sp-1);
-    flex: 0 1 auto;
-    min-inline-size: min(23rem, 55%);
+    inline-size: 100%;
   }
 
   .custom-inquiry__schedule-open {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: var(--sp-3);
+    gap: var(--sp-1);
     inline-size: 100%;
     min-block-size: var(--sp-7);
     padding: var(--sp-3) var(--sp-4);
@@ -901,12 +956,20 @@
     background: color-mix(in srgb, var(--color-sage) 12%, transparent);
     color: var(--color-earth-brown);
   }
+  .custom-inquiry__schedule-open.is-scheduled:hover {
+    background: var(--color-earth-brown);
+    color: var(--color-milk);
+  }
+
+  .custom-inquiry__schedule-open.is-scheduled svg {
+    color: var(--color-success);
+  }
 
   .custom-inquiry__schedule-icon {
     display: inline-flex;
     flex: 0 0 auto;
-    inline-size: var(--sp-5);
-    block-size: var(--sp-5);
+    inline-size: 24px;
+    block-size: 24px;
   }
 
   .custom-inquiry__schedule-icon[hidden] {
@@ -1042,6 +1105,15 @@
     cursor: pointer;
   }
 
+  .consultation-scheduler__intro {
+    margin: var(--sp-0);
+    padding: var(--sp-3) var(--sp-5) var(--sp-0);
+    color: var(--text-secondary);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-relaxed);
+  }
+
   .consultation-scheduler__body {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1059,7 +1131,7 @@
     gap: var(--sp-8);
     justify-content: space-between;
     grid-column: 1 / -1;
-    padding: var(--sp-4);
+    padding: var(--sp-3) var(--sp-4);
     border: var(--border-width) solid var(--border-default);
     border-radius: var(--radius-lg);
     background: var(--bg-secondary);
@@ -1105,7 +1177,7 @@
   }
 
   .consultation-calendar {
-    padding: var(--sp-3);
+    padding: var(--sp-2) var(--sp-3);
     border: var(--border-width) solid var(--border-default);
     border-radius: var(--radius-lg);
   }
@@ -1191,115 +1263,45 @@
     min-block-size: var(--sp-7);
   }
 
-  .consultation-clock {
+  .consultation-slots {
     display: grid;
-    grid-template-columns: 1fr auto;
-    align-items: center;
-    gap: var(--sp-3);
+    grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
+    gap: var(--sp-2);
   }
 
-  .consultation-clock__controls {
-    display: flex;
-    gap: var(--sp-6);
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-  }
-
-  .consultation-clock__display {
+  .consultation-slots__slot {
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--color-earth-brown);
-    font-family: var(--font-body);
-    font-size: var(--font-size-display-sm);
-  }
-
-  .consultation-clock__display button,
-  .consultation-clock__period button {
     min-block-size: var(--sp-7);
-    border: 0;
-    border-radius: var(--radius-md);
-    background: transparent;
-    color: inherit;
-    font: inherit;
-    cursor: pointer;
-    padding-inline: var(--sp-1);
-  }
-
-  .consultation-clock__display button.is-active {
-    background: var(--bg-secondary);
-  }
-
-  .consultation-clock__period {
-    display: flex;
+    padding: var(--sp-2) var(--sp-3);
     border: var(--border-width) solid var(--border-default);
     border-radius: var(--radius-md);
-    overflow: hidden;
-  }
-
-  .consultation-clock__period button {
-    min-inline-size: var(--sp-7);
-    padding-inline: var(--sp-2);
-    color: var(--text-secondary);
-    font-family: var(--font-roboto);
-    font-size: var(--font-size-body-sm);
-  }
-
-  .consultation-clock__period button.is-active {
-    background: var(--color-earth-brown);
-    color: var(--text-inverse);
-  }
-
-  .consultation-clock__face {
-    --clock-radius: min(7.2rem, 29vw);
-    position: relative;
-    grid-column: 1 / -1;
-    inline-size: min(19rem, 76vw);
-    aspect-ratio: 1;
-    margin-inline: auto;
-    border-radius: var(--radius-full);
-    background: var(--bg-secondary);
-  }
-
-  .consultation-clock__face::before {
-    content: '';
-    position: absolute;
-    inset: 50% auto auto 50%;
-    inline-size: var(--sp-2);
-    block-size: var(--sp-2);
-    border-radius: var(--radius-full);
-    background: var(--color-earth-brown);
-    transform: translate(-50%, -50%);
-  }
-
-  .consultation-clock__tick {
-    position: absolute;
-    inset: 50% auto auto 50%;
-    display: grid;
-    place-items: center;
-    min-inline-size: var(--sp-7);
-    min-block-size: var(--sp-7);
-    padding: var(--sp-0);
-    border: 0;
-    border-radius: var(--radius-full);
-    background: transparent;
+    background: var(--surface-elevated);
     color: var(--text-primary);
-    font-family: var(--font-roboto);
+    font-family: var(--font-body);
     font-size: var(--font-size-body-sm);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
     cursor: pointer;
-    transform: translate(-50%, -50%) rotate(var(--tick-angle)) translateY(calc(var(--clock-radius) * -1))
-      rotate(calc(var(--tick-angle) * -1));
+    transition: var(--transition-fast);
   }
 
-  .consultation-clock__tick.is-selected {
-    background: var(--color-earth-brown);
-    color: var(--text-inverse);
-  }
-
-  .consultation-clock__tick:hover {
+  .consultation-slots__slot:hover {
+    border-color: var(--color-clay);
     background: var(--color-clay);
     color: var(--text-inverse);
+  }
+
+  .consultation-slots__slot.is-selected {
+    border-color: var(--color-earth-brown);
+    background: var(--color-earth-brown);
+    color: var(--text-inverse);
+  }
+
+  .consultation-slots__slot:focus-visible {
+    outline: calc(var(--border-width) * 2) solid var(--color-sage);
+    outline-offset: var(--sp-1);
   }
 
   .consultation-scheduler__footer {
@@ -1542,7 +1544,7 @@
     }
 
     .consultation-scheduler__section-head,
-    .consultation-clock {
+    .consultation-slots {
       padding-inline: var(--sp-2);
     }
 
@@ -1599,10 +1601,7 @@
       const daysGrid = form.querySelector('[data-calendar-days]');
       const prevButton = form.querySelector('[data-calendar-prev]');
       const nextButton = form.querySelector('[data-calendar-next]');
-      const clockFace = form.querySelector('[data-clock-face]');
-      const hourDisplay = form.querySelector('[data-clock-mode="hour"]');
-      const minuteDisplay = form.querySelector('[data-clock-mode="minute"]');
-      const periodButtons = Array.from(form.querySelectorAll('[data-clock-period]'));
+      const slotsContainer = form.querySelector('[data-schedule-slots]');
 
       if (!popup || !dialog || !openButton || !confirmButton || !hiddenInput) return;
 
@@ -1610,6 +1609,21 @@
       const completedScheduleLabel = openButton.dataset.scheduledLabel || 'CONSULTATION SCHEDULED';
 
       const pad = (value) => String(value).padStart(2, '0');
+
+      // Fixed US business-hours slots, 09:00 AM – 05:00 PM in 30-minute steps.
+      const SLOT_START_MINUTES = 9 * 60; // 09:00
+      const SLOT_END_MINUTES = 16 * 60; // 16:00 (04:00 PM), inclusive — last bookable slot
+      const SLOT_STEP_MINUTES = 30;
+      const timeSlots = [];
+      for (let minutes = SLOT_START_MINUTES; minutes <= SLOT_END_MINUTES; minutes += SLOT_STEP_MINUTES) {
+        const hour24 = Math.floor(minutes / 60);
+        const minute = minutes % 60;
+        const period = hour24 >= 12 ? 'PM' : 'AM';
+        let hour12 = hour24 % 12;
+        if (hour12 === 0) hour12 = 12;
+        timeSlots.push({ hour: hour12, minute, period, label: `${pad(hour12)}:${pad(minute)} ${period}` });
+      }
+
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const firstMonth = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -1618,8 +1632,7 @@
       let selectedDate = null;
       let selectedHour = null;
       let selectedMinute = null;
-      let selectedPeriod = 'AM';
-      let clockMode = 'hour';
+      let selectedPeriod = null;
       let returnFocus = null;
       let committedSelection = null;
 
@@ -1696,58 +1709,39 @@
         if (nextButton) nextButton.disabled = visibleMonth.getTime() >= lastMonth.getTime();
       };
 
-      const renderClock = () => {
-        if (!clockFace) return;
-        clockFace.textContent = '';
-        const values =
-          clockMode === 'hour'
-            ? Array.from({ length: 12 }, (_, index) => index + 1)
-            : Array.from({ length: 12 }, (_, index) => index * 5);
+      const renderSlots = () => {
+        if (!slotsContainer) return;
+        slotsContainer.textContent = '';
 
-        values.forEach((value, index) => {
+        timeSlots.forEach((slot) => {
           const button = document.createElement('button');
           button.type = 'button';
-          button.className = 'consultation-clock__tick';
-          button.style.setProperty('--tick-angle', `${index * 30}deg`);
-          button.textContent = clockMode === 'minute' ? pad(value) : value;
-          const isSelected = clockMode === 'hour' ? selectedHour === value : selectedMinute === value;
+          button.className = 'consultation-slots__slot';
+          button.textContent = slot.label;
+          const isSelected =
+            selectedHour === slot.hour && selectedMinute === slot.minute && selectedPeriod === slot.period;
           if (isSelected) button.classList.add('is-selected');
-          button.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
-          button.setAttribute('aria-label', clockMode === 'hour' ? `Hour ${value}` : `${value} minutes`);
+          button.setAttribute('role', 'option');
+          button.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+          button.setAttribute('aria-label', `${slot.label} consultation slot`);
           button.addEventListener('click', () => {
-            if (clockMode === 'hour') {
-              selectedHour = value;
-              clockMode = 'minute';
-            } else {
-              selectedMinute = value;
-            }
-            renderClock();
+            selectedHour = slot.hour;
+            selectedMinute = slot.minute;
+            selectedPeriod = slot.period;
+            renderSlots();
             syncSelection();
           });
-          clockFace.append(button);
+          slotsContainer.append(button);
         });
-
-        if (hourDisplay) {
-          hourDisplay.textContent = selectedHour == null ? '--' : pad(selectedHour);
-          hourDisplay.classList.toggle('is-active', clockMode === 'hour');
-        }
-        if (minuteDisplay) {
-          minuteDisplay.textContent = selectedMinute == null ? '--' : pad(selectedMinute);
-          minuteDisplay.classList.toggle('is-active', clockMode === 'minute');
-        }
       };
 
       const restoreCommittedSelection = () => {
         selectedDate = committedSelection?.date ? new Date(committedSelection.date) : null;
         selectedHour = committedSelection?.hour ?? null;
         selectedMinute = committedSelection?.minute ?? null;
-        selectedPeriod = committedSelection?.period || 'AM';
-        clockMode = selectedHour == null ? 'hour' : 'minute';
-        periodButtons.forEach((button) =>
-          button.classList.toggle('is-active', button.dataset.clockPeriod === selectedPeriod)
-        );
+        selectedPeriod = committedSelection?.period ?? null;
         renderCalendar();
-        renderClock();
+        renderSlots();
         syncSelection();
       };
 
@@ -1793,7 +1787,7 @@
         openButton.setAttribute('aria-expanded', 'true');
         document.documentElement.classList.add('consultation-scheduler-open');
         renderCalendar();
-        renderClock();
+        renderSlots();
         syncSelection();
         window.requestAnimationFrame(() => window.requestAnimationFrame(() => popup.classList.add('is-open')));
         document.addEventListener('keydown', onKeydown);
@@ -1810,22 +1804,6 @@
         visibleMonth = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + 1, 1);
         renderCalendar();
       });
-      hourDisplay?.addEventListener('click', () => {
-        clockMode = 'hour';
-        renderClock();
-      });
-      minuteDisplay?.addEventListener('click', () => {
-        clockMode = 'minute';
-        renderClock();
-      });
-      periodButtons.forEach((button) => {
-        button.addEventListener('click', () => {
-          selectedPeriod = button.dataset.clockPeriod;
-          periodButtons.forEach((periodButton) => periodButton.classList.toggle('is-active', periodButton === button));
-          syncSelection();
-        });
-      });
-
       openButton.addEventListener('click', openPopup);
       popup
         .querySelectorAll('[data-schedule-close]')
@@ -1852,8 +1830,7 @@
         selectedDate = null;
         selectedHour = null;
         selectedMinute = null;
-        selectedPeriod = 'AM';
-        clockMode = 'hour';
+        selectedPeriod = null;
         committedSelection = null;
         visibleMonth = new Date(firstMonth);
         hiddenInput.value = '';
@@ -1863,14 +1840,13 @@
         if (scheduleDefaultIcon) scheduleDefaultIcon.hidden = false;
         if (scheduleCompleteIcon) scheduleCompleteIcon.hidden = true;
         openButton.classList.remove('is-scheduled');
-        periodButtons.forEach((button) => button.classList.toggle('is-active', button.dataset.clockPeriod === 'AM'));
         renderCalendar();
-        renderClock();
+        renderSlots();
         syncSelection();
       });
 
       renderCalendar();
-      renderClock();
+      renderSlots();
       syncSelection();
     });
 
@@ -1884,12 +1860,84 @@
       const successMessage = section.dataset.successMessage || 'Thank you. Your consultation request has been sent.';
       const errorMessage = section.dataset.errorMessage || 'Something went wrong. Please try again.';
 
+      // Inline, per-field error handling. `errorEls` are keyed by the API's field
+      // names (name / phone_or_email / message) so the API's own validation errors
+      // can be mapped straight back onto the right input.
+      const fields = {
+        name: form.querySelector('[name="name"]'),
+        phone_or_email: form.querySelector('[name="phone_or_email"]'),
+        message: form.querySelector('[name="message"]'),
+      };
+      const errorEls = {
+        name: form.querySelector('[data-field-error="name"]'),
+        phone_or_email: form.querySelector('[data-field-error="phone_or_email"]'),
+        message: form.querySelector('[data-field-error="message"]'),
+      };
+
+      const setFieldError = (fieldName, message) => {
+        const input = fields[fieldName];
+        const el = errorEls[fieldName];
+        if (input) input.setAttribute('aria-invalid', 'true');
+        if (el) {
+          el.textContent = message;
+          el.hidden = false;
+        }
+      };
+      const clearFieldError = (fieldName) => {
+        const input = fields[fieldName];
+        const el = errorEls[fieldName];
+        if (input) input.removeAttribute('aria-invalid');
+        if (el) {
+          el.textContent = '';
+          el.hidden = true;
+        }
+      };
+      const clearAllErrors = () => Object.keys(errorEls).forEach(clearFieldError);
+
+      // Clear a field's error the moment the shopper starts fixing it.
+      Object.entries(fields).forEach(([fieldName, input]) => {
+        input?.addEventListener('input', () => clearFieldError(fieldName));
+      });
+
+      const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const isValidContact = (value) => {
+        if (EMAIL_RE.test(value)) return true;
+        // Phone: 7–15 digits and only phone-ish characters.
+        const digits = value.replace(/\D/g, '');
+        return digits.length >= 7 && digits.length <= 15 && /^[+()\d\s.-]+$/.test(value);
+      };
+
+      // Client-side validation that mirrors the API's rules, so obvious mistakes
+      // are caught before the request goes out (form is novalidate).
+      const validateForm = () => {
+        clearAllErrors();
+        let firstInvalid = null;
+        const fail = (fieldName, message) => {
+          setFieldError(fieldName, message);
+          if (!firstInvalid) firstInvalid = fields[fieldName];
+        };
+
+        const name = fields.name?.value.trim() || '';
+        const contact = fields.phone_or_email?.value.trim() || '';
+        const message = fields.message?.value.trim() || '';
+
+        if (!name) fail('name', 'Name is required.');
+        if (!contact) fail('phone_or_email', 'A phone number or email address is required.');
+        else if (!isValidContact(contact)) fail('phone_or_email', 'Enter a valid phone number or email address.');
+        if (!message) fail('message', 'A short request is required.');
+        else if (message.length < 10) fail('message', 'Message must be at least 10 characters.');
+        else if (message.length > 10000) fail('message', 'Message must be at most 10,000 characters.');
+
+        if (firstInvalid && typeof firstInvalid.focus === 'function') firstInvalid.focus();
+        return !firstInvalid;
+      };
+
       form.addEventListener('submit', async (event) => {
         // Fully AJAX: never let the browser navigate/reload.
         event.preventDefault();
 
-        // Validate in JS (form is novalidate) and surface native hints.
-        if (!form.reportValidity()) return;
+        // Validate in JS (form is novalidate) and show inline field errors.
+        if (!validateForm()) return;
 
         const submitButton = form.querySelector('.custom-inquiry__submit');
         const labelSpan = submitButton?.querySelector('span:first-child');
@@ -1920,13 +1968,41 @@
           const response = await fetch(endpoint, { method: 'POST', body: formData });
 
           if (response.ok) {
+            clearAllErrors();
             notify(successMessage, 'success');
             form.reset();
             form.dispatchEvent(new CustomEvent('consultation:schedule-reset'));
             // Re-sync the file UI (count box, popup, dropzone copy) to the now-empty input.
             if (fileInput) fileInput.dispatchEvent(new Event('change'));
           } else {
-            notify(errorMessage, 'error');
+            // Surface the API's structured errors instead of a blind generic toast.
+            let data = null;
+            try {
+              data = await response.json();
+            } catch (parseError) {
+              data = null;
+            }
+
+            const apiErrors = data && Array.isArray(data.errors) ? data.errors : [];
+            if (apiErrors.length) {
+              clearAllErrors();
+              let firstInvalid = null;
+              let mappedAny = false;
+              apiErrors.forEach((err) => {
+                if (err && errorEls[err.field]) {
+                  setFieldError(err.field, err.message || 'This field is invalid.');
+                  if (!firstInvalid) firstInvalid = fields[err.field];
+                  mappedAny = true;
+                }
+              });
+              if (firstInvalid && typeof firstInvalid.focus === 'function') firstInvalid.focus();
+              // Fields now carry the specific errors; if some (e.g. file errors)
+              // couldn't be mapped, fall back to the API message so nothing is lost.
+              notify(mappedAny ? errorMessage : data.message || errorMessage, 'error');
+            } else {
+              // File-size / type / server errors: no field, but a clear API message.
+              notify((data && data.message) || errorMessage, 'error');
+            }
           }
         } catch (error) {
           notify(errorMessage, 'error');
