@@ -7,44 +7,31 @@
 -%}
 
 <style>
-  @keyframes showroom-first-room-media-reveal {
-    from {
-      opacity: 0.18;
-      transform: scale(1.04);
-    }
+  #shopify-section-{{ section.id }} {
+    --sp-0: 0px;
+    --sp-1: 4px;
+    --sp-2: 8px;
+    --sp-3: 12px;
+    --sp-4: 16px;
+    --sp-5: 20px;
+    --sp-6: 24px;
+    --sp-7: 28px;
+    --sp-8: 32px;
+    --sp-9: 36px;
+    --sp-10: 40px;
+    --sp-11: 44px;
+    --sp-12: 48px;
 
-    to {
-      opacity: 1;
-      transform: scale(1);
-    }
-  }
-
-  @keyframes showroom-first-room-content-reveal {
-    from {
-      opacity: 0;
-      transform: translateY(var(--sp-5));
-    }
-
-    to {
-      opacity: 1;
-      transform: translateY(var(--sp-0));
-    }
-  }
-
-  .showroom-page--reveal-ready .showroom-room:first-of-type.showroom-room--is-visible .showroom-room__media {
-    animation: showroom-first-room-media-reveal calc(var(--timing-short) * 4) var(--ease-standard) both;
-  }
-
-  .showroom-page--reveal-ready .showroom-room:first-of-type.showroom-room--is-visible .showroom-room__title,
-  .showroom-page--reveal-ready .showroom-room:first-of-type.showroom-room--is-visible .showroom-room__description,
-  .showroom-page--reveal-ready .showroom-room:first-of-type.showroom-room--is-visible .showroom-room__button {
-    animation: showroom-first-room-content-reveal calc(var(--timing-short) * 4) var(--ease-standard) both;
+    --layout-padding-mobile: var(--sp-4);
+    --layout-padding: var(--sp-6);
   }
 </style>
 
-<section class="showroom-page" id="ShowroomPage-{{ section.id }}" aria-labelledby="ShowroomTitle-{{ section.id }}">
-  <h1 class="showroom-page__title" id="ShowroomTitle-{{ section.id }}">{{ page.title | default: 'Showroom' | escape }}</h1>
+<h1 class="showroom-page__title" id="ShowroomTitle-{{ section.id }}">
+  {{ page.title | default: 'Showroom' | escape }}
+</h1>
 
+<section class="showroom-page" id="ShowroomPage-{{ section.id }}" aria-labelledby="ShowroomTitle-{{ section.id }}">
   {%- for entry in showroom_entries -%}
     {%- liquid
       assign collection_handle = entry.collection_handle.value | default: entry.collection_handle | strip
@@ -128,48 +115,21 @@
 </section>
 
 {% stylesheet %}
-  body:has(.showroom-page) .header__heading-logo {
-    filter: brightness(0) invert(1);
-  }
-
-  body:has(.showroom-page) .header__heading-link,
-  body:has(.showroom-page) .header__nav-item,
-  body:has(.showroom-page) .header__icon,
-  body:has(.showroom-page) .header__icon--search,
-  body:has(.showroom-page) .header__icon--cart,
-  body:has(.showroom-page) .header__icon--account,
-  body:has(.showroom-page) .header__icon--menu,
-  body:has(.showroom-page) .header__icon--wishlist,
-  body:has(.showroom-page) .loc-picker .loc-picker__code,
-  body:has(.showroom-page) .loc-picker__chevron {
-    color: var(--color-milk);
-  }
-
-  body:has(.showroom-page) .header__consultation-link {
-    background-color: transparent;
-    border-color: color-mix(in srgb, var(--color-milk) 72%, transparent);
-    color: var(--color-milk);
-  }
-
-  body:has(.showroom-page) .Vtl-WishlistHeader__HeartIconWrapper {
-    fill: var(--color-milk) !important;
-  }
-
-  .showroom-page {
-    background: var(--color-ebony);
-    color: var(--color-milk);
-    overflow: hidden;
+  #MainContent {
+    background-color: var(--color-cream);
   }
 
   .showroom-page__title {
-    block-size: 1px;
-    clip: rect(0 0 0 0);
-    clip-path: inset(50%);
-    inline-size: 1px;
-    margin: calc(-1 * var(--border-width));
+    color: var(--color-earth-brown);
+    text-align: center;
+    margin-block-start: 128px;
+    margin-block-end: var(--sp-12);
+  }
+
+  .showroom-page {
+    color: var(--color-milk);
     overflow: hidden;
-    position: absolute;
-    white-space: nowrap;
+    background-color: #222222;
   }
 
   .showroom-room {
@@ -180,21 +140,6 @@
     min-block-size: 100svh;
     overflow: hidden;
     position: relative;
-  }
-
-  .showroom-room:first-of-type::before {
-    background:
-      linear-gradient(
-        180deg,
-        color-mix(in srgb, var(--color-ebony) 82%, transparent) 0%,
-        color-mix(in srgb, var(--color-ebony) 24%, transparent) 38%,
-        transparent 100%
-      );
-    content: '';
-    inset: var(--sp-0);
-    pointer-events: none;
-    position: absolute;
-    z-index: 0;
   }
 
   .showroom-room__media,
@@ -223,13 +168,12 @@
   .showroom-room__title,
   .showroom-room__description,
   .showroom-room__button {
-    transition:
-      opacity calc(var(--timing-short) * 4) var(--ease-standard),
+    transition: opacity calc(var(--timing-short) * 4) var(--ease-standard),
       transform calc(var(--timing-short) * 4) var(--ease-standard);
   }
 
   .showroom-page--reveal-ready .showroom-room:not(.showroom-room--is-visible) .showroom-room__media {
-    opacity: 0.18;
+    opacity: 0.4;
     transform: scale(1.04);
   }
 
@@ -248,51 +192,16 @@
     transition-delay: calc(var(--timing-short) * 2);
   }
 
-  @keyframes showroom-first-room-media-reveal {
-    from {
-      opacity: 0.18;
-      transform: scale(1.04);
-    }
-
-    to {
-      opacity: 1;
-      transform: scale(1);
-    }
-  }
-
-  @keyframes showroom-first-room-content-reveal {
-    from {
-      opacity: 0;
-      transform: translateY(var(--sp-5));
-    }
-
-    to {
-      opacity: 1;
-      transform: translateY(var(--sp-0));
-    }
-  }
-
-  .showroom-page--reveal-ready .showroom-room:first-of-type.showroom-room--is-visible .showroom-room__media {
-    animation: showroom-first-room-media-reveal calc(var(--timing-short) * 4) var(--ease-standard) both;
-  }
-
-  .showroom-page--reveal-ready .showroom-room:first-of-type.showroom-room--is-visible .showroom-room__title,
-  .showroom-page--reveal-ready .showroom-room:first-of-type.showroom-room--is-visible .showroom-room__description,
-  .showroom-page--reveal-ready .showroom-room:first-of-type.showroom-room--is-visible .showroom-room__button {
-    animation: showroom-first-room-content-reveal calc(var(--timing-short) * 4) var(--ease-standard) both;
-  }
-
   .showroom-room__content {
     align-items: center;
     display: flex;
     flex-direction: column;
-    inline-size: min(100%, calc(var(--sp-12) * 10));
-    justify-self: center;
     padding: var(--sp-12) var(--layout-padding);
     position: relative;
     text-align: center;
-    transform: translateY(18svh);
     z-index: 1;
+    width: 100vw;
+    max-width: 100vw;
   }
 
   .showroom-room__title {
@@ -304,6 +213,7 @@
     line-height: var(--line-height-tight);
     margin: var(--sp-0);
     text-shadow: 0 var(--sp-1) var(--sp-8) color-mix(in srgb, var(--color-ebony) 54%, transparent);
+    width: max-content;
   }
 
   .showroom-room__description {
@@ -316,9 +226,10 @@
     -webkit-box-orient: vertical;
     line-height: var(--line-height-relaxed);
     margin: var(--sp-5) auto var(--sp-0);
-    max-inline-size: calc(var(--sp-12) * 8);
     overflow: hidden;
     text-shadow: 0 var(--border-width) var(--sp-5) color-mix(in srgb, var(--color-ebony) 58%, transparent);
+    width: max-content;
+    max-width: 70%;
   }
 
   .showroom-room__button {
@@ -334,15 +245,13 @@
     letter-spacing: var(--letter-spacing-relaxed);
     line-height: var(--line-height-snug);
     margin-block-start: var(--sp-6);
-    min-block-size: var(--sp-8);
+    min-block-size: var(--sp-12);
     min-inline-size: calc(var(--sp-12) * 3);
     padding-inline: var(--sp-8);
     text-decoration: none;
     text-transform: uppercase;
-    transition:
-      background-color var(--timing-short) var(--ease-standard),
-      border-color var(--timing-short) var(--ease-standard),
-      color var(--timing-short) var(--ease-standard);
+    transition: background-color var(--timing-short) var(--ease-standard),
+      border-color var(--timing-short) var(--ease-standard), color var(--timing-short) var(--ease-standard);
   }
 
   .showroom-room__button:hover,
@@ -374,9 +283,18 @@
 
   @media screen and (max-width: 749px) {
     .showroom-room__shade {
-      background:
-        linear-gradient(180deg, color-mix(in srgb, var(--color-ebony) 8%, transparent) 0 36%, color-mix(in srgb, var(--color-ebony) 46%, transparent) 72%, color-mix(in srgb, var(--color-ebony) 64%, transparent) 100%),
-        linear-gradient(90deg, color-mix(in srgb, var(--color-ebony) 18%, transparent), transparent 52%, color-mix(in srgb, var(--color-ebony) 12%, transparent));
+      background: linear-gradient(
+          180deg,
+          color-mix(in srgb, var(--color-ebony) 8%, transparent) 0 36%,
+          color-mix(in srgb, var(--color-ebony) 46%, transparent) 72%,
+          color-mix(in srgb, var(--color-ebony) 64%, transparent) 100%
+        ),
+        linear-gradient(
+          90deg,
+          color-mix(in srgb, var(--color-ebony) 18%, transparent),
+          transparent 52%,
+          color-mix(in srgb, var(--color-ebony) 12%, transparent)
+        );
     }
 
     .showroom-room__content {
@@ -426,7 +344,6 @@
     .showroom-room__description,
     .showroom-room__button {
       transition: none;
-      animation: none;
     }
 
     .showroom-page--reveal-ready .showroom-room:not(.showroom-room--is-visible) .showroom-room__media,

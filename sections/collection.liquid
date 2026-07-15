@@ -18,265 +18,266 @@
   -%}
 
   {%- unless collection_is_empty -%}
-  <div class="col-toolbar">
-    <div class="col-toolbar__left">
-      <div class="col-toolbar__facets">
-        {%- capture col_caret -%}
+    <div class="col-toolbar">
+      <div class="col-toolbar__left">
+        <div class="col-toolbar__facets">
+          {%- capture col_caret -%}
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
         {%- endcapture -%}
-        {%- capture col_check -%}
+          {%- capture col_check -%}
           <span class="col-checkbox"><svg viewBox="0 0 14 14" fill="none" class="col-checkbox__icon"><path d="M3 7.5L6 10.5L11 3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
         {%- endcapture -%}
 
-        {%- liquid
-          assign avail_filter = null
-          assign price_filter = null
-          assign wood_native = null
-          for f in collection.filters
-            if f.type == 'price_range'
-              assign price_filter = f
-            elsif f.param_name == 'filter.v.availability'
-              assign avail_filter = f
-            elsif f.param_name contains 'wood_type'
-              assign wood_native = f
-            endif
-          endfor
-        -%}
+          {%- liquid
+            assign avail_filter = null
+            assign price_filter = null
+            assign wood_native = null
+            for f in collection.filters
+              if f.type == 'price_range'
+                assign price_filter = f
+              elsif f.param_name == 'filter.v.availability'
+                assign avail_filter = f
+              elsif f.param_name contains 'wood_type'
+                assign wood_native = f
+              endif
+            endfor
+          -%}
 
-        {%- comment -%} Availability — native storefront filter (multi-select) {%- endcomment -%}
-        {%- if avail_filter != blank -%}
-          <div
-            class="col-dropdown col-dropdown--left col-toolbar__facet{% if avail_filter.active_values.size > 0 %} has-active{% endif %}"
-            data-dropdown
-          >
-            <button
-              type="button"
-              class="col-dropdown__trigger"
-              data-dropdown-toggle
-              aria-expanded="false"
-              aria-haspopup="true"
+          {%- comment -%} Availability — native storefront filter (multi-select) {%- endcomment -%}
+          {%- if avail_filter != blank -%}
+            <div
+              class="col-dropdown col-dropdown--left col-toolbar__facet{% if avail_filter.active_values.size > 0 %} has-active{% endif %}"
+              data-dropdown
             >
-              <span>{{ avail_filter.label | escape }}</span>
-              {{ col_caret }}
-            </button>
-            <div class="col-dropdown__menu">
-              {%- for value in avail_filter.values -%}
-                <a
-                  href="{% if value.active %}{{ value.url_to_remove }}{% else %}{{ value.url_to_add }}{% endif %}"
-                  class="col-dropdown__option{% if value.active %} is-active{% endif %}"
-                >
-                  <input
-                    type="checkbox"
-                    class="visually-hidden"
-                    {% if value.active %}
-                      checked
-                    {% endif %}
-                    tabindex="-1"
-                    aria-hidden="true"
+              <button
+                type="button"
+                class="col-dropdown__trigger"
+                data-dropdown-toggle
+                aria-expanded="false"
+                aria-haspopup="true"
+              >
+                <span>{{ avail_filter.label | escape }}</span>
+                {{ col_caret }}
+              </button>
+              <div class="col-dropdown__menu">
+                {%- for value in avail_filter.values -%}
+                  <a
+                    href="{% if value.active %}{{ value.url_to_remove }}{% else %}{{ value.url_to_add }}{% endif %}"
+                    class="col-dropdown__option{% if value.active %} is-active{% endif %}"
                   >
-                  {{ col_check }}
-                  <span class="col-dropdown__option-label">{{ value.label | escape }}</span>
-                  <span class="col-dropdown__option-count">({{ value.count }})</span>
-                </a>
-              {%- endfor -%}
-              {%- if avail_filter.active_values.size > 0 -%}
-                <a href="{{ avail_filter.url_to_remove }}" class="col-dropdown__clear">Clear</a>
-              {%- endif -%}
-            </div>
-          </div>
-        {%- endif -%}
-
-        {%- comment -%} Price — native price_range filter (carries other active filters + sort) {%- endcomment -%}
-        {%- if price_filter != blank -%}
-          {%- assign price_active = false -%}
-          {%- if price_filter.min_value.value != null or price_filter.max_value.value != null -%}
-            {%- assign price_active = true -%}
-          {%- endif -%}
-          <div
-            class="col-dropdown col-dropdown--left col-toolbar__facet{% if price_active %} has-active{% endif %}"
-            data-dropdown
-          >
-            <button
-              type="button"
-              class="col-dropdown__trigger"
-              data-dropdown-toggle
-              aria-expanded="false"
-              aria-haspopup="true"
-            >
-              <span>{{ price_filter.label | escape }}</span>
-              {{ col_caret }}
-            </button>
-            <div class="col-dropdown__menu">
-              <form class="col-price-form">
-                <div class="col-price-form__header">
-                  <span>MIN</span>
-                  <span>MAX</span>
-                </div>
-                <div class="col-price-form__inputs">
-                  <label class="visually-hidden" for="CollectionPriceMin-{{ section.id }}">Minimum price</label>
-                  <input
-                    id="CollectionPriceMin-{{ section.id }}"
-                    name="{{ price_filter.min_value.param_name }}"
-                    type="number"
-                    placeholder="0"
-                    value="{{ price_filter.min_value.value | money_without_currency | replace: ',', '' }}"
-                    step="0.01"
-                    min="0"
-                  >
-                  <label class="visually-hidden" for="CollectionPriceMax-{{ section.id }}">Maximum price</label>
-                  <input
-                    id="CollectionPriceMax-{{ section.id }}"
-                    name="{{ price_filter.max_value.param_name }}"
-                    type="number"
-                    placeholder="{{ price_filter.range_max | money_without_currency | replace: ',', '' }}"
-                    value="{{ price_filter.max_value.value | money_without_currency | replace: ',', '' }}"
-                    step="0.01"
-                    min="0"
-                  >
-                </div>
-                <button type="submit" class="col-price-form__apply">Apply</button>
-
-                {%- for f in collection.filters -%}
-                  {%- if f.type != 'price_range' -%}
-                    {%- for v in f.active_values -%}
-                      <input type="hidden" name="{{ v.param_name }}" value="{{ v.value }}">
-                    {%- endfor -%}
-                  {%- endif -%}
+                    <input
+                      type="checkbox"
+                      class="visually-hidden"
+                      {% if value.active %}
+                        checked
+                      {% endif %}
+                      tabindex="-1"
+                      aria-hidden="true"
+                    >
+                    {{ col_check }}
+                    <span class="col-dropdown__option-label">{{ value.label | escape }}</span>
+                    <span class="col-dropdown__option-count">({{ value.count }})</span>
+                  </a>
                 {%- endfor -%}
-                {%- if collection.sort_by != blank -%}
-                  <input type="hidden" name="sort_by" value="{{ collection.sort_by }}">
+                {%- if avail_filter.active_values.size > 0 -%}
+                  <a href="{{ avail_filter.url_to_remove }}" class="col-dropdown__clear">Clear</a>
                 {%- endif -%}
-              </form>
-              {%- if price_active -%}
-                <a href="{{ price_filter.url_to_remove }}" class="col-dropdown__clear">Clear</a>
-              {%- endif -%}
+              </div>
             </div>
-          </div>
-        {%- endif -%}
+          {%- endif -%}
 
-        {%- comment -%}
-          Wood Type is rendered only when the custom.wood_type metafield filter is
-          enabled in Shopify Search & Discovery. A client-side fallback would only
-          filter the current pagination page and would produce incomplete results.
-        {%- endcomment -%}
-        {%- if wood_native != blank -%}
-          <div
-            class="col-dropdown col-dropdown--left col-toolbar__facet{% if wood_native.active_values.size > 0 %} has-active{% endif %}"
-            data-dropdown
-          >
-            <button
-              type="button"
-              class="col-dropdown__trigger"
-              data-dropdown-toggle
-              aria-expanded="false"
-              aria-haspopup="true"
+          {%- comment -%} Price — native price_range filter (carries other active filters + sort) {%- endcomment -%}
+          {%- if price_filter != blank -%}
+            {%- assign price_active = false -%}
+            {%- if price_filter.min_value.value != null or price_filter.max_value.value != null -%}
+              {%- assign price_active = true -%}
+            {%- endif -%}
+            <div
+              class="col-dropdown col-dropdown--left col-toolbar__facet{% if price_active %} has-active{% endif %}"
+              data-dropdown
             >
-              <span>Wood Type</span>
-              {{ col_caret }}
-            </button>
-            <div class="col-dropdown__menu">
-              {%- for value in wood_native.values -%}
-                <a
-                  href="{% if value.active %}{{ value.url_to_remove }}{% else %}{{ value.url_to_add }}{% endif %}"
-                  class="col-dropdown__option{% if value.active %} is-active{% endif %}"
-                >
-                  <input
-                    type="checkbox"
-                    class="visually-hidden"
-                    {% if value.active %}
-                      checked
-                    {% endif %}
-                    tabindex="-1"
-                    aria-hidden="true"
-                  >
-                  {{ col_check }}
-                  <span class="col-dropdown__option-label">{{ value.label | escape }}</span>
-                  <span class="col-dropdown__option-count">({{ value.count }})</span>
-                </a>
-              {%- endfor -%}
-              {%- if wood_native.active_values.size > 0 -%}
-                <a href="{{ wood_native.url_to_remove }}" class="col-dropdown__clear">Clear</a>
-              {%- endif -%}
-            </div>
-          </div>
-        {%- endif -%}
-      </div>
-    </div>
+              <button
+                type="button"
+                class="col-dropdown__trigger"
+                data-dropdown-toggle
+                aria-expanded="false"
+                aria-haspopup="true"
+              >
+                <span>{{ price_filter.label | escape }}</span>
+                {{ col_caret }}
+              </button>
+              <div class="col-dropdown__menu">
+                <form class="col-price-form">
+                  <div class="col-price-form__header">
+                    <span>MIN</span>
+                    <span>MAX</span>
+                  </div>
+                  <div class="col-price-form__inputs">
+                    <label class="visually-hidden" for="CollectionPriceMin-{{ section.id }}">Minimum price</label>
+                    <input
+                      id="CollectionPriceMin-{{ section.id }}"
+                      name="{{ price_filter.min_value.param_name }}"
+                      type="number"
+                      placeholder="0"
+                      value="{{ price_filter.min_value.value | money_without_currency | replace: ',', '' }}"
+                      step="0.01"
+                      min="0"
+                    >
+                    <label class="visually-hidden" for="CollectionPriceMax-{{ section.id }}">Maximum price</label>
+                    <input
+                      id="CollectionPriceMax-{{ section.id }}"
+                      name="{{ price_filter.max_value.param_name }}"
+                      type="number"
+                      placeholder="{{ price_filter.range_max | money_without_currency | replace: ',', '' }}"
+                      value="{{ price_filter.max_value.value | money_without_currency | replace: ',', '' }}"
+                      step="0.01"
+                      min="0"
+                    >
+                  </div>
+                  <button type="submit" class="col-price-form__apply">Apply</button>
 
-    <div class="col-toolbar__right">
-      {% liquid
-        assign sort_by = collection.sort_by | default: collection.default_sort_by
-        assign current_sort_option = collection.sort_options | find: 'value', sort_by
-        assign current_sort_label = current_sort_option.name | default: 'Featured'
-        if sort_by == 'manual'
-          assign current_sort_label = 'Featured'
-        endif
-      %}
-      <div class="col-dropdown col-dropdown--right col-toolbar__sort" data-dropdown>
-        <button
-          type="button"
-          class="col-dropdown__trigger"
-          data-dropdown-toggle
-          aria-expanded="false"
-          aria-haspopup="true"
-        >
-          <span class="col-toolbar__sort-label">Sort by:</span>
-          <span class="col-toolbar__sort-value">{{ current_sort_label }}</span>
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <polyline points="6 9 12 15 18 9"></polyline>
-          </svg>
-        </button>
-        <div class="col-dropdown__menu">
-          <button
-            type="button"
-            class="col-dropdown__option{% if sort_by == 'manual' %} is-active{% endif %}"
-            data-sort-value="manual"
-          >
-            <span class="col-dropdown__option-label">Featured</span>
-          </button>
-          <button
-            type="button"
-            class="col-dropdown__option{% if sort_by == 'best-selling' %} is-active{% endif %}"
-            data-sort-value="best-selling"
-          >
-            <span class="col-dropdown__option-label">Best Selling</span>
-          </button>
-          <button
-            type="button"
-            class="col-dropdown__option{% if sort_by == 'price-ascending' %} is-active{% endif %}"
-            data-sort-value="price-ascending"
-          >
-            <span class="col-dropdown__option-label">Price: Low to High</span>
-          </button>
-          <button
-            type="button"
-            class="col-dropdown__option{% if sort_by == 'price-descending' %} is-active{% endif %}"
-            data-sort-value="price-descending"
-          >
-            <span class="col-dropdown__option-label">Price: High to Low</span>
-          </button>
-          <button
-            type="button"
-            class="col-dropdown__option{% if sort_by == 'created-descending' %} is-active{% endif %}"
-            data-sort-value="created-descending"
-          >
-            <span class="col-dropdown__option-label">Newest</span>
-          </button>
+                  {%- for f in collection.filters -%}
+                    {%- if f.type != 'price_range' -%}
+                      {%- for v in f.active_values -%}
+                        <input type="hidden" name="{{ v.param_name }}" value="{{ v.value }}">
+                      {%- endfor -%}
+                    {%- endif -%}
+                  {%- endfor -%}
+                  {%- if collection.sort_by != blank -%}
+                    <input type="hidden" name="sort_by" value="{{ collection.sort_by }}">
+                  {%- endif -%}
+                </form>
+                {%- if price_active -%}
+                  <a href="{{ price_filter.url_to_remove }}" class="col-dropdown__clear">Clear</a>
+                {%- endif -%}
+              </div>
+            </div>
+          {%- endif -%}
+
+          {%- comment -%}
+            Wood Type is rendered only when the custom.wood_type metafield filter is
+            enabled in Shopify Search & Discovery. A client-side fallback would only
+            filter the current pagination page and would produce incomplete results.
+          {%- endcomment -%}
+          {%- if wood_native != blank -%}
+            <div
+              class="col-dropdown col-dropdown--left col-toolbar__facet{% if wood_native.active_values.size > 0 %} has-active{% endif %}"
+              data-dropdown
+            >
+              <button
+                type="button"
+                class="col-dropdown__trigger"
+                data-dropdown-toggle
+                aria-expanded="false"
+                aria-haspopup="true"
+              >
+                <span>Wood Type</span>
+                {{ col_caret }}
+              </button>
+              <div class="col-dropdown__menu">
+                {%- for value in wood_native.values -%}
+                  <a
+                    href="{% if value.active %}{{ value.url_to_remove }}{% else %}{{ value.url_to_add }}{% endif %}"
+                    class="col-dropdown__option{% if value.active %} is-active{% endif %}"
+                  >
+                    <input
+                      type="checkbox"
+                      class="visually-hidden"
+                      {% if value.active %}
+                        checked
+                      {% endif %}
+                      tabindex="-1"
+                      aria-hidden="true"
+                    >
+                    {{ col_check }}
+                    <span class="col-dropdown__option-label">{{ value.label | escape }}</span>
+                    <span class="col-dropdown__option-count">({{ value.count }})</span>
+                  </a>
+                {%- endfor -%}
+                {%- if wood_native.active_values.size > 0 -%}
+                  <a href="{{ wood_native.url_to_remove }}" class="col-dropdown__clear">Clear</a>
+                {%- endif -%}
+              </div>
+            </div>
+          {%- endif -%}
         </div>
       </div>
-      <div class="col-toolbar__count">
-        {{ collection.products_count }} {{ collection.products_count | pluralize: 'item', 'items' }}
+
+      <div class="col-toolbar__right">
+        {% liquid
+          assign sort_by = collection.sort_by | default: collection.default_sort_by
+          assign current_sort_option = collection.sort_options | find: 'value', sort_by
+          assign current_sort_label = current_sort_option.name | default: 'Featured'
+          if sort_by == 'manual'
+            assign current_sort_label = 'Featured'
+          endif
+        %}
+        <div class="col-dropdown col-dropdown--right col-toolbar__sort" data-dropdown>
+          <button
+            type="button"
+            class="col-dropdown__trigger"
+            data-dropdown-toggle
+            aria-expanded="false"
+            aria-haspopup="true"
+          >
+            <span class="col-toolbar__sort-label">Sort by:</span>
+            <span class="col-toolbar__sort-value">{{ current_sort_label }}</span>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+          <div class="col-dropdown__menu">
+            <button
+              type="button"
+              class="col-dropdown__option{% if sort_by == 'manual' %} is-active{% endif %}"
+              data-sort-value="manual"
+            >
+              <span class="col-dropdown__option-label">Featured</span>
+            </button>
+            <button
+              type="button"
+              class="col-dropdown__option{% if sort_by == 'best-selling' %} is-active{% endif %}"
+              data-sort-value="best-selling"
+            >
+              <span class="col-dropdown__option-label">Best Selling</span>
+            </button>
+            <button
+              type="button"
+              class="col-dropdown__option{% if sort_by == 'price-ascending' %} is-active{% endif %}"
+              data-sort-value="price-ascending"
+            >
+              <span class="col-dropdown__option-label">Price: Low to High</span>
+            </button>
+            <button
+              type="button"
+              class="col-dropdown__option{% if sort_by == 'price-descending' %} is-active{% endif %}"
+              data-sort-value="price-descending"
+            >
+              <span class="col-dropdown__option-label">Price: High to Low</span>
+            </button>
+            <button
+              type="button"
+              class="col-dropdown__option{% if sort_by == 'created-descending' %} is-active{% endif %}"
+              data-sort-value="created-descending"
+            >
+              <span class="col-dropdown__option-label">Newest</span>
+            </button>
+          </div>
+        </div>
+        <div class="col-toolbar__count">
+          {{ collection.products_count }}
+          {{ collection.products_count | pluralize: 'item', 'items' }}
+        </div>
       </div>
     </div>
-  </div>
   {%- endunless -%}
 
   {%- if collection_is_empty -%}
@@ -364,236 +365,244 @@
       {%- endif -%}
     </div>
   {%- else -%}
-  <div class="col-grid-wrap">
-    {% paginate collection.products by per_page %}
-      {% if collection.products.size == 0 %}
-        <p class="col-empty">No products match the selected filters.</p>
-      {% else %}
-        <div class="col-grid">
-          {% for product in collection.products %}
-            {% liquid
-              assign artist = ''
-              assign author = product.metafields.custom.author_info.value
-              if author != blank and author.author_name.value != blank
-                assign artist = author.author_name.value
-              elsif product.vendor != blank
-                assign artist = product.vendor
-              endif
-
-              assign material = product.metafields.custom.product_material
-              assign ptype = product.type
-
-              # Flag products in the "new-arrivals" collection for the "New" badge.
-              assign is_new = false
-              for coll in product.collections
-                if coll.handle == 'new-arrivals'
-                  assign is_new = true
-                  break
+    <div class="col-grid-wrap">
+      {% paginate collection.products by per_page %}
+        {% if collection.products.size == 0 %}
+          <p class="col-empty">No products match the selected filters.</p>
+        {% else %}
+          <div class="col-grid">
+            {% for product in collection.products %}
+              {% liquid
+                assign artist = ''
+                assign author = product.metafields.custom.author_info.value
+                if author != blank and author.author_name.value != blank
+                  assign artist = author.author_name.value
+                elsif product.vendor != blank
+                  assign artist = product.vendor
                 endif
-              endfor
-            %}
-            {% assign card_variant = product.selected_or_first_available_variant | default: product.variants.first %}
-            <article class="pcard">
-              <div class="pcard__media-wrap">
-                <a
-                  class="pcard__media"
-                  href="{{ product.url }}"
-                  aria-label="{{ product.title | escape }}"
-                  data-hover-gallery
-                >
-                  {% if product.media.size > 0 %}
-                    {% assign img_count = 0 %}
-                    {% for media in product.media %}
-                      {% if media.media_type == 'image' %}
-                        {% assign img_class = 'pcard__image' %}
-                        {% if img_count == 0 %}{% assign img_class = 'pcard__image is-active' %}{% endif %}
-                        {%- comment -%}
-                          Fallback alt to the product title when the media has no alt. Compute it in a
-                          variable: chaining `| default:` after image_tag applies to the <img> string
-                          (never blank), so the fallback never fired. See doc/SEO-diagnose.md #8.
-                        {%- endcomment -%}
-                        {% assign card_alt = media.alt | default: product.title %}
-                        {{
-                          media.preview_image
-                          | image_url: width: 720
-                          | image_tag:
-                            class: img_class,
-                            loading: 'lazy',
-                            widths: '280, 420, 560, 720',
-                            sizes: '(min-width: 1024px) 24vw, (min-width: 720px) 33vw, 90vw',
-                            alt: card_alt
-                        }}
-                        {% assign img_count = img_count | plus: 1 %}
-                        {% if img_count >= 5 %}{% break %}{% endif %}
-                      {% endif %}
-                    {% endfor %}
-                  {% else %}
-                    {{ 'product-1' | placeholder_svg_tag: 'pcard__image is-active placeholder-svg' }}
-                  {% endif %}
-                </a>
 
-                <button
-                  type="button"
-                  class="pcard__add"
-                  data-add-to-cart
-                  data-variant-id="{{ card_variant.id }}"
-                  aria-label="Add {{ product.title | escape }} to cart"
-                  {% unless product.available %}
-                    disabled aria-disabled="true"
-                  {% endunless %}
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    fill="currentColor"
-                    class="bi bi-cart-plus-fill"
-                    viewBox="0 0 16 16"
-                    aria-hidden="true"
+                assign material = product.metafields.custom.product_material
+                assign ptype = product.type
+
+                # Flag products in the "new-arrivals" collection for the "New" badge.
+                assign is_new = false
+                for coll in product.collections
+                  if coll.handle == 'new-arrivals'
+                    assign is_new = true
+                    break
+                  endif
+                endfor
+              %}
+              {% assign card_variant = product.selected_or_first_available_variant | default: product.variants.first %}
+              <article class="pcard">
+                <div class="pcard__media-wrap">
+                  <a
+                    class="pcard__media"
+                    href="{{ product.url }}"
+                    aria-label="{{ product.title | escape }}"
+                    data-hover-gallery
                   >
-                    <path d="M.5 1a.5.5 0 0 0 0 1h1.11l.401 1.607 1.498 7.985A.5.5 0 0 0 4 12h1a2 2 0 1 0 0 4 2 2 0 0 0 0-4h7a2 2 0 1 0 0 4 2 2 0 0 0 0-4h1a.5.5 0 0 0 .491-.408l1.5-8A.5.5 0 0 0 14.5 3H2.89l-.405-1.621A.5.5 0 0 0 2 1zM6 14a1 1 0 1 1-2 0 1 1 0 0 1 2 0m7 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0M9 5.5V7h1.5a.5.5 0 0 1 0 1H9v1.5a.5.5 0 0 1-1 0V8H6.5a.5.5 0 0 1 0-1H8V5.5a.5.5 0 0 1 1 0"/>
-                  </svg>
-                </button>
-
-                {%- if is_new -%}
-                  <span class="pcard__new">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 36 36">
-                      <path d="M0 0h36v36H0z" fill="none" />
-                      <path fill="currentColor" d="m34.11 24.49l-3.92-6.62l3.88-6.35a1 1 0 0 0-.85-1.52H2a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h31.25a1 1 0 0 0 .86-1.51m-23.6-3.31H9.39l-3.26-4.34v4.35H5V15h1.13l3.27 4.35V15h1.12ZM16.84 16h-3.53v1.49h3.2v1h-3.2v1.61h3.53v1h-4.66V15h4.65Zm8.29 5.16H24l-1.55-4.59l-1.55 4.61h-1.12l-2-6.18H19l1.32 4.43L21.84 15h1.22l1.46 4.43L25.85 15h1.23Z" class="clr-i-solid clr-i-solid-path-1" />
-                      <path fill="none" d="M0 0h36v36H0z" />
-                    </svg>
-                    <span class="pcard__new-text">New</span>
-                  </span>
-                {%- endif -%}
-              </div>
-
-              <div class="pcard__info">
-                {% if ptype != blank %}
-                  <span class="pcard__pill">{{ ptype | escape }}</span>
-                {% endif %}
-
-                <h2 class="pcard__title">
-                  <a class="pcard__title-link" href="{{ product.url }}">
-                    {{- product.title | split: ',' | first | split: ' - ' | first | strip | escape -}}
-                  </a>
-                </h2>
-
-                <hr class="pcard__divider">
-
-                {% if artist != blank %}
-                  <p class="pcard__artist">Crafted By {{ artist | escape }}</p>
-                {% endif %}
-
-                {%- comment -%}
-                  Judge.me star rating from the product's judgeme.badge metafield (server-rendered).
-                  Hidden by CSS for products with no reviews.
-                {%- endcomment -%}
-                {%- if product.metafields.judgeme.badge != blank -%}
-                  <div class="pcard__rating">
-                    {{ product.metafields.judgeme.badge }}
-                  </div>
-                {%- endif -%}
-
-                <p class="pcard__price">
-                  <span style="font-weight: var(--font-weight-light);">From</span> {{ product.price | money }}
-                </p>
-              </div>
-            </article>
-          {% endfor %}
-        </div>
-
-        {% if paginate.pages > 1 %}
-          <nav class="col-pagination" role="navigation" aria-label="Pagination">
-            <div class="col-pagination__inner">
-              {% if paginate.previous %}
-                <a href="{{ paginate.previous.url }}" class="col-pagination__prev" aria-label="Previous page">
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    aria-hidden="true"
-                  >
-                    <polyline points="15 18 9 12 15 6"></polyline>
-                  </svg>
-                  <span>Previous</span>
-                </a>
-              {% else %}
-                <span class="col-pagination__prev is-disabled">
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    aria-hidden="true"
-                  >
-                    <polyline points="15 18 9 12 15 6"></polyline>
-                  </svg>
-                  <span>Previous</span>
-                </span>
-              {% endif %}
-
-              <div class="col-pagination__sep"></div>
-
-              <div class="col-pagination__numbers">
-                {% for part in paginate.parts %}
-                  {% if part.is_link %}
-                    <a href="{{ part.url }}" class="col-pagination__num" aria-label="Page {{ part.title }}">
-                      {{- part.title -}}
-                    </a>
-                  {% else %}
-                    {% if part.title == paginate.current_page %}
-                      <span class="col-pagination__num is-current" aria-current="page">{{ part.title }}</span>
+                    {% if product.media.size > 0 %}
+                      {% assign img_count = 0 %}
+                      {% for media in product.media %}
+                        {% if media.media_type == 'image' %}
+                          {% assign img_class = 'pcard__image' %}
+                          {% if img_count == 0 %}{% assign img_class = 'pcard__image is-active' %}{% endif %}
+                          {%- comment -%}
+                            Fallback alt to the product title when the media has no alt. Compute it in a
+                            variable: chaining `| default:` after image_tag applies to the <img> string
+                            (never blank), so the fallback never fired. See doc/SEO-diagnose.md #8.
+                          {%- endcomment -%}
+                          {% assign card_alt = media.alt | default: product.title %}
+                          {{
+                            media.preview_image
+                            | image_url: width: 720
+                            | image_tag:
+                              class: img_class,
+                              loading: 'lazy',
+                              widths: '280, 420, 560, 720',
+                              sizes: '(min-width: 1024px) 24vw, (min-width: 720px) 33vw, 90vw',
+                              alt: card_alt
+                          }}
+                          {% assign img_count = img_count | plus: 1 %}
+                          {% if img_count >= 5 %}{% break %}{% endif %}
+                        {% endif %}
+                      {% endfor %}
                     {% else %}
-                      <span class="col-pagination__num is-deco">{{ part.title }}</span>
+                      {{ 'product-1' | placeholder_svg_tag: 'pcard__image is-active placeholder-svg' }}
                     {% endif %}
+                  </a>
+
+                  <button
+                    type="button"
+                    class="pcard__add"
+                    data-add-to-cart
+                    data-variant-id="{{ card_variant.id }}"
+                    aria-label="Add {{ product.title | escape }} to cart"
+                    {% unless product.available %}
+                      disabled aria-disabled="true"
+                    {% endunless %}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      fill="currentColor"
+                      class="bi bi-cart-plus-fill"
+                      viewBox="0 0 16 16"
+                      aria-hidden="true"
+                    >
+                      <path d="M.5 1a.5.5 0 0 0 0 1h1.11l.401 1.607 1.498 7.985A.5.5 0 0 0 4 12h1a2 2 0 1 0 0 4 2 2 0 0 0 0-4h7a2 2 0 1 0 0 4 2 2 0 0 0 0-4h1a.5.5 0 0 0 .491-.408l1.5-8A.5.5 0 0 0 14.5 3H2.89l-.405-1.621A.5.5 0 0 0 2 1zM6 14a1 1 0 1 1-2 0 1 1 0 0 1 2 0m7 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0M9 5.5V7h1.5a.5.5 0 0 1 0 1H9v1.5a.5.5 0 0 1-1 0V8H6.5a.5.5 0 0 1 0-1H8V5.5a.5.5 0 0 1 1 0"/>
+                    </svg>
+                  </button>
+
+                  {%- if is_new -%}
+                    <span class="pcard__new">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 36 36">
+                        <path d="M0 0h36v36H0z" fill="none" />
+                        <path fill="currentColor" d="m34.11 24.49l-3.92-6.62l3.88-6.35a1 1 0 0 0-.85-1.52H2a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h31.25a1 1 0 0 0 .86-1.51m-23.6-3.31H9.39l-3.26-4.34v4.35H5V15h1.13l3.27 4.35V15h1.12ZM16.84 16h-3.53v1.49h3.2v1h-3.2v1.61h3.53v1h-4.66V15h4.65Zm8.29 5.16H24l-1.55-4.59l-1.55 4.61h-1.12l-2-6.18H19l1.32 4.43L21.84 15h1.22l1.46 4.43L25.85 15h1.23Z" class="clr-i-solid clr-i-solid-path-1" />
+                        <path fill="none" d="M0 0h36v36H0z" />
+                      </svg>
+                      <span class="pcard__new-text">New</span>
+                    </span>
+                  {%- endif -%}
+                </div>
+
+                <div class="pcard__info">
+                  {% if ptype != blank %}
+                    <span class="pcard__pill">{{ ptype | escape }}</span>
                   {% endif %}
-                {% endfor %}
+
+                  <h2 class="pcard__title">
+                    <a class="pcard__title-link" href="{{ product.url }}">
+                      {{- product.title | split: ',' | first | split: ' - ' | first | strip | escape -}}
+                    </a>
+                  </h2>
+
+                  <hr class="pcard__divider">
+
+                  {% if artist != blank %}
+                    <p class="pcard__artist">Crafted By {{ artist | escape }}</p>
+                  {% endif %}
+
+                  {%- comment -%}
+                    Judge.me star rating from the product's judgeme.badge metafield (server-rendered).
+                    Hidden by CSS for products with no reviews.
+                  {%- endcomment -%}
+                  {%- if product.metafields.judgeme.badge != blank -%}
+                    <div class="pcard__rating">
+                      {{ product.metafields.judgeme.badge }}
+                    </div>
+                  {%- endif -%}
+
+                  <p class="pcard__price">
+                    <span style="font-weight: var(--font-weight-light);">From</span> {{ product.price | money }}
+                  </p>
+
+                  <span class="pcard__freeshipping">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="1.2em" height="1.2em" viewBox="0 0 24 24">
+                      <path d="M0 0h24v24H0z" fill="none" />
+                      <path fill="currentColor" d="M18 8h-2V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10h2a3 3 0 1 0 6 0h4a3 3 0 1 0 6 0h2v-5zM7 18.5a1.5 1.5 0 1 1 .001-3.001A1.5 1.5 0 0 1 7 18.5M4 14V7h10v7zm13 4.5a1.5 1.5 0 1 1 .001-3.001A1.5 1.5 0 0 1 17 18.5" />
+                    </svg>
+                    <span class="pcard__freeshipping-text">Free Shipping</span>
+                  </span>
+                </div>
+              </article>
+            {% endfor %}
+          </div>
+
+          {% if paginate.pages > 1 %}
+            <nav class="col-pagination" role="navigation" aria-label="Pagination">
+              <div class="col-pagination__inner">
+                {% if paginate.previous %}
+                  <a href="{{ paginate.previous.url }}" class="col-pagination__prev" aria-label="Previous page">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                    <span>Previous</span>
+                  </a>
+                {% else %}
+                  <span class="col-pagination__prev is-disabled">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                    <span>Previous</span>
+                  </span>
+                {% endif %}
+
+                <div class="col-pagination__sep"></div>
+
+                <div class="col-pagination__numbers">
+                  {% for part in paginate.parts %}
+                    {% if part.is_link %}
+                      <a href="{{ part.url }}" class="col-pagination__num" aria-label="Page {{ part.title }}">
+                        {{- part.title -}}
+                      </a>
+                    {% else %}
+                      {% if part.title == paginate.current_page %}
+                        <span class="col-pagination__num is-current" aria-current="page">{{ part.title }}</span>
+                      {% else %}
+                        <span class="col-pagination__num is-deco">{{ part.title }}</span>
+                      {% endif %}
+                    {% endif %}
+                  {% endfor %}
+                </div>
+
+                <div class="col-pagination__sep"></div>
+
+                {% if paginate.next %}
+                  <a href="{{ paginate.next.url }}" class="col-pagination__next" aria-label="Next page">
+                    <span>Next</span>
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                  </a>
+                {% else %}
+                  <span class="col-pagination__next is-disabled">
+                    <span>Next</span>
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                  </span>
+                {% endif %}
               </div>
-
-              <div class="col-pagination__sep"></div>
-
-              {% if paginate.next %}
-                <a href="{{ paginate.next.url }}" class="col-pagination__next" aria-label="Next page">
-                  <span>Next</span>
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    aria-hidden="true"
-                  >
-                    <polyline points="9 18 15 12 9 6"></polyline>
-                  </svg>
-                </a>
-              {% else %}
-                <span class="col-pagination__next is-disabled">
-                  <span>Next</span>
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    aria-hidden="true"
-                  >
-                    <polyline points="9 18 15 12 9 6"></polyline>
-                  </svg>
-                </span>
-              {% endif %}
-            </div>
-          </nav>
+            </nav>
+          {% endif %}
         {% endif %}
-      {% endif %}
-    {% endpaginate %}
-  </div>
+      {% endpaginate %}
+    </div>
   {%- endif -%}
 </section>
 
@@ -897,7 +906,7 @@
   }
   .col-grid {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     column-gap: var(--sp-5);
     row-gap: var(--sp-7);
   }
@@ -1190,6 +1199,7 @@
     display: flex;
     flex-direction: column;
     padding: var(--sp-5) var(--sp-2) var(--sp-2);
+    position: relative;
   }
   .pcard__pill {
     align-self: flex-start;
@@ -1254,6 +1264,22 @@
     font-size: var(--font-size-body-lg);
     font-weight: var(--font-weight-semibold);
     color: var(--text-primary);
+  }
+
+  .pcard__freeshipping {
+    position: absolute;
+    bottom: var(--sp-2);
+    right: var(--sp-1);
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: 2px var(--sp-3);
+    border-radius: var(--radius-full);
+    background-color: #f8e9cb;
+  }
+  .pcard__freeshipping-text {
+    font-size: var(--font-size-body-sm);
   }
 
   .col-pagination {
@@ -1646,7 +1672,6 @@
           window.location.search = params.toString();
         });
       });
-
     }
 
     if (document.readyState === 'loading') {
@@ -1663,11 +1688,36 @@
   "settings": [
     { "type": "header", "content": "Empty collection state" },
     { "type": "text", "id": "empty_heading", "label": "Heading", "default": "This collection is being curated." },
-    { "type": "textarea", "id": "empty_text", "label": "Text", "default": "We're thoughtfully selecting exceptional pieces for this collection.\nExplore our other handcrafted designs or connect with our team for a bespoke creation." },
-    { "type": "text", "id": "empty_primary_label", "label": "Primary button label", "default": "Explore All Collections" },
-    { "type": "text", "id": "empty_secondary_label", "label": "Secondary button label", "default": "Book a Design Consultation" },
-    { "type": "url", "id": "consultation_url", "label": "Consultation page", "info": "Defaults to the customization page." },
-    { "type": "text", "id": "empty_other_label", "label": "Other collections label", "default": "Explore Other Collections" }
+    {
+      "type": "textarea",
+      "id": "empty_text",
+      "label": "Text",
+      "default": "We're thoughtfully selecting exceptional pieces for this collection.\nExplore our other handcrafted designs or connect with our team for a bespoke creation."
+    },
+    {
+      "type": "text",
+      "id": "empty_primary_label",
+      "label": "Primary button label",
+      "default": "Explore All Collections"
+    },
+    {
+      "type": "text",
+      "id": "empty_secondary_label",
+      "label": "Secondary button label",
+      "default": "Book a Design Consultation"
+    },
+    {
+      "type": "url",
+      "id": "consultation_url",
+      "label": "Consultation page",
+      "info": "Defaults to the customization page."
+    },
+    {
+      "type": "text",
+      "id": "empty_other_label",
+      "label": "Other collections label",
+      "default": "Explore Other Collections"
+    }
   ]
 }
 {% endschema %}

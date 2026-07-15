@@ -22,6 +22,7 @@
         return;
       }
 
+      rooms[0].classList.add('showroom-room--is-visible');
       showroomPage.classList.add('showroom-page--reveal-ready');
 
       var observer = new IntersectionObserver(
@@ -44,10 +45,6 @@
       rooms.slice(1).forEach(function (room) {
         observer.observe(room);
       });
-
-      window.setTimeout(function () {
-        rooms[0].classList.add('showroom-room--is-visible');
-      }, 180);
     });
   }
 
