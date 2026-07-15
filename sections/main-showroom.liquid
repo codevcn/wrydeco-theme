@@ -6,32 +6,18 @@
   assign room_count = 0
 -%}
 
-<style>
-  #shopify-section-{{ section.id }} {
-    --sp-0: 0px;
-    --sp-1: 4px;
-    --sp-2: 8px;
-    --sp-3: 12px;
-    --sp-4: 16px;
-    --sp-5: 20px;
-    --sp-6: 24px;
-    --sp-7: 28px;
-    --sp-8: 32px;
-    --sp-9: 36px;
-    --sp-10: 40px;
-    --sp-11: 44px;
-    --sp-12: 48px;
+<section class="showroom-intro" aria-labelledby="ShowroomTitle-{{ section.id }}">
+  <p class="showroom-intro__eyebrow">Curated by Room</p>
+  <h1 class="showroom-intro__title" id="ShowroomTitle-{{ section.id }}">
+    {{ page.title | default: 'Showroom' | escape }}
+  </h1>
+  <span class="showroom-intro__rule" aria-hidden="true"></span>
+  <p class="showroom-intro__copy">
+    <span class="showroom-intro__copy-begin-text">Step inside our collection of craftsmanship and calm. </span>Explore thoughtfully curated spaces designed to inspire and made to last for generations.
+  </p>
+</section>
 
-    --layout-padding-mobile: var(--sp-4);
-    --layout-padding: var(--sp-6);
-  }
-</style>
-
-<h1 class="showroom-page__title" id="ShowroomTitle-{{ section.id }}">
-  {{ page.title | default: 'Showroom' | escape }}
-</h1>
-
-<section class="showroom-page" id="ShowroomPage-{{ section.id }}" aria-labelledby="ShowroomTitle-{{ section.id }}">
+<section class="showroom-page" id="ShowroomPage-{{ section.id }}" aria-label="Showroom rooms">
   {%- for entry in showroom_entries -%}
     {%- liquid
       assign collection_handle = entry.collection_handle.value | default: entry.collection_handle | strip
@@ -119,17 +105,82 @@
     background-color: var(--color-cream);
   }
 
-  .showroom-page__title {
+  .showroom-intro {
+    align-items: center;
+    background:
+      linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--color-milk) 70%, var(--color-cream)) 0%,
+        var(--color-cream) 100%
+      );
     color: var(--color-earth-brown);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: calc(var(--sp-10) + var(--sp-7)) var(--layout-padding-desktop) var(--sp-7);
     text-align: center;
-    margin-block-start: 128px;
-    margin-block-end: var(--sp-12);
+  }
+
+  .showroom-intro__eyebrow {
+    color: var(--color-clay);
+    font-family: var(--font-body);
+    font-size: clamp(var(--font-size-body-md), 1vw, var(--font-size-display-sm));
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--letter-spacing-normal);
+    line-height: var(--line-height-tight);
+    margin: var(--sp-0) var(--sp-0) var(--sp-4);
+    text-transform: uppercase;
+    text-shadow: 0 var(--border-width) var(--sp-1) color-mix(in srgb, var(--color-earth-brown) 28%, transparent);
+  }
+
+  .showroom-intro__title {
+    color: var(--color-earth-brown);
+    font-family: var(--font-display-light);
+    font-size: clamp(var(--font-size-display-xl), 3vw, calc(var(--font-size-display-2xl) * 2.8));
+    font-weight: var(--font-weight-light);
+    letter-spacing: var(--letter-spacing-normal);
+    line-height: var(--line-height-display);
+    margin: var(--sp-0);
+    text-shadow:
+      0 var(--border-width) var(--sp-1) color-mix(in srgb, var(--color-milk) 88%, transparent),
+      0 var(--sp-1) var(--sp-2) color-mix(in srgb, var(--color-ebony) 18%, transparent);
+  }
+
+  .showroom-intro__rule {
+    background: var(--color-clay);
+    block-size: calc(var(--border-width) * 2);
+    display: block;
+    inline-size: min(36vw, calc(var(--sp-12) * 4));
+    margin-block: var(--sp-5) var(--sp-4);
+    position: relative;
+  }
+
+  .showroom-intro__rule::after {
+    background: var(--color-clay);
+    block-size: var(--sp-3);
+    border: var(--border-width) solid color-mix(in srgb, var(--color-earth-brown) 48%, var(--color-cream));
+    border-radius: var(--radius-full);
+    content: '';
+    inline-size: var(--sp-3);
+    inset-block-start: 50%;
+    inset-inline-end: calc(-1 * var(--sp-2));
+    position: absolute;
+    transform: translateY(-50%);
+  }
+
+  .showroom-intro__copy {
+    color: var(--text-secondary);
+    font-family: var(--font-body);
+    font-size: clamp(var(--font-size-body-xl), 1vw, var(--font-size-body-3xl));
+    line-height: var(--line-height-generous);
+    margin: var(--sp-0);
+    max-inline-size: calc(var(--sp-12) * 6);
   }
 
   .showroom-page {
     color: var(--color-milk);
     overflow: hidden;
-    background-color: #222222;
+    background-color: var(--color-ebony);
   }
 
   .showroom-room {
@@ -140,6 +191,9 @@
     min-block-size: 100svh;
     overflow: hidden;
     position: relative;
+  }
+  .showroom-room:first-of-type {
+    border-top: 1px solid var(--color-earth-brown);
   }
 
   .showroom-room__media,
@@ -228,8 +282,8 @@
     margin: var(--sp-5) auto var(--sp-0);
     overflow: hidden;
     text-shadow: 0 var(--border-width) var(--sp-5) color-mix(in srgb, var(--color-ebony) 58%, transparent);
-    width: max-content;
-    max-width: 70%;
+    inline-size: min(70%, calc(var(--sp-12) + var(--sp-12) + var(--sp-12) + var(--sp-12) + var(--sp-12) + var(--sp-12)));
+    max-inline-size: 100%;
   }
 
   .showroom-room__button {
@@ -245,7 +299,7 @@
     letter-spacing: var(--letter-spacing-relaxed);
     line-height: var(--line-height-snug);
     margin-block-start: var(--sp-6);
-    min-block-size: var(--sp-12);
+    min-block-size: var(--sp-8);
     min-inline-size: calc(var(--sp-12) * 3);
     padding-inline: var(--sp-8);
     text-decoration: none;
@@ -282,6 +336,38 @@
   }
 
   @media screen and (max-width: 749px) {
+    .showroom-intro {
+      padding: calc(var(--sp-10) + var(--sp-4)) var(--layout-padding-mobile) var(--sp-5);
+    }
+
+    .showroom-intro__eyebrow {
+      font-size: var(--font-size-caption);
+      margin-block-end: var(--sp-4);
+    }
+
+    .showroom-intro__title {
+      font-size: clamp(var(--font-size-body-xl), 10vw, var(--font-size-body-6xl));
+    }
+
+    .showroom-intro__rule {
+      inline-size: min(62vw, calc(var(--sp-12) * 2));
+      margin-block: var(--sp-3) var(--sp-3);
+    }
+
+    .showroom-intro__copy {
+      font-size: var(--font-size-body-sm);
+      line-height: var(--line-height-relaxed);
+      max-inline-size: calc(var(--sp-12) * 3);
+    }
+    .showroom-intro__copy-begin-text {
+      display: none;
+    }
+
+    .showroom-room {
+      block-size: min(50svh, calc(var(--sp-12) + var(--sp-12) + var(--sp-12) + var(--sp-12) + var(--sp-12) + var(--sp-7)));
+      min-block-size: min(50svh, calc(var(--sp-12) + var(--sp-12) + var(--sp-12) + var(--sp-12) + var(--sp-12) + var(--sp-7)));
+    }
+
     .showroom-room__shade {
       background: linear-gradient(
           180deg,
@@ -300,41 +386,43 @@
     .showroom-room__content {
       inline-size: 100%;
       padding: var(--sp-12) var(--layout-padding-mobile) var(--sp-10);
-      transform: translateY(8svh);
+      transform: none;
     }
 
     .showroom-room__title {
-      font-size: clamp(var(--font-size-display-md), 13vw, var(--font-size-display-xl));
+      font-size: clamp(var(--font-size-display-md), 11vw, var(--font-size-display-xl));
     }
 
     .showroom-room__description {
-      font-size: clamp(var(--font-size-body-xl), 6.4vw, var(--font-size-display-sm));
+      font-size: clamp(var(--font-size-body-lg), 5.6vw, var(--font-size-display-sm));
+      inline-size: min(100%, calc(var(--sp-12) + var(--sp-12) + var(--sp-8)));
       line-height: var(--line-height-relaxed);
-      margin-block-start: var(--sp-6);
-      max-inline-size: calc(var(--sp-12) * 6);
+      margin-block-start: var(--sp-4);
+      max-inline-size: none;
     }
 
     .showroom-room__button {
-      font-size: var(--font-size-body-xl);
-      margin-block-start: var(--sp-8);
-      min-block-size: var(--sp-9);
+      font-size: var(--font-size-body-lg);
+      margin-block-start: var(--sp-5);
+      min-block-size: var(--sp-6-bigger);
       min-inline-size: 0;
       padding-inline: var(--sp-6);
-      width: min(100%, calc(var(--sp-12) * 5));
+      width: fit-content;
     }
   }
 
   @media screen and (max-width: 390px) {
     .showroom-room__title {
-      font-size: clamp(var(--font-size-display-sm), 12vw, var(--font-size-display-lg));
+      font-size: clamp(var(--font-size-display-sm), 6vw, var(--font-size-display-lg));
     }
 
     .showroom-room__description {
-      font-size: var(--font-size-body-xl);
+      font-size: var(--font-size-body-sm);
+      line-height: var(--line-height-tight);
     }
 
     .showroom-room__button {
-      font-size: var(--font-size-body-lg);
+      font-size: var(--font-size-caption);
     }
   }
 
