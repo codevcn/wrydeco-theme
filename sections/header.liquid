@@ -26,7 +26,8 @@
             src="{{ section.settings.logo_asset | file_url }}"
             class="header__heading-logo"
             alt="{{ shop.name | escape }}"
-            height="auto"
+            width="200"
+            height="52"
           >
         {%- else -%}
           <span class="h2">{{ shop.name }}</span>
@@ -34,398 +35,204 @@
       </a>
     </{{ header_heading_tag }}>
 
-    <nav class="header__nav">
+    {%- capture room_nav_data -%}
+      Living Room::Wooden Plant Stands|Boho Wooden Floating Shelves|Modern Wooden Floating Shelves|Rustic Wooden Floating Shelves
+      ||Bedroom::Wooden Bed Frames With Headboards
+      ||Kitchen::
+      ||Home Office::Modern Wooden Bookshelves|Rustic Wooden Bookshelves
+      ||Kid's Room::
+      ||Entryway::
+    {%- endcapture -%}
+    {%- assign room_nav_items = room_nav_data | strip | split: '||' -%}
+
+    <nav class="header__nav" aria-label="Rooms">
       <ul class="header__nav-list">
-        <li class="header__nav-item-has-mega-menu">
-          <a href="{{ routes.collections_url }}" class="header__nav-item">
-            Collections
-            <svg aria-hidden="true" focusable="false" role="presentation" class="icon icon-caret" viewBox="0 0 10 6">
-              <path fill-rule="evenodd" clip-rule="evenodd" d="M9.354.646a.5.5 0 00-.708 0L5 4.293 1.354.646a.5.5 0 00-.708.708l4 4a.5.5 0 00.708 0l4-4a.5.5 0 000-.708z" fill="currentColor">
-            </svg>
-          </a>
-
-          {%- capture mm_ico_tables -%}
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h18"/><path d="M5 8l-1 12"/><path d="M19 8l1 12"/><path d="M9 8v12"/><path d="M15 8v12"/></svg>
-          {%- endcapture -%}
-          {%- capture mm_ico_shelving -%}
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="1"/><path d="M4 9.5h16"/><path d="M4 15h16"/></svg>
-          {%- endcapture -%}
-          {%- capture mm_ico_storage -%}
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M4 12h16"/><path d="M10 7.5h1.5"/><path d="M10 16.5h1.5"/></svg>
-          {%- endcapture -%}
-          {%- capture mm_ico_decor -%}
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3h8"/><path d="M9 3c0 2.5-2.5 3.5-2.5 8A5.5 5.5 0 0 0 12 21a5.5 5.5 0 0 0 5.5-10c0-4.5-2.5-5.5-2.5-8"/></svg>
-          {%- endcapture -%}
-          {%- capture mm_ico_lighting -%}
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3h8l2.5 7h-13z"/><path d="M12 10v8"/><path d="M9 21h6"/><path d="M10 21v-3h4v3"/></svg>
-          {%- endcapture -%}
-          {%- capture mm_ico_plant -%}
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21v-8"/><path d="M12 13c0-3.3-2.2-5.5-5.5-5.5C6.5 10.8 8.7 13 12 13Z"/><path d="M12 14c0-3.3 2.2-5.5 5.5-5.5C17.5 11.8 15.3 14 12 14Z"/><path d="M8.5 21h7"/></svg>
-          {%- endcapture -%}
-          {%- capture mm_ico_wine -%}
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2h4v4l1.4 2.8a3 3 0 0 1 .3 1.3V21a1 1 0 0 1-1 1H9.3a1 1 0 0 1-1-1V10.1a3 3 0 0 1 .3-1.3L10 6z"/><path d="M8.5 13h7"/></svg>
-          {%- endcapture -%}
-          {%- capture mm_ico_pet -%}
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="9" r="1.6"/><circle cx="12" cy="7.2" r="1.6"/><circle cx="17" cy="9" r="1.6"/><path d="M12 12.5c-2.4 0-4.3 1.8-4.3 3.9 0 1.3 1 1.9 2.3 1.9.8 0 1.3-.4 2-.4s1.2.4 2 .4c1.3 0 2.3-.6 2.3-1.9 0-2.1-1.9-3.9-4.3-3.9Z"/></svg>
-          {%- endcapture -%}
-          {%- capture mm_ico_bed -%}
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 18v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5"/><path d="M3 14h18"/><path d="M7 11V9a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v2"/><path d="M3 18v2"/><path d="M21 18v2"/></svg>
-          {%- endcapture -%}
-          {%- capture mm_ico_featured -%}
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594zM20 2v4m2-2h-4"/><circle cx="4" cy="20" r="2"/></svg>
-          {%- endcapture -%}
-          {%- capture mm_chevron -%}
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg>
-          {%- endcapture -%}
-          {%- capture mm_arrow -%}
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="12" x2="20" y2="12"/><polyline points="13 5 20 12 13 19"/></svg>
-          {%- endcapture -%}
-
+        {%- for room_nav_item in room_nav_items -%}
           {%- liquid
-            assign explore_link = routes.all_products_collection_url
+            assign room_nav_parts = room_nav_item | strip | split: '::'
+            assign room_title = room_nav_parts[0] | strip
+            assign room_collections_value = room_nav_parts[1] | strip
+            assign room_collections = room_collections_value | split: '|'
           -%}
-
-          <div class="header__mega-menu" id="MobileMenuDrawer-{{ section.id }}" data-mobile-menu-drawer>
-            <button
-              type="button"
-              class="mobile-menu__overlay"
-              aria-label="Close menu"
-              data-mobile-menu-close
-              tabindex="-1"
-            ></button>
-            <div class="cmega custom-scrollbar">
-              <div class="mobile-menu__bar">
-                <span class="mobile-menu__title">Menu</span>
-                <button type="button" class="mobile-menu__close" aria-label="Close menu" data-mobile-menu-close>
-                  <span aria-hidden="true"></span>
-                </button>
-              </div>
-
-              {%- comment -%} Account — shown only inside the mobile drawer (the header icon is hidden on mobile). {%- endcomment -%}
-              <div class="cmega__account">
-                <p class="cmega__heading">Account</p>
-                {%- if customer -%}
-                  <a class="cmega__account-btn" href="{{ routes.account_url }}">
-                    <span class="cmega__account-btn-icon" aria-hidden="true">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="18"
-                        height="18"
-                        fill="currentColor"
-                        viewBox="0 0 16 16"
-                      >
-                        <path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/>
-                      </svg>
-                    </span>
-                    <span>My account</span>
-                  </a>
-                  <a class="cmega__account-logout" href="{{ routes.account_logout_url }}">Log out</a>
-                {%- else -%}
-                  <a class="cmega__account-btn" href="{{ routes.account_login_url }}" data-mobile-menu-close>
-                    <span class="cmega__account-btn-icon" aria-hidden="true">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="18"
-                        height="18"
-                        fill="currentColor"
-                        viewBox="0 0 16 16"
-                      >
-                        <path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/>
-                      </svg>
-                    </span>
-                    <span>Sign in</span>
-                  </a>
-                  <p class="cmega__account-note">Secure passwordless sign-in — we email you a one-time code.</p>
-                {%- endif -%}
-              </div>
-
-              <div class="cmega__cats">
-                <p class="cmega__heading">Shop by Category</p>
-                <div class="cmega__groups-wrap">
-                  <ul class="cmega__groups">
-                    <li class="cmega__group cmega__group--featured" data-mega-group>
-                      <button type="button" class="cmega__group-head" data-mega-toggle aria-expanded="false">
-                        <span class="cmega__group-icon">{{ mm_ico_featured }}</span>
-                        <span class="cmega__group-text">
-                          <span class="cmega__group-name">Featured Collections</span>
-                          <span class="cmega__group-desc">Signature pieces and new arrivals</span>
-                        </span>
-                        <span class="cmega__group-caret">{{ mm_chevron }}</span>
-                      </button>
-                      <div class="cmega__panel">
-                        <ul class="cmega__collections">
-                          {%- assign cmega_items = 'Signature Pieces, New Arrivals' | split: ', ' -%}
-                          {%- for cmega_item in cmega_items -%}
-                            <li><a href="/collections/{{ cmega_item | handleize }}">{{ cmega_item }}</a></li>
-                          {%- endfor -%}
-                        </ul>
-                      </div>
-                    </li>
-
-                    <li class="cmega__group" data-mega-group>
-                      <button type="button" class="cmega__group-head" data-mega-toggle aria-expanded="false">
-                        <span class="cmega__group-icon">{{ mm_ico_tables }}</span>
-                        <span class="cmega__group-text">
-                          <span class="cmega__group-name">Tables &amp; Surfaces</span>
-                          <span class="cmega__group-desc">Coffee tables, console tables &amp; more</span>
-                        </span>
-                        <span class="cmega__group-caret">{{ mm_chevron }}</span>
-                      </button>
-                      <div class="cmega__panel">
-                        <ul class="cmega__collections">
-                          {%- assign cmega_items = 'Coffee Table (Modern), Coffee Table (Rustic), Console Table, End Table' | split: ', ' -%}
-                          {%- for cmega_item in cmega_items -%}
-                            <li><a href="/collections/{{ cmega_item | handleize }}">{{ cmega_item }}</a></li>
-                          {%- endfor -%}
-                        </ul>
-                      </div>
-                    </li>
-
-                    <li class="cmega__group" data-mega-group>
-                      <button type="button" class="cmega__group-head" data-mega-toggle aria-expanded="false">
-                        <span class="cmega__group-icon">{{ mm_ico_shelving }}</span>
-                        <span class="cmega__group-text">
-                          <span class="cmega__group-name">Shelving &amp; Display</span>
-                          <span class="cmega__group-desc">Bookshelves, shelves &amp; mantels</span>
-                        </span>
-                        <span class="cmega__group-caret">{{ mm_chevron }}</span>
-                      </button>
-                      <div class="cmega__panel">
-                        <ul class="cmega__collections">
-                          {%- assign cmega_items = 'Bookshelf (Modern), Bookshelf (Rustic), Fireplace Mantel Shelf, Floating Shelf (Boho), Floating Shelf (Modern), Floating Shelf (Rustic), Wall Shelf (Gothic), Wall Shelf (Rustic)' | split: ', ' -%}
-                          {%- for cmega_item in cmega_items -%}
-                            <li><a href="/collections/{{ cmega_item | handleize }}">{{ cmega_item }}</a></li>
-                          {%- endfor -%}
-                        </ul>
-                      </div>
-                    </li>
-
-                    <li class="cmega__group" data-mega-group>
-                      <button type="button" class="cmega__group-head" data-mega-toggle aria-expanded="false">
-                        <span class="cmega__group-icon">{{ mm_ico_storage }}</span>
-                        <span class="cmega__group-text">
-                          <span class="cmega__group-name">Storage &amp; Organization</span>
-                          <span class="cmega__group-desc">Cabinets, coat racks &amp; benches</span>
-                        </span>
-                        <span class="cmega__group-caret">{{ mm_chevron }}</span>
-                      </button>
-                      <div class="cmega__panel">
-                        <ul class="cmega__collections">
-                          {%- assign cmega_items = 'Coat Rack, Entryway Shoe Bench Rack, Storage Cabinet, Tree Coat Rack' | split: ', ' -%}
-                          {%- for cmega_item in cmega_items -%}
-                            <li><a href="/collections/{{ cmega_item | handleize }}">{{ cmega_item }}</a></li>
-                          {%- endfor -%}
-                        </ul>
-                      </div>
-                    </li>
-
-                    <li class="cmega__group" data-mega-group>
-                      <button type="button" class="cmega__group-head" data-mega-toggle aria-expanded="false">
-                        <span class="cmega__group-icon">{{ mm_ico_decor }}</span>
-                        <span class="cmega__group-text">
-                          <span class="cmega__group-name">Decorative Wood Accents</span>
-                          <span class="cmega__group-desc">Sculptures, bowls &amp; organizers</span>
-                        </span>
-                        <span class="cmega__group-caret">{{ mm_chevron }}</span>
-                      </button>
-                      <div class="cmega__panel">
-                        <ul class="cmega__collections">
-                          {%- assign cmega_items = 'Jewelry Tree Organizer Stand, Wall Decorative Sculpture, Wooden Floor Sculpture, Wooden Fruit Bowl' | split: ', ' -%}
-                          {%- for cmega_item in cmega_items -%}
-                            <li><a href="/collections/{{ cmega_item | handleize }}">{{ cmega_item }}</a></li>
-                          {%- endfor -%}
-                        </ul>
-                      </div>
-                    </li>
-
-                  </ul>
-
-                  <ul class="cmega__groups">
-                    <li class="cmega__group" data-mega-group>
-                      <button type="button" class="cmega__group-head" data-mega-toggle aria-expanded="false">
-                        <span class="cmega__group-icon">{{ mm_ico_lighting }}</span>
-                        <span class="cmega__group-text">
-                          <span class="cmega__group-name">Lighting &amp; Bases</span>
-                          <span class="cmega__group-desc">Wooden lamps &amp; floor lamp bases</span>
-                        </span>
-                        <span class="cmega__group-caret">{{ mm_chevron }}</span>
-                      </button>
-                      <div class="cmega__panel">
-                        <ul class="cmega__collections">
-                          {%- assign cmega_items = 'Wood Floor Lamp Base, Wooden Lamp Base' | split: ', ' -%}
-                          {%- for cmega_item in cmega_items -%}
-                            <li><a href="/collections/{{ cmega_item | handleize }}">{{ cmega_item }}</a></li>
-                          {%- endfor -%}
-                        </ul>
-                      </div>
-                    </li>
-
-                    <li class="cmega__group" data-mega-group>
-                      <button type="button" class="cmega__group-head" data-mega-toggle aria-expanded="false">
-                        <span class="cmega__group-icon">{{ mm_ico_plant }}</span>
-                        <span class="cmega__group-text">
-                          <span class="cmega__group-name">Plant &amp; Object Stands</span>
-                          <span class="cmega__group-desc">Plant stands &amp; display pieces</span>
-                        </span>
-                        <span class="cmega__group-caret">{{ mm_chevron }}</span>
-                      </button>
-                      <div class="cmega__panel">
-                        <ul class="cmega__collections">
-                          {%- assign cmega_items = 'Wooden Plant Stand' | split: ', ' -%}
-                          {%- for cmega_item in cmega_items -%}
-                            <li><a href="/collections/{{ cmega_item | handleize }}">{{ cmega_item }}</a></li>
-                          {%- endfor -%}
-                        </ul>
-                      </div>
-                    </li>
-
-                    <li class="cmega__group" data-mega-group>
-                      <button type="button" class="cmega__group-head" data-mega-toggle aria-expanded="false">
-                        <span class="cmega__group-icon">{{ mm_ico_wine }}</span>
-                        <span class="cmega__group-text">
-                          <span class="cmega__group-name">Wine &amp; Bar Display</span>
-                          <span class="cmega__group-desc">Wine racks &amp; bar display</span>
-                        </span>
-                        <span class="cmega__group-caret">{{ mm_chevron }}</span>
-                      </button>
-                      <div class="cmega__panel">
-                        <ul class="cmega__collections">
-                          {%- assign cmega_items = 'Rustic Wine Rack, Tree Wine Rack, Wall Mounted Wine Rack' | split: ', ' -%}
-                          {%- for cmega_item in cmega_items -%}
-                            <li><a href="/collections/{{ cmega_item | handleize }}">{{ cmega_item }}</a></li>
-                          {%- endfor -%}
-                        </ul>
-                      </div>
-                    </li>
-
-                    <li class="cmega__group" data-mega-group>
-                      <button type="button" class="cmega__group-head" data-mega-toggle aria-expanded="false">
-                        <span class="cmega__group-icon">{{ mm_ico_pet }}</span>
-                        <span class="cmega__group-text">
-                          <span class="cmega__group-name">Pet Furniture &amp; Stands</span>
-                          <span class="cmega__group-desc">Cat trees, parrot stands &amp; more</span>
-                        </span>
-                        <span class="cmega__group-caret">{{ mm_chevron }}</span>
-                      </button>
-                      <div class="cmega__panel">
-                        <ul class="cmega__collections">
-                          {%- assign cmega_items = 'Cat Tree, Parrot Tree' | split: ', ' -%}
-                          {%- for cmega_item in cmega_items -%}
-                            <li><a href="/collections/{{ cmega_item | handleize }}">{{ cmega_item }}</a></li>
-                          {%- endfor -%}
-                        </ul>
-                      </div>
-                    </li>
-
-                    <li class="cmega__group" data-mega-group>
-                      <button type="button" class="cmega__group-head" data-mega-toggle aria-expanded="false">
-                        <span class="cmega__group-icon">{{ mm_ico_bed }}</span>
-                        <span class="cmega__group-text">
-                          <span class="cmega__group-name">Bedroom Furniture</span>
-                          <span class="cmega__group-desc">Beds, frames &amp; bedside tables</span>
-                        </span>
-                        <span class="cmega__group-caret">{{ mm_chevron }}</span>
-                      </button>
-                      <div class="cmega__panel">
-                        <ul class="cmega__collections">
-                          {%- assign cmega_items = 'Bed, Bed Frame With Headboard, Bedside Table' | split: ', ' -%}
-                          {%- for cmega_item in cmega_items -%}
-                            <li><a href="/collections/{{ cmega_item | handleize }}">{{ cmega_item }}</a></li>
-                          {%- endfor -%}
-                        </ul>
-                      </div>
-                    </li>
-                  </ul>
+          {%- if room_collections_value == blank -%}
+            {%- continue -%}
+          {%- endif -%}
+          <li class="header__nav-item-has-mega-menu">
+            <button type="button" class="header__nav-item" aria-haspopup="true">
+              {{ room_title }}
+              <svg aria-hidden="true" focusable="false" role="presentation" class="icon icon-caret" viewBox="0 0 10 6">
+                <path fill-rule="evenodd" clip-rule="evenodd" d="M9.354.646a.5.5 0 00-.708 0L5 4.293 1.354.646a.5.5 0 00-.708.708l4 4a.5.5 0 00.708 0l4-4a.5.5 0 000-.708z" fill="currentColor">
+              </svg>
+            </button>
+            <div class="header__mega-menu">
+              <div class="cmega cmega--room custom-scrollbar">
+                <div class="cmega__cats">
+                  <p class="cmega__heading">{{ room_title }}</p>
+                  {%- if room_collections_value != blank -%}
+                    <ul class="cmega__collections cmega__collections--room">
+                      {%- for room_collection in room_collections -%}
+                        {%- assign room_collection_title = room_collection | strip -%}
+                        <li>
+                          <a class="cmega__collection-link" href="{{ routes.collections_url }}/{{ room_collection_title | handleize }}">
+                            {{ room_collection_title }}
+                          </a>
+                        </li>
+                      {%- endfor -%}
+                    </ul>
+                  {%- else -%}
+                    <p class="cmega__empty">Coming soon.</p>
+                  {%- endif -%}
                 </div>
               </div>
-
-              {%- comment -%} Country / currency selector — mobile drawer copy. {%- endcomment -%}
-              <div class="cmega__localization">
-                <p class="cmega__heading">{{ 'general.localization.country_label' | t }}</p>
-                {% render 'localization-selector', variant: 'drawer', id: 'mobile-drawer' %}
-              </div>
-
-              {%- comment -%} Primary nav links — mirrors the desktop header nav (hidden on desktop). {%- endcomment -%}
-              <nav class="cmega__nav" aria-label="Main">
-                <ul class="cmega__nav-list">
-                  <li class="cmega__nav-item">
-                    <a class="cmega__nav-link" href="{{ routes.collections_url }}" data-mobile-menu-close>Collections</a>
-                  </li>
-                  <li class="cmega__nav-item">
-                    <a class="cmega__nav-link" href="{{ routes.all_products_collection_url }}" data-mobile-menu-close>Explore All Pieces</a>
-                  </li>
-                  <li class="cmega__nav-item">
-                    <a class="cmega__nav-link" href="/pages/showroom" data-mobile-menu-close>Showroom</a>
-                  </li>
-                  <li class="cmega__nav-item">
-                    <a class="cmega__nav-link" href="/pages/customization" data-mobile-menu-close>Book Consultation</a>
-                  </li>
-                  <li class="cmega__nav-item">
-                    <a
-                      class="cmega__nav-link"
-                      href="{{ pages['faq'].url | default: '/pages/faq' }}?view=faq"
-                      data-mobile-menu-close
-                      >FAQ</a
-                    >
-                  </li>
-                  <li class="cmega__nav-item">
-                    <a
-                      class="cmega__nav-link"
-                      href="{{ pages['about-us'].url | default: '/pages/about-us' }}?view=about-us"
-                      data-mobile-menu-close
-                      >About Us</a
-                    >
-                  </li>
-                  <li class="cmega__nav-item">
-                    <a
-                      class="cmega__nav-link"
-                      href="{{ pages['contact'].url | default: '/pages/contact' }}"
-                      data-mobile-menu-close
-                      >Contact</a
-                    >
-                  </li>
-                </ul>
-              </nav>
-
-              <aside class="cmega__feature">
-                <a class="cmega__feature-link" href="{{ explore_link }}">
-                  <span class="cmega__feature-media">
-                    {%- if section.settings.mega_menu_image != blank -%}
-                      {{
-                        section.settings.mega_menu_image
-                        | image_url: width: 760
-                        | image_tag: class: 'cmega__feature-img', loading: 'lazy', widths: '380, 560, 760', alt: ''
-                      }}
-                    {%- else -%}
-                      <img
-                        class="cmega__feature-img"
-                        src="{{ 'mega-menu-photo.png' | file_url }}"
-                        alt=""
-                        width="760"
-                        height="560"
-                        loading="lazy"
-                      >
-                    {%- endif -%}
-                  </span>
-                  <span class="cmega__feature-body">
-                    <span class="cmega__feature-title">Timeless craftsmanship for every space.</span>
-                    <span class="cmega__feature-cta">
-                      Explore all collections
-                      <span class="cmega__feature-arrow">{{ mm_arrow }}</span>
-                    </span>
-                  </span>
-                </a>
-              </aside>
             </div>
-          </div>
+          </li>
+        {%- endfor -%}
+        <li>
+          <a href="/collections/all" class="header__nav-item">
+            EXPLORE ALL PIECES
+          </a>
         </li>
-        <li><a href="/pages/showroom" class="header__nav-item">Showroom</a></li>
-        <li><a href="{{ routes.all_products_collection_url }}" class="header__nav-item">Explore All Pieces</a></li>
-        <li><a href="{{ pages['faq'].url }}?view=faq" class="header__nav-item">FAQ</a></li>
-        <li><a href="{{ pages['about-us'].url }}?view=about-us" class="header__nav-item">About Us</a></li>
-        <li><a href="{{ pages['contact'].url | default: '/pages/contact' }}" class="header__nav-item">Contact</a></li>
+        <li>
+          <a href="/pages/about-us" class="header__nav-item">
+            ABOUT US
+          </a>
+        </li>
       </ul>
     </nav>
+
+    <div class="header__mega-menu header__mobile-menu" id="MobileMenuDrawer-{{ section.id }}" data-mobile-menu-drawer>
+      <button
+        type="button"
+        class="mobile-menu__overlay"
+        aria-label="Close menu"
+        data-mobile-menu-close
+        tabindex="-1"
+      ></button>
+      <div class="cmega custom-scrollbar">
+        <div class="mobile-menu__bar">
+          <span class="mobile-menu__title">
+            <svg xmlns="http://www.w3.org/2000/svg" width="1.2em" height="1.2em" viewBox="0 0 24 24">
+              <path d="M0 0h24v24H0z" fill="none" />
+              <path fill="currentColor" d="M3 18v-2h18v2zm0-5v-2h18v2zm0-5V6h18v2z" />
+            </svg>
+          </span>
+          <button type="button" class="mobile-menu__close" aria-label="Close menu" data-mobile-menu-close>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+              <path d="M0 0h24v24H0z" fill="none" />
+              <path fill="currentColor" d="M6.4 19L5 17.6l5.6-5.6L5 6.4L6.4 5l5.6 5.6L17.6 5L19 6.4L13.4 12l5.6 5.6l-1.4 1.4l-5.6-5.6z" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="cmega__consultation">
+          <a
+            href="/pages/customization"
+            class="header__consultation-link cmega__consultation-link"
+            data-mobile-menu-close
+          >
+            Book Consultation
+          </a>
+        </div>
+
+        <div class="cmega__account">
+          <p class="cmega__heading">Account</p>
+          {%- if customer -%}
+            <a class="cmega__account-btn" href="{{ routes.account_url }}">
+              <span>My account</span>
+            </a>
+            <a class="cmega__account-logout" href="{{ routes.account_logout_url }}">Log out</a>
+          {%- else -%}
+            <a class="cmega__account-btn" href="{{ routes.account_login_url }}" data-mobile-menu-close>
+              <span>Sign in</span>
+            </a>
+            <p class="cmega__account-note">Secure passwordless sign-in. We email you a one-time code.</p>
+          {%- endif -%}
+        </div>
+
+        <div class="cmega__localization">
+          <p class="cmega__heading">{{ 'general.localization.country_label' | t }}</p>
+          {% render 'localization-selector', variant: 'drawer', id: 'mobile-drawer' %}
+        </div>
+
+        <div class="cmega__cats">
+          <p class="cmega__heading">Shop by Room</p>
+          <div class="cmega__groups-wrap">
+            <ul class="cmega__groups">
+              {%- for room_nav_item in room_nav_items -%}
+                {%- liquid
+                  assign room_nav_parts = room_nav_item | strip | split: '::'
+                  assign room_title = room_nav_parts[0] | strip
+                  assign room_collections_value = room_nav_parts[1] | strip
+                  assign room_collections = room_collections_value | split: '|'
+                -%}
+                {%- if room_collections_value == blank -%}
+                  {%- continue -%}
+                {%- endif -%}
+                <li class="cmega__group" data-mega-group>
+                  <button type="button" class="cmega__group-head" data-mega-toggle aria-expanded="false">
+                    <span class="cmega__group-text">
+                      <span class="cmega__group-name">{{ room_title }}</span>
+                      <span class="cmega__group-desc">
+                        {%- if room_collections_value != blank -%}
+                          {{ room_collections.size }} collections
+                        {%- else -%}
+                          Coming soon
+                        {%- endif -%}
+                      </span>
+                    </span>
+                    <span class="cmega__group-caret" aria-hidden="true">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      >
+                        <polyline points="9 6 15 12 9 18"/>
+                      </svg>
+                    </span>
+                  </button>
+                  <div class="cmega__panel">
+                    {%- if room_collections_value != blank -%}
+                      <ul class="cmega__collections">
+                        {%- for room_collection in room_collections -%}
+                          {%- assign room_collection_title = room_collection | strip -%}
+                          <li>
+                            <a
+                              href="{{ routes.collections_url }}/{{ room_collection_title | handleize }}"
+                              data-mobile-menu-close
+                            >
+                              {{ room_collection_title }}
+                            </a>
+                          </li>
+                        {%- endfor -%}
+                      </ul>
+                    {%- else -%}
+                      <p class="cmega__empty">Coming soon.</p>
+                    {%- endif -%}
+                  </div>
+                </li>
+              {%- endfor -%}
+              <li class="cmega__group">
+                <a href="/collections/all" class="cmega__group-head" style="text-decoration: none;">
+                  <span class="cmega__group-text">
+                    <span class="cmega__group-name">EXPLORE ALL PIECES</span>
+                  </span>
+                </a>
+              </li>
+              <li class="cmega__group">
+                <a href="/pages/about-us" class="cmega__group-head" style="text-decoration: none;">
+                  <span class="cmega__group-text">
+                    <span class="cmega__group-name">ABOUT US</span>
+                  </span>
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="header__right">
@@ -683,7 +490,7 @@
   }
   .header__nav-list li {
     margin: 0;
-    position: static;
+    position: relative;
     padding-block: 8px;
   }
 
@@ -691,6 +498,8 @@
     display: flex;
     align-items: center;
     gap: 6px;
+    border: 0;
+    background: transparent;
     text-decoration: none;
     color: var(--color-earth-brown, #333);
     font-family: var(--font-roboto, sans-serif);
@@ -702,6 +511,7 @@
     padding: 10px 0;
     white-space: nowrap;
     position: relative;
+    cursor: pointer;
   }
 
   .header__nav-item::after {
@@ -733,30 +543,33 @@
   .header__nav-item-has-mega-menu:focus-within .header__mega-menu {
     opacity: 1;
     visibility: visible;
-    transform: translateY(0);
+    transform: translateX(-50%) translateY(0);
   }
 
-  /* Collections popover — anchored to the header so it sits 26.5px from the viewport's left edge */
+  /* Room popovers are anchored to each navigation item. */
   .header__mega-menu {
     position: absolute;
-    top: 80%;
-    left: 26.5px;
+    top: 100%;
+    left: 50%;
     width: fit-content;
-    /* max-width: 1400px; */
     max-width: 900px;
     z-index: 100;
     opacity: 0;
     visibility: hidden;
-    transform: translateY(5px);
+    transform: translateX(-50%) translateY(5px);
     transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s ease;
     font-family: var(--font-body);
   }
 
+  .header__mobile-menu {
+    display: none;
+  }
+
   .mobile-menu__overlay,
   .mobile-menu__bar,
+  .cmega__consultation,
   .cmega__account,
-  .cmega__localization,
-  .cmega__nav {
+  .cmega__localization {
     display: none;
   }
 
@@ -765,19 +578,18 @@
     display: flex;
     width: fit-content;
     max-width: 1180px;
-    max-height: calc(100dvh - 96px);
+    max-height: calc(100dvh - 136px);
     overflow: hidden auto;
     background-color: var(--color-milk);
     border: 1px solid var(--border-light);
-    border-radius: var(--radius-xl);
+    border-radius: var(--radius-md);
     box-shadow: var(--shadow-elevation-3);
+    padding: var(--sp-4) var(--sp-3) var(--sp-2);
   }
 
   /* Category column */
   .cmega__cats {
-    /* flex: 1; */
     min-width: 0;
-    padding: var(--sp-6) var(--sp-6) var(--sp-4);
     height: fit-content;
   }
   .cmega__heading {
@@ -830,19 +642,6 @@
   .cmega__group.is-open > .cmega__group-head {
     background-color: var(--color-cream);
   }
-  .cmega__group-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex: 0 0 auto;
-    width: 30px;
-    height: 30px;
-    color: var(--color-earth-brown);
-  }
-  .cmega__group-icon svg {
-    width: 24px;
-    height: 24px;
-  }
   .cmega__group-text {
     display: flex;
     flex-direction: column;
@@ -878,11 +677,12 @@
   /* Accordion panel (animated collapse via grid-template-rows) */
   .cmega__panel {
     display: grid;
-    grid-template-rows: 0fr;
+    grid-template-rows: minmax(var(--sp-0), 0fr);
+    overflow: hidden;
     transition: grid-template-rows var(--timing-base) var(--ease-standard);
   }
   .cmega__group.is-open .cmega__panel {
-    grid-template-rows: 1fr;
+    grid-template-rows: minmax(var(--sp-0), 1fr);
   }
   .cmega__collections {
     overflow: hidden;
@@ -895,6 +695,7 @@
     margin: 0;
   }
   .cmega__collections a {
+    position: relative;
     display: block;
     padding: var(--sp-2) var(--sp-4) var(--sp-2) calc(var(--sp-4) + 30px + var(--sp-4));
     font-size: var(--font-size-body-sm);
@@ -907,96 +708,40 @@
     color: var(--color-earth-brown);
     background-color: var(--color-cream);
   }
+  .cmega__collections a::after {
+    content: '';
+    position: absolute;
+    left: var(--sp-4);
+    bottom: var(--sp-2);
+    width: 0;
+    height: var(--border-width);
+    background-color: currentColor;
+    transition: width var(--timing-short) var(--ease-standard);
+  }
+  .cmega__collections a:hover::after,
+  .cmega__collections a:focus-visible::after {
+    width: calc(100% - (var(--sp-4) * 2));
+  }
   .cmega__collections li:last-child a {
     padding-bottom: var(--sp-3);
   }
 
-  /* TEMPORARY: only surface collections that currently have products. Any mega-menu
-     group or item whose collection is not in the allow-list below is hidden. Remove
-     this block to restore the full menu once the other collections are populated. */
-  .cmega__group:not(:has(
-      a[href="/collections/floating-shelf-rustic"],
-      a[href="/collections/bookshelf-modern"],
-      a[href="/collections/bookshelf-rustic"],
-      a[href="/collections/floating-shelf-modern"],
-      a[href="/collections/signature-pieces"],
-      a[href="/collections/new-arrivals"]
-    )),
-  .cmega__collections li:not(:has(
-      a[href="/collections/floating-shelf-rustic"],
-      a[href="/collections/bookshelf-modern"],
-      a[href="/collections/bookshelf-rustic"],
-      a[href="/collections/floating-shelf-modern"],
-      a[href="/collections/signature-pieces"],
-      a[href="/collections/new-arrivals"]
-    )) {
-    display: none;
+  .cmega__collections--room a {
+    padding-inline: var(--sp-4);
+    width: max-content !important;
   }
 
-  /* Feature column */
-  .cmega__feature {
-    flex: 1;
-    display: flex;
-    padding: var(--sp-6);
-    border-left: 1px solid var(--border-light);
-    background-color: var(--color-cream);
-    height: fit-content;
-  }
-  .cmega__feature-link {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    height: fit-content;
-    color: inherit;
-    text-decoration: none;
-  }
-  .cmega__feature-media {
-    display: block;
-    overflow: hidden;
-    border-radius: var(--radius-lg);
-    aspect-ratio: 4 / 3;
-    background-color: var(--bg-secondary);
-    max-width: 350px;
-  }
-  .cmega__feature-img {
-    display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-  .cmega__feature-body {
-    padding-top: var(--sp-5);
-  }
-  .cmega__feature-title {
-    display: block;
-    font-family: var(--font-display);
-    font-size: var(--font-size-body-lg);
-    font-weight: var(--font-weight-regular);
-    line-height: var(--line-height-tight);
-    color: var(--text-primary);
-  }
-  .cmega__feature-cta {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--sp-2);
-    margin-top: var(--sp-4);
+  .cmega__empty {
+    margin: var(--sp-2) 0 var(--sp-2) !important;
+    color: var(--text-secondary);
     font-size: var(--font-size-body-sm);
-    font-weight: var(--font-weight-medium);
-    color: var(--color-earth-brown);
-  }
-  .cmega__feature-arrow {
-    display: inline-flex;
-  }
-  .cmega__feature-arrow svg {
-    width: 16px;
-    height: 16px;
-    transition: transform var(--timing-short) var(--ease-standard);
-  }
-  .cmega__feature-link:hover .cmega__feature-arrow svg {
-    transform: translateX(3px);
+    line-height: var(--line-height-normal);
+    max-width: 100%;
+    width: max-content;
+    overflow-wrap: anywhere;
+    padding: var(--sp-3) var(--sp-4);
   }
 
-  /* Narrow viewports: stack the feature under the category list */
   @media screen and (max-width: 900px) {
     .cmega {
       flex-direction: column;
@@ -1012,13 +757,6 @@
     }
     .cmega__groups:last-child {
       padding-left: 0;
-    }
-    .cmega__feature {
-      border-left: none;
-      border-top: 1px solid var(--border-light);
-    }
-    .cmega__feature-media {
-      aspect-ratio: 16 / 7;
     }
   }
 
@@ -1108,6 +846,7 @@
       box-shadow: var(--shadow-modal);
       transform: translateX(100%);
       transition: transform var(--timing-long) var(--ease-out);
+      padding: var(--sp-2) var(--sp-3) var(--sp-2);
     }
 
     .header__mega-menu.is-mobile-open .cmega {
@@ -1115,14 +854,13 @@
     }
 
     .mobile-menu__bar {
-      position: sticky;
       inset-block-start: var(--sp-0);
       z-index: 2;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      min-block-size: var(--sp-8);
-      padding-inline: var(--sp-4);
+      min-block-size: var(--sp-7);
+      padding-inline: var(--sp-4) var(--sp-1);
       border-block-end: var(--border-width) solid var(--border-light);
       background: var(--color-milk);
     }
@@ -1145,17 +883,10 @@
       color: var(--color-earth-brown);
       cursor: pointer;
     }
-
-    .mobile-menu__close::before,
-    .mobile-menu__close::after {
-      position: absolute;
-      inset-block-start: 50%;
-      inset-inline-start: 50%;
-      inline-size: var(--sp-5);
-      block-size: calc(var(--border-width) * 2);
-      background: currentColor;
-      content: '';
-      transform: translate(-50%, -50%) rotate(45deg);
+    .mobile-menu__close svg {
+      height: 28px;
+      width: 28px;
+      margin: auto;
     }
 
     .mobile-menu__close::after {
@@ -1202,16 +933,6 @@
       border-radius: var(--radius-none);
     }
 
-    .header__mega-menu .cmega__group-icon {
-      inline-size: var(--sp-7);
-      block-size: var(--sp-7);
-    }
-
-    .header__mega-menu .cmega__group-icon svg {
-      inline-size: var(--sp-6);
-      block-size: var(--sp-6);
-    }
-
     .header__mega-menu .cmega__group-name {
       color: var(--text-primary);
       font-family: var(--font-display);
@@ -1233,13 +954,9 @@
 
     .header__mega-menu .cmega__collections a {
       min-block-size: var(--sp-7);
-      padding: var(--sp-3) var(--sp-4) var(--sp-3) calc(var(--sp-7) + var(--sp-6));
+      padding: var(--sp-3) var(--sp-4);
       color: var(--text-secondary);
       font-size: var(--font-size-body-sm);
-    }
-
-    .header__mega-menu .cmega__feature {
-      display: none;
     }
 
     /* Account icon lives inside the drawer on mobile, not in the header bar.
@@ -1247,6 +964,21 @@
     .header__right .header__icon--account {
       display: none;
       color: var(--color-milk);
+    }
+
+    .cmega__consultation {
+      display: block;
+      padding: var(--sp-4);
+      border-block-end: var(--border-width) solid var(--border-light);
+      background: var(--color-milk);
+    }
+
+    .cmega__consultation .cmega__consultation-link {
+      display: flex;
+      inline-size: 100%;
+      min-block-size: var(--sp-7);
+      margin: var(--sp-0);
+      padding-inline: var(--sp-4);
     }
 
     /* Dedicated account section pinned to the top of the drawer (above the
@@ -1319,47 +1051,6 @@
     .cmega__account-logout:hover {
       color: var(--color-earth-brown);
     }
-
-    /* Primary nav links, pinned above the category list. */
-    .cmega__nav {
-      display: block;
-      padding: var(--sp-3) var(--sp-4) var(--sp-6) var(--sp-4);
-      border-block-end: var(--border-width) solid var(--border-light);
-      background: var(--color-milk);
-    }
-
-    .cmega__nav-list {
-      margin: var(--sp-0);
-      padding: var(--sp-0);
-      list-style: none;
-    }
-
-    .cmega__nav-item + .cmega__nav-item {
-      border-block-start: var(--border-width) solid var(--border-light);
-    }
-
-    .cmega__nav-link {
-      display: flex;
-      align-items: center;
-      min-block-size: var(--sp-7);
-      padding: var(--sp-3) var(--sp-2);
-      color: var(--text-primary);
-      font-family: var(--font-roboto);
-      font-size: var(--font-size-body-lg);
-      font-weight: var(--font-weight-medium);
-      line-height: var(--line-height-tight);
-      text-decoration: none;
-      transition: color var(--timing-short) var(--ease-standard);
-    }
-
-    .cmega__nav-link:hover {
-      color: var(--color-earth-brown);
-    }
-
-    .cmega__nav-link:focus-visible {
-      outline: calc(var(--border-width) * 2) solid var(--color-sage);
-      outline-offset: calc(var(--border-width) * -2);
-    }
   }
 
   .header__right {
@@ -1424,8 +1115,7 @@
   }
 
   .header__heading-logo {
-    max-width: 100%;
-    height: auto;
+    max-width: fit-content;
     height: 52px;
   }
 
