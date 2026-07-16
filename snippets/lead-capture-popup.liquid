@@ -32,6 +32,8 @@
   class="lead-capture"
   data-lead-capture
   data-storage-key="wrydeco_lead_capture_seen_v1"
+  data-reminder-key="wrydeco_lead_capture_reminder_v1"
+  data-auto-open="{% if request.page_type == 'index' %}true{% else %}false{% endif %}"
   aria-hidden="true"
   hidden
 >
@@ -174,6 +176,40 @@
   </div>
 </div>
 
+<div
+  class="lead-capture-reminder"
+  data-lead-capture-reminder
+  style="--reminder-bg: url('{{ 'lead-capture-popup.png' | file_url }}');"
+  hidden
+>
+  <button
+    type="button"
+    class="lead-capture-reminder__open"
+    data-lead-capture-reminder-open
+    aria-haspopup="dialog"
+    aria-controls="LeadCaptureDialog"
+  >
+    <span class="lead-capture-reminder__text">Your Gift Awaits</span>
+  </button>
+  <button
+    type="button"
+    class="lead-capture-reminder__close"
+    data-lead-capture-reminder-close
+    aria-label="Dismiss gift reminder"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="none"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        d="M18 6L6 18M6 6l12 12"
+      />
+    </svg>
+  </button>
+</div>
+
 {% stylesheet %}
   .lead-capture-test-toggle[hidden] {
     display: none;
@@ -208,6 +244,95 @@
   .lead-capture-test-toggle:focus-visible {
     outline: var(--border-width) solid var(--color-sage);
     outline-offset: var(--sp-1);
+  }
+
+  .lead-capture-reminder[hidden] {
+    display: none;
+  }
+
+  .lead-capture-reminder {
+    position: fixed;
+    z-index: calc(var(--z-drawer) + 9);
+    bottom: var(--sp-4);
+    left: var(--sp-4);
+    display: inline-flex;
+    align-items: stretch;
+    overflow: hidden;
+    border: var(--border-width) solid var(--color-clay);
+    border-radius: var(--radius-full);
+    background-color: var(--color-brown-dark);
+    background-image: var(--reminder-bg);
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    box-shadow: var(--shadow-elevation-2);
+    opacity: 0;
+    transform: translateY(var(--sp-3));
+    transition: opacity var(--timing-base) var(--ease-out), transform var(--timing-base) var(--ease-out),
+      box-shadow var(--transition-fast);
+  }
+
+  .lead-capture-reminder.is-visible {
+    opacity: 1;
+    transform: translateY(var(--sp-0));
+  }
+
+  .lead-capture-reminder:hover {
+    box-shadow: var(--shadow-elevation-3);
+  }
+
+  .lead-capture-reminder__open {
+    display: flex;
+    min-height: var(--sp-7);
+    align-items: center;
+    padding: var(--sp-2) var(--sp-5);
+    border: var(--sp-0);
+    background: transparent;
+    color: var(--text-inverse);
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-md);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.05rem;
+    line-height: var(--line-height-normal);
+    text-transform: uppercase;
+  }
+
+  .lead-capture-reminder__text {
+    text-shadow: var(--sp-0) var(--border-width) var(--sp-2) color-mix(in srgb, var(--color-ebony) 65%, transparent);
+  }
+
+  .lead-capture-reminder__open:focus-visible {
+    outline: var(--border-width) solid var(--color-sage);
+    outline-offset: calc(var(--sp-1) * -1);
+  }
+
+  .lead-capture-reminder__close {
+    display: grid;
+    width: var(--sp-7);
+    min-height: var(--sp-7);
+    place-items: center;
+    padding: var(--sp-0);
+    border: var(--sp-0);
+    border-left: var(--border-width) solid color-mix(in srgb, var(--color-clay) 60%, transparent);
+    background: color-mix(in srgb, var(--color-ebony) 28%, transparent);
+    color: var(--text-inverse);
+    cursor: pointer;
+    transition: var(--transition-fast);
+  }
+
+  .lead-capture-reminder__close svg {
+    width: var(--sp-5);
+    height: var(--sp-5);
+  }
+
+  .lead-capture-reminder__close:hover {
+    background: color-mix(in srgb, var(--color-ebony) 50%, transparent);
+  }
+
+  .lead-capture-reminder__close:focus-visible {
+    outline: var(--border-width) solid var(--color-sage);
+    outline-offset: calc(var(--sp-1) * -1);
   }
 
   html.lead-capture-is-open,
@@ -614,10 +739,48 @@
     var formState = root.querySelector('[data-lead-capture-form-state]');
     var successState = root.querySelector('[data-lead-capture-success]');
     var storageKey = root.dataset.storageKey;
+    var reminderKey = root.dataset.reminderKey;
+    var autoOpen = root.dataset.autoOpen === 'true';
+    var reminder = document.querySelector('[data-lead-capture-reminder]');
+    var reminderOpenButton = reminder ? reminder.querySelector('[data-lead-capture-reminder-open]') : null;
+    var reminderCloseButton = reminder ? reminder.querySelector('[data-lead-capture-reminder-close]') : null;
+    var reminderMemoryState = '';
     var isSubmitting = false;
     var isOpen = false;
+    var isSubscribed = false;
     var lastFocusedElement = null;
     var closeTimer = null;
+
+    function getReminderState() {
+      try {
+        return window.localStorage.getItem(reminderKey) || '';
+      } catch (error) {
+        return reminderMemoryState;
+      }
+    }
+
+    function setReminderState(state) {
+      reminderMemoryState = state;
+      try {
+        window.localStorage.setItem(reminderKey, state);
+      } catch (error) {
+        // The reminder still works for the current session when storage is blocked.
+      }
+    }
+
+    function showReminder() {
+      if (!reminder) return;
+      reminder.hidden = false;
+      window.requestAnimationFrame(function () {
+        reminder.classList.add('is-visible');
+      });
+    }
+
+    function hideReminder() {
+      if (!reminder) return;
+      reminder.classList.remove('is-visible');
+      reminder.hidden = true;
+    }
 
     function hasBeenSeen() {
       try {
@@ -667,6 +830,7 @@
 
     function openPopup(forceOpen) {
       if ((!forceOpen && hasBeenSeen()) || isOpen) return;
+      window.clearTimeout(closeTimer);
       rememberVisit();
       isOpen = true;
       if (testToggle) testToggle.setAttribute('aria-expanded', 'true');
@@ -697,12 +861,19 @@
       if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') {
         lastFocusedElement.focus({ preventScroll: true });
       }
+      if (!isSubscribed && getReminderState() !== 'dismissed') {
+        setReminderState('active');
+        showReminder();
+      }
     }
 
     function showSuccess() {
       setLoading(false);
       setError('');
       form.reset();
+      isSubscribed = true;
+      setReminderState('dismissed');
+      hideReminder();
       formState.hidden = true;
       successState.hidden = false;
       dialog.setAttribute('aria-labelledby', 'LeadCaptureSuccessTitle');
@@ -761,6 +932,20 @@
 
     document.addEventListener('keydown', handleKeydown);
 
+    if (reminderOpenButton) {
+      reminderOpenButton.addEventListener('click', function () {
+        hideReminder();
+        openPopup(true);
+      });
+    }
+
+    if (reminderCloseButton) {
+      reminderCloseButton.addEventListener('click', function () {
+        setReminderState('dismissed');
+        hideReminder();
+      });
+    }
+
     var testSuccessToggle = document.querySelector('[data-lead-capture-test-success-toggle]');
 
     if (testToggle && new URLSearchParams(window.location.search).get('lead_popup_test') === '1') {
@@ -797,10 +982,12 @@
     } else if (serverError) {
       setError(serverError.textContent.trim());
       openPopup(true);
-    } else if (!hasBeenSeen()) {
+    } else if (autoOpen && !hasBeenSeen()) {
       var navigationElapsed =
         window.performance && typeof window.performance.now === 'function' ? window.performance.now() : 0;
       window.setTimeout(openPopup, Math.max(0, 2000 - navigationElapsed));
+    } else if (getReminderState() === 'active') {
+      showReminder();
     }
   })();
 {% endjavascript %}
