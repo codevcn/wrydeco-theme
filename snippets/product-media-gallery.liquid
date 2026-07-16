@@ -39,6 +39,43 @@
   .product-gallery__zoom-lens.is-active {
     display: block;
   }
+  .product-gallery__wishlist {
+    position: absolute;
+    inset-block-start: var(--sp-4);
+    inset-inline-end: var(--sp-4);
+    z-index: 3;
+    display: grid;
+    place-items: center;
+    inline-size: var(--sp-7);
+    block-size: var(--sp-7);
+    padding: var(--sp-0);
+    border: var(--border-width) solid var(--color-bark);
+    border-radius: var(--radius-full);
+    background-color: var(--surface-elevated);
+    box-shadow: var(--shadow-elevation-1);
+    color: var(--color-bark);
+    cursor: pointer;
+    transition: var(--transition-fast);
+  }
+  .product-gallery__wishlist:hover,
+  .product-gallery__wishlist:focus-visible,
+  .product-gallery__wishlist.is-added {
+    background-color: var(--color-bark);
+    color: var(--color-milk);
+  }
+  .product-gallery__wishlist:focus-visible {
+    outline: var(--border-width) solid var(--color-bark);
+    outline-offset: var(--sp-1);
+  }
+  .product-gallery__wishlist:disabled {
+    cursor: wait;
+  }
+  .product-gallery__wishlist-icon,
+  .product-gallery__wishlist-icon svg {
+    display: block;
+    inline-size: var(--sp-5);
+    block-size: var(--sp-5);
+  }
   .product-gallery__main-item {
     display: none;
     width: 100%;
@@ -103,6 +140,10 @@
   @media screen and (max-width: 720px) {
     .product-gallery {
       margin-block-end: var(--sp-3);
+    }
+    .product-gallery__wishlist {
+      inset-block-start: var(--sp-3);
+      inset-inline-end: var(--sp-3);
     }
   }
 
@@ -266,6 +307,19 @@
 
 <div class="product-gallery" data-product-gallery>
   <div class="product-gallery__main">
+    {% assign wishlist_variant = current_variant | default: product.selected_or_first_available_variant %}
+    <button
+      type="button"
+      class="product-gallery__wishlist"
+      data-product-wishlist
+      data-wishlist-product-id="{{ product.id }}"
+      data-wishlist-variant-id="{{ wishlist_variant.id }}"
+      data-wishlist-product-title="{{ product.title | escape }}"
+      aria-label="Add {{ product.title | escape }} to wishlist"
+      aria-pressed="false"
+    >
+      <span class="product-gallery__wishlist-icon" data-product-wishlist-icon aria-hidden="true"></span>
+    </button>
     <div class="product-gallery__zoom-lens" data-zoom-lens aria-hidden="true"></div>
     {% assign featured_media = current_variant.featured_media | default: product.featured_media %}
     {% for media in product.media %}
@@ -631,14 +685,252 @@
       });
     }
 
+    function readCookie(name) {
+      var cookies = document.cookie ? document.cookie.split('; ') : [];
+
+      for (var index = 0; index < cookies.length; index += 1) {
+        var separatorIndex = cookies[index].indexOf('=');
+        if (separatorIndex === -1) continue;
+        if (cookies[index].slice(0, separatorIndex) !== name) continue;
+
+        try {
+          return decodeURIComponent(cookies[index].slice(separatorIndex + 1));
+        } catch (error) {
+          return '';
+        }
+      }
+
+      return '';
+    }
+
+    function createWishlistCustomerId() {
+      if (!window.crypto || !window.crypto.getRandomValues) return '';
+
+      var bytes = new Uint8Array(15);
+      var binary = '';
+      window.crypto.getRandomValues(bytes);
+
+      bytes.forEach(function (byte) {
+        binary += String.fromCharCode(byte);
+      });
+
+      return window.btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    }
+
+    // Read the wishlist customer id WITHOUT creating one, so simply viewing a
+    // product never sets a cookie. Returns '' when the shopper has no id yet.
+    function resolveWishlistCustomerId() {
+      var analytics = window.ShopifyAnalytics && window.ShopifyAnalytics.meta;
+      var customerId = analytics && analytics.page && analytics.page.customerId;
+
+      if (!customerId && window.meta && window.meta.page) {
+        customerId = window.meta.page.customerId;
+      }
+      if (!customerId && window.__st) {
+        customerId = window.__st.cid;
+      }
+      if (customerId) return String(customerId);
+
+      return readCookie('__v__wl__c__') || '';
+    }
+
+    function getWishlistCustomerId() {
+      var existingCustomerId = resolveWishlistCustomerId();
+      if (existingCustomerId) return existingCustomerId;
+
+      var generatedCustomerId = createWishlistCustomerId();
+      if (!generatedCustomerId) return '';
+
+      document.cookie = '__v__wl__c__=' + encodeURIComponent(generatedCustomerId) + '; path=/; max-age=31536000; samesite=strict';
+      return generatedCustomerId;
+    }
+
+    // Locally mirror which variants this browser has added, so the heart shows
+    // the correct state on load and when switching variants. This reflects adds
+    // made in THIS browser only; it does not track removals or other devices —
+    // the authoritative check is still the API response when the shopper clicks.
+    var WISHLIST_ADDED_STORAGE_PREFIX = 'wrydeco_wishlist_added_';
+
+    function wishlistStorageKey(customerId) {
+      return WISHLIST_ADDED_STORAGE_PREFIX + (customerId || 'anon');
+    }
+
+    function readAddedVariants(customerId) {
+      try {
+        var raw = window.localStorage.getItem(wishlistStorageKey(customerId));
+        if (!raw) return {};
+        var parsed = JSON.parse(raw);
+        return parsed && typeof parsed === 'object' ? parsed : {};
+      } catch (error) {
+        return {};
+      }
+    }
+
+    function isVariantAdded(variantId) {
+      if (!variantId) return false;
+      return readAddedVariants(resolveWishlistCustomerId())[String(variantId)] === true;
+    }
+
+    function rememberAddedVariant(customerId, variantId) {
+      if (!variantId) return;
+      try {
+        var map = readAddedVariants(customerId);
+        map[String(variantId)] = true;
+        window.localStorage.setItem(wishlistStorageKey(customerId), JSON.stringify(map));
+      } catch (error) {
+        // Non-fatal: the button still works without the local mirror.
+      }
+    }
+
+    function applyWishlistButtonState(button, added) {
+      var title = button.dataset.wishlistProductTitle || 'this piece';
+      button.classList.toggle('is-added', added);
+      button.setAttribute('aria-pressed', added ? 'true' : 'false');
+      button.setAttribute('aria-label', added ? title + ' is in your wishlist' : 'Add ' + title + ' to wishlist');
+    }
+
+    function syncWishlistButtonForVariant(button) {
+      applyWishlistButtonState(button, isVariantAdded(getWishlistVariantId(button)));
+    }
+
+    function syncWishlistIcon(button) {
+      var iconTarget = button.querySelector('[data-product-wishlist-icon]');
+      var sourceIcon = document.querySelector('#vitals-wishlist-header .Vtl-WishlistHeader__HeartIconWrapper');
+      if (!iconTarget || !sourceIcon || iconTarget.firstElementChild) return false;
+
+      var icon = sourceIcon.cloneNode(true);
+      icon.removeAttribute('class');
+      icon.removeAttribute('style');
+      icon.setAttribute('aria-hidden', 'true');
+      icon.style.setProperty('fill', 'currentColor', 'important');
+      iconTarget.appendChild(icon);
+      return true;
+    }
+
+    function getWishlistVariantId(button) {
+      // The product form's hidden id is the live source of truth (it is what the
+      // add-to-cart request submits), so trust it before the URL param, which can
+      // lag behind the current selection.
+      var selectedVariant = document.querySelector('form[action*="/cart/add"] [name="id"]');
+      if (selectedVariant && selectedVariant.value) return selectedVariant.value;
+
+      var urlVariantId = new URL(window.location.href).searchParams.get('variant');
+      if (urlVariantId) return urlVariantId;
+
+      return button.dataset.wishlistVariantId;
+    }
+
+    function updateWishlistHeaderCount() {
+      var counter = document.querySelector('#vitals-wishlist-header .Vtl-WishlistHeader__HeartCounter');
+      if (!counter) {
+        var iconWrapper = document.querySelector('#vitals-wishlist-header .Vtl-WishlistHeader__IconWrapper');
+        if (!iconWrapper) return;
+
+        counter = document.createElement('span');
+        counter.className = 'Vtl-WishlistHeader__HeartCounter';
+        iconWrapper.appendChild(counter);
+      }
+
+      var count = Number.parseInt(counter.textContent, 10);
+      counter.textContent = String(Number.isNaN(count) ? 1 : count + 1);
+    }
+
+    function showWishlistToast(message, type) {
+      if (typeof window.showToast !== 'function') return;
+      window.showToast({
+        message: message,
+        type: type,
+        position: 'bottom-left',
+        duration: 4000,
+      });
+    }
+
+    function initProductWishlist() {
+      document.querySelectorAll('[data-product-wishlist]').forEach(function (button) {
+        if (button.dataset.wishlistInit === 'true') return;
+        button.dataset.wishlistInit = 'true';
+
+        if (!syncWishlistIcon(button)) {
+          var observer = new MutationObserver(function () {
+            if (syncWishlistIcon(button)) observer.disconnect();
+          });
+          observer.observe(document.body, { childList: true, subtree: true });
+        }
+
+        // Reflect the known state for the initial variant, and keep it in sync
+        // when the shopper switches variants — wishlist membership is per-variant,
+        // so a heart added for one variant must not stay lit for another.
+        syncWishlistButtonForVariant(button);
+        document.addEventListener('variant:change', function () {
+          syncWishlistButtonForVariant(button);
+        });
+
+        button.addEventListener('click', function (event) {
+          event.preventDefault();
+          event.stopPropagation();
+          if (button.disabled) return;
+
+          var wishlistData = window.vtlsLiquidData || {};
+          var appId = wishlistData.shopInfo && wishlistData.shopInfo.appId;
+          var apiHost = appId && wishlistData.apiHosts && wishlistData.apiHosts[appId];
+          var shopId = wishlistData.shopInfo && wishlistData.shopInfo.id;
+          var variantId = getWishlistVariantId(button);
+          var customerId = getWishlistCustomerId();
+
+          if (!apiHost || !shopId || !customerId || !variantId) {
+            showWishlistToast('We could not add this piece to your wishlist. Please try again.', 'error');
+            return;
+          }
+
+          button.disabled = true;
+          button.setAttribute('aria-busy', 'true');
+
+          window
+            .fetch(apiHost + '/bundle/api/v2/sf/ws', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                shop_id: shopId,
+                customerId: customerId,
+                productId: Number(button.dataset.wishlistProductId),
+                variantId: Number(variantId),
+              }),
+            })
+            .then(function (response) {
+              if (response.status === 409) {
+                rememberAddedVariant(customerId, variantId);
+                applyWishlistButtonState(button, true);
+                showWishlistToast('This piece is already in your wishlist.', 'info');
+                return;
+              }
+              if (!response.ok) throw new Error('Wishlist request failed');
+
+              rememberAddedVariant(customerId, variantId);
+              applyWishlistButtonState(button, true);
+              updateWishlistHeaderCount();
+              showWishlistToast('Added to your wishlist.', 'success');
+            })
+            .catch(function () {
+              showWishlistToast('We could not add this piece to your wishlist. Please try again.', 'error');
+            })
+            .finally(function () {
+              button.disabled = false;
+              button.removeAttribute('aria-busy');
+            });
+        });
+      });
+    }
+
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', function () {
         initGalleryLightbox();
         initGalleryZoom();
+        initProductWishlist();
       });
     } else {
       initGalleryLightbox();
       initGalleryZoom();
+      initProductWishlist();
     }
   })();
 </script>

@@ -1040,6 +1040,12 @@
             window.history.replaceState({}, '', nextUrl);
           }
 
+          // Let other components (e.g. the gallery wishlist heart) react to the
+          // newly-selected variant. Fired after the form id and URL are updated.
+          document.dispatchEvent(
+            new CustomEvent('variant:change', { detail: { variantId: selectedVariant.id } })
+          );
+
           // Filter the gallery by the variant's `variant_images` metafield.
           var variantImagesRaw = variantMetafieldsMap[selectedVariant.id];
           if (variantImagesRaw) {
