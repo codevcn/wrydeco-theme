@@ -30,7 +30,7 @@
     <div class="srp-hero__media">
       <img
         class="srp-hero__bg"
-        src="{{ 'collection-top-banner.png' | file_url }}"
+        src="{{ 'hero-bg-search.png' | file_url }}"
         alt=""
         width="2169"
         height="725"
@@ -40,7 +40,6 @@
     </div>
 
     <div class="srp-hero__inner">
-      <p class="srp-hero__eyebrow">{{ section.settings.eyebrow | escape }}</p>
       <h1 class="srp-hero__title">{{ section.settings.heading | escape }}</h1>
       <p class="srp-hero__subtitle">{{ section.settings.subtitle | escape }}</p>
     </div>
@@ -72,7 +71,9 @@
           aria-label="{{ 'search.title' | t }}"
           autocomplete="off"
         >
-        <button type="submit" class="srp-search__submit">Search</button>
+        <button type="submit" class="srp-search__submit">
+          <span>Search</span>
+        </button>
       </form>
     </div>
 
@@ -379,6 +380,8 @@
 
   {% if popular_collection != blank and popular_collection.products.size > 0 %}
     <section class="srp-popular" aria-labelledby="SrpPopular-{{ section.id }}">
+      <div class="divider"></div>
+
       <div class="srp-popular__head">
         <h2 id="SrpPopular-{{ section.id }}" class="srp-popular__title">Explore Popular Categories</h2>
         <a class="srp-popular__view-all" href="{{ popular_collection.url }}">
@@ -478,9 +481,7 @@
                 <p class="srp-popular-card__artist">Crafted By {{ artist | escape }}</p>
               {% endif %}
 
-              <p class="srp-popular-card__price">
-                <span>From</span> {{ popular_product.price | money }}
-              </p>
+              <p class="srp-popular-card__price"><span>From</span> {{ popular_product.price | money }}</p>
 
               {% if material != blank %}
                 <p class="srp-popular-card__material">{{ material | metafield_text }}</p>
@@ -494,18 +495,6 @@
 </section>
 
 {% stylesheet %}
-  body:has(.not-found-page) .header__icon--search,
-  body:has(.not-found-page) .header__icon--cart,
-  body:has(.not-found-page) .header__icon--menu,
-  body:has(.not-found-page) .header__icon--account,
-  body:has(.not-found-page) .header__localization .loc-picker__code,
-  body:has(.not-found-page) .header__localization .loc-picker__chevron {
-    color: var(--color-earth-brown);
-  }
-  .loc-picker__option .loc-picker__code {
-    color: var(--color-earth-brown) !important;
-  }
-
   .srp {
     width: 100%;
     background-color: var(--color-cream);
@@ -554,15 +543,6 @@
     width: 100%;
     max-width: calc(var(--layout-hero-copy-width) - var(--sp-12));
     padding: var(--sp-7) var(--layout-padding-desktop) var(--sp-7) var(--sp-9);
-  }
-  .srp-hero__eyebrow {
-    margin: 0;
-    font-family: var(--font-roboto);
-    font-size: var(--font-size-caption);
-    font-weight: var(--font-weight-bold);
-    letter-spacing: 0;
-    text-transform: uppercase;
-    color: var(--text-secondary);
   }
   .srp-hero__title {
     margin: 0;
@@ -751,7 +731,7 @@
   }
 
   .srp-popular {
-    width: min(calc(100% - (var(--layout-padding-desktop) * 2)), calc(var(--layout-max-width) + var(--sp-12)));
+    padding: var(--sp-6) 96px var(--section-spacing-desktop);
     margin: var(--sp-6) auto var(--section-spacing-desktop);
   }
   .srp-popular__head {
@@ -764,7 +744,7 @@
   .srp-popular__title {
     margin: 0;
     font-family: var(--font-roboto);
-    font-size: var(--font-size-caption);
+    font-size: var(--font-size-body-3xl);
     font-weight: var(--font-weight-bold);
     letter-spacing: 0;
     text-transform: uppercase;
@@ -784,7 +764,7 @@
   }
   .srp-popular__grid {
     display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: var(--sp-4);
   }
 
@@ -943,6 +923,7 @@
     padding: var(--sp-4) 64px;
     border-top: 1px solid var(--border-light);
     border-bottom: 1px solid var(--border-light);
+    margin-top: var(--sp-4);
   }
   .srp-sort {
     display: flex;
@@ -1040,7 +1021,7 @@
 
   /* Grid */
   .srp-grid-wrap {
-    padding: var(--sp-6) 64px var(--section-spacing-desktop);
+    padding: var(--sp-6) 96px var(--section-spacing-desktop);
   }
   .srp-grid {
     display: grid;
@@ -1052,6 +1033,10 @@
     display: flex;
     flex-direction: column;
     min-width: 0;
+    background-color: var(--color-milk);
+    box-shadow: var(--shadow-elevation-1);
+    border-radius: var(--radius-lg);
+    padding: var(--sp-2);
   }
   .srp-card__media {
     display: block;
@@ -1073,7 +1058,7 @@
   .srp-card__info {
     display: flex;
     flex-direction: column;
-    padding: var(--sp-4) 0 0;
+    padding: var(--sp-4) var(--sp-1) var(--sp-1);
   }
   .srp-card__pill {
     align-self: flex-start;
@@ -1252,6 +1237,21 @@
   }
 
   @media screen and (max-width: 768px) {
+    body:has(.srp) .header__icon--search,
+    body:has(.srp) .header__icon--cart,
+    body:has(.srp) .header__icon--menu,
+    body:has(.srp) .header__icon--account,
+    body:has(.srp) .header__localization .loc-picker__code,
+    body:has(.srp) .header__localization .loc-picker__chevron {
+      color: var(--color-earth-brown);
+    }
+    body:has(.srp) .header {
+      border: 1px solid #cfcbc7b4;
+    }
+    body:has(.srp) .loc-picker__option .loc-picker__code {
+      color: var(--color-earth-brown) !important;
+    }
+
     .srp-sort__pill {
       border-radius: 0;
     }
@@ -1262,7 +1262,7 @@
       text-align: left;
     }
     .srp-hero {
-      min-height: calc(var(--sp-12) * 2);
+      min-height: 220px;
     }
     .srp-hero__media::after {
       background: linear-gradient(
@@ -1275,7 +1275,7 @@
     .srp-hero__inner {
       width: 100%;
       max-width: 100%;
-      padding: var(--sp-6) var(--layout-padding-mobile);
+      padding: var(--sp-10) var(--layout-padding-mobile) var(--sp-6);
       gap: var(--sp-2);
     }
     .srp-hero__subtitle {
@@ -1350,7 +1350,7 @@
       justify-content: space-between;
     }
     .srp-grid-wrap {
-      padding: var(--sp-5) var(--layout-padding-mobile) var(--section-spacing-mobile);
+      padding: var(--sp-5) calc(var(--layout-padding-mobile) - 6px) var(--section-spacing-mobile);
     }
     .srp-grid {
       column-gap: var(--sp-4);
@@ -1387,7 +1387,11 @@
       place-content: center;
     }
     .srp-hero__title {
-      font-size: var(--font-size-display-md);
+      font-size: var(--font-size-display-sm);
+      text-align: center;
+    }
+    .srp-hero__subtitle {
+      text-align: center;
     }
     .srp-popular__head {
       align-items: flex-start;
