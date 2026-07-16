@@ -1482,12 +1482,26 @@
     display: grid;
     place-items: center;
     padding: var(--sp-5);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--timing-base) var(--ease-standard);
+  }
+
+  .cart-drawer__voucher-popup.is-open {
+    opacity: 1;
+    pointer-events: auto;
   }
 
   .cart-drawer__voucher-overlay {
     position: absolute;
     inset: var(--sp-0);
     background: color-mix(in srgb, var(--color-ebony) 62%, transparent);
+    opacity: 0;
+    transition: opacity var(--timing-base) var(--ease-standard);
+  }
+
+  .cart-drawer__voucher-popup.is-open .cart-drawer__voucher-overlay {
+    opacity: 1;
   }
 
   .cart-drawer__voucher-dialog {
@@ -1499,6 +1513,16 @@
     box-shadow: var(--shadow-modal);
     color: var(--text-primary);
     text-align: center;
+    opacity: 0;
+    transform: translateY(var(--sp-4)) scale(0.98);
+    transition:
+      opacity var(--timing-base) var(--ease-standard),
+      transform var(--timing-base) var(--ease-standard);
+  }
+
+  .cart-drawer__voucher-popup.is-open .cart-drawer__voucher-dialog {
+    opacity: 1;
+    transform: translateY(var(--sp-0)) scale(1);
   }
 
   /* Spinner overlay shown inside the discount popup while a code is validated. */
@@ -2072,20 +2096,48 @@
     };
 
     const getDiscountPopup = () => document.querySelector('[data-cart-discount-popup]');
-    const openDiscountPopup = () => {
+    let discountPopupCloseHandler;
+    let discountPopupTrigger;
+    const openDiscountPopup = (trigger) => {
       const popup = getDiscountPopup();
       if (!popup) return;
+      if (discountPopupCloseHandler) {
+        popup.removeEventListener('transitionend', discountPopupCloseHandler);
+        discountPopupCloseHandler = null;
+      }
+      discountPopupTrigger = trigger || document.activeElement;
       popup.hidden = false;
+      popup.dataset.open = 'true';
       document.documentElement.style.overflow = 'hidden';
       window.requestAnimationFrame(() => {
+        if (popup.dataset.open !== 'true') return;
+        popup.classList.add('is-open');
         popup.querySelector('[data-cart-discount-input]')?.focus();
       });
     };
     const closeDiscountPopup = () => {
       const popup = getDiscountPopup();
-      if (!popup) return;
-      popup.hidden = true;
+      if (!popup || popup.hidden || popup.dataset.open !== 'true') return;
+      popup.dataset.open = 'false';
+      popup.classList.remove('is-open');
       document.documentElement.style.overflow = '';
+
+      const finishClose = (event) => {
+        if (event && event.target !== popup) return;
+        popup.removeEventListener('transitionend', finishClose);
+        discountPopupCloseHandler = null;
+        if (popup.dataset.open === 'true') return;
+        popup.hidden = true;
+        discountPopupTrigger?.focus();
+      };
+
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        finishClose();
+        return;
+      }
+
+      discountPopupCloseHandler = finishClose;
+      popup.addEventListener('transitionend', finishClose);
     };
 
     const applyDiscount = async (form) => {
@@ -2251,9 +2303,10 @@
         return;
       }
 
-      if (event.target.closest('[data-cart-discount-open]')) {
+      const discountPopupOpener = event.target.closest('[data-cart-discount-open]');
+      if (discountPopupOpener) {
         event.preventDefault();
-        openDiscountPopup();
+        openDiscountPopup(discountPopupOpener);
         return;
       }
 
