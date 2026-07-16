@@ -57,8 +57,8 @@ The technical implementation must align with the brand's luxury positioning.
 
 ## 9. SVG Creation and Usage
 
-- Whenever an AI Agent needs to create an SVG image or write SVG code, it MUST use the `iconify` MCP server located in the `my-tools` folder.
-- **Error Handling:** If an error occurs while using the MCP, the Agent is free to handle it, but it MUST explicitly notify the user that an error occurred during the MCP execution.
+- Whenever an AI Agent needs to create an SVG image or write SVG code, it MUST use the `iconify` API tool located in the `my-tools` folder.
+- **Error Handling:** If an error occurs while using the API, the Agent is free to handle it, but it MUST explicitly notify the user that an error occurred during the API execution.
 
 ## 10. Icon Creation
 

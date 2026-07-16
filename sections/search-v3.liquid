@@ -1,7 +1,7 @@
 {% comment %}
   Search results page.
 
-  Hero (eyebrow + heading + search field) over a lifestyle background image,
+  Hero (heading + search field) over a lifestyle background image,
   a sort/view toolbar, a 4-column product grid (flat cards, no border/shadow)
   and pill pagination reusing the same paginate logic as the collection page.
 
@@ -79,19 +79,45 @@
 
     <nav class="srp-quick-links" aria-label="Search shortcuts">
       <a class="srp-quick-links__item" href="/pages/showroom">
-        <span aria-hidden="true">R</span>
+        <span class="srp-quick-links__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+              <path d="M20 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v3"/>
+              <path d="M2 16a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5a2 2 0 0 0-4 0v1.5a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5V11a2 2 0 0 0-4 0zm2 2v2m16-2v2M12 4v9"/>
+            </g>
+          </svg>
+        </span>
         <span>Rooms</span>
       </a>
       <a class="srp-quick-links__item" href="{{ routes.collections_url }}">
-        <span aria-hidden="true">C</span>
+        <span class="srp-quick-links__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+              <path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/>
+              <path d="m6.08 9.5l-3.5 1.6a1 1 0 0 0 0 1.81l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9a1 1 0 0 0 0-1.83l-3.5-1.59"/>
+              <path d="m6.08 14.5l-3.5 1.6a1 1 0 0 0 0 1.81l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9a1 1 0 0 0 0-1.83l-3.5-1.59"/>
+            </g>
+          </svg>
+        </span>
         <span>Collections</span>
       </a>
       <a class="srp-quick-links__item" href="/collections/new-arrivals">
-        <span aria-hidden="true">N</span>
+        <span class="srp-quick-links__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+              <path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594zM20 2v4m2-2h-4"/>
+              <circle cx="4" cy="20" r="2"/>
+            </g>
+          </svg>
+        </span>
         <span>New Arrivals</span>
       </a>
       <a class="srp-quick-links__item" href="/collections/signature-pieces">
-        <span aria-hidden="true">S</span>
+        <span class="srp-quick-links__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294zM5 21h14"/>
+          </svg>
+        </span>
         <span>Signature Pieces</span>
       </a>
     </nav>
@@ -225,16 +251,9 @@
               {% continue %}
             {% endif %}
             {% liquid
-              assign artist = ''
-              assign author = result.metafields.custom.author_info.value | first
-              if author != blank and author.author_name.value != blank
-                assign artist = author.author_name.value
-              elsif result.vendor != blank
-                assign artist = result.vendor
-              endif
               assign ptype = result.type
             %}
-            <article class="srp-card" data-created="{{ result.created_at | date: '%s' }}">
+            <article class="srp-card">
               <a class="srp-card__media" href="{{ result.url }}" aria-label="{{ result.title | escape }}">
                 {% if result.featured_image %}
                   {{
@@ -264,10 +283,6 @@
                 </h2>
 
                 <hr class="srp-card__divider">
-
-                {% if artist != blank %}
-                  <p class="srp-card__artist">{{ 'search.crafted_by' | t: artist: artist }}</p>
-                {% endif %}
 
                 <p class="srp-card__price">
                   <span class="srp-card__price-label">{{ 'search.from_price' | t }}</span> {{ result.price | money }}
@@ -384,13 +399,11 @@
 
       <div class="srp-popular__head">
         <h2 id="SrpPopular-{{ section.id }}" class="srp-popular__title">Explore Popular Categories</h2>
-        <a class="srp-popular__view-all" href="{{ popular_collection.url }}">
-          <span>View all</span>
-          <span aria-hidden="true">-></span>
-        </a>
       </div>
 
-      <div class="srp-popular__grid">
+      <div
+        class="srp-popular__grid srp-popular__grid--fixed"
+      >
         {% for popular_product in popular_collection.products limit: 6 %}
           {% liquid
             assign artist = ''
@@ -403,7 +416,6 @@
 
             assign material = popular_product.metafields.custom.product_material
             assign ptype = popular_product.type
-            assign card_variant = popular_product.selected_or_first_available_variant | default: popular_product.variants.first
             assign is_new = false
             for coll in popular_product.collections
               if coll.handle == 'new-arrivals'
@@ -445,19 +457,6 @@
                   {{ 'product-1' | placeholder_svg_tag: 'srp-popular-card__image is-active placeholder-svg' }}
                 {% endif %}
               </a>
-
-              <button
-                type="button"
-                class="srp-popular-card__add"
-                data-add-to-cart
-                data-variant-id="{{ card_variant.id }}"
-                aria-label="Add {{ popular_product.title | escape }} to cart"
-                {% unless popular_product.available %}
-                  disabled aria-disabled="true"
-                {% endunless %}
-              >
-                <span aria-hidden="true">+</span>
-              </button>
 
               {% if is_new %}
                 <span class="srp-popular-card__new">New</span>
@@ -612,25 +611,6 @@
   .srp-search__input::-webkit-search-cancel-button {
     -webkit-appearance: none;
   }
-  .srp-search__clear {
-    flex: 0 0 auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: var(--sp-5);
-    height: var(--sp-5);
-    margin-right: var(--sp-3);
-    color: var(--text-secondary);
-    text-decoration: none;
-    transition: color var(--timing-fast) var(--ease-standard);
-  }
-  .srp-search__clear:hover {
-    color: var(--color-earth-brown);
-  }
-  .srp-search__clear svg {
-    width: 100%;
-    height: 100%;
-  }
   .srp-search__submit {
     flex: 0 0 auto;
     min-width: calc(var(--sp-12) - var(--sp-4));
@@ -675,17 +655,18 @@
     box-shadow: var(--shadow-elevation-1);
     transition: var(--transition-fast);
   }
-  .srp-quick-links__item > span:first-child {
+  .srp-quick-links__icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: var(--sp-5);
-    height: var(--sp-5);
-    border: var(--border-width) solid currentColor;
-    border-radius: var(--radius-full);
-    font-size: var(--font-size-caption);
-    font-weight: var(--font-weight-bold);
-    line-height: var(--line-height-tight);
+    width: var(--sp-4);
+    height: var(--sp-4);
+    flex: 0 0 auto;
+  }
+  .srp-quick-links__icon svg {
+    display: block;
+    width: 100%;
+    height: 100%;
   }
   .srp-quick-links__item:hover {
     border-color: var(--color-earth-brown);
@@ -732,7 +713,7 @@
 
   .srp-popular {
     padding: var(--sp-6) 96px var(--section-spacing-desktop);
-    margin: var(--sp-6) auto var(--section-spacing-desktop);
+    margin: 0;
   }
   .srp-popular__head {
     display: flex;
@@ -743,12 +724,15 @@
   }
   .srp-popular__title {
     margin: 0;
-    font-family: var(--font-roboto);
-    font-size: var(--font-size-body-3xl);
+    font-family: var(--font-body);
+    word-spacing: 0.2rem;
+    font-size: var(--font-size-body-4xl);
     font-weight: var(--font-weight-bold);
     letter-spacing: 0;
     text-transform: uppercase;
     color: var(--text-primary);
+    text-align: center;
+    width: 100%;
   }
   .srp-popular__view-all {
     display: inline-flex;
@@ -766,6 +750,9 @@
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: var(--sp-4);
+  }
+  .srp-popular__grid--fixed {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, calc((var(--sp-12) * 2) + var(--sp-5))), 1fr));
   }
 
   .srp-popular-card {
@@ -808,40 +795,6 @@
   }
   .srp-popular-card__media:hover .srp-popular-card__image {
     transform: scale(1.03);
-  }
-  .srp-popular-card__add {
-    position: absolute;
-    right: var(--sp-2);
-    bottom: var(--sp-2);
-    z-index: 3;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: var(--sp-7);
-    height: var(--sp-7);
-    border: 0;
-    border-radius: var(--radius-full);
-    background-color: var(--surface-elevated);
-    color: var(--color-earth-brown);
-    box-shadow: var(--shadow-elevation-2);
-    cursor: pointer;
-    transition: var(--transition-fast);
-  }
-  .srp-popular-card__add span {
-    font-size: var(--font-size-body-xl);
-    line-height: var(--line-height-tight);
-  }
-  .srp-popular-card__add:hover {
-    transform: translateY(calc(var(--sp-1) * -1));
-    background-color: var(--color-cream);
-  }
-  .srp-popular-card__add:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-  .srp-popular-card__add.is-loading {
-    pointer-events: none;
-    opacity: 0.6;
   }
   .srp-popular-card__new {
     position: absolute;
@@ -965,8 +918,8 @@
     color: var(--color-earth-brown);
   }
   .srp-sort__pill.is-active {
-    background-color: var(--color-ebony);
-    border-color: var(--color-ebony);
+    background-color: var(--color-earth-brown);
+    border-color: var(--color-earth-brown);
     color: var(--text-inverse);
   }
   .srp-sort__pill.is-active:hover {
@@ -1093,12 +1046,6 @@
     margin: var(--sp-3) 0 0;
     border: none;
     background-color: var(--color-orange);
-  }
-  .srp-card__artist {
-    margin: var(--sp-3) 0 0;
-    font-family: var(--font-roboto);
-    font-size: var(--font-size-body-sm);
-    color: var(--color-clay);
   }
   .srp-card__price {
     margin: var(--sp-3) 0 0;
@@ -1252,9 +1199,10 @@
       color: var(--color-earth-brown) !important;
     }
 
-    .srp-sort__pill {
-      border-radius: 0;
+    .srp-popular-card__new {
+      display: none;
     }
+
     .srp-state {
       padding-block: var(--sp-6);
     }
@@ -1303,17 +1251,13 @@
     .srp-search__input {
       min-height: var(--sp-7);
       padding-inline: var(--sp-3);
-      font-size: var(--font-size-body-sm);
-    }
-    .srp-search__clear {
-      align-self: center;
-      margin-right: var(--sp-2);
+      font-size: var(--font-size-body-lg);
     }
     .srp-search__submit {
       grid-column: 1 / -1;
       width: 100%;
       margin-top: var(--sp-2);
-      min-height: var(--sp-7);
+      min-height: 38px;
     }
     .srp-quick-links {
       justify-content: flex-start;
@@ -1335,7 +1279,7 @@
     }
     .srp-state,
     .srp-popular {
-      width: calc(100% - (var(--layout-padding-mobile) * 2));
+      width: 100%;
     }
     .srp-state {
       margin-top: var(--sp-4);
@@ -1358,9 +1302,13 @@
     }
     .srp-popular {
       margin-bottom: var(--section-spacing-mobile);
+      margin-top: var(--sp-4);
+      border-top: 1px solid var(--border-light);
+      padding: var(--sp-4) calc(var(--layout-padding-mobile) - 6px) var(--section-spacing-mobile);
     }
     .srp-popular__grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
       gap: var(--sp-3);
     }
     .srp-popular-card {
@@ -1372,6 +1320,37 @@
     .srp-popular-card__artist,
     .srp-popular-card__material {
       display: none;
+    }
+    .srp-popular__title {
+      text-align: center;
+      width: 100%;
+      font-size: var(--font-size-body-lg);
+    }
+    .srp .srp-popular__head,
+    .srp .srp-popular__grid--fixed {
+      position: relative;
+      left: 50%;
+      width: auto;
+      min-width: calc(100vw - (var(--layout-padding-mobile) * 2));
+      transform: translateX(-50%);
+    }
+    .srp .srp-popular__grid--fixed {
+      grid-template-columns: 1fr 1fr;
+      margin-inline: 0;
+      padding-inline: 0;
+      overflow-x: visible;
+      scroll-snap-type: none;
+    }
+    .srp .srp-popular-card {
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
+      flex: initial;
+      scroll-snap-align: initial;
+    }
+    .srp-popular__view-all {
+      width: 100%;
+      justify-content: flex-end;
     }
   }
 
@@ -1394,11 +1373,8 @@
       text-align: center;
     }
     .srp-popular__head {
+      flex-direction: column;
       align-items: flex-start;
-    }
-    .srp-popular-card__add {
-      width: calc(var(--sp-6) + var(--sp-3));
-      height: calc(var(--sp-6) + var(--sp-3));
     }
   }
 {% endstylesheet %}
@@ -1406,78 +1382,6 @@
 <script>
   (function () {
     function initSearchPage() {
-      function updateCartBubble() {
-        fetch(window.Shopify.routes.root + 'cart.js', { headers: { Accept: 'application/json' } })
-          .then(function (res) {
-            return res.json();
-          })
-          .then(function (cart) {
-            var cartIcon = document.querySelector('.header__icon--cart');
-            if (!cartIcon) return;
-            var bubble = cartIcon.querySelector('.cart-count-bubble');
-            if (cart.item_count > 0) {
-              if (!bubble) {
-                bubble = document.createElement('div');
-                bubble.className = 'cart-count-bubble';
-                bubble.innerHTML = '<span></span>';
-                cartIcon.appendChild(bubble);
-              }
-              bubble.querySelector('span').textContent = cart.item_count;
-            } else if (bubble) {
-              bubble.remove();
-            }
-          });
-      }
-
-      document.querySelectorAll('[data-add-to-cart]').forEach(function (btn) {
-        if (btn.dataset.init === 'true') return;
-        btn.dataset.init = 'true';
-
-        btn.addEventListener('click', function () {
-          if (btn.disabled || btn.classList.contains('is-loading')) return;
-          var variantId = btn.dataset.variantId;
-          if (!variantId) return;
-
-          btn.classList.add('is-loading');
-          fetch(window.Shopify.routes.root + 'cart/add.js', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Accept: 'application/javascript' },
-            body: JSON.stringify({ id: variantId, quantity: 1 }),
-          })
-            .then(function (res) {
-              return res.json();
-            })
-            .then(function (data) {
-              if (data.status) {
-                throw new Error(data.description || 'Could not add to cart');
-              }
-              if (window.showToast) {
-                window.showToast({
-                  message: 'Item added to your cart.',
-                  type: 'success',
-                  position: 'bottom-right',
-                  duration: 4000,
-                });
-              }
-              updateCartBubble();
-              document.dispatchEvent(new CustomEvent('cart:updated', { detail: { open: true } }));
-            })
-            .catch(function (err) {
-              if (window.showToast) {
-                window.showToast({
-                  message: err.message,
-                  type: 'error',
-                  position: 'bottom-right',
-                  duration: 4000,
-                });
-              }
-            })
-            .finally(function () {
-              btn.classList.remove('is-loading');
-            });
-        });
-      });
-
       document.querySelectorAll('[data-hover-gallery]').forEach(function (gallery) {
         if (gallery.dataset.initHover === 'true') return;
         gallery.dataset.initHover = 'true';
@@ -1562,7 +1466,6 @@
 {
   "name": "t:general.search",
   "settings": [
-    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "Search Results" },
     { "type": "text", "id": "heading", "label": "Heading", "default": "Find What Inspires You" },
     {
       "type": "text",
