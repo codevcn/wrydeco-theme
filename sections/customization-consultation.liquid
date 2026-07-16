@@ -1299,6 +1299,20 @@
     color: var(--text-inverse);
   }
 
+  .consultation-slots__slot:disabled {
+    border-color: var(--border-default);
+    background: var(--surface-elevated);
+    color: var(--text-tertiary);
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .consultation-slots__slot:disabled:hover {
+    border-color: var(--border-default);
+    background: var(--surface-elevated);
+    color: var(--text-tertiary);
+  }
+
   .consultation-slots__slot:focus-visible {
     outline: calc(var(--border-width) * 2) solid var(--color-sage);
     outline-offset: var(--sp-1);
@@ -1621,7 +1635,13 @@
         const period = hour24 >= 12 ? 'PM' : 'AM';
         let hour12 = hour24 % 12;
         if (hour12 === 0) hour12 = 12;
-        timeSlots.push({ hour: hour12, minute, period, label: `${pad(hour12)}:${pad(minute)} ${period}` });
+        timeSlots.push({
+          hour: hour12,
+          minute,
+          period,
+          startMinutes: minutes,
+          label: `${pad(hour12)}:${pad(minute)} ${period}`,
+        });
       }
 
       const today = new Date();
@@ -1635,6 +1655,42 @@
       let selectedPeriod = null;
       let returnFocus = null;
       let committedSelection = null;
+
+      // A consultation must be booked at least 24h ahead. The threshold is based
+      // on the real current time (not midnight), so both the date column and the
+      // individual time slots are validated against the same moment.
+      const MIN_LEAD_MS = 24 * 60 * 60 * 1000;
+      const getMinMoment = () => new Date(Date.now() + MIN_LEAD_MS);
+
+      const slotDateTime = (date, slot) => {
+        if (!date || !slot) return null;
+        return new Date(
+          date.getFullYear(),
+          date.getMonth(),
+          date.getDate(),
+          Math.floor(slot.startMinutes / 60),
+          slot.startMinutes % 60,
+          0,
+          0
+        );
+      };
+
+      const findSelectedSlot = () =>
+        timeSlots.find(
+          (slot) => slot.hour === selectedHour && slot.minute === selectedMinute && slot.period === selectedPeriod
+        );
+
+      // If the picked time is now within the 24h window (e.g. after switching to a
+      // boundary date), drop it so the shopper must choose a still-valid slot.
+      const pruneInvalidTime = () => {
+        const slot = findSelectedSlot();
+        if (!selectedDate || !slot) return;
+        if (slotDateTime(selectedDate, slot).getTime() < getMinMoment().getTime()) {
+          selectedHour = null;
+          selectedMinute = null;
+          selectedPeriod = null;
+        }
+      };
 
       const sameDay = (left, right) =>
         left &&
@@ -1652,8 +1708,15 @@
 
       const syncSelection = () => {
         const formatted = formatSelection();
+        let bookable = Boolean(formatted);
+        if (bookable) {
+          const slot = findSelectedSlot();
+          if (slot && slotDateTime(selectedDate, slot).getTime() < getMinMoment().getTime()) {
+            bookable = false;
+          }
+        }
         if (result) result.textContent = formatted || 'Choose a date and time to continue.';
-        confirmButton.disabled = !formatted;
+        confirmButton.disabled = !bookable;
       };
 
       const renderCalendar = () => {
@@ -1681,7 +1744,9 @@
           button.type = 'button';
           button.className = 'consultation-calendar__day';
           button.textContent = day;
-          button.disabled = date < today;
+          // The day is bookable only if its last slot still clears the 24h window.
+          const lastSlotDateTime = slotDateTime(date, timeSlots[timeSlots.length - 1]);
+          button.disabled = lastSlotDateTime.getTime() < getMinMoment().getTime();
           button.setAttribute(
             'aria-label',
             new Intl.DateTimeFormat('en-US', {
@@ -1699,7 +1764,9 @@
           }
           button.addEventListener('click', () => {
             selectedDate = date;
+            pruneInvalidTime();
             renderCalendar();
+            renderSlots();
             syncSelection();
           });
           daysGrid.append(button);
@@ -1713,13 +1780,22 @@
         if (!slotsContainer) return;
         slotsContainer.textContent = '';
 
+        const minMoment = getMinMoment();
+
         timeSlots.forEach((slot) => {
           const button = document.createElement('button');
           button.type = 'button';
           button.className = 'consultation-slots__slot';
           button.textContent = slot.label;
+          // Once a date is chosen, slots inside the 24h window are not bookable.
+          const slotTime = slotDateTime(selectedDate, slot);
+          const isTooSoon = Boolean(selectedDate) && slotTime.getTime() < minMoment.getTime();
+          button.disabled = isTooSoon;
           const isSelected =
-            selectedHour === slot.hour && selectedMinute === slot.minute && selectedPeriod === slot.period;
+            !isTooSoon &&
+            selectedHour === slot.hour &&
+            selectedMinute === slot.minute &&
+            selectedPeriod === slot.period;
           if (isSelected) button.classList.add('is-selected');
           button.setAttribute('role', 'option');
           button.setAttribute('aria-selected', isSelected ? 'true' : 'false');
