@@ -7,9 +7,6 @@
       <h2 class="mto__heading" id="MadeToOrderHeading-{{ section.id }}">
         {{ section.settings.heading | escape }}
       </h2>
-      {%- if section.settings.subtext != blank -%}
-        <p class="mto__subtext">{{ section.settings.subtext | newline_to_br }}</p>
-      {%- endif -%}
     </header>
 
     <ol class="mto__steps" aria-label="{{ section.settings.heading | escape }}">
@@ -60,24 +57,11 @@
             <span class="mto__step-num" aria-hidden="true">{{ forloop.index | prepend: '0' | slice: -2, 2 }}</span>
           </div>
           <h3 class="mto__step-title">{{ block.settings.title | escape }}</h3>
-          <p class="mto__step-text">{{ block.settings.text | escape }}</p>
         </li>
       {%- endfor -%}
     </ol>
 
     <div class="mto__footer">
-      {%- if section.settings.note != blank -%}
-        <aside class="mto__note" aria-label="Process approval note">
-          <span class="mto__note-icon" aria-hidden="true">
-            <svg viewBox="0 0 28 28" fill="none">
-              <path d="M14 25c6-2.4 9.4-6.7 9.4-12.5V6.3L14 3 4.6 6.3v6.2C4.6 18.3 8 22.6 14 25Z" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
-              <path d="m10.4 14.1 2.4 2.4 5-5.1" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </span>
-          <p>{{ section.settings.note | escape }}</p>
-        </aside>
-      {%- endif -%}
-
       {%- if section.settings.button_label != blank -%}
         <a class="mto__btn" href="{{ section.settings.button_link | default: routes.root_url }}">
           <span>{{ section.settings.button_label | escape }}</span>
@@ -228,7 +212,7 @@
     max-width: 230px;
     margin: 0 0 10px;
     font-family: var(--font-display);
-    font-size: clamp(18px, 1.35vw, 21px);
+    font-size: clamp(16px, 1.15vw, 19px);
     font-weight: var(--font-weight-regular);
     line-height: 1.12;
     letter-spacing: 0;
@@ -236,59 +220,15 @@
     text-wrap: balance;
   }
 
-  .mto__step-text {
-    max-width: 230px;
-    margin: 0;
-    font-family: var(--font-body);
-    font-size: 13px;
-    line-height: 1.5;
-    color: var(--color-muted, #3f3934);
-    text-wrap: pretty;
-  }
-
   .mto__footer {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
     gap: 24px;
     flex-wrap: wrap;
     margin-top: clamp(32px, 3.5vw, 48px);
     padding-top: clamp(22px, 2.2vw, 30px);
     border-top: 1px solid var(--color-border, rgba(74, 44, 24, 0.16));
-  }
-
-  .mto__note {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    align-items: center;
-    gap: 14px;
-    flex: 1 1 380px;
-    margin: 0;
-  }
-
-  .mto__note-icon {
-    display: grid;
-    place-items: center;
-    width: 40px;
-    height: 40px;
-    border: 1px solid rgba(91, 60, 39, 0.24);
-    border-radius: 999px;
-    color: #5c3d29;
-    background: rgba(255, 252, 248, 0.64);
-  }
-
-  .mto__note-icon svg {
-    width: 21px;
-    height: 21px;
-  }
-
-  .mto__note p {
-    margin: 0;
-    max-width: 52ch;
-    font-family: var(--font-body);
-    font-size: 13px;
-    line-height: 1.5;
-    color: var(--color-muted, #332a24);
   }
 
   .mto__btn {
@@ -411,20 +351,8 @@
   "settings": [
     { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "Our process" },
     { "type": "text", "id": "heading", "label": "Heading", "default": "How Custom Orders Work" },
-    {
-      "type": "textarea",
-      "id": "subtext",
-      "label": "Subtext",
-      "default": "A thoughtful, collaborative experience-designed around your space,\nyour style, and the way you live."
-    },
     { "type": "text", "id": "button_label", "label": "Button label", "default": "Start Your Custom Request" },
     { "type": "url", "id": "button_link", "label": "Button link" },
-    {
-      "type": "textarea",
-      "id": "note",
-      "label": "Note bar",
-      "default": "No piece enters production until you approve the final design, dimensions, materials, and finish."
-    }
   ],
   "blocks": [
     {
@@ -449,52 +377,6 @@
       ]
     }
   ],
-  "presets": [
-    {
-      "name": "Made-to-Order Steps",
-      "blocks": [
-        {
-          "type": "step",
-          "settings": {
-            "icon": "consult",
-            "title": "Share Your Space",
-            "text": "Send us your inspiration, measurements, and photos of your space."
-          }
-        },
-        {
-          "type": "step",
-          "settings": {
-            "icon": "wood",
-            "title": "Choose Materials & Details",
-            "text": "Select your wood, finish, dimensions, and the details that matter most."
-          }
-        },
-        {
-          "type": "step",
-          "settings": {
-            "icon": "ruler",
-            "title": "Receive Design & Quote",
-            "text": "We'll create a custom design tailored to your space and provide a clear quote."
-          }
-        },
-        {
-          "type": "step",
-          "settings": {
-            "icon": "artisan",
-            "title": "Approve & Craft",
-            "text": "Once approved, our artisans handcraft your piece with care and precision."
-          }
-        },
-        {
-          "type": "step",
-          "settings": {
-            "icon": "truck",
-            "title": "Deliver & Enjoy",
-            "text": "We deliver and install with care, so you can enjoy your piece for years to come."
-          }
-        }
-      ]
-    }
-  ]
+  "presets": []
 }
 {% endschema %}
