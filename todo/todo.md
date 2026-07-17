@@ -334,9 +334,12 @@ Với từng Color Swatch:
 
 4. Crawl lại Product Attributes nếu thuộc tính thay đổi theo swatch.
 5. Click nút `Customize now`.
+   - **Lưu ý quan trọng**: Amazon có thể render 2 nút "Customize Now" trong DOM. Tuyệt đối **không click** vào nút giả có ID `#gestalt-fake-popover-button-announce` vì nó sẽ gây chuyển hướng hoặc lỗi tải trang. Phải click chính xác vào nút thật có ID: `#gestalt-popover-button-announce`.
 6. Chờ popup `Customize`.
+   - Dữ liệu customization sẽ được load bên trong một iframe có ID là `gc-iframe`.
+   - Để bóc tách dữ liệu, cần evaluate bên trong iframe này, hoặc trích xuất `src` của iframe và điều hướng trình duyệt đến URL đó để parse DOM dễ dàng hơn nếu gặp lỗi cross-origin.
 7. Thu thập toàn bộ customization type.
-8. Với từng customization type, thu thập toàn bộ customization option và giá tăng thêm.
+8. Với từng customization type, thu thập toàn bộ customization option và giá tăng thêm (ví dụ click nút "See all X options" nếu bị ẩn đi).
 9. Đóng popup.
 10. Tiếp tục với swatch tiếp theo.
 
