@@ -2,6 +2,7 @@
 """Validate WRYDECO Amazon crawl JSON files.
 
 Usage:
+    python validate_crawl_json.py                 # validate every JSON in ./data
     python validate_crawl_json.py path/to/product.json
     python validate_crawl_json.py path/to/folder
 
@@ -24,6 +25,9 @@ from pathlib import Path
 from typing import Any, Iterable
 from urllib.parse import urlparse
 
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+DEFAULT_INPUT = "data"
 
 ASIN_PATTERN = re.compile(r"^[A-Z0-9]{10}$")
 SLUG_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
@@ -603,14 +607,35 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "input",
         type=Path,
-        help="A crawl JSON file or a directory containing JSON files.",
+        nargs="?",
+        default=None,
+        help=(
+            "A crawl JSON file or a directory containing JSON files "
+            f"(default: the ./{DEFAULT_INPUT} folder next to this script)."
+        ),
     )
     return parser.parse_args()
 
 
+def resolve_input_path(raw_input: Path | None) -> Path:
+    """Resolve the CLI input, defaulting to the script's ./data folder.
+
+    When no argument is given, ``./data`` next to this script is used so the
+    validator runs plug-and-play regardless of the current working directory.
+    """
+    if raw_input is not None:
+        return raw_input.expanduser().resolve()
+    return (SCRIPT_DIR / DEFAULT_INPUT).resolve()
+
+
 def main() -> int:
     args = parse_args()
-    input_path = args.input.expanduser().resolve()
+    input_path = resolve_input_path(args.input)
+
+    if not input_path.exists():
+        print(f"ERROR: input path does not exist: {input_path}", file=sys.stderr)
+        return 2
+
     json_files = discover_json_files(input_path)
 
     if not json_files:

@@ -1,0 +1,4 @@
+- Thục thi yêu cầu được mô tả trong file `./crawl.md`
+- Sau khi thực thi xong xuôi thì chạy file `./validate_crawl_json.cmd` để kiểm tra dữ liệu crawl có hợp lệ hay không.
+- Sau khi validate xong xuôi thì chạy file `./import_csv_to_store.cmd` để import dữ liệu vào store.
+- Sau khi đã làm hết các bước trên, báo cáo kết quả crawl và import dữ liệu vào store vào file `./report.md` (xóa file nội dung của file report.md trước khi ghi báo cáo mới).

@@ -14,6 +14,9 @@ by CSV" flow, so this script reproduces that behaviour programmatically:
    the matching metafield definition already present in the destination store.
 4. Publish the product to the store's sales channels, matching the CSV
    ``Published`` column.
+5. On a clean import (no failures), move every file from ``data/`` and
+   ``output/`` into ``warehouse/`` so processed inputs/outputs are archived out
+   of the working folders. Disable with ``--no-archive``.
 
 All Shopify credentials are read from ``.env`` using the ``IMPORT_`` prefix so
 this importer never touches the media-processing / dev-store credentials:
@@ -32,8 +35,8 @@ Dependencies:
 
 Usage:
 
-    python import_csv_to_store.py
-    python import_csv_to_store.py --csv output/shopify-products-import.csv
+    python import_csv_to_store.py                      # import every CSV in output/
+    python import_csv_to_store.py --csv output/B0H6FGXKZ7.csv
     python import_csv_to_store.py --dry-run
     python import_csv_to_store.py --no-publish --draft
 """
@@ -46,8 +49,10 @@ import json
 import logging
 import os
 import re
+import shutil
 import sys
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 from urllib.parse import urlparse
@@ -56,11 +61,16 @@ import requests
 
 
 LOGGER = logging.getLogger("csv-to-shopify-importer")
+SCRIPT_DIR = Path(__file__).resolve().parent
 ENV_PREFIX = "IMPORT_"
 DEFAULT_API_VERSION = "2026-07"
 DEFAULT_TIMEOUT_SECONDS = 60
-DEFAULT_CSV = "output/shopify-products-import.csv"
+DEFAULT_CSV = "output"
 MAX_OPTIONS = 3
+
+# After a clean import, the processed inputs/outputs are archived here.
+ARCHIVE_SOURCE_DIRS = ("data", "output")
+WAREHOUSE_DIR = "warehouse"
 
 # Metafield definition types this importer can set directly from a CSV string.
 # Reference/metaobject/rich-text types need specially-formatted values (GIDs or
@@ -315,7 +325,10 @@ def parse_args() -> argparse.Namespace:
         "--csv",
         type=Path,
         default=Path(DEFAULT_CSV),
-        help=f"CSV file to import (default: {DEFAULT_CSV}).",
+        help=(
+            "A CSV file, or a directory to import every *.csv from "
+            f"(default: {DEFAULT_CSV})."
+        ),
     )
     parser.add_argument(
         "--env-file",
@@ -349,6 +362,14 @@ def parse_args() -> argparse.Namespace:
         "--no-metafields",
         action="store_true",
         help="Skip assigning product metafields.",
+    )
+    parser.add_argument(
+        "--no-archive",
+        action="store_true",
+        help=(
+            "Do not move the processed data/ and output/ files into warehouse/ "
+            "after a successful import."
+        ),
     )
     parser.add_argument(
         "--dry-run",
@@ -510,6 +531,44 @@ def metafield_columns(headers: Sequence[str]) -> list[tuple[str, str, str]]:
         if match:
             columns.append((header, match.group("namespace"), match.group("key")))
     return columns
+
+
+def discover_csv_files(path: Path) -> list[Path]:
+    """Return the CSV file(s) to import from a file or a directory path."""
+    if path.is_file():
+        return [path]
+    if path.is_dir():
+        files = sorted(
+            csv_path
+            for csv_path in path.glob("*.csv")
+            if csv_path.is_file() and not csv_path.name.startswith(".")
+        )
+        if not files:
+            raise AppError(f"No .csv files were found in directory: {path}")
+        return files
+    raise AppError(f"CSV path not found: {path}")
+
+
+def parse_csv_files(
+    files: Sequence[Path], only_handles: Iterable[str] | None
+) -> list[ProductRecord]:
+    """Parse every CSV file and return the combined products, de-duplicated by handle."""
+    combined: list[ProductRecord] = []
+    seen_handles: set[str] = set()
+
+    for csv_path in files:
+        for record in parse_csv(csv_path, only_handles):
+            if record.handle in seen_handles:
+                LOGGER.warning(
+                    "Duplicate handle '%s' found in %s; keeping the first occurrence.",
+                    record.handle,
+                    csv_path.name,
+                )
+                continue
+            seen_handles.add(record.handle)
+            combined.append(record)
+
+    return combined
 
 
 def parse_csv(path: Path, only_handles: Iterable[str] | None) -> list[ProductRecord]:
@@ -846,6 +905,52 @@ def import_products(
     return created, skipped, failed, warnings
 
 
+def _unique_destination(directory: Path, name: str) -> Path:
+    """Return a non-colliding path inside ``directory`` for ``name``."""
+    candidate = directory / name
+    if not candidate.exists():
+        return candidate
+
+    source = Path(name)
+    stem, suffix = source.stem, source.suffix
+    timestamp = datetime.now().strftime("%Y%m%dT%H%M%S")
+    counter = 1
+    while True:
+        candidate = directory / f"{stem}.{timestamp}-{counter}{suffix}"
+        if not candidate.exists():
+            return candidate
+        counter += 1
+
+
+def archive_processed_files(base_dir: Path) -> tuple[int, list[str]]:
+    """Move every file from the source directories into the warehouse directory.
+
+    Called only after a clean import so processed inputs/outputs are moved out of
+    the working folders. Name collisions in the warehouse are resolved with a
+    timestamped suffix, so nothing is ever overwritten.
+    """
+    warnings: list[str] = []
+    warehouse = base_dir / WAREHOUSE_DIR
+    warehouse.mkdir(parents=True, exist_ok=True)
+
+    moved = 0
+    for source_name in ARCHIVE_SOURCE_DIRS:
+        source_dir = base_dir / source_name
+        if not source_dir.is_dir():
+            continue
+        for entry in sorted(source_dir.iterdir()):
+            if entry.resolve() == warehouse.resolve():
+                continue
+            destination = _unique_destination(warehouse, entry.name)
+            try:
+                shutil.move(str(entry), str(destination))
+                moved += 1
+                LOGGER.info("Archived %s -> %s", entry, destination)
+            except OSError as exc:
+                warnings.append(f"Could not archive {entry}: {exc}")
+    return moved, warnings
+
+
 def main() -> int:
     args = parse_args()
     logging.basicConfig(
@@ -855,13 +960,15 @@ def main() -> int:
     )
 
     try:
-        records = parse_csv(args.csv.resolve(), args.only_handles)
+        csv_files = discover_csv_files(args.csv.resolve())
+        records = parse_csv_files(csv_files, args.only_handles)
         if not records:
-            raise AppError("No products were found in the CSV.")
+            raise AppError("No products were found in the CSV(s).")
         if args.limit and args.limit > 0:
             records = records[: args.limit]
 
-        LOGGER.info("CSV: %s", args.csv)
+        LOGGER.info("CSV source: %s", args.csv)
+        LOGGER.info("CSV file(s): %d", len(csv_files))
         LOGGER.info("Products to import: %d", len(records))
 
         if args.dry_run:
@@ -900,6 +1007,25 @@ def main() -> int:
             skipped,
             failed,
         )
+
+        # A clean import archives the processed data/ and output/ files.
+        if failed:
+            LOGGER.warning(
+                "Skipping archive because %d product(s) failed; "
+                "the data/ and output/ files are left in place.",
+                failed,
+            )
+        elif args.no_archive:
+            LOGGER.info("Archiving disabled via --no-archive.")
+        else:
+            moved, archive_warnings = archive_processed_files(SCRIPT_DIR)
+            warnings.extend(archive_warnings)
+            LOGGER.info(
+                "Archived %d file(s) into %s/",
+                moved,
+                (SCRIPT_DIR / WAREHOUSE_DIR),
+            )
+
         if warnings:
             LOGGER.warning("Warnings: %d", len(warnings))
             for warning in warnings:

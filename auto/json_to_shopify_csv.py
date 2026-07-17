@@ -190,9 +190,15 @@ def parse_args() -> argparse.Namespace:
         help="A crawl JSON file or a directory containing crawl JSON files (default: data).",
     )
     parser.add_argument(
+        "--output-dir",
         "--output",
-        default="data/shopify-products-import.csv",
-        help="Output Shopify CSV path (default: data/shopify-products-import.csv).",
+        dest="output_dir",
+        default="output",
+        help=(
+            "Directory where each CSV is written (default: output). "
+            "Every CSV is named after its source JSON file, e.g. B0H6FGXKZ7.json "
+            "-> B0H6FGXKZ7.csv."
+        ),
     )
     parser.add_argument(
         "--config",
@@ -884,57 +890,61 @@ def build_product_rows(
     return rows, warnings
 
 
-def convert_files(
-    json_files: Sequence[Path], settings: Settings, strict: bool
+def convert_file(
+    json_path: Path, settings: Settings, strict: bool
 ) -> tuple[list[dict[str, str]], list[str], int]:
+    """Convert one crawl JSON file into its Shopify CSV rows.
+
+    Every JSON file is converted independently so that each one produces a
+    separate CSV named after the source file.
+    """
     all_rows: list[dict[str, str]] = []
     warnings: list[str] = []
     product_count = 0
     handles_seen: set[str] = set()
 
-    for json_path in json_files:
-        try:
-            data = load_crawl_json(json_path)
-            swatches = data.get("color_swatches") or []
-            if not swatches:
-                # A crawl without swatches is still treated as one product.
-                swatches = [
-                    {
-                        "name": "Default",
-                        "asin": data.get("asin"),
-                        "product_url": data.get("source_url"),
-                        "base_price": data.get("product", {}).get("base_price", {}),
-                        "product_attributes": data.get("product", {}).get(
-                            "product_attributes", {}
-                        ),
-                        "customization_types": [],
-                    }
-                ]
+    try:
+        data = load_crawl_json(json_path)
+        swatches = data.get("color_swatches") or []
+        if not swatches:
+            # A crawl without swatches is still treated as one product.
+            swatches = [
+                {
+                    "name": "Default",
+                    "asin": data.get("asin"),
+                    "product_url": data.get("source_url"),
+                    "base_price": data.get("product", {}).get("base_price", {}),
+                    "product_attributes": data.get("product", {}).get(
+                        "product_attributes", {}
+                    ),
+                    "customization_types": [],
+                }
+            ]
 
-            for swatch in swatches:
-                product_rows, product_warnings = build_product_rows(
-                    data,
-                    swatch,
-                    settings,
-                    append_asin_to_handle=len(swatches) > 1,
+        for swatch in swatches:
+            product_rows, product_warnings = build_product_rows(
+                data,
+                swatch,
+                settings,
+                append_asin_to_handle=len(swatches) > 1,
+            )
+            handle = product_rows[0]["Handle"]
+            if handle in handles_seen:
+                raise ValueError(
+                    f"Duplicate Shopify handle generated: {handle}. Check duplicate ASINs."
                 )
-                handle = product_rows[0]["Handle"]
-                if handle in handles_seen:
-                    raise ValueError(
-                        f"Duplicate Shopify handle generated: {handle}. Check duplicate ASINs."
-                    )
-                handles_seen.add(handle)
-                all_rows.extend(product_rows)
-                product_count += 1
-                for warning in product_warnings:
-                    warnings.append(
-                        f"{json_path.name} / {swatch.get('asin') or swatch.get('name')}: {warning}"
-                    )
-        except Exception as exc:  # noqa: BLE001 - CLI should report per-file failures.
-            message = f"Skipped {json_path}: {exc}"
-            if strict:
-                raise RuntimeError(message) from exc
-            warnings.append(message)
+            handles_seen.add(handle)
+            all_rows.extend(product_rows)
+            product_count += 1
+            for warning in product_warnings:
+                warnings.append(
+                    f"{json_path.name} / {swatch.get('asin') or swatch.get('name')}: {warning}"
+                )
+    except Exception as exc:  # noqa: BLE001 - CLI should report per-file failures.
+        message = f"Skipped {json_path}: {exc}"
+        if strict:
+            raise RuntimeError(message) from exc
+        warnings.append(message)
 
     return all_rows, warnings, product_count
 
@@ -957,8 +967,11 @@ def write_csv(output_path: Path, rows: Sequence[dict[str, str]]) -> None:
 def main() -> int:
     args = parse_args()
     input_path = Path(args.input).expanduser().resolve()
-    output_path = Path(args.output).expanduser().resolve()
+    output_dir = Path(args.output_dir).expanduser().resolve()
     config_path = Path(args.config).expanduser().resolve()
+
+    warnings: list[str] = []
+    written: list[tuple[Path, int, int, int]] = []
 
     try:
         settings = load_settings(config_path)
@@ -966,24 +979,34 @@ def main() -> int:
         if not json_files:
             raise FileNotFoundError(f"No JSON files found under {input_path}")
 
-        rows, warnings, product_count = convert_files(
-            json_files, settings, strict=args.strict
-        )
-        if not rows:
-            raise RuntimeError("No Shopify product rows were generated")
+        for json_path in json_files:
+            rows, file_warnings, product_count = convert_file(
+                json_path, settings, strict=args.strict
+            )
+            warnings.extend(file_warnings)
+            if not rows:
+                warnings.append(f"{json_path.name}: no Shopify rows were generated")
+                continue
 
-        write_csv(output_path, rows)
+            # The output CSV is named after its source JSON file.
+            output_path = output_dir / f"{json_path.stem}.csv"
+            write_csv(output_path, rows)
+            variant_count = sum(1 for row in rows if row.get("Variant Price"))
+            image_count = sum(1 for row in rows if row.get("Image Src"))
+            written.append((output_path, product_count, variant_count, image_count))
+
+        if not written:
+            raise RuntimeError("No Shopify product rows were generated")
     except Exception as exc:  # noqa: BLE001 - top-level CLI error reporting.
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
 
-    variant_count = sum(1 for row in rows if row.get("Variant Price"))
-    image_count = sum(1 for row in rows if row.get("Image Src"))
-
-    print(f"Created: {output_path}")
-    print(f"Products: {product_count}")
-    print(f"Variants: {variant_count}")
-    print(f"Product image rows: {image_count}")
+    for output_path, product_count, variant_count, image_count in written:
+        print(
+            f"Created: {output_path} "
+            f"(products={product_count}, variants={variant_count}, images={image_count})"
+        )
+    print(f"Files written: {len(written)}")
     print("Publishing: Status=active, Online Store Published=true")
     print(f"Vendor: {PRODUCT_VENDOR}; Tags: {PRODUCT_TAG}; Gallery image limit: {PRODUCT_IMAGE_LIMIT}")
     print(
