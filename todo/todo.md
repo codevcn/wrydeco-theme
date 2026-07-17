@@ -662,3 +662,374 @@ Sau khi crawl xong:
 - Currency verified:
 - Customize now found:
 - Notes:
+
+---
+
+# Hậu xử lý nội dung sau khi crawl hoàn tất
+
+Chỉ thực hiện các bước trong mục này **sau khi toàn bộ quá trình crawl đã hoàn thành**, các khu vực có thể truy cập đã được kiểm tra đầy đủ và file JSON kết quả đã được tạo thành công.
+
+## 1. Viết lại Product Title chuẩn SEO
+
+- Viết lại `product.title` dựa trên product title gốc và toàn bộ dữ liệu sản phẩm đã crawl được.
+- Product title mới phải tự nhiên, rõ nghĩa, mô tả đúng sản phẩm và không chứa thông tin không có trong dữ liệu nguồn.
+- Độ dài bắt buộc: **từ 50 đến 70 ký tự**, tính cả khoảng trắng.
+- Ưu tiên đặt từ khóa chính gần đầu title.
+- Không nhồi nhét từ khóa, không lặp từ vô nghĩa, không dùng câu quảng cáo quá mức và không tự tạo thông số kỹ thuật.
+- Ghi đè giá trị title mới vào field:
+
+```json
+product.title
+```
+
+## 2. Viết lại Product Description thành HTML
+
+- Dùng nội dung từ `product.about_this_item`, Product Attributes và các thông tin sản phẩm thực tế đã crawl được để viết lại product description.
+- Chỉ tham khảo **cấu trúc HTML, bố cục và inline style** bên dưới.
+- Toàn bộ heading, paragraph, badge và nội dung mô tả phải được viết lại theo đúng sản phẩm đang crawl.
+- Không sao chép các nội dung mẫu về bookshelf, storage, finish color hoặc vật trang trí nếu chúng không phù hợp với sản phẩm thực tế.
+- Không tạo đặc điểm, vật liệu, công dụng, màu sắc, kích thước hoặc phụ kiện không có trong dữ liệu đã crawl.
+- Có thể tăng hoặc giảm số block đánh số để phù hợp với số lượng ý chính thực tế, nhưng phải giữ phong cách và cấu trúc trình bày thống nhất.
+- Ghi HTML hoàn chỉnh vào field:
+
+```json
+product.about_this_item
+```
+
+Field này sau bước hậu xử lý sẽ là một **chuỗi HTML**, không còn là mảng bullet thô.
+
+Cấu trúc HTML tham khảo:
+
+```html
+<div
+  class="dm-tabs__rte"
+  style="margin:0; padding:0; background:transparent; color:#2a211b; font-family:inherit;"
+>
+  <div style="display:grid; gap:16px; margin:0; padding:0; background:transparent;">
+    <div
+      style="padding:16px 18px; border-radius:16px; background:rgba(91,50,24,0.055); border:1px solid rgba(92,58,35,0.10);"
+    >
+      <div
+        style="margin:0 0 6px; color:#5a3218; font-size:11px; line-height:1; font-weight:600; letter-spacing:0.16em; text-transform:uppercase;"
+      >
+        Sculptural Tree-Inspired Storage
+      </div>
+      <p
+        style="margin:0; padding:0; color:rgba(42,33,27,0.76); font-size:14px; line-height:1.7; font-weight:400;"
+      >
+        Bring natural warmth and artistic character into your home with a tree branch floor shelf
+        featuring flowing trunk lines, organic supports, and sculptural multi-level storage.
+      </p>
+    </div>
+    <div
+      style="display:grid; grid-template-columns:34px 1fr; gap:14px; padding:0 0 16px; border-bottom:1px solid rgba(92,58,35,0.14); background:transparent;"
+    >
+      <span
+        style="width:30px; height:30px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; background:rgba(91,50,24,0.09); color:#5a3218; font-size:11px; font-weight:600; letter-spacing:0.04em; line-height:1;"
+      >
+        01
+      </span>
+      <div style="margin:0; padding:0; background:transparent;">
+        <h3
+          style="margin:0 0 7px; padding:0; color:#1f1712; font-family:var(--font-heading-family, Georgia, serif); font-size:17px; line-height:1.35; font-weight:500;"
+        >
+          Tree Branch Statement Design
+        </h3>
+        <p
+          style="margin:0; padding:0; color:rgba(42,33,27,0.76); font-size:14px; line-height:1.7; font-weight:400;"
+        >
+          Flowing trunk lines, organic branch supports, and sculptural shelf placement create a
+          nature-inspired focal point that adds rustic warmth and visual movement to the room.
+        </p>
+      </div>
+    </div>
+    <div
+      style="display:grid; grid-template-columns:34px 1fr; gap:14px; padding:0 0 16px; border-bottom:1px solid rgba(92,58,35,0.14); background:transparent;"
+    >
+      <span
+        style="width:30px; height:30px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; background:rgba(91,50,24,0.09); color:#5a3218; font-size:11px; font-weight:600; letter-spacing:0.04em; line-height:1;"
+      >
+        02
+      </span>
+      <div style="margin:0; padding:0; background:transparent;">
+        <h3
+          style="margin:0 0 7px; padding:0; color:#1f1712; font-family:var(--font-heading-family, Georgia, serif); font-size:17px; line-height:1.35; font-weight:500;"
+        >
+          Rich Wood Grain Appearance
+        </h3>
+        <p
+          style="margin:0; padding:0; color:rgba(42,33,27,0.76); font-size:14px; line-height:1.7; font-weight:400;"
+        >
+          A rich wood grain appearance, smooth rounded shelf edges, and handcrafted-style curves
+          give the bookcase a warm vintage character suited to cozy and nature-inspired interiors.
+        </p>
+      </div>
+    </div>
+    <div
+      style="display:grid; grid-template-columns:34px 1fr; gap:14px; padding:0 0 16px; border-bottom:1px solid rgba(92,58,35,0.14); background:transparent;"
+    >
+      <span
+        style="width:30px; height:30px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; background:rgba(91,50,24,0.09); color:#5a3218; font-size:11px; font-weight:600; letter-spacing:0.04em; line-height:1;"
+      >
+        03
+      </span>
+      <div style="margin:0; padding:0; background:transparent;">
+        <h3
+          style="margin:0 0 7px; padding:0; color:#1f1712; font-family:var(--font-heading-family, Georgia, serif); font-size:17px; line-height:1.35; font-weight:500;"
+        >
+          Multi-Level Display Storage
+        </h3>
+        <p
+          style="margin:0 0 10px; padding:0; color:rgba(42,33,27,0.76); font-size:14px; line-height:1.7; font-weight:400;"
+        >
+          Multiple shelf levels provide decorative display space for arranging books, plants,
+          keepsakes, and personal décor in a warm and visually balanced way.
+        </p>
+        <div style="display:flex; flex-wrap:wrap; gap:7px; margin:0; padding:0;">
+          <span
+            style="display:inline-flex; padding:6px 9px; border-radius:999px; background:rgba(91,50,24,0.06); border:1px solid rgba(92,58,35,0.10); color:rgba(42,33,27,0.78); font-size:12px; line-height:1;"
+            >Books</span
+          >
+          <span
+            style="display:inline-flex; padding:6px 9px; border-radius:999px; background:rgba(91,50,24,0.06); border:1px solid rgba(92,58,35,0.10); color:rgba(42,33,27,0.78); font-size:12px; line-height:1;"
+            >Plants</span
+          >
+          <span
+            style="display:inline-flex; padding:6px 9px; border-radius:999px; background:rgba(91,50,24,0.06); border:1px solid rgba(92,58,35,0.10); color:rgba(42,33,27,0.78); font-size:12px; line-height:1;"
+            >Pottery</span
+          >
+          <span
+            style="display:inline-flex; padding:6px 9px; border-radius:999px; background:rgba(91,50,24,0.06); border:1px solid rgba(92,58,35,0.10); color:rgba(42,33,27,0.78); font-size:12px; line-height:1;"
+            >Lanterns</span
+          >
+          <span
+            style="display:inline-flex; padding:6px 9px; border-radius:999px; background:rgba(91,50,24,0.06); border:1px solid rgba(92,58,35,0.10); color:rgba(42,33,27,0.78); font-size:12px; line-height:1;"
+            >Framed Photos</span
+          >
+          <span
+            style="display:inline-flex; padding:6px 9px; border-radius:999px; background:rgba(91,50,24,0.06); border:1px solid rgba(92,58,35,0.10); color:rgba(42,33,27,0.78); font-size:12px; line-height:1;"
+            >Candles</span
+          >
+          <span
+            style="display:inline-flex; padding:6px 9px; border-radius:999px; background:rgba(91,50,24,0.06); border:1px solid rgba(92,58,35,0.10); color:rgba(42,33,27,0.78); font-size:12px; line-height:1;"
+            >Baskets</span
+          >
+          <span
+            style="display:inline-flex; padding:6px 9px; border-radius:999px; background:rgba(91,50,24,0.09); border:1px solid rgba(92,58,35,0.13); color:#5a3218; font-size:12px; line-height:1;"
+            >Collectibles</span
+          >
+        </div>
+      </div>
+    </div>
+
+    <div
+      style="display:grid; grid-template-columns:34px 1fr; gap:14px; padding:0 0 16px; border-bottom:1px solid rgba(92,58,35,0.14); background:transparent;"
+    >
+      <span
+        style="width:30px; height:30px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; background:rgba(91,50,24,0.09); color:#5a3218; font-size:11px; font-weight:600; letter-spacing:0.04em; line-height:1;"
+      >
+        04
+      </span>
+
+      <div style="margin:0; padding:0; background:transparent;">
+        <h3
+          style="margin:0 0 7px; padding:0; color:#1f1712; font-family:var(--font-heading-family, Georgia, serif); font-size:17px; line-height:1.35; font-weight:500;"
+        >
+          Functional Storage With Artistic Style
+        </h3>
+
+        <p
+          style="margin:0; padding:0; color:rgba(42,33,27,0.76); font-size:14px; line-height:1.7; font-weight:400;"
+        >
+          Combining practical organization with decorative character, this tree bookshelf can serve
+          as a bookcase, plant display shelf, rustic storage piece, or sculptural statement feature.
+        </p>
+      </div>
+    </div>
+
+    <div
+      style="display:grid; grid-template-columns:34px 1fr; gap:14px; padding:0 0 16px; border-bottom:1px solid rgba(92,58,35,0.14); background:transparent;"
+    >
+      <span
+        style="width:30px; height:30px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; background:rgba(91,50,24,0.09); color:#5a3218; font-size:11px; font-weight:600; letter-spacing:0.04em; line-height:1;"
+      >
+        05
+      </span>
+
+      <div style="margin:0; padding:0; background:transparent;">
+        <h3
+          style="margin:0 0 7px; padding:0; color:#1f1712; font-family:var(--font-heading-family, Georgia, serif); font-size:17px; line-height:1.35; font-weight:500;"
+        >
+          Choose Your Finish Color
+        </h3>
+
+        <p
+          style="margin:0 0 10px; padding:0; color:rgba(42,33,27,0.76); font-size:14px; line-height:1.7; font-weight:400;"
+        >
+          Choose from four finish colors to coordinate the bookshelf with rustic, farmhouse, boho,
+          vintage, cottage, cabin, woodland, or organic-modern décor.
+        </p>
+
+        <div style="display:flex; flex-wrap:wrap; gap:7px; margin:0; padding:0;">
+          <span
+            style="display:inline-flex; padding:6px 9px; border-radius:999px; background:rgba(91,50,24,0.06); border:1px solid rgba(92,58,35,0.10); color:rgba(42,33,27,0.78); font-size:12px; line-height:1;"
+            >Warm Wood</span
+          >
+          <span
+            style="display:inline-flex; padding:6px 9px; border-radius:999px; background:rgba(91,50,24,0.06); border:1px solid rgba(92,58,35,0.10); color:rgba(42,33,27,0.78); font-size:12px; line-height:1;"
+            >Dark Warm Wood</span
+          >
+          <span
+            style="display:inline-flex; padding:6px 9px; border-radius:999px; background:rgba(91,50,24,0.06); border:1px solid rgba(92,58,35,0.10); color:rgba(42,33,27,0.78); font-size:12px; line-height:1;"
+            >Cool Dark Wood</span
+          >
+          <span
+            style="display:inline-flex; padding:6px 9px; border-radius:999px; background:rgba(91,50,24,0.09); border:1px solid rgba(92,58,35,0.13); color:#5a3218; font-size:12px; line-height:1;"
+            >Natural Finish</span
+          >
+        </div>
+      </div>
+    </div>
+
+    <div
+      style="display:grid; grid-template-columns:34px 1fr; gap:14px; padding:0 0 16px; border-bottom:1px solid rgba(92,58,35,0.14); background:transparent;"
+    >
+      <span
+        style="width:30px; height:30px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; background:rgba(91,50,24,0.09); color:#5a3218; font-size:11px; font-weight:600; letter-spacing:0.04em; line-height:1;"
+      >
+        06
+      </span>
+
+      <div style="margin:0; padding:0; background:transparent;">
+        <h3
+          style="margin:0 0 7px; padding:0; color:#1f1712; font-family:var(--font-heading-family, Georgia, serif); font-size:17px; line-height:1.35; font-weight:500;"
+        >
+          Designed for Cozy Interiors
+        </h3>
+
+        <p
+          style="margin:0; padding:0; color:rgba(42,33,27,0.76); font-size:14px; line-height:1.7; font-weight:400;"
+        >
+          A warm decorative addition to living rooms, bedrooms, reading nooks, offices, cabins,
+          cottages, and other welcoming spaces with rustic or nature-inspired styling.
+        </p>
+      </div>
+    </div>
+
+    <div
+      style="display:grid; grid-template-columns:34px 1fr; gap:14px; padding:0 0 16px; border-bottom:1px solid rgba(92,58,35,0.14); background:transparent;"
+    >
+      <span
+        style="width:30px; height:30px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; background:rgba(91,50,24,0.09); color:#5a3218; font-size:11px; font-weight:600; letter-spacing:0.04em; line-height:1;"
+      >
+        07
+      </span>
+
+      <div style="margin:0; padding:0; background:transparent;">
+        <h3
+          style="margin:0 0 7px; padding:0; color:#1f1712; font-family:var(--font-heading-family, Georgia, serif); font-size:17px; line-height:1.35; font-weight:500;"
+        >
+          Naturally Unique Character
+        </h3>
+
+        <p
+          style="margin:0; padding:0; color:rgba(42,33,27,0.76); font-size:14px; line-height:1.7; font-weight:400;"
+        >
+          Each piece may vary slightly in branch curve, shelf edge, decorative leaf placement, wood
+          grain, color tone, and finish appearance, giving every bookshelf its own distinctive look.
+        </p>
+      </div>
+    </div>
+
+    <div
+      style="margin:2px 0 0; padding:13px 15px; border-radius:14px; background:rgba(91,50,24,0.06); color:rgba(42,33,27,0.72); font-size:13px; line-height:1.6; border:1px solid rgba(92,58,35,0.08);"
+    >
+      Books, plants, pottery, lanterns, framed photos, baskets, and other decorative objects shown
+      in product photos are for presentation only unless explicitly included.
+    </div>
+  </div>
+</div>
+```
+
+## 3. Thêm `extra_fields` vào cuối JSON crawl
+
+Sau khi đã viết lại title và description, thêm object `extra_fields` ở cấp cao nhất, tại cuối file JSON:
+
+```json
+{
+  "extra_fields": {
+    "seo_product_title": "string",
+    "page_title": "string",
+    "meta_description": "string",
+    "url_slug": "string"
+  }
+}
+```
+
+Quy tắc cho từng field:
+
+### `extra_fields.seo_product_title`
+
+- Viết từ product title gốc thành dạng **long-tail keyword**.
+- Phải mô tả đúng loại sản phẩm, đặc điểm nổi bật, vật liệu hoặc phong cách thực tế nếu dữ liệu crawl có cung cấp.
+- Không nhồi nhét từ khóa và không thêm thông tin không có trong dữ liệu nguồn.
+- Không bắt buộc giống `product.title` hoặc `page_title`.
+
+### `extra_fields.page_title`
+
+- Đây là tiêu đề hiển thị trên công cụ tìm kiếm.
+- Viết chuẩn SEO, tự nhiên và tập trung vào từ khóa chính.
+- Độ dài bắt buộc: **từ 50 đến 60 ký tự**, tính cả khoảng trắng.
+- Không tự động thêm tên thương hiệu nếu việc đó làm vượt giới hạn ký tự.
+
+### `extra_fields.meta_description`
+
+- Viết chuẩn SEO dựa trên nội dung thật của sản phẩm.
+- Độ dài bắt buộc: **từ 150 đến 160 ký tự**, tính cả khoảng trắng.
+- Mô tả rõ sản phẩm, điểm nổi bật và mục đích sử dụng chính.
+- Không nhồi nhét từ khóa, không dùng thông tin giả và không kết thúc bằng câu bị cắt dở.
+
+### `extra_fields.url_slug`
+
+- Viết dưới dạng URL slug chuẩn SEO.
+- Độ dài bắt buộc: **từ 50 đến 60 ký tự**, tính cả dấu gạch nối.
+- Chỉ sử dụng chữ thường ASCII, chữ số và dấu gạch nối `-`.
+- Không dấu tiếng Việt, không khoảng trắng, không ký tự đặc biệt.
+- Không bắt đầu hoặc kết thúc bằng dấu gạch nối.
+- Không có hai dấu gạch nối liên tiếp.
+- Ưu tiên từ khóa mô tả đúng sản phẩm và tránh các từ không mang giá trị SEO.
+
+Ví dụ cấu trúc cuối file JSON:
+
+```json
+{
+  "schema_version": "1.2.0",
+  "asin": "B0H6FGXKZ7",
+  "source_url": "https://www.amazon.com/dp/B0H6FGXKZ7",
+  "crawl_metadata": {},
+  "product": {},
+  "assets": {},
+  "color_swatches": [],
+  "extra_fields": {
+    "seo_product_title": "Long-tail keyword product title generated from the original title",
+    "page_title": "SEO page title between 50 and 60 characters",
+    "meta_description": "SEO meta description between 150 and 160 characters, written naturally from the actual crawled product information without invented claims.",
+    "url_slug": "seo-friendly-product-url-slug-between-50-and-60-chars"
+  }
+}
+```
+
+## 4. Xác minh bắt buộc sau hậu xử lý
+
+Trước khi kết thúc, phải kiểm tra và ghi nhận:
+
+- `product.title` có độ dài từ 50 đến 70 ký tự.
+- `product.about_this_item` là một chuỗi HTML hoàn chỉnh, hợp lệ và dùng đúng nội dung của sản phẩm đã crawl.
+- HTML không còn nội dung mẫu không liên quan đến sản phẩm thực tế.
+- `extra_fields.seo_product_title` có dạng long-tail keyword và không chứa thông tin bịa đặt.
+- `extra_fields.page_title` có độ dài từ 50 đến 60 ký tự.
+- `extra_fields.meta_description` có độ dài từ 150 đến 160 ký tự.
+- `extra_fields.url_slug` có độ dài từ 50 đến 60 ký tự và đúng định dạng slug.
+- File JSON vẫn parse hợp lệ sau khi cập nhật.
+- Không làm mất hoặc thay đổi sai dữ liệu crawl gốc ngoài các field được yêu cầu hậu xử lý.
+- Cập nhật `report.md` để ghi rõ rằng bước SEO và định dạng description đã hoàn thành, đồng thời ghi lại độ dài thực tế của title, page title, meta description và URL slug.

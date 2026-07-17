@@ -1,1 +1,0 @@
-python json_to_shopify_csv.py --input "data" --output "output/shopify-products-import.csv" --strict

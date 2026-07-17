@@ -17,6 +17,8 @@ Product mapping rules implemented by this script:
   ``material``.
 - For any customization type whose lowercase name contains ``size``, the first
   option is discarded before Shopify variants are generated.
+- SEO data comes from the top-level ``extra_fields`` object: ``seo_product_title``,
+  ``page_title``, ``meta_description`` and ``url_slug``.
 - Products are generated with ``Status=active`` and ``Published=true``.
 
 Text-input customizations such as "Note to seller" are not valid Shopify
@@ -222,6 +224,23 @@ def slugify(value: str) -> str:
     return slug or "product"
 
 
+def normalize_url_slug(value: Any) -> str:
+    """Normalize ``extra_fields.url_slug`` into a Shopify Handle base.
+
+    The crawl JSON should normally contain only the slug. For resilience, this
+    also accepts a full URL or a value prefixed with ``products/``.
+    """
+    raw = clean_text(value)
+    if not raw:
+        return ""
+
+    raw = re.sub(r"(?i)^https?://[^/]+/?", "", raw)
+    raw = raw.split("?", 1)[0].split("#", 1)[0].strip("/")
+    if raw.casefold().startswith("products/"):
+        raw = raw[len("products/") :]
+    return slugify(raw)
+
+
 def parse_decimal(value: Any, *, field_name: str) -> Decimal:
     if value is None or value == "":
         raise ValueError(f"Missing numeric field: {field_name}")
@@ -406,19 +425,47 @@ def load_crawl_json(path: Path) -> dict[str, Any]:
 
 
 def build_body_html(product: dict[str, Any]) -> str:
-    """Map ``product.about_this_item`` to the Shopify product description."""
-    bullets = [clean_text(item) for item in product.get("about_this_item") or []]
-    bullets = [item for item in bullets if item]
-    if not bullets:
-        return ""
-    list_items = "".join(f"<li>{html.escape(item)}</li>" for item in bullets)
-    return f"<ul>{list_items}</ul>"
+    """Return Shopify Body HTML from ``product.about_this_item``.
+
+    The post-crawl workflow stores the rewritten description as one HTML string.
+    Older crawl files store ``about_this_item`` as a list of plain-text bullets.
+    Both forms are supported without iterating over individual string characters.
+    """
+    description = product.get("about_this_item")
+
+    if isinstance(description, str):
+        return description.strip()
+
+    if isinstance(description, list):
+        bullets = [clean_text(item) for item in description]
+        bullets = [item for item in bullets if item]
+        if not bullets:
+            return ""
+        list_items = "".join(f"<li>{html.escape(item)}</li>" for item in bullets)
+        return f"<ul>{list_items}</ul>"
+
+    return ""
 
 
 def build_seo_description(product: dict[str, Any], title: str) -> str:
-    bullets = [clean_text(item) for item in product.get("about_this_item") or []]
-    candidate = next((item for item in bullets if item), title)
-    return candidate[:320].rstrip()
+    """Build a safe fallback SEO description for legacy JSON files.
+
+    Normal JSON files should provide ``extra_fields.meta_description``. This
+    fallback supports both the legacy list format and the new HTML-string format.
+    """
+    description = product.get("about_this_item")
+
+    if isinstance(description, list):
+        bullets = [clean_text(item) for item in description]
+        candidate = next((item for item in bullets if item), title)
+        return candidate[:320].rstrip()
+
+    if isinstance(description, str):
+        plain_text = re.sub(r"<[^>]+>", " ", description)
+        plain_text = clean_text(html.unescape(plain_text))
+        return (plain_text or title)[:320].rstrip()
+
+    return title[:320].rstrip()
 
 
 def build_rich_description(data: dict[str, Any]) -> str:
@@ -638,7 +685,11 @@ def empty_row() -> dict[str, str]:
 
 
 def build_product_rows(
-    data: dict[str, Any], swatch: dict[str, Any], settings: Settings
+    data: dict[str, Any],
+    swatch: dict[str, Any],
+    settings: Settings,
+    *,
+    append_asin_to_handle: bool,
 ) -> tuple[list[dict[str, str]], list[str]]:
     product = data["product"]
     title = clean_text(product.get("title"))
@@ -649,7 +700,22 @@ def build_product_rows(
     if not asin:
         raise ValueError(f"Product '{title}' has no ASIN")
 
-    handle = f"{slugify(title)}-{slugify(asin)}"
+    extra_fields_raw = data.get("extra_fields")
+    extra_fields = extra_fields_raw if isinstance(extra_fields_raw, dict) else {}
+    seo_product_title = clean_text(extra_fields.get("seo_product_title"))
+    page_title = clean_text(extra_fields.get("page_title"))
+    meta_description = clean_text(extra_fields.get("meta_description"))
+    url_slug = clean_text(extra_fields.get("url_slug"))
+
+    # Use extra_fields.url_slug as the Shopify Handle. When one JSON contains
+    # multiple color swatches, each swatch becomes a separate product, so append
+    # its ASIN to prevent Shopify from merging those rows into one product.
+    handle_base = normalize_url_slug(url_slug) or slugify(title)
+    handle = (
+        f"{handle_base}-{slugify(asin)}"
+        if append_asin_to_handle
+        else handle_base
+    )
     base_price = parse_decimal(
         (swatch.get("base_price") or {}).get("amount"),
         field_name=f"color_swatches[{asin}].base_price.amount",
@@ -670,6 +736,32 @@ def build_product_rows(
     wood_type = get_attribute_value(attributes, "material")
 
     variant_options, warnings = build_variant_options(swatch, settings)
+
+    if not isinstance(extra_fields_raw, dict):
+        warnings.append("Top-level extra_fields is missing or is not an object")
+    if not seo_product_title:
+        warnings.append("extra_fields.seo_product_title is empty; product.title will be used")
+    if not page_title:
+        warnings.append("extra_fields.page_title is empty; product.title will be used")
+    elif not 50 <= len(page_title) <= 60:
+        warnings.append(
+            f"extra_fields.page_title has {len(page_title)} characters; expected 50-60"
+        )
+    if not meta_description:
+        warnings.append(
+            "extra_fields.meta_description is empty; the legacy generated SEO description will be used"
+        )
+    elif not 150 <= len(meta_description) <= 160:
+        warnings.append(
+            f"extra_fields.meta_description has {len(meta_description)} characters; expected 150-160"
+        )
+    if not url_slug:
+        warnings.append("extra_fields.url_slug is empty; product.title will be used for the Handle")
+    elif not 50 <= len(normalize_url_slug(url_slug)) <= 60:
+        warnings.append(
+            f"extra_fields.url_slug has {len(normalize_url_slug(url_slug))} normalized characters; expected 50-60"
+        )
+
     if variant_options:
         combinations: Iterable[tuple[VariantValue, ...]] = itertools.product(
             *(option.values for option in variant_options)
@@ -680,7 +772,10 @@ def build_product_rows(
     images = collect_image_records(data, title)
     first_image_url = images[0]["url"] if images else ""
     body_html = build_body_html(product)
-    seo_description = build_seo_description(product, title)
+    fallback_seo_description = build_seo_description(product, title)
+    effective_seo_product_title = seo_product_title or title
+    effective_page_title = page_title or title
+    effective_meta_description = meta_description or fallback_seo_description
     rich_description = build_rich_description(data)
     amazon_url = clean_text(swatch.get("product_url") or data.get("source_url"))
     tags = build_tags(data, swatch, settings)
@@ -713,12 +808,12 @@ def build_product_rows(
                     "Tags": tags,
                     "Published": "true",
                     "Gift Card": "false",
-                    "SEO Title": title,
-                    "SEO Description": seo_description,
+                    "SEO Title": effective_page_title,
+                    "SEO Description": effective_meta_description,
                     "amazon_link (product.metafields.custom.amazon_link)": amazon_url,
                     "Author Info (product.metafields.custom.author_info)": author_info,
                     "Product Material (product.metafields.custom.product_material)": material,
-                    "SEO Product Title (product.metafields.custom.seo_product_title)": title,
+                    "SEO Product Title (product.metafields.custom.seo_product_title)": effective_seo_product_title,
                     "Wood Type (product.metafields.custom.wood_type)": wood_type,
                     "Rich Description (product.metafields.custom.rich_description)": rich_description,
                     "Status": "active",
@@ -818,7 +913,10 @@ def convert_files(
 
             for swatch in swatches:
                 product_rows, product_warnings = build_product_rows(
-                    data, swatch, settings
+                    data,
+                    swatch,
+                    settings,
+                    append_asin_to_handle=len(swatches) > 1,
                 )
                 handle = product_rows[0]["Handle"]
                 if handle in handles_seen:
