@@ -19,6 +19,24 @@ Không chỉ hướng dẫn hoặc phân tích. Hãy tự điều khiển trình
 - Phải tạo file JSON kết quả và file báo cáo Markdown theo cấu trúc được chỉ định.
 - Có thể ghi screenshot, HTML, network log hoặc dữ liệu trung gian vào folder `debug` trong quá trình crawl.
 
+## Mở trình duyệt có giao diện để người dùng quan sát
+
+Phải khởi chạy trình duyệt Playwright ở chế độ **headed/visible**, không chạy `headless`. Cửa sổ trình duyệt phải hiển thị trực tiếp trên màn hình để tôi có thể quan sát và kiểm tra toàn bộ quá trình thao tác.
+
+Yêu cầu cụ thể:
+
+- Mở Chromium hoặc browser tương thích bằng Playwright với giao diện người dùng hiển thị rõ ràng, tương đương cấu hình `headless: false`.
+- Không chạy browser ẩn, không chạy toàn bộ tác vụ trong background và không chỉ dùng request/API mà không hiển thị thao tác trên trang.
+- Giữ cửa sổ trình duyệt mở trong suốt quá trình crawl; không tự thu nhỏ, đóng hoặc thay thế bằng một browser context ẩn.
+- Thực hiện các thao tác chính trực tiếp trên giao diện đang hiển thị, bao gồm nhập ZIP code, scroll, click thumbnail, chọn Color Swatch, mở `Customize now`, duyệt carousel và mở/đóng modal.
+- Thao tác với tốc độ đủ để tôi quan sát được bước đang thực hiện; không click hàng loạt quá nhanh khiến tôi không thể kiểm tra.
+- Có thể dùng DOM inspection, `evaluate` và network inspection để đọc dữ liệu sau khi đã thao tác trên giao diện, nhưng không được dùng chúng để thay thế hoàn toàn quy trình tương tác hiển thị mà tôi cần quan sát.
+- Không mở thêm browser ẩn hoặc page ẩn để crawl song song. Nếu cần mở tab/page mới, tab/page đó cũng phải hiển thị trong cùng phiên browser có giao diện.
+- Khi cần tôi xử lý CAPTCHA hoặc xác minh thủ công, phải giữ nguyên cửa sổ browser ở đúng trạng thái hiện tại và chờ tôi thao tác trực tiếp.
+- Chỉ đóng browser sau khi đã hoàn thành việc ghi file JSON, `report.md` và thông báo kết quả cuối cùng.
+
+Nếu môi trường hiện tại không hỗ trợ hiển thị browser GUI để tôi quan sát, không được âm thầm chuyển sang headless. Hãy dừng lại và thông báo rõ giới hạn đó trước khi tiếp tục.
+
 ## Thiết lập phiên Amazon US trước khi crawl
 
 Ngay sau khi truy cập trang sản phẩm, phải chuyển delivery location của phiên Amazon sang Hoa Kỳ bằng ZIP code:
@@ -88,6 +106,8 @@ Nếu không thể ép phiên sang Amazon US, đặt trạng thái crawl là `pa
   "crawl_metadata": {
     "crawled_at": null,
     "status": "completed",
+    "browser_mode": "headed",
+    "browser_visible_to_user": true,
     "marketplace": "amazon.com",
     "delivery_country": "US",
     "delivery_zip_code": "90001",
@@ -380,6 +400,8 @@ Cấu trúc tối thiểu:
   "crawl_metadata": {
     "crawled_at": null,
     "status": "completed",
+    "browser_mode": "headed",
+    "browser_visible_to_user": true,
     "errors": [],
     "warnings": []
   },
@@ -564,6 +586,8 @@ Không bắt buộc phải giữ dữ liệu debug không còn giá trị. Tuy n
 - Nếu đang chờ tôi xử lý CAPTCHA, đặt `status` là `blocked`.
 - Nếu không thể hoàn thành do lỗi khác, đặt `status` là `failed`.
 - Chỉ đặt `status` là `completed` khi các khu vực có thể truy cập đã được kiểm tra đầy đủ.
+- `browser_mode` phải là `headed` và `browser_visible_to_user` phải là `true`.
+- Không được chuyển sang headless trong quá trình crawl nếu chưa có sự đồng ý của tôi.
 - `base_price.currency` phải là `USD` sau khi phiên Amazon US được thiết lập.
 - Không tự chuyển đổi giá từ VND hoặc currency khác sang USD.
 - Giá phải được lấy trực tiếp từ giao diện Amazon sau khi áp dụng ZIP code `90001`.
@@ -596,6 +620,8 @@ File `report.md` phải bao gồm tối thiểu:
 - Base price:
 - Crawl time:
 - Final status:
+- Browser mode: headed
+- Browser visible to user: yes/no
 
 ## Crawl results
 
