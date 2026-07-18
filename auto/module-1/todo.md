@@ -1,0 +1,3 @@
+- Chạy file `run.cmd` để thực hiện các bước tự động hóa trước.
+- Sau khi chạy xong xuôi hết, hãy thực hiện yêu cầu trong file `./product.md`.
+- Sau khi hoàn tất các yêu cầu, hãy chạy lưu lại thông tin của sản phẩm đã xử lý vào cuối file `./handled_products.json` và chạy file `./clean.cmd` để dọn dẹp.

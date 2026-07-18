@@ -1,0 +1,23 @@
+===> hãy nhớ quy tắc mới sau để cấu thành sản phẩm trong file json:
+- Mỗi 1 object color swatch sẽ là 1 sản phẩm, title của sản phẩm sẽ là field product.title ở đầu file json, description của sản phẩm sẽ là field product.about_this_item.
+- Metafields của sản phẩm được xác định theo logic sau:
++) amazon_link là field color_swatches.product_url
++) author_info là ngẫu nhiên 1 trong 6 giá trị "nhien-le" / "alex-nguyen" / "khoi-hoang" / "nhan-pham" / "lam-nguyen" / "son-tran"
++) wood_type là field color_swatches.product_attributes.items.key
+- Biến thể của sản phẩm được xác định theo logic sau: 
++) 1 object color_swatches.customization_types sẽ là 1 option của biến thể (có thể là size, có thể là color, có thể là wood finish, có thể là depth, v.v), dựa vào field customization_types.type để phân loại option 
++) các giá trị của 1 loại option được xác định tại field customization_types.options 
++) price của 1 biến thể được xác định theo logic là dựa vào field base_price.amount của sản phẩm đó cộng thêm value của field color_swatches.customization_types.options.increase_amount
+
+===> Viết code python để tự động hóa chuyển file json thành 1 file csv sản phẩm chuẩn để import vào shopify store.
+Lưu ý là file python này phải tự động bỏ đi object size đầu tiên (ko ghi vào file csv) trong mảng color_swatches.customization_types.options đối với bất cứ field color_swatches.customization_types.type nào chứa từ "size" (color_swatches.customization_types.type đã chuyển thành lowercase để so sánh).
+File python có 1 biến là IGNORE_CUSTOMIZATION_TYPE:[str] chứa các customization_types.type phải bỏ đi (ko ghi vào file csv).
+Field customization_types.options.increase_amount có thể là null or number.
+"vendor" phải là "Wrydeco", "status": phải là "active".
+Sản phẩm này sẽ nhận 7 ảnh từ assets.product_media_gallery.images[*].source_url.
+Về wood_type: tìm object trong product_attributes.items có key == "material", sau đó lấy field value làm wood_type.
+Product Type sẽ là field "product_type" ngay đầu file json (field này sẽ được thêm bằng tay vào file json trước khi chạy code python).
+Product Tags thì hiện tại chỉ có duy nhất 1 tag là "source_amazon".
+Trạng thái sản phẩm phải là active thay vì draft.
+Đăng lên channel: online channel, inbox.
+Product Category sẽ lấy field product_category ở đầu file json.

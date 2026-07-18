@@ -1,1 +1,0 @@
-python process_product_images_with_logo.py
