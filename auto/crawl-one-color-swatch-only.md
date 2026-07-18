@@ -3,7 +3,7 @@
 Hãy trực tiếp sử dụng **Playwright** để mở trình duyệt và crawl trang Amazon sau:
 
 ```text
-https://www.amazon.com/dp/B0H7H3HCTJ
+https://www.amazon.com/dp/B0H44GDSM6
 ```
 
 Không chỉ hướng dẫn hoặc phân tích. Hãy tự điều khiển trình duyệt trong phiên làm việc hiện tại, trực tiếp truy cập trang, scroll, click, mở modal, kiểm tra DOM/network và lưu kết quả thực tế.
@@ -121,9 +121,9 @@ Tạo cấu trúc sau:
 
 ```text
 /crawl/
-└── B0H7H3HCTJ/
+└── B0H44GDSM6/
     ├── debug/
-    ├── B0H7H3HCTJ.json
+    ├── B0H44GDSM6.json
     └── report.md
 ```
 
@@ -132,19 +132,19 @@ Trong đó:
 - File dữ liệu chính:
 
 ```text
-/crawl/B0H7H3HCTJ/B0H7H3HCTJ.json
+/crawl/B0H44GDSM6/B0H44GDSM6.json
 ```
 
 - File báo cáo kết quả:
 
 ```text
-/crawl/B0H7H3HCTJ/report.md
+/crawl/B0H44GDSM6/report.md
 ```
 
 - Dữ liệu debug:
 
 ```text
-/crawl/B0H7H3HCTJ/debug/
+/crawl/B0H44GDSM6/debug/
 ```
 
 Không tạo folder riêng để chứa ảnh hoặc video vì chỉ cần lưu URL media vào file JSON.
@@ -192,9 +192,11 @@ Quy tắc:
 
 Toàn bộ thông tin cơ bản này lấy trên đúng trang của swatch đang chọn, không chuyển variant.
 
-### 2. Product Media Gallery
+### 2. Product Media Gallery (Phải cào riêng cho từng Color Swatch)
 
-Tìm khu vực Product Media Gallery ở phần đầu trang sản phẩm. Khu vực này thường được chia thành hai phần:
+Khu vực Product Media Gallery sẽ thay đổi tuỳ thuộc vào Color Swatch đang được chọn. Do đó, KHÔNG thu thập chung một Product Media Gallery cho toàn bộ sản phẩm. Thay vào đó, Product Media Gallery phải được cào riêng và lưu bên trong dữ liệu của từng Color Swatch (xem mục 5).
+
+Khi cào Product Media Gallery cho một Color Swatch, hãy tìm khu vực ở phần đầu trang sản phẩm. Khu vực này thường được chia thành hai phần:
 
 1. Danh sách ảnh hoặc video thu nhỏ (`thumbnail list`).
 2. Khu vực hiển thị ảnh hoặc video lớn đang được chọn (`main/large media area`).
@@ -342,6 +344,7 @@ Với swatch đang chọn, thu thập:
 - Availability.
 - Product base price.
 - Product Attributes (nếu chưa lấy ở phần thông tin cơ bản thì lấy tại đây).
+- Product Media Gallery (Ảnh và video) của riêng Color Swatch này (tuân thủ quy trình cào ở Mục 2).
 - Toàn bộ customization type và option.
 
 #### Quy tắc quan trọng về `name`
@@ -355,12 +358,13 @@ Với swatch đang chọn, thu thập:
 #### Customize
 
 1. Kiểm tra và click nút `Customize now` cho swatch đang chọn.
-   - **Lưu ý quan trọng**: Amazon có thể render 2 nút "Customize Now" trong DOM. Tuyệt đối **không click** vào nút giả có ID `#gestalt-fake-popover-button-announce` vì nó sẽ gây chuyển hướng hoặc lỗi tải trang. Phải click chính xác vào nút thật có ID: `#gestalt-popover-button-announce`.
+   - **Lưu ý quan trọng**: Amazon có thể render 2 nút "Customize Now" trong DOM. Để click chính xác vào nút Customize Now thật, **phải kết hợp 2 điều kiện**: (1) Tìm phần tử có ID `#gestalt-popover-button-announce` hoặc class `.gestalt-popover-button`, VÀ (2) có nội dung hiển thị chính xác là chữ `"customize now"` (không phân biệt hoa/thường). Chỉ click khi thoả mãn cả 2 điều kiện này để tránh click nhầm vào nút giả.
 2. Chờ popup `Customize`.
    - Dữ liệu customization sẽ được load bên trong một iframe có ID là `gc-iframe`.
-   - Để bóc tách dữ liệu, cần evaluate bên trong iframe này, hoặc trích xuất `src` của iframe và điều hướng trình duyệt đến URL đó để parse DOM dễ dàng hơn nếu gặp lỗi cross-origin.
-3. Thu thập toàn bộ customization type.
-4. Với từng customization type, thu thập toàn bộ customization option và giá tăng thêm (ví dụ click nút "See all X options" nếu bị ẩn đi).
+3. Sau khi `gc-iframe` load thành công, chuyển context vào bên trong iframe và tìm toàn bộ phần tử với class `gc-component`.
+   - Mỗi `gc-component` đại diện cho một customization type.
+   - Giữ nguyên thứ tự các `gc-component` theo thứ tự xuất hiện trong DOM.
+4. Với từng `gc-component`, thu thập tên customization type và toàn bộ customization option tương ứng, bao gồm giá tăng thêm; nếu có nút như `See all X options`, phải click để hiển thị đầy đủ các option trước khi thu thập.
 5. Đóng popup sau khi lấy xong.
 
 Với mỗi customization option, lấy:
@@ -388,7 +392,7 @@ Không suy đoán giá khi không thể xác định.
 Tạo file:
 
 ```text
-/crawl/B0H7H3HCTJ/B0H7H3HCTJ.json
+/crawl/B0H44GDSM6/B0H44GDSM6.json
 ```
 
 Cấu trúc tối thiểu cần phải có (lưu ý `color_swatches` chỉ có **đúng 1 object**):
@@ -419,10 +423,6 @@ Cấu trúc tối thiểu cần phải có (lưu ý `color_swatches` chỉ có *
     }
   },
   "assets": {
-    "product_media_gallery": {
-      "images": [],
-      "videos": []
-    },
     "aplus_content": {
       "images": [],
       "videos": []
@@ -492,6 +492,10 @@ Không lưu `blob:` URL nếu có thể lấy URL HTTP/HTTPS thực tế từ DO
     "items": [],
     "by_key": {}
   },
+  "product_media_gallery": {
+    "images": [],
+    "videos": []
+  },
   "customization_types": []
 }
 ```
@@ -521,7 +525,7 @@ Mỗi customization option phải được liệt kê theo cấu trúc sau:
 Trong quá trình crawl, có thể lưu các dữ liệu hỗ trợ kiểm tra vào:
 
 ```text
-/crawl/B0H7H3HCTJ/debug/
+/crawl/B0H44GDSM6/debug/
 ```
 
 Dữ liệu debug có thể bao gồm:
@@ -600,7 +604,7 @@ Không bắt buộc phải giữ dữ liệu debug không còn giá trị. Tuy n
 Tạo file:
 
 ```text
-/crawl/B0H7H3HCTJ/report.md
+/crawl/B0H44GDSM6/report.md
 ```
 
 File `report.md` phải bao gồm tối thiểu:
@@ -629,8 +633,7 @@ File `report.md` phải bao gồm tối thiểu:
 
 - Product Attributes:
 - About this item entries:
-- Product Media Gallery images:
-- Product Media Gallery videos:
+- Product Media Gallery: (Đã cào riêng cho từng Color Swatch)
 - A+ Content images:
 - A+ Content videos:
 - Product Videos:
@@ -667,8 +670,8 @@ Sau khi crawl xong:
 1. Xác nhận đã tạo:
 
 ```text
-/crawl/B0H7H3HCTJ/B0H7H3HCTJ.json
-/crawl/B0H7H3HCTJ/report.md
+/crawl/B0H44GDSM6/B0H44GDSM6.json
+/crawl/B0H44GDSM6/report.md
 ```
 
 2. Báo cáo ngắn gọn:

@@ -3,7 +3,7 @@
 Hãy trực tiếp sử dụng **Playwright** để mở trình duyệt và crawl trang Amazon sau:
 
 ```text
-https://www.amazon.com/dp/B0H44GDSM6
+https://www.amazon.com/dp/B0H82J4GXR
 ```
 
 Không chỉ hướng dẫn hoặc phân tích. Hãy tự điều khiển trình duyệt trong phiên làm việc hiện tại, trực tiếp truy cập trang, scroll, click, mở modal, kiểm tra DOM/network và lưu kết quả thực tế.
@@ -118,9 +118,9 @@ Tạo cấu trúc sau:
 
 ```text
 /crawl/
-└── B0H44GDSM6/
+└── B0H82J4GXR/
     ├── debug/
-    ├── B0H44GDSM6.json
+    ├── B0H82J4GXR.json
     └── report.md
 ```
 
@@ -129,19 +129,19 @@ Trong đó:
 - File dữ liệu chính:
 
 ```text
-/crawl/B0H44GDSM6/B0H44GDSM6.json
+/crawl/B0H82J4GXR/B0H82J4GXR.json
 ```
 
 - File báo cáo kết quả:
 
 ```text
-/crawl/B0H44GDSM6/report.md
+/crawl/B0H82J4GXR/report.md
 ```
 
 - Dữ liệu debug:
 
 ```text
-/crawl/B0H44GDSM6/debug/
+/crawl/B0H82J4GXR/debug/
 ```
 
 Không tạo folder riêng để chứa ảnh hoặc video vì chỉ cần lưu URL media vào file JSON.
@@ -373,7 +373,7 @@ Không suy đoán giá khi không thể xác định.
 Tạo file:
 
 ```text
-/crawl/B0H44GDSM6/B0H44GDSM6.json
+/crawl/B0H82J4GXR/B0H82J4GXR.json
 ```
 
 Cấu trúc tối thiểu cần phải có:
@@ -506,7 +506,7 @@ Mỗi customization option phải dược liệt kê theo cấu trúc sau:
 Trong quá trình crawl, có thể lưu các dữ liệu hỗ trợ kiểm tra vào:
 
 ```text
-/crawl/B0H44GDSM6/debug/
+/crawl/B0H82J4GXR/debug/
 ```
 
 Dữ liệu debug có thể bao gồm:
@@ -578,7 +578,7 @@ Không bắt buộc phải giữ dữ liệu debug không còn giá trị. Tuy n
 Tạo file:
 
 ```text
-/crawl/B0H44GDSM6/report.md
+/crawl/B0H82J4GXR/report.md
 ```
 
 File `report.md` phải bao gồm tối thiểu:
@@ -639,8 +639,8 @@ Sau khi crawl xong:
 1. Xác nhận đã tạo:
 
 ```text
-/crawl/B0H44GDSM6/B0H44GDSM6.json
-/crawl/B0H44GDSM6/report.md
+/crawl/B0H82J4GXR/B0H82J4GXR.json
+/crawl/B0H82J4GXR/report.md
 ```
 
 2. Báo cáo ngắn gọn:
@@ -1006,8 +1006,8 @@ Ví dụ cấu trúc cuối file JSON:
 ```json
 {
   "schema_version": "1.2.0",
-  "asin": "B0H44GDSM6",
-  "source_url": "https://www.amazon.com/dp/B0H44GDSM6",
+  "asin": "B0H82J4GXR",
+  "source_url": "https://www.amazon.com/dp/B0H82J4GXR",
   "crawl_metadata": {},
   "product": {},
   "assets": {},

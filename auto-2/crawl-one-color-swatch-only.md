@@ -1,12 +1,14 @@
-# Crawl dữ liệu sản phẩm Amazon bằng Playwright
+# Crawl dữ liệu sản phẩm Amazon (chỉ đúng 1 Color Swatch) bằng Playwright
 
 Hãy trực tiếp sử dụng **Playwright** để mở trình duyệt và crawl trang Amazon sau:
 
 ```text
-https://www.amazon.com/dp/B0H44GDSM6
+https://www.amazon.com/dp/B0H82J4GXR
 ```
 
 Không chỉ hướng dẫn hoặc phân tích. Hãy tự điều khiển trình duyệt trong phiên làm việc hiện tại, trực tiếp truy cập trang, scroll, click, mở modal, kiểm tra DOM/network và lưu kết quả thực tế.
+
+**Khác biệt cốt lõi so với quy trình crawl đầy đủ:** lần này chỉ crawl **đúng duy nhất 1 Color Swatch** — swatch tương ứng với chính link/ASIN được cung cấp ở trên (variant đang được chọn khi mở trang). **Không** tìm, **không** click, **không** enumerate các Color Swatch khác. Kết quả `color_swatches` phải chứa **đúng 1 object**.
 
 ## Yêu cầu bắt buộc
 
@@ -18,6 +20,7 @@ Không chỉ hướng dẫn hoặc phân tích. Hãy tự điều khiển trình
 - Có thể dùng Playwright evaluate, DOM inspection và network inspection trực tiếp trong phiên trình duyệt.
 - Phải tạo file JSON kết quả và file báo cáo Markdown theo cấu trúc được chỉ định.
 - Có thể ghi screenshot, HTML, network log hoặc dữ liệu trung gian vào folder `debug` trong quá trình crawl.
+- **Chỉ crawl 1 Color Swatch duy nhất**: đúng swatch đang được chọn cho ASIN của link. Không được chuyển sang variant/màu khác.
 
 ## Thiết lập phiên Amazon US trước khi crawl
 
@@ -66,7 +69,7 @@ Trước khi crawl dữ liệu chính, phải kiểm tra:
 - Currency là `USD`.
 - Giá hiển thị bằng dollar Mỹ.
 - Trang không còn hiển thị giá bằng `VND`.
-- Nút `Customize now` đã được kiểm tra sau khi chọn từng Color Swatch.
+- Nút `Customize now` đã được kiểm tra trên swatch đang chọn.
 - URL hoặc nội dung trang đã ổn định sau khi location được cập nhật.
 
 Không được chỉ đổi currency bằng cách tự quy đổi giá VND sang USD. Phải lấy trực tiếp giá USD đang hiển thị trên phiên Amazon US.
@@ -118,9 +121,9 @@ Tạo cấu trúc sau:
 
 ```text
 /crawl/
-└── B0H44GDSM6/
+└── B0H82J4GXR/
     ├── debug/
-    ├── B0H44GDSM6.json
+    ├── B0H82J4GXR.json
     └── report.md
 ```
 
@@ -129,19 +132,19 @@ Trong đó:
 - File dữ liệu chính:
 
 ```text
-/crawl/B0H44GDSM6/B0H44GDSM6.json
+/crawl/B0H82J4GXR/B0H82J4GXR.json
 ```
 
 - File báo cáo kết quả:
 
 ```text
-/crawl/B0H44GDSM6/report.md
+/crawl/B0H82J4GXR/report.md
 ```
 
 - Dữ liệu debug:
 
 ```text
-/crawl/B0H44GDSM6/debug/
+/crawl/B0H82J4GXR/debug/
 ```
 
 Không tạo folder riêng để chứa ảnh hoặc video vì chỉ cần lưu URL media vào file JSON.
@@ -187,6 +190,8 @@ Quy tắc:
 - Không ghi đè dữ liệu nếu nhiều thuộc tính có cùng key.
 - Không gộp seller information, ranking hoặc warranty vào Product Attributes nếu chúng thuộc khu vực khác.
 
+Toàn bộ thông tin cơ bản này lấy trên đúng trang của swatch đang chọn, không chuyển variant.
+
 ### 2. Product Media Gallery (Phải cào riêng cho từng Color Swatch)
 
 Khu vực Product Media Gallery sẽ thay đổi tuỳ thuộc vào Color Swatch đang được chọn. Do đó, KHÔNG thu thập chung một Product Media Gallery cho toàn bộ sản phẩm. Thay vào đó, Product Media Gallery phải được cào riêng và lưu bên trong dữ liệu của từng Color Swatch (xem mục 5).
@@ -196,7 +201,7 @@ Khi cào Product Media Gallery cho một Color Swatch, hãy tìm khu vực ở p
 1. Danh sách ảnh hoặc video thu nhỏ (`thumbnail list`).
 2. Khu vực hiển thị ảnh hoặc video lớn đang được chọn (`main/large media area`).
 
-Phải crawl toàn bộ media trong gallery của swatch đó, bao gồm:
+Phải crawl toàn bộ media trong gallery của swatch đang chọn, bao gồm:
 
 - Tất cả ảnh sản phẩm.
 - Tất cả video sản phẩm.
@@ -223,6 +228,12 @@ Với từng thumbnail ảnh trong danh sách ảnh nhỏ, phải thực hiện 
 7. Chọn URL có độ phân giải thực tế lớn nhất làm `resolved_url`.
 8. Chỉ lưu URL thumbnail vào `thumbnail_url` để tham chiếu, không dùng thumbnail URL làm `source_url` hoặc `resolved_url`.
 9. Tiếp tục với thumbnail kế tiếp cho đến khi đã duyệt hết danh sách.
+
+**Bắt buộc: mỗi thumbnail phải cho ra một ảnh lớn khác nhau.** Nếu sau khi click nhiều thumbnail khác nhau mà `source_url`/`resolved_url` vẫn trả về cùng một ảnh lớn, nghĩa là khu vực ảnh lớn chưa cập nhật kịp (thường do Amazon UI interception hoặc lazy render). Khi đó phải:
+
+- Chờ thêm cho tới khi ảnh lớn thực sự đổi trước khi đọc URL.
+- Không được ghi cùng một URL ảnh lớn cho nhiều mục ảnh khác nhau.
+- Nếu vẫn không tách được, ghi warning cụ thể vào JSON và lưu screenshot/DOM snapshot vào `debug`.
 
 Ví dụ URL ảnh nhỏ sau không được dùng làm ảnh chính:
 
@@ -318,35 +329,43 @@ Nếu video nằm trong carousel hoặc modal:
 
 Không nhầm Product Videos với video trong Product Media Gallery hoặc A+ Content.
 
-### 5. Color Swatches và Customize
+### 5. Color Swatch duy nhất và Customize
 
-Tìm toàn bộ Color Swatch trong Amazon Twister, bao gồm swatch đang được chọn mặc định. Phải crawl đầy đủ các color swatch hiển thị cho người dùng cuối. Không crawl swatch bị ẩn.
+**Chỉ crawl đúng 1 Color Swatch: swatch đang được chọn cho ASIN của link.**
 
-Với từng Color Swatch:
+Không tìm, không đếm, không click sang các swatch khác trong Amazon Twister. Không được chuyển variant hay đổi màu. Toàn bộ dữ liệu swatch phải lấy trên đúng trạng thái variant hiện tại của trang.
 
-1. Click chọn swatch.
-2. Chờ variation, URL, ASIN và giá cập nhật ổn định.
-3. Thu thập:
-   - Tên hoặc label.
-   - ASIN.
-   - Product URL.
-   - Swatch image URL.
-   - Availability.
-   - Product base price.
-   - Product Media Gallery (Ảnh và video) của riêng Color Swatch này (tuân thủ quy trình cào ở Mục 2).
+Với swatch đang chọn, thu thập:
 
-4. Crawl lại Product Attributes nếu thuộc tính thay đổi theo swatch.
-5. Click nút `Customize now`.
+- **Tên hoặc label của swatch** (`name`).
+- ASIN.
+- Product URL.
+- Swatch image URL.
+- Availability.
+- Product base price.
+- Product Attributes (nếu chưa lấy ở phần thông tin cơ bản thì lấy tại đây).
+- Product Media Gallery (Ảnh và video) của riêng Color Swatch này (tuân thủ quy trình cào ở Mục 2).
+- Toàn bộ customization type và option.
+
+#### Quy tắc quan trọng về `name`
+
+- `name` là **tên/nhãn thật của swatch hiển thị trên Amazon**, không phải placeholder do quá trình crawl bịa ra.
+- Nhiều vendor đặt tên variant/swatch theo kiểu chung chung như `OPTION 1`, `OPTION 2`, `Style A`, `Color 1`... Đây là **tên hợp lệ thật sự** và phải được ghi lại **nguyên văn** như Amazon hiển thị.
+- Không được tự "chuẩn hóa", đổi tên, hay thay bằng tên màu suy đoán. Nếu Amazon hiển thị `OPTION 1` thì `name` phải là `OPTION 1`.
+- Chỉ khi hoàn toàn không đọc được bất kỳ nhãn nào cho swatch, mới đặt `name` là `null` và ghi warning; **không** thay bằng chuỗi bịa đặt.
+- Ưu tiên đọc `name` từ: nhãn variation đang selected trong Twister, thuộc tính `alt`/`title` của swatch, hoặc text "Style:"/"Color:"/tên tùy chọn đang chọn hiển thị cạnh khu vực variation.
+
+#### Customize
+
+1. Kiểm tra và click nút `Customize now` cho swatch đang chọn.
    - **Lưu ý quan trọng**: Amazon có thể render 2 nút "Customize Now" trong DOM. Để click chính xác vào nút Customize Now thật, **phải kết hợp 2 điều kiện**: (1) Tìm phần tử có ID `#gestalt-popover-button-announce` hoặc class `.gestalt-popover-button`, VÀ (2) có nội dung hiển thị chính xác là chữ `"customize now"` (không phân biệt hoa/thường). Chỉ click khi thoả mãn cả 2 điều kiện này để tránh click nhầm vào nút giả.
-6. Chờ popup `Customize`.
+2. Chờ popup `Customize`.
    - Dữ liệu customization sẽ được load bên trong một iframe có ID là `gc-iframe`.
-   - Để bóc tách dữ liệu, cần evaluate bên trong iframe này, hoặc trích xuất `src` của iframe và điều hướng trình duyệt đến URL đó để parse DOM dễ dàng hơn nếu gặp lỗi cross-origin.
-7. Thu thập toàn bộ customization type.
-8. Với từng customization type, thu thập toàn bộ customization option và giá tăng thêm (ví dụ click nút "See all X options" nếu bị ẩn đi).
-9. Đóng popup.
-10. Tiếp tục với swatch tiếp theo.
-
-Không giả định các swatch có cùng giá, thuộc tính hoặc customization.
+3. Sau khi `gc-iframe` load thành công, chuyển context vào bên trong iframe và tìm toàn bộ phần tử với class `gc-component`.
+   - Mỗi `gc-component` đại diện cho một customization type.
+   - Giữ nguyên thứ tự các `gc-component` theo thứ tự xuất hiện trong DOM.
+4. Với từng `gc-component`, thu thập tên customization type và toàn bộ customization option tương ứng, bao gồm giá tăng thêm; nếu có nút như `See all X options`, phải click để hiển thị đầy đủ các option trước khi thu thập.
+5. Đóng popup sau khi lấy xong.
 
 Với mỗi customization option, lấy:
 
@@ -373,10 +392,10 @@ Không suy đoán giá khi không thể xác định.
 Tạo file:
 
 ```text
-/crawl/B0H44GDSM6/B0H44GDSM6.json
+/crawl/B0H82J4GXR/B0H82J4GXR.json
 ```
 
-Cấu trúc tối thiểu cần phải có:
+Cấu trúc tối thiểu cần phải có (lưu ý `color_swatches` chỉ có **đúng 1 object**):
 
 ```json
 {
@@ -390,12 +409,12 @@ Cấu trúc tối thiểu cần phải có:
     "warnings": []
   },
   "product": {
-    "title": string | null,
+    "title": "string | null",
     "base_price": {
-      "amount": number | null,
-      "currency": string | null,
-      "formatted": string | null,
-      "raw_text": string | null
+      "amount": "number | null",
+      "currency": "string | null",
+      "formatted": "string | null",
+      "raw_text": "string | null"
     },
     "about_this_item": [],
     "product_attributes": {
@@ -454,20 +473,20 @@ Không lưu `blob:` URL nếu có thể lấy URL HTTP/HTTPS thực tế từ DO
 
 ## Cấu trúc Color Swatch
 
-Mỗi Color Swatch phải chứa tối thiểu:
+`color_swatches` phải là mảng chứa **đúng 1 phần tử** — swatch đang chọn. Mỗi Color Swatch phải chứa tối thiểu:
 
 ```json
 {
-  "name": string | null,
-  "asin": string | null,
-  "product_url": string | null,
-  "swatch_image_url": string | null,
-  "availability": boolean | null,
+  "name": "string | null",
+  "asin": "string | null",
+  "product_url": "string | null",
+  "swatch_image_url": "string | null",
+  "availability": "boolean | null",
   "base_price": {
-    "amount": number | null,
-    "currency": string | null,
-    "formatted": string | null,
-    "raw_text": string | null
+    "amount": "number | null",
+    "currency": "string | null",
+    "formatted": "string | null",
+    "raw_text": "string | null"
   },
   "product_attributes": {
     "items": [],
@@ -485,19 +504,19 @@ Mỗi customization type phải được liệt kê theo cấu trúc sau:
 
 ```json
 {
-  "name": string | null,
-  "required": boolean | null,
-  "selection_type": string | null,
+  "name": "string | null",
+  "required": "boolean | null",
+  "selection_type": "string | null",
   "options": []
 }
 ```
 
-Mỗi customization option phải dược liệt kê theo cấu trúc sau:
+Mỗi customization option phải được liệt kê theo cấu trúc sau:
 
 ```json
 {
-  "value": string | null,
-  "increase_amount": string | null,
+  "value": "string | null",
+  "increase_amount": "string | null"
 }
 ```
 
@@ -506,7 +525,7 @@ Mỗi customization option phải dược liệt kê theo cấu trúc sau:
 Trong quá trình crawl, có thể lưu các dữ liệu hỗ trợ kiểm tra vào:
 
 ```text
-/crawl/B0H44GDSM6/debug/
+/crawl/B0H82J4GXR/debug/
 ```
 
 Dữ liệu debug có thể bao gồm:
@@ -519,7 +538,7 @@ Dữ liệu debug có thể bao gồm:
 - Response JSON liên quan đến video hoặc variation.
 - Danh sách selector đã thử.
 - Dữ liệu trung gian trước khi ghi vào JSON.
-- Log lỗi cho từng media, swatch hoặc customization option.
+- Log lỗi cho từng media hoặc customization option.
 
 Đặt tên file debug rõ ràng, ví dụ:
 
@@ -530,7 +549,7 @@ debug/
 ├── product-media-gallery.json
 ├── aplus-network-requests.json
 ├── product-videos-network.json
-├── swatch-option-01.json
+├── swatch-name.json
 └── errors.log
 ```
 
@@ -556,7 +575,8 @@ Không bắt buộc phải giữ dữ liệu debug không còn giá trị. Tuy n
 - Không dùng URL thumbnail làm `source_url` hoặc `resolved_url`.
 - Không chấp nhận URL ảnh chính chứa transform kích thước nhỏ như `_AC_US100_`, `_SS64_` hoặc `_SX38_`.
 - Sau mỗi lần click thumbnail, phải chờ và xác nhận ảnh lớn đã cập nhật trước khi đọc URL.
-- Một media, swatch hoặc customization bị lỗi không được làm mất toàn bộ kết quả.
+- **Không được ghi cùng một `source_url`/`resolved_url` cho nhiều ảnh khác nhau trong gallery.**
+- Một media hoặc customization bị lỗi không được làm mất toàn bộ kết quả.
 - Thường xuyên cập nhật file JSON để tránh mất dữ liệu khi phiên trình duyệt gặp lỗi.
 - Nếu crawl được một phần, đặt `status` là `partial`.
 - Nếu đang chờ tôi xử lý CAPTCHA, đặt `status` là `blocked`.
@@ -568,8 +588,14 @@ Không bắt buộc phải giữ dữ liệu debug không còn giá trị. Tuy n
 - Chỉ đặt `location_applied` thành `true` sau khi xác nhận location đã cập nhật.
 - Chỉ đặt `currency_verified` thành `true` sau khi xác nhận giá hiển thị bằng USD.
 - Nếu vẫn thấy giá VND, không được lưu giá đó làm product base price.
-- Nếu một Color Swatch làm trang đổi ASIN hoặc reload, phải kiểm tra location và currency vẫn là US/USD trước khi lấy giá.
-- Với mỗi Color Swatch, phải kiểm tra lại nút `Customize now` sau khi variation cập nhật hoàn tất.
+
+### Quy tắc riêng cho chế độ 1 Color Swatch
+
+- `color_swatches` phải chứa **đúng 1 object**, không nhiều hơn, không ít hơn.
+- Không được crawl, click hoặc ghi lại bất kỳ swatch nào khác ngoài swatch đang chọn.
+- `swatch.asin` phải trùng với ASIN của link được cung cấp (variant đang chọn).
+- `name` phải là tên swatch **thật** như Amazon hiển thị, ghi nguyên văn (kể cả khi là `OPTION 1`, `OPTION 2`... do vendor đặt). Không coi các tên này là placeholder.
+- Vẫn phải kiểm tra và crawl nút `Customize now` cho đúng swatch này.
 
 ---
 
@@ -578,13 +604,13 @@ Không bắt buộc phải giữ dữ liệu debug không còn giá trị. Tuy n
 Tạo file:
 
 ```text
-/crawl/B0H44GDSM6/report.md
+/crawl/B0H82J4GXR/report.md
 ```
 
 File `report.md` phải bao gồm tối thiểu:
 
 ```markdown
-# Amazon Crawl Report
+# Amazon Crawl Report (single color swatch)
 
 ## Product
 
@@ -595,6 +621,14 @@ File `report.md` phải bao gồm tối thiểu:
 - Crawl time:
 - Final status:
 
+## Color swatch
+
+- Swatch name:
+- Swatch ASIN:
+- Availability:
+- Customization types:
+- Customization options:
+
 ## Crawl results
 
 - Product Attributes:
@@ -603,9 +637,6 @@ File `report.md` phải bao gồm tối thiểu:
 - A+ Content images:
 - A+ Content videos:
 - Product Videos:
-- Color Swatches:
-- Customization types:
-- Customization options:
 
 ## Output files
 
@@ -639,17 +670,17 @@ Sau khi crawl xong:
 1. Xác nhận đã tạo:
 
 ```text
-/crawl/B0H44GDSM6/B0H44GDSM6.json
-/crawl/B0H44GDSM6/report.md
+/crawl/B0H82J4GXR/B0H82J4GXR.json
+/crawl/B0H82J4GXR/report.md
 ```
 
 2. Báo cáo ngắn gọn:
    - Product title và base price.
+   - Tên swatch đã crawl (đúng 1 swatch).
    - Số Product Attributes.
    - Số ảnh và video trong Product Media Gallery.
    - Số ảnh và video trong A+ Content.
    - Số Product Videos.
-   - Số Color Swatches.
    - Số customization type và option.
    - Trạng thái cuối cùng.
    - Dữ liệu không tìm thấy hoặc lỗi còn tồn tại.
@@ -687,9 +718,9 @@ product.title
 ## 2. Viết lại Product Description thành HTML
 
 - Dùng nội dung từ `product.about_this_item`, Product Attributes và các thông tin sản phẩm thực tế đã crawl được để viết lại product description.
-- Chỉ tham khảo **cấu trúc HTML, bố cục và inline style** bên dưới.
+- Chỉ tham khảo **cấu trúc HTML, bố cục và inline style** của mẫu trong `crawl.md`.
 - Toàn bộ heading, paragraph, badge và nội dung mô tả phải được viết lại theo đúng sản phẩm đang crawl.
-- Không sao chép các nội dung mẫu về bookshelf, storage, finish color hoặc vật trang trí nếu chúng không phù hợp với sản phẩm thực tế.
+- Không sao chép các nội dung mẫu không phù hợp với sản phẩm thực tế.
 - Không tạo đặc điểm, vật liệu, công dụng, màu sắc, kích thước hoặc phụ kiện không có trong dữ liệu đã crawl.
 - Có thể tăng hoặc giảm số block đánh số để phù hợp với số lượng ý chính thực tế, nhưng phải giữ phong cách và cấu trúc trình bày thống nhất.
 - Ghi HTML hoàn chỉnh vào field:
@@ -698,260 +729,7 @@ product.title
 product.about_this_item
 ```
 
-Field này sau bước hậu xử lý sẽ là một **chuỗi HTML**, không còn là mảng bullet thô.
-
-Cấu trúc HTML tham khảo:
-
-```html
-<div
-  class="dm-tabs__rte"
-  style="margin:0; padding:0; background:transparent; color:#2a211b; font-family:inherit;"
->
-  <div style="display:grid; gap:16px; margin:0; padding:0; background:transparent;">
-    <div
-      style="padding:16px 18px; border-radius:16px; background:rgba(91,50,24,0.055); border:1px solid rgba(92,58,35,0.10);"
-    >
-      <div
-        style="margin:0 0 6px; color:#5a3218; font-size:11px; line-height:1; font-weight:600; letter-spacing:0.16em; text-transform:uppercase;"
-      >
-        Sculptural Tree-Inspired Storage
-      </div>
-      <p
-        style="margin:0; padding:0; color:rgba(42,33,27,0.76); font-size:14px; line-height:1.7; font-weight:400;"
-      >
-        Bring natural warmth and artistic character into your home with a tree branch floor shelf
-        featuring flowing trunk lines, organic supports, and sculptural multi-level storage.
-      </p>
-    </div>
-    <div
-      style="display:grid; grid-template-columns:34px 1fr; gap:14px; padding:0 0 16px; border-bottom:1px solid rgba(92,58,35,0.14); background:transparent;"
-    >
-      <span
-        style="width:30px; height:30px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; background:rgba(91,50,24,0.09); color:#5a3218; font-size:11px; font-weight:600; letter-spacing:0.04em; line-height:1;"
-      >
-        01
-      </span>
-      <div style="margin:0; padding:0; background:transparent;">
-        <h3
-          style="margin:0 0 7px; padding:0; color:#1f1712; font-family:var(--font-heading-family, Georgia, serif); font-size:17px; line-height:1.35; font-weight:500;"
-        >
-          Tree Branch Statement Design
-        </h3>
-        <p
-          style="margin:0; padding:0; color:rgba(42,33,27,0.76); font-size:14px; line-height:1.7; font-weight:400;"
-        >
-          Flowing trunk lines, organic branch supports, and sculptural shelf placement create a
-          nature-inspired focal point that adds rustic warmth and visual movement to the room.
-        </p>
-      </div>
-    </div>
-    <div
-      style="display:grid; grid-template-columns:34px 1fr; gap:14px; padding:0 0 16px; border-bottom:1px solid rgba(92,58,35,0.14); background:transparent;"
-    >
-      <span
-        style="width:30px; height:30px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; background:rgba(91,50,24,0.09); color:#5a3218; font-size:11px; font-weight:600; letter-spacing:0.04em; line-height:1;"
-      >
-        02
-      </span>
-      <div style="margin:0; padding:0; background:transparent;">
-        <h3
-          style="margin:0 0 7px; padding:0; color:#1f1712; font-family:var(--font-heading-family, Georgia, serif); font-size:17px; line-height:1.35; font-weight:500;"
-        >
-          Rich Wood Grain Appearance
-        </h3>
-        <p
-          style="margin:0; padding:0; color:rgba(42,33,27,0.76); font-size:14px; line-height:1.7; font-weight:400;"
-        >
-          A rich wood grain appearance, smooth rounded shelf edges, and handcrafted-style curves
-          give the bookcase a warm vintage character suited to cozy and nature-inspired interiors.
-        </p>
-      </div>
-    </div>
-    <div
-      style="display:grid; grid-template-columns:34px 1fr; gap:14px; padding:0 0 16px; border-bottom:1px solid rgba(92,58,35,0.14); background:transparent;"
-    >
-      <span
-        style="width:30px; height:30px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; background:rgba(91,50,24,0.09); color:#5a3218; font-size:11px; font-weight:600; letter-spacing:0.04em; line-height:1;"
-      >
-        03
-      </span>
-      <div style="margin:0; padding:0; background:transparent;">
-        <h3
-          style="margin:0 0 7px; padding:0; color:#1f1712; font-family:var(--font-heading-family, Georgia, serif); font-size:17px; line-height:1.35; font-weight:500;"
-        >
-          Multi-Level Display Storage
-        </h3>
-        <p
-          style="margin:0 0 10px; padding:0; color:rgba(42,33,27,0.76); font-size:14px; line-height:1.7; font-weight:400;"
-        >
-          Multiple shelf levels provide decorative display space for arranging books, plants,
-          keepsakes, and personal décor in a warm and visually balanced way.
-        </p>
-        <div style="display:flex; flex-wrap:wrap; gap:7px; margin:0; padding:0;">
-          <span
-            style="display:inline-flex; padding:6px 9px; border-radius:999px; background:rgba(91,50,24,0.06); border:1px solid rgba(92,58,35,0.10); color:rgba(42,33,27,0.78); font-size:12px; line-height:1;"
-            >Books</span
-          >
-          <span
-            style="display:inline-flex; padding:6px 9px; border-radius:999px; background:rgba(91,50,24,0.06); border:1px solid rgba(92,58,35,0.10); color:rgba(42,33,27,0.78); font-size:12px; line-height:1;"
-            >Plants</span
-          >
-          <span
-            style="display:inline-flex; padding:6px 9px; border-radius:999px; background:rgba(91,50,24,0.06); border:1px solid rgba(92,58,35,0.10); color:rgba(42,33,27,0.78); font-size:12px; line-height:1;"
-            >Pottery</span
-          >
-          <span
-            style="display:inline-flex; padding:6px 9px; border-radius:999px; background:rgba(91,50,24,0.06); border:1px solid rgba(92,58,35,0.10); color:rgba(42,33,27,0.78); font-size:12px; line-height:1;"
-            >Lanterns</span
-          >
-          <span
-            style="display:inline-flex; padding:6px 9px; border-radius:999px; background:rgba(91,50,24,0.06); border:1px solid rgba(92,58,35,0.10); color:rgba(42,33,27,0.78); font-size:12px; line-height:1;"
-            >Framed Photos</span
-          >
-          <span
-            style="display:inline-flex; padding:6px 9px; border-radius:999px; background:rgba(91,50,24,0.06); border:1px solid rgba(92,58,35,0.10); color:rgba(42,33,27,0.78); font-size:12px; line-height:1;"
-            >Candles</span
-          >
-          <span
-            style="display:inline-flex; padding:6px 9px; border-radius:999px; background:rgba(91,50,24,0.06); border:1px solid rgba(92,58,35,0.10); color:rgba(42,33,27,0.78); font-size:12px; line-height:1;"
-            >Baskets</span
-          >
-          <span
-            style="display:inline-flex; padding:6px 9px; border-radius:999px; background:rgba(91,50,24,0.09); border:1px solid rgba(92,58,35,0.13); color:#5a3218; font-size:12px; line-height:1;"
-            >Collectibles</span
-          >
-        </div>
-      </div>
-    </div>
-
-    <div
-      style="display:grid; grid-template-columns:34px 1fr; gap:14px; padding:0 0 16px; border-bottom:1px solid rgba(92,58,35,0.14); background:transparent;"
-    >
-      <span
-        style="width:30px; height:30px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; background:rgba(91,50,24,0.09); color:#5a3218; font-size:11px; font-weight:600; letter-spacing:0.04em; line-height:1;"
-      >
-        04
-      </span>
-
-      <div style="margin:0; padding:0; background:transparent;">
-        <h3
-          style="margin:0 0 7px; padding:0; color:#1f1712; font-family:var(--font-heading-family, Georgia, serif); font-size:17px; line-height:1.35; font-weight:500;"
-        >
-          Functional Storage With Artistic Style
-        </h3>
-
-        <p
-          style="margin:0; padding:0; color:rgba(42,33,27,0.76); font-size:14px; line-height:1.7; font-weight:400;"
-        >
-          Combining practical organization with decorative character, this tree bookshelf can serve
-          as a bookcase, plant display shelf, rustic storage piece, or sculptural statement feature.
-        </p>
-      </div>
-    </div>
-
-    <div
-      style="display:grid; grid-template-columns:34px 1fr; gap:14px; padding:0 0 16px; border-bottom:1px solid rgba(92,58,35,0.14); background:transparent;"
-    >
-      <span
-        style="width:30px; height:30px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; background:rgba(91,50,24,0.09); color:#5a3218; font-size:11px; font-weight:600; letter-spacing:0.04em; line-height:1;"
-      >
-        05
-      </span>
-
-      <div style="margin:0; padding:0; background:transparent;">
-        <h3
-          style="margin:0 0 7px; padding:0; color:#1f1712; font-family:var(--font-heading-family, Georgia, serif); font-size:17px; line-height:1.35; font-weight:500;"
-        >
-          Choose Your Finish Color
-        </h3>
-
-        <p
-          style="margin:0 0 10px; padding:0; color:rgba(42,33,27,0.76); font-size:14px; line-height:1.7; font-weight:400;"
-        >
-          Choose from four finish colors to coordinate the bookshelf with rustic, farmhouse, boho,
-          vintage, cottage, cabin, woodland, or organic-modern décor.
-        </p>
-
-        <div style="display:flex; flex-wrap:wrap; gap:7px; margin:0; padding:0;">
-          <span
-            style="display:inline-flex; padding:6px 9px; border-radius:999px; background:rgba(91,50,24,0.06); border:1px solid rgba(92,58,35,0.10); color:rgba(42,33,27,0.78); font-size:12px; line-height:1;"
-            >Warm Wood</span
-          >
-          <span
-            style="display:inline-flex; padding:6px 9px; border-radius:999px; background:rgba(91,50,24,0.06); border:1px solid rgba(92,58,35,0.10); color:rgba(42,33,27,0.78); font-size:12px; line-height:1;"
-            >Dark Warm Wood</span
-          >
-          <span
-            style="display:inline-flex; padding:6px 9px; border-radius:999px; background:rgba(91,50,24,0.06); border:1px solid rgba(92,58,35,0.10); color:rgba(42,33,27,0.78); font-size:12px; line-height:1;"
-            >Cool Dark Wood</span
-          >
-          <span
-            style="display:inline-flex; padding:6px 9px; border-radius:999px; background:rgba(91,50,24,0.09); border:1px solid rgba(92,58,35,0.13); color:#5a3218; font-size:12px; line-height:1;"
-            >Natural Finish</span
-          >
-        </div>
-      </div>
-    </div>
-
-    <div
-      style="display:grid; grid-template-columns:34px 1fr; gap:14px; padding:0 0 16px; border-bottom:1px solid rgba(92,58,35,0.14); background:transparent;"
-    >
-      <span
-        style="width:30px; height:30px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; background:rgba(91,50,24,0.09); color:#5a3218; font-size:11px; font-weight:600; letter-spacing:0.04em; line-height:1;"
-      >
-        06
-      </span>
-
-      <div style="margin:0; padding:0; background:transparent;">
-        <h3
-          style="margin:0 0 7px; padding:0; color:#1f1712; font-family:var(--font-heading-family, Georgia, serif); font-size:17px; line-height:1.35; font-weight:500;"
-        >
-          Designed for Cozy Interiors
-        </h3>
-
-        <p
-          style="margin:0; padding:0; color:rgba(42,33,27,0.76); font-size:14px; line-height:1.7; font-weight:400;"
-        >
-          A warm decorative addition to living rooms, bedrooms, reading nooks, offices, cabins,
-          cottages, and other welcoming spaces with rustic or nature-inspired styling.
-        </p>
-      </div>
-    </div>
-
-    <div
-      style="display:grid; grid-template-columns:34px 1fr; gap:14px; padding:0 0 16px; border-bottom:1px solid rgba(92,58,35,0.14); background:transparent;"
-    >
-      <span
-        style="width:30px; height:30px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; background:rgba(91,50,24,0.09); color:#5a3218; font-size:11px; font-weight:600; letter-spacing:0.04em; line-height:1;"
-      >
-        07
-      </span>
-
-      <div style="margin:0; padding:0; background:transparent;">
-        <h3
-          style="margin:0 0 7px; padding:0; color:#1f1712; font-family:var(--font-heading-family, Georgia, serif); font-size:17px; line-height:1.35; font-weight:500;"
-        >
-          Naturally Unique Character
-        </h3>
-
-        <p
-          style="margin:0; padding:0; color:rgba(42,33,27,0.76); font-size:14px; line-height:1.7; font-weight:400;"
-        >
-          Each piece may vary slightly in branch curve, shelf edge, decorative leaf placement, wood
-          grain, color tone, and finish appearance, giving every bookshelf its own distinctive look.
-        </p>
-      </div>
-    </div>
-
-    <div
-      style="margin:2px 0 0; padding:13px 15px; border-radius:14px; background:rgba(91,50,24,0.06); color:rgba(42,33,27,0.72); font-size:13px; line-height:1.6; border:1px solid rgba(92,58,35,0.08);"
-    >
-      Books, plants, pottery, lanterns, framed photos, baskets, and other decorative objects shown
-      in product photos are for presentation only unless explicitly included.
-    </div>
-  </div>
-</div>
-```
+Field này sau bước hậu xử lý sẽ là một **chuỗi HTML** (root element có class `dm-tabs__rte`), không còn là mảng bullet thô.
 
 ## 3. Thêm `extra_fields` vào cuối JSON crawl
 
@@ -1001,30 +779,11 @@ Quy tắc cho từng field:
 - Không có hai dấu gạch nối liên tiếp.
 - Ưu tiên từ khóa mô tả đúng sản phẩm và tránh các từ không mang giá trị SEO.
 
-Ví dụ cấu trúc cuối file JSON:
-
-```json
-{
-  "schema_version": "1.2.0",
-  "asin": "B0H44GDSM6",
-  "source_url": "https://www.amazon.com/dp/B0H44GDSM6",
-  "crawl_metadata": {},
-  "product": {},
-  "assets": {},
-  "color_swatches": [],
-  "extra_fields": {
-    "seo_product_title": "Long-tail keyword product title generated from the original title",
-    "page_title": "SEO page title between 50 and 60 characters",
-    "meta_description": "SEO meta description between 150 and 160 characters, written naturally from the actual crawled product information without invented claims.",
-    "url_slug": "seo-friendly-product-url-slug-between-50-and-60-chars"
-  }
-}
-```
-
 ## 4. Xác minh bắt buộc sau hậu xử lý
 
 Trước khi kết thúc, phải kiểm tra và ghi nhận:
 
+- `color_swatches` chứa đúng 1 object và `swatch.asin` khớp ASIN của link.
 - `product.title` có độ dài từ 50 đến 70 ký tự.
 - `product.about_this_item` là một chuỗi HTML hoàn chỉnh, hợp lệ và dùng đúng nội dung của sản phẩm đã crawl.
 - HTML không còn nội dung mẫu không liên quan đến sản phẩm thực tế.

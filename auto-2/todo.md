@@ -1,6 +1,6 @@
-- Đầu tiên bạn phải đọc lên là "Tôi đang chạy task todo 1".
+- Đầu tiên bạn phải đọc lên là "Tôi đang chạy task todo 2".
 - Chạy file `./move_to_new_link.cmd` để reset toàn bộ data liên quan đến link sản phẩm cũ và chuyển sang link sản phẩm mới.
-- Sau đó thực thi yêu cầu được mô tả trong file `./crawl.md`.
+- Sau đó thực thi yêu cầu được mô tả trong file `./crawl-one-color-swatch-only.md`.
 - Sau khi thực thi xong xuôi thì chạy file `./validate_crawl_json.cmd` để kiểm tra dữ liệu crawl có hợp lệ hay không. Nếu dữ liệu crawl không hợp lệ thì báo cáo lỗi vào file `./report.md` và dừng lại, không thực hiện bước tiếp theo.
 - Sau khi kiểm tra dữ liệu hợp lệ thì chạy file `process_product_images_with_logo.cmd` để xử lý ảnh sản phẩm gắn logo.
 - Sau khi gắn logo lên ảnh xong xuôi thì chạy file `./import_csv_to_store.cmd` để import dữ liệu vào store.

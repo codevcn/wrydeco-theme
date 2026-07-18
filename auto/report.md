@@ -1,77 +1,36 @@
-# Báo cáo crawl và import Wrydeco
+# Báo Cáo Kết Quả Crawl và Import Dữ Liệu Amazon
 
-## Kết quả tổng quan
+## 1. Kết quả Crawl Dữ Liệu
 
-- Trạng thái cuối cùng: Hoàn thành
-- ASIN: B0H7H3HCTJ
-- Link nguồn Amazon: https://www.amazon.com/dp/B0H7H3HCTJ
-- Product title: Modern Wooden Record Stand with Turntable Storage Shelf
-- Base price: $2,585.00 USD
-- Swatch đã crawl: OPTION 4
-- Số color swatch: 1
-- Product Attributes: 18
-- Product Media Gallery images: 9
-- Product Media Gallery videos: 1
-- A+ Content images: 0
-- A+ Content videos: 0
-- Product Videos: 2
-- Customization types: 3
-- Customization options: 7
+- **Sản phẩm gốc (ASIN):** B0H44GDSM6
+- **Tên sản phẩm SEO:** PREAUREUM Tall Rustic Twisted Wood Floor Sculpture
+- **Trạng thái crawl:** Hoàn tất thành công bằng Playwright.
+- **Dữ liệu thu thập được:**
+  - Lấy thành công dữ liệu giá (USD) và vị trí (US Zip code: 90001).
+  - Thu thập thành công tất cả 4 biến thể màu sắc (color swatches).
+  - Thu thập đầy đủ hình ảnh (gallery & thumbnail), tuỳ chọn tuỳ biến (customization), và thông tin mô tả.
+- **Xử lý nội dung (Hậu xử lý):**
+  - Viết lại Product Title chuẩn SEO: *PREAUREUM Tall Rustic Twisted Wood Floor Sculpture*.
+  - Chuyển đổi Product Description sang định dạng HTML với cấu trúc chuẩn.
+- **Xử lý Logo:**
+  - Chèn thành công Logo vào 7 hình ảnh gallery của biến thể chính.
+  - Hình ảnh đã được upload thành công lên hệ thống CDN của Shopify Files.
 
-## Xác minh crawl
+## 2. Kết quả Import vào Shopify
 
-- Delivery country: United States
-- Delivery ZIP code: 90001
-- Location applied: true
-- Display currency: USD
-- Currency verified: true
-- Customize now found: true
-- CAPTCHA: Không gặp CAPTCHA.
-- JSON validate: PASS với auto/validate_crawl_json.cmd
+- **Dữ liệu JSON -> CSV:**
+  - Chuyển đổi thành công JSON sang CSV.
+  - Tạo ra 4 Products, 12 Variants và 28 Images.
+- **Import vào cửa hàng:**
+  - Thực hiện import thành công 4 sản phẩm (mỗi swatch thành một sản phẩm riêng biệt) vào cửa hàng `wrydeco.myshopify.com`.
+  - Các ID sản phẩm đã tạo trên Shopify:
+    - gid://shopify/Product/8346217054265
+    - gid://shopify/Product/8346217087033
+    - gid://shopify/Product/8346217119801
+    - gid://shopify/Product/8346217185337
+  - Tổng cộng: Đã tạo 4 sản phẩm, 0 lỗi, 0 sản phẩm bị bỏ qua.
 
-## SEO và description
+## 3. Quản lý File
+- Toàn bộ dữ liệu trung gian (JSON, CSV, file backup) đã được tự động lưu trữ và dọn dẹp vào thư mục `warehouse/` thành công để tránh trùng lặp cho các lượt chạy sau.
 
-- Đã rewrite product.title theo chuẩn SEO.
-- Đã rewrite product.about_this_item thành HTML với root class dm-tabs__rte.
-- Đã thêm extra_fields ở cuối JSON.
-- product.title length: 55
-- page_title length: 55
-- meta_description length: 156
-- url_slug length: 50
-
-## Xử lý ảnh/logo
-
-- Script: process_product_images_with_logo.cmd
-- Kết quả: Updated=9, skipped=0, failed=0
-- 9 ảnh gallery đã được upload lên Shopify Files và cập nhật source_url trong JSON đã archive.
-
-## CSV và import store
-
-- CSV đã tạo: auto/warehouse/B0H7H3HCTJ.20260718T123607-1.csv
-- CSV conversion: products=1, variants=4, images=7
-- Shopify product ID: gid://shopify/Product/8346048888889
-- Shopify handle: modern-wooden-record-stand-turntable-storage-shelf
-- Import result: Created=1, skipped(existing)=0, failed=0
-- uploaded.json đã ghi nhận product mới.
-
-## Output files
-
-- JSON crawl cuối cùng: crawl/B0H7H3HCTJ/B0H7H3HCTJ.json
-- Report crawl chi tiết: crawl/B0H7H3HCTJ/report.md
-- Debug folder: crawl/B0H7H3HCTJ/debug/
-- JSON đã xử lý và archive: auto/warehouse/B0H7H3HCTJ.20260718T123607-1.json
-- CSV đã import và archive: auto/warehouse/B0H7H3HCTJ.20260718T123607-1.csv
-
-## Warnings
-
-- In-app browser endpoint không khả dụng, nên Playwright được chạy trực tiếp trong phiên Node.
-- Khi click thumbnail, visible image element của Amazon không cập nhật ổn định cho từng thumbnail; dữ liệu gallery đã được resolve từ Amazon image block data của đúng swatch OPTION 4 để tránh ghi URL trùng.
-- Không tìm thấy URL ảnh/video trong A+ Content/Product Description.
-- Product Videos item #2 không có title/poster rõ ràng trong DOM/script đã kiểm tra.
-- Converter CSV bỏ option size đầu tiên theo rule có sẵn: 36"W x 34"H x 16"D.
-- Converter CSV bỏ customization type Add On-Site Installation theo IGNORE_CUSTOMIZATION_TYPE.
-- Importer bỏ qua metafield custom.author_info vì definition là metaobject_reference và cần GID/JSON value.
-
-## Errors
-
-- Không có lỗi dừng pipeline.
+**Tất cả các task trong `todo.md` đã hoàn thành xuất sắc.**
