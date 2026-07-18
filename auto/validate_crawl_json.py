@@ -22,7 +22,7 @@ import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 from urllib.parse import urlparse
 
 
@@ -54,6 +54,9 @@ class ValidationIssue:
 class CrawlJsonValidator:
     def __init__(self) -> None:
         self.errors: list[ValidationIssue] = []
+        # Set once crawl_metadata.status is read; a completed crawl must expose a
+        # concrete price so json_to_shopify_csv.py can build a variant price.
+        self.crawl_completed: bool = False
 
     def error(self, path: str, message: str, actual: Any = None) -> None:
         self.errors.append(ValidationIssue(path, message, actual))
@@ -78,9 +81,14 @@ class CrawlJsonValidator:
         if value is None and nullable:
             return True
 
-        # bool is a subclass of int in Python; reject it for numeric fields.
+        # bool is a subclass of int in Python; reject it for numeric fields
+        # unless bool is itself an accepted type for this field.
         expected_types = expected if isinstance(expected, tuple) else (expected,)
-        if any(t in (int, float) for t in expected_types) and isinstance(value, bool):
+        if (
+            any(t in (int, float) for t in expected_types)
+            and bool not in expected_types
+            and isinstance(value, bool)
+        ):
             self.error(path, "expected number, got boolean", value)
             return False
 
@@ -127,6 +135,7 @@ class CrawlJsonValidator:
 
     def validate(self, data: Any) -> list[ValidationIssue]:
         self.errors = []
+        self.crawl_completed = False
         if not isinstance(data, dict):
             self.error("$", "top-level JSON value must be an object", data)
             return self.errors
@@ -201,6 +210,7 @@ class CrawlJsonValidator:
                     f"expected one of {sorted(VALID_CRAWL_STATUSES)}",
                     status,
                 )
+            self.crawl_completed = status == "completed"
 
         self.expect_non_empty_string(marketplace, f"{path}.marketplace")
         self.expect_non_empty_string(delivery_country, f"{path}.delivery_country")
@@ -268,10 +278,17 @@ class CrawlJsonValidator:
         formatted = self.require_key(value, "formatted", path)
         raw_text = self.require_key(value, "raw_text", path)
 
-        if amount is not None:
-            if self.expect_type(amount, (int, float), f"{path}.amount"):
-                if amount < 0:
-                    self.error(f"{path}.amount", "must be greater than or equal to 0", amount)
+        if amount is None:
+            # A completed crawl must carry a concrete price; the CSV converter
+            # cannot build a variant price from a null amount.
+            if self.crawl_completed:
+                self.error(
+                    f"{path}.amount",
+                    "must not be null when crawl status is completed",
+                )
+        elif self.expect_type(amount, (int, float), f"{path}.amount"):
+            if amount < 0:
+                self.error(f"{path}.amount", "must be greater than or equal to 0", amount)
 
         self.expect_non_empty_string(currency, f"{path}.currency", nullable=True)
         self.expect_non_empty_string(formatted, f"{path}.formatted", nullable=True)
@@ -341,23 +358,39 @@ class CrawlJsonValidator:
         aplus = self.require_key(value, "aplus_content", path)
         product_videos = self.require_key(value, "product_videos", path)
 
-        self.validate_media_group(gallery, f"{path}.product_media_gallery")
+        # Only the product media gallery must expose a distinct large image per
+        # thumbnail; a duplicate here means the crawl captured the same large
+        # image for several thumbnails (see the mandatory per-thumbnail click
+        # procedure in crawl.md).
+        self.validate_media_group(
+            gallery, f"{path}.product_media_gallery", check_duplicate_urls=True
+        )
         self.validate_media_group(aplus, f"{path}.aplus_content")
         self.validate_video_list(product_videos, f"{path}.product_videos")
 
-    def validate_media_group(self, value: Any, path: str) -> None:
+    def validate_media_group(
+        self, value: Any, path: str, *, check_duplicate_urls: bool = False
+    ) -> None:
         if not self.expect_type(value, dict, path):
             return
         images = self.require_key(value, "images", path)
         videos = self.require_key(value, "videos", path)
-        self.validate_image_list(images, f"{path}.images")
+        self.validate_image_list(
+            images, f"{path}.images", check_duplicate_urls=check_duplicate_urls
+        )
         self.validate_video_list(videos, f"{path}.videos")
 
-    def validate_image_list(self, value: Any, path: str) -> None:
+    def validate_image_list(
+        self, value: Any, path: str, *, check_duplicate_urls: bool = False
+    ) -> None:
         if not self.expect_type(value, list, path):
             return
 
         seen_indexes: set[int] = set()
+        # Maps a normalized URL to the image path that first used it, so a
+        # duplicate report can point at the earlier occurrence.
+        seen_source_urls: dict[str, str] = {}
+        seen_resolved_urls: dict[str, str] = {}
         for index, image in enumerate(value):
             image_path = f"{path}[{index}]"
             if not self.expect_type(image, dict, image_path):
@@ -380,6 +413,37 @@ class CrawlJsonValidator:
             self.expect_url(resolved_url, f"{image_path}.resolved_url", nullable=True)
             self.expect_url(thumbnail_url, f"{image_path}.thumbnail_url", nullable=True)
             self.expect_type(alt_text, str, f"{image_path}.alt_text", nullable=True)
+
+            if check_duplicate_urls:
+                self.check_duplicate_image_url(
+                    source_url, f"{image_path}.source_url", seen_source_urls
+                )
+                self.check_duplicate_image_url(
+                    resolved_url, f"{image_path}.resolved_url", seen_resolved_urls
+                )
+
+    def check_duplicate_image_url(
+        self, value: Any, path: str, seen: dict[str, str]
+    ) -> None:
+        """Flag a gallery image URL already used by an earlier gallery image.
+
+        Only non-empty string URLs are compared; ``null`` values are ignored so
+        several images may legitimately leave a URL unset.
+        """
+        if not isinstance(value, str):
+            return
+        normalized = value.strip()
+        if not normalized:
+            return
+        if normalized in seen:
+            self.error(
+                path,
+                f"duplicate gallery image URL also used by {seen[normalized]}; "
+                "each thumbnail must resolve to a distinct large image",
+                normalized,
+            )
+        else:
+            seen[normalized] = path
 
     def validate_video_list(self, value: Any, path: str) -> None:
         if not self.expect_type(value, list, path):
@@ -499,18 +563,9 @@ class CrawlJsonValidator:
                     self.error(f"{option_path}.value", "duplicate option value", option_value)
                 seen_values.add(folded)
 
-            if increase_amount is not None:
-                if self.expect_type(
-                    increase_amount,
-                    (int, float),
-                    f"{option_path}.increase_amount",
-                ):
-                    if increase_amount < 0:
-                        self.error(
-                            f"{option_path}.increase_amount",
-                            "must be greater than or equal to 0",
-                            increase_amount,
-                        )
+            self.validate_increase_amount(
+                increase_amount, f"{option_path}.increase_amount"
+            )
 
             for optional_boolean in ("available", "disabled", "selected", "is_default"):
                 if optional_boolean in option:
@@ -520,6 +575,61 @@ class CrawlJsonValidator:
                         f"{option_path}.{optional_boolean}",
                         nullable=True,
                     )
+
+    def validate_increase_amount(self, value: Any, path: str) -> None:
+        """Validate a customization surcharge.
+
+        ``crawl.md`` documents ``increase_amount`` as ``string | null`` (for
+        example ``"$850.00"``), and ``json_to_shopify_csv.py`` accepts either a
+        number or a currency-formatted string. This mirrors that contract:
+        ``null``/empty means no surcharge, numbers must be non-negative, and a
+        string must parse to a non-negative amount after currency formatting is
+        removed.
+        """
+        if value is None:
+            return
+
+        if isinstance(value, bool):
+            self.error(path, "expected a number or currency string, got boolean", value)
+            return
+
+        if isinstance(value, (int, float)):
+            if value < 0:
+                self.error(path, "must be greater than or equal to 0", value)
+            return
+
+        if not isinstance(value, str):
+            self.error(
+                path,
+                f"expected string, number or null, got {type(value).__name__}",
+                value,
+            )
+            return
+
+        raw = value.strip()
+        if not raw:
+            # An empty string is treated as "no surcharge" by the converter.
+            return
+
+        normalized = re.sub(r"(?i)\bUSD\b", "", raw)
+        normalized = (
+            normalized.replace("$", "")
+            .replace(",", "")
+            .replace("[", "")
+            .replace("]", "")
+            .strip()
+        )
+        try:
+            amount = float(normalized)
+        except ValueError:
+            self.error(
+                path,
+                "string must be a currency amount such as \"$850.00\"",
+                value,
+            )
+            return
+        if amount < 0:
+            self.error(path, "must be greater than or equal to 0", value)
 
     def validate_extra_fields(self, value: Any, path: str) -> None:
         if not self.expect_type(value, dict, path):
@@ -573,10 +683,15 @@ def discover_json_files(input_path: Path) -> list[Path]:
     if input_path.is_file():
         return [input_path] if input_path.suffix.lower() == ".json" else []
     if input_path.is_dir():
+        # Skip timestamped backups and debug folders so a re-run does not
+        # validate the intermediate files produced by the other scripts.
         return sorted(
             path
             for path in input_path.rglob("*.json")
             if path.is_file()
+            and ".backup-" not in path.name
+            and not path.name.startswith(".")
+            and "debug" not in {part.lower() for part in path.parts}
         )
     return []
 

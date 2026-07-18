@@ -52,7 +52,7 @@ import re
 import shutil
 import sys
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 from urllib.parse import urlparse
@@ -71,6 +71,10 @@ MAX_OPTIONS = 3
 # After a clean import, the processed inputs/outputs are archived here.
 ARCHIVE_SOURCE_DIRS = ("data", "output")
 WAREHOUSE_DIR = "warehouse"
+
+# Running log of every product this importer has created, kept next to the
+# script so it survives the data/output archiving step.
+UPLOADED_RECORD_FILE = "uploaded.json"
 
 # Metafield definition types this importer can set directly from a CSV string.
 # Reference/metaobject/rich-text types need specially-formatted values (GIDs or
@@ -104,6 +108,11 @@ class AppError(RuntimeError):
 
 def _dump(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False)
+
+
+def _numeric_id(gid: str) -> str:
+    """Return the numeric part of a Shopify GID (``gid://shopify/Product/123``)."""
+    return gid.rsplit("/", 1)[-1] if gid else gid
 
 
 @dataclass(frozen=True)
@@ -831,8 +840,9 @@ def import_products(
     force_draft: bool,
     do_publish: bool,
     do_metafields: bool,
-) -> tuple[int, int, int, list[str]]:
+) -> tuple[int, int, int, list[str], list[dict[str, str]]]:
     warnings: list[str] = []
+    imported: list[dict[str, str]] = []
     created = 0
     skipped = 0
     failed = 0
@@ -878,6 +888,16 @@ def import_products(
             product = client.product_set(product_input)
             product_id = product["id"]
             created += 1
+            imported.append(
+                {
+                    "id": _numeric_id(product_id),
+                    "name": record.title or record.handle,
+                    "handle": record.handle,
+                    "imported_at": datetime.now(timezone.utc)
+                    .isoformat(timespec="seconds")
+                    .replace("+00:00", "Z"),
+                }
+            )
 
             if do_metafields:
                 metafields = build_metafield_inputs(
@@ -902,7 +922,7 @@ def import_products(
             failed += 1
             LOGGER.error("Failed to import %s: %s", record.handle, exc)
 
-    return created, skipped, failed, warnings
+    return created, skipped, failed, warnings, imported
 
 
 def _unique_destination(directory: Path, name: str) -> Path:
@@ -951,6 +971,65 @@ def archive_processed_files(base_dir: Path) -> tuple[int, list[str]]:
     return moved, warnings
 
 
+def record_uploaded_products(
+    base_dir: Path, products: Sequence[Mapping[str, str]]
+) -> list[str]:
+    """Save the name, id and handle of every imported product to uploaded.json.
+
+    The file is a running log across imports: existing entries are preserved and
+    an entry sharing a handle is refreshed with the latest id/name, so the file
+    never accumulates duplicates when a CSV is re-imported.
+    """
+    warnings: list[str] = []
+    if not products:
+        return warnings
+
+    path = base_dir / UPLOADED_RECORD_FILE
+    existing: list[Mapping[str, Any]] = []
+    if path.exists():
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8-sig"))
+            if isinstance(payload, Mapping) and isinstance(payload.get("products"), list):
+                existing = [
+                    item for item in payload["products"] if isinstance(item, Mapping)
+                ]
+        except (OSError, json.JSONDecodeError) as exc:
+            warnings.append(f"Could not read {path}; it will be recreated: {exc}")
+
+    order: list[str] = []
+    by_handle: dict[str, dict[str, str]] = {}
+    for item in existing:
+        handle = str(item.get("handle") or "")
+        if handle not in by_handle:
+            order.append(handle)
+        by_handle[handle] = {
+            "id": str(item.get("id") or ""),
+            "name": str(item.get("name") or ""),
+            "handle": handle,
+            "imported_at": str(item.get("imported_at") or ""),
+        }
+    for product in products:
+        handle = str(product.get("handle") or "")
+        if handle not in by_handle:
+            order.append(handle)
+        by_handle[handle] = {
+            "id": str(product.get("id") or ""),
+            "name": str(product.get("name") or ""),
+            "handle": handle,
+            "imported_at": str(product.get("imported_at") or ""),
+        }
+
+    merged = [by_handle[handle] for handle in order]
+    try:
+        path.write_text(
+            json.dumps({"products": merged}, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+    except OSError as exc:
+        warnings.append(f"Could not write {path}: {exc}")
+    return warnings
+
+
 def main() -> int:
     args = parse_args()
     logging.basicConfig(
@@ -993,7 +1072,7 @@ def main() -> int:
         LOGGER.info("API version: %s", settings.api_version)
 
         client = ShopifyClient(settings, session)
-        created, skipped, failed, warnings = import_products(
+        created, skipped, failed, warnings, imported = import_products(
             client,
             records,
             force_draft=args.draft,
@@ -1007,6 +1086,16 @@ def main() -> int:
             skipped,
             failed,
         )
+
+        # Persist the imported products (name + id + handle) for later reference.
+        record_warnings = record_uploaded_products(SCRIPT_DIR, imported)
+        warnings.extend(record_warnings)
+        if imported:
+            LOGGER.info(
+                "Recorded %d imported product(s) into %s",
+                len(imported),
+                SCRIPT_DIR / UPLOADED_RECORD_FILE,
+            )
 
         # A clean import archives the processed data/ and output/ files.
         if failed:

@@ -3,7 +3,7 @@
 Hãy trực tiếp sử dụng **Playwright** để mở trình duyệt và crawl trang Amazon sau:
 
 ```text
-https://www.amazon.com/dp/B0H6FGXKZ7
+https://www.amazon.com/dp/B0H6FGCCVP
 ```
 
 Không chỉ hướng dẫn hoặc phân tích. Hãy tự điều khiển trình duyệt trong phiên làm việc hiện tại, trực tiếp truy cập trang, scroll, click, mở modal, kiểm tra DOM/network và lưu kết quả thực tế.
@@ -118,9 +118,9 @@ Tạo cấu trúc sau:
 
 ```text
 /crawl/
-└── B0H6FGXKZ7/
+└── B0H6FGCCVP/
     ├── debug/
-    ├── B0H6FGXKZ7.json
+    ├── B0H6FGCCVP.json
     └── report.md
 ```
 
@@ -129,19 +129,19 @@ Trong đó:
 - File dữ liệu chính:
 
 ```text
-/crawl/B0H6FGXKZ7/B0H6FGXKZ7.json
+/crawl/B0H6FGCCVP/B0H6FGCCVP.json
 ```
 
 - File báo cáo kết quả:
 
 ```text
-/crawl/B0H6FGXKZ7/report.md
+/crawl/B0H6FGCCVP/report.md
 ```
 
 - Dữ liệu debug:
 
 ```text
-/crawl/B0H6FGXKZ7/debug/
+/crawl/B0H6FGCCVP/debug/
 ```
 
 Không tạo folder riêng để chứa ảnh hoặc video vì chỉ cần lưu URL media vào file JSON.
@@ -370,7 +370,7 @@ Không suy đoán giá khi không thể xác định.
 Tạo file:
 
 ```text
-/crawl/B0H6FGXKZ7/B0H6FGXKZ7.json
+/crawl/B0H6FGCCVP/B0H6FGCCVP.json
 ```
 
 Cấu trúc tối thiểu cần phải có:
@@ -503,7 +503,7 @@ Mỗi customization option phải dược liệt kê theo cấu trúc sau:
 Trong quá trình crawl, có thể lưu các dữ liệu hỗ trợ kiểm tra vào:
 
 ```text
-/crawl/B0H6FGXKZ7/debug/
+/crawl/B0H6FGCCVP/debug/
 ```
 
 Dữ liệu debug có thể bao gồm:
@@ -575,7 +575,7 @@ Không bắt buộc phải giữ dữ liệu debug không còn giá trị. Tuy n
 Tạo file:
 
 ```text
-/crawl/B0H6FGXKZ7/report.md
+/crawl/B0H6FGCCVP/report.md
 ```
 
 File `report.md` phải bao gồm tối thiểu:
@@ -637,8 +637,8 @@ Sau khi crawl xong:
 1. Xác nhận đã tạo:
 
 ```text
-/crawl/B0H6FGXKZ7/B0H6FGXKZ7.json
-/crawl/B0H6FGXKZ7/report.md
+/crawl/B0H6FGCCVP/B0H6FGCCVP.json
+/crawl/B0H6FGCCVP/report.md
 ```
 
 2. Báo cáo ngắn gọn:
@@ -1004,8 +1004,8 @@ Ví dụ cấu trúc cuối file JSON:
 ```json
 {
   "schema_version": "1.2.0",
-  "asin": "B0H6FGXKZ7",
-  "source_url": "https://www.amazon.com/dp/B0H6FGXKZ7",
+  "asin": "B0H6FGCCVP",
+  "source_url": "https://www.amazon.com/dp/B0H6FGCCVP",
   "crawl_metadata": {},
   "product": {},
   "assets": {},

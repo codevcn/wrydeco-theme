@@ -124,12 +124,12 @@ TEXT_INPUT_MARKERS = {
 }
 
 AUTHOR_INFO_VALUES: tuple[str, ...] = (
-    "nhien-le",
-    "alex-nguyen",
-    "khoi-hoang",
-    "nhan-pham",
-    "lam-nguyen",
-    "son-tran",
+    "gid://shopify/Metaobject/195647275065", # nhien-le
+    "gid://shopify/Metaobject/194643296313", # alex-nguyen
+    "gid://shopify/Metaobject/194643198009", # khoi-hoang
+    "gid://shopify/Metaobject/195646947385", # nhan-pham
+    "gid://shopify/Metaobject/194643165241", # lam-nguyen
+    "gid://shopify/Metaobject/195647701049", # son-tran
 )
 
 # Add exact customization type names here to omit them from the Shopify CSV.
