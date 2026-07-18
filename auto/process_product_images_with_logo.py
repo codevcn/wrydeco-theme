@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Download crawled product-gallery images, add a local logo, upload the
 watermarked images to Shopify Content > Files, then replace each
