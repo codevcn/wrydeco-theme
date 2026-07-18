@@ -3,7 +3,7 @@
 Hãy trực tiếp sử dụng **Playwright** để mở trình duyệt và crawl trang Amazon sau:
 
 ```text
-https://www.amazon.com/dp/B0H6FGCCVP
+https://www.amazon.com/dp/B0H7H3HCTJ
 ```
 
 Không chỉ hướng dẫn hoặc phân tích. Hãy tự điều khiển trình duyệt trong phiên làm việc hiện tại, trực tiếp truy cập trang, scroll, click, mở modal, kiểm tra DOM/network và lưu kết quả thực tế.
@@ -121,9 +121,9 @@ Tạo cấu trúc sau:
 
 ```text
 /crawl/
-└── B0H6FGCCVP/
+└── B0H7H3HCTJ/
     ├── debug/
-    ├── B0H6FGCCVP.json
+    ├── B0H7H3HCTJ.json
     └── report.md
 ```
 
@@ -132,19 +132,19 @@ Trong đó:
 - File dữ liệu chính:
 
 ```text
-/crawl/B0H6FGCCVP/B0H6FGCCVP.json
+/crawl/B0H7H3HCTJ/B0H7H3HCTJ.json
 ```
 
 - File báo cáo kết quả:
 
 ```text
-/crawl/B0H6FGCCVP/report.md
+/crawl/B0H7H3HCTJ/report.md
 ```
 
 - Dữ liệu debug:
 
 ```text
-/crawl/B0H6FGCCVP/debug/
+/crawl/B0H7H3HCTJ/debug/
 ```
 
 Không tạo folder riêng để chứa ảnh hoặc video vì chỉ cần lưu URL media vào file JSON.
@@ -388,7 +388,7 @@ Không suy đoán giá khi không thể xác định.
 Tạo file:
 
 ```text
-/crawl/B0H6FGCCVP/B0H6FGCCVP.json
+/crawl/B0H7H3HCTJ/B0H7H3HCTJ.json
 ```
 
 Cấu trúc tối thiểu cần phải có (lưu ý `color_swatches` chỉ có **đúng 1 object**):
@@ -521,7 +521,7 @@ Mỗi customization option phải được liệt kê theo cấu trúc sau:
 Trong quá trình crawl, có thể lưu các dữ liệu hỗ trợ kiểm tra vào:
 
 ```text
-/crawl/B0H6FGCCVP/debug/
+/crawl/B0H7H3HCTJ/debug/
 ```
 
 Dữ liệu debug có thể bao gồm:
@@ -600,7 +600,7 @@ Không bắt buộc phải giữ dữ liệu debug không còn giá trị. Tuy n
 Tạo file:
 
 ```text
-/crawl/B0H6FGCCVP/report.md
+/crawl/B0H7H3HCTJ/report.md
 ```
 
 File `report.md` phải bao gồm tối thiểu:
@@ -667,8 +667,8 @@ Sau khi crawl xong:
 1. Xác nhận đã tạo:
 
 ```text
-/crawl/B0H6FGCCVP/B0H6FGCCVP.json
-/crawl/B0H6FGCCVP/report.md
+/crawl/B0H7H3HCTJ/B0H7H3HCTJ.json
+/crawl/B0H7H3HCTJ/report.md
 ```
 
 2. Báo cáo ngắn gọn:

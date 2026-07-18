@@ -10,16 +10,20 @@ Product mapping rules implemented by this script:
 - A variant price is the color swatch base price plus the ``increase_amount``
   of every selected customization option. Legacy bracketed surcharges remain
   supported for backwards compatibility.
-- ``Product Category`` comes from the top-level ``product_category`` field.
-- ``Product Type`` comes from the top-level ``product_type`` field.
-- The vendor is always ``Wrydeco`` and the only product tag is ``source_amazon``.
+- ``Vendor``, ``Tags``, ``Product Type`` and ``Product Category`` come from the
+  ``product`` block in ``configs/config.json`` (``product.vendor``,
+  ``product.tags``, ``product.product_type``, ``product.product_category``).
+  ``Product Type`` and ``Product Category`` fall back to the crawl JSON's
+  top-level fields, ``Vendor`` to ``Wrydeco`` and ``Tags`` to ``source_amazon``.
 - The ``wood_type`` metafield is populated from the swatch attribute whose key is
   ``material``.
 - For any customization type whose lowercase name contains ``size``, the first
   option is discarded before Shopify variants are generated.
 - SEO data comes from the top-level ``extra_fields`` object: ``seo_product_title``,
   ``page_title``, ``meta_description`` and ``url_slug``.
-- Products are generated with ``Status=active`` and ``Published=true``.
+- The product ``Status`` and ``Published`` columns come from the ``product``
+  block in ``configs/config.json`` (``product.status`` and ``product.published``);
+  they default to ``active`` / ``true`` when absent.
 
 Text-input customizations such as "Note to seller" are not valid Shopify
 variant dimensions and are skipped. Shopify theme code or a line-item property
@@ -135,8 +139,7 @@ AUTHOR_INFO_VALUES: tuple[str, ...] = (
 # Add exact customization type names here to omit them from the Shopify CSV.
 # Matching is case-insensitive and ignores surrounding/repeated whitespace.
 IGNORE_CUSTOMIZATION_TYPE: list[str] = [
-    "Note to seller (Optional)",
-    "Add On-Site Installation"
+    "Note to seller (Optional)"
 ]
 
 PRODUCT_VENDOR = "Wrydeco"
@@ -163,6 +166,7 @@ class Settings:
     product_category: str = ""
     product_type: str = ""
     tags: tuple[str, ...] = ("source_amazon",)
+    author_info: tuple[str, ...] = ()
     published: bool = True
     status: str = "active"
     inventory_policy: str = "continue"
@@ -361,17 +365,41 @@ def load_settings(config_path: Path) -> Settings:
         raise ValueError(f"Cannot read config file {config_path}: {exc}") from exc
 
     raw = config.get("shopify_csv") or {}
-    tags = raw.get("tags", ["source_amazon"])
+    # Product-level fields (status, published, vendor, tags, product_type,
+    # product_category) are controlled from the top-level "product" block in
+    # config.json; fall back to the legacy shopify_csv block for compatibility.
+    product_cfg = config.get("product") or {}
+    tags = product_cfg.get("tags", raw.get("tags", ["source_amazon"]))
     if isinstance(tags, str):
         tags = [part.strip() for part in tags.split(",") if part.strip()]
 
+    status_raw = product_cfg.get("status", raw.get("status", "active"))
+    published_raw = product_cfg.get("published", raw.get("published", True))
+
+    # author_info accepts a single string or a list of strings (one is picked
+    # per product); when absent, the built-in AUTHOR_INFO_VALUES are used.
+    author_info_raw = product_cfg.get("author_info", raw.get("author_info"))
+    if isinstance(author_info_raw, str):
+        author_info = (clean_text(author_info_raw),) if clean_text(author_info_raw) else ()
+    elif isinstance(author_info_raw, (list, tuple)):
+        author_info = tuple(
+            clean_text(value) for value in author_info_raw if clean_text(value)
+        )
+    else:
+        author_info = ()
+
     return Settings(
-        vendor=clean_text(raw.get("vendor")),
-        product_category=clean_text(raw.get("product_category")),
-        product_type=clean_text(raw.get("type", "")),
+        vendor=clean_text(product_cfg.get("vendor", raw.get("vendor"))),
+        author_info=author_info,
+        product_category=clean_text(
+            product_cfg.get("product_category", raw.get("product_category"))
+        ),
+        product_type=clean_text(
+            product_cfg.get("product_type", raw.get("type", ""))
+        ),
         tags=tuple(clean_text(tag) for tag in tags if clean_text(tag)),
-        published=bool(raw.get("published", True)),
-        status=clean_text(raw.get("status", "active")) or "active",
+        published=bool(published_raw),
+        status=clean_text(status_raw) or "active",
         inventory_policy=clean_text(raw.get("inventory_policy", "continue")) or "continue",
         fulfillment_service=clean_text(raw.get("fulfillment_service", "manual")) or "manual",
         requires_shipping=bool(raw.get("requires_shipping", True)),
@@ -666,24 +694,37 @@ def build_variant_options(
 def build_tags(
     data: dict[str, Any], swatch: dict[str, Any], settings: Settings
 ) -> str:
-    """Return the single fixed product tag required for Amazon-source products."""
-    del data, swatch, settings
+    """Return the product tags as a Shopify comma-separated string.
+
+    Tags come from ``product.tags`` in config.json; when none are configured the
+    default ``source_amazon`` tag is used.
+    """
+    del data, swatch
+    if settings.tags:
+        return ", ".join(settings.tags)
     return PRODUCT_TAG
 
 
-def choose_author_info() -> str:
+def choose_author_info(settings: Settings) -> str:
+    """Return the author_info value from config, or a built-in default.
+
+    ``product.author_info`` in config.json may be a single handle or a list of
+    handles; a single value is chosen per product. When it is not configured,
+    one of the built-in AUTHOR_INFO_VALUES is used.
+    """
+    if settings.author_info:
+        return random.choice(settings.author_info)
     return random.choice(AUTHOR_INFO_VALUES)
 
 
 def resolve_product_type(data: dict[str, Any], settings: Settings) -> str:
-    """Return Product Type only from the JSON top-level product_type field."""
-    del settings
-    return clean_text(data.get("product_type"))
+    """Return Product Type from config.json, falling back to the crawl JSON."""
+    return settings.product_type or clean_text(data.get("product_type"))
 
 
-def resolve_product_category(data: dict[str, Any]) -> str:
-    """Return Shopify Product Category from the crawl JSON top-level field."""
-    return clean_text(data.get("product_category"))
+def resolve_product_category(data: dict[str, Any], settings: Settings) -> str:
+    """Return Product Category from config.json, falling back to the crawl JSON."""
+    return settings.product_category or clean_text(data.get("product_category"))
 
 
 def empty_row() -> dict[str, str]:
@@ -735,7 +776,7 @@ def build_product_rows(
     attributes = swatch.get("product_attributes") or product.get(
         "product_attributes", {}
     )
-    vendor = PRODUCT_VENDOR
+    vendor = settings.vendor or PRODUCT_VENDOR
     material = get_attribute_value(attributes, "material", "product_material")
     # WRYDECO rule: the wood_type metafield uses the swatch attribute whose key
     # is exactly "material"; do not read the old "wood_type" attribute here.
@@ -785,9 +826,9 @@ def build_product_rows(
     rich_description = build_rich_description(data)
     amazon_url = clean_text(swatch.get("product_url") or data.get("source_url"))
     tags = build_tags(data, swatch, settings)
-    product_category = resolve_product_category(data)
+    product_category = resolve_product_category(data, settings)
     shopify_product_type = resolve_product_type(data, settings)
-    author_info = choose_author_info()
+    author_info = choose_author_info(settings)
 
     if not product_category:
         warnings.append("Top-level product_category is empty; Shopify Product Category will be blank")
@@ -812,7 +853,7 @@ def build_product_rows(
                     "Product Category": product_category,
                     "Type": shopify_product_type,
                     "Tags": tags,
-                    "Published": "true",
+                    "Published": bool_csv(settings.published),
                     "Gift Card": "false",
                     "SEO Title": effective_page_title,
                     "SEO Description": effective_meta_description,
@@ -822,7 +863,7 @@ def build_product_rows(
                     "SEO Product Title (product.metafields.custom.seo_product_title)": effective_seo_product_title,
                     "Wood Type (product.metafields.custom.wood_type)": wood_type,
                     "Rich Description (product.metafields.custom.rich_description)": rich_description,
-                    "Status": "active",
+                    "Status": settings.status,
                 }
             )
 
@@ -1007,8 +1048,16 @@ def main() -> int:
             f"(products={product_count}, variants={variant_count}, images={image_count})"
         )
     print(f"Files written: {len(written)}")
-    print("Publishing: Status=active, Online Store Published=true")
-    print(f"Vendor: {PRODUCT_VENDOR}; Tags: {PRODUCT_TAG}; Gallery image limit: {PRODUCT_IMAGE_LIMIT}")
+    print(
+        f"Publishing: Status={settings.status}, "
+        f"Online Store Published={bool_csv(settings.published)}"
+    )
+    effective_vendor = settings.vendor or PRODUCT_VENDOR
+    effective_tags = ", ".join(settings.tags) if settings.tags else PRODUCT_TAG
+    print(
+        f"Vendor: {effective_vendor}; Tags: {effective_tags}; "
+        f"Gallery image limit: {PRODUCT_IMAGE_LIMIT}"
+    )
     print(
         "Shopify Inbox: keep 'Publish new products to all sales channels' "
         "selected in the Shopify import dialog"

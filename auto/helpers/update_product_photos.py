@@ -26,10 +26,11 @@ from __future__ import annotations
 PRODUCT_ID = "8346020282425"
 
 # Path to the crawl JSON whose gallery source_url values become the new images.
-JSON_FILE_CONTAINS_SOURCE_URLS = "D:\\D-Jobs\\ae-B6\\Shopify\\stores\\main\\wrydeco\\wrydeco-app\\auto\\data\\B0H6FGCCVP.json"
+# Relative paths resolve against the CWD, this helpers/ folder, then auto/.
+JSON_FILE_CONTAINS_SOURCE_URLS = "data/B0H6FGCCVP.json"
 
 # Path to the .env file that stores the Admin API access token.
-ENV_FILE_CONTAINS_ACCESS_TOKEN = "D:\\D-Jobs\\ae-B6\\Shopify\\stores\\main\\wrydeco\\wrydeco-app\\auto\\.env"
+ENV_FILE_CONTAINS_ACCESS_TOKEN = ".env"
 
 # The key inside the .env file that holds the Admin API access token.
 STORE_ADMIN_ACCESS_TOKEN_KEY = "IMPORT_STORE_ADMIN_ACCESS_TOKEN"

@@ -9,10 +9,8 @@ from requests import HTTPError
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-ROOT_DIR = SCRIPT_DIR.parent
 
 load_dotenv(SCRIPT_DIR / ".env")
-load_dotenv(ROOT_DIR / ".env.shopify", override=False)
 
 SHOPIFY_SHOP = os.getenv("SHOPIFY_SHOP", "").strip().strip('"')
 SHOPIFY_ADMIN_TOKEN = os.getenv("SHOPIFY_ADMIN_TOKEN", "").strip().strip('"')

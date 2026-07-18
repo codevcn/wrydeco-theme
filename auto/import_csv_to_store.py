@@ -77,8 +77,8 @@ WAREHOUSE_DIR = "warehouse"
 UPLOADED_RECORD_FILE = "uploaded.json"
 
 # Metafield definition types this importer can set directly from a CSV string.
-# Reference/metaobject/rich-text types need specially-formatted values (GIDs or
-# JSON) that a flat CSV cannot express, so they are skipped with a warning.
+# Rich-text and other structured types need specially-formatted values that a
+# flat CSV cannot express, so they are skipped with a warning.
 DIRECT_METAFIELD_TYPES = {
     "single_line_text_field",
     "multi_line_text_field",
@@ -96,6 +96,22 @@ DIRECT_METAFIELD_TYPES = {
     "volume",
     "weight",
 }
+
+# Single-reference metafield types whose value is one GID (gid://shopify/...).
+# The CSV cell holds the GID directly.
+REFERENCE_METAFIELD_TYPES = {
+    "metaobject_reference",
+    "mixed_reference",
+    "product_reference",
+    "variant_reference",
+    "collection_reference",
+    "page_reference",
+    "file_reference",
+}
+
+# List-of-reference metafield types whose value is a JSON array of GIDs. The CSV
+# cell may hold a JSON array or a comma-separated list of GIDs.
+LIST_REFERENCE_METAFIELD_TYPES = {f"list.{name}" for name in REFERENCE_METAFIELD_TYPES}
 
 METAFIELD_HEADER_PATTERN = re.compile(
     r"\(\s*product\.metafields\.(?P<namespace>[^.\s]+)\.(?P<key>[^.)\s]+)\s*\)"
@@ -800,6 +816,55 @@ def build_variant_input(variant: VariantRow) -> dict[str, Any]:
     return variant_input
 
 
+def _parse_gid_list(value: str) -> list[str]:
+    """Parse a CSV cell into a list of GIDs (JSON array or comma-separated)."""
+    raw = value.strip()
+    if raw.startswith("["):
+        try:
+            parsed = json.loads(raw)
+        except ValueError:
+            return []
+        if not isinstance(parsed, list):
+            return []
+        return [str(item).strip() for item in parsed if str(item).strip()]
+    return [part.strip() for part in raw.split(",") if part.strip()]
+
+
+def resolve_metafield_value(
+    handle: str, namespace: str, key: str, type_name: str, value: str, warnings: list[str]
+) -> str | None:
+    """Return the API value for a metafield, or None when it must be skipped."""
+    if type_name in DIRECT_METAFIELD_TYPES:
+        return value
+
+    if type_name in REFERENCE_METAFIELD_TYPES:
+        gid = value.strip()
+        if not gid.startswith("gid://"):
+            warnings.append(
+                f"{handle}: metafield {namespace}.{key} ('{type_name}') expects a "
+                f"gid://shopify/... value but got {value!r}; skipped."
+            )
+            return None
+        return gid
+
+    if type_name in LIST_REFERENCE_METAFIELD_TYPES:
+        gids = _parse_gid_list(value)
+        invalid = [gid for gid in gids if not gid.startswith("gid://")]
+        if not gids or invalid:
+            warnings.append(
+                f"{handle}: metafield {namespace}.{key} ('{type_name}') expects a "
+                f"list of gid://shopify/... values but got {value!r}; skipped."
+            )
+            return None
+        return json.dumps(gids)
+
+    warnings.append(
+        f"{handle}: metafield {namespace}.{key} has type "
+        f"'{type_name}' that this importer cannot express; skipped."
+    )
+    return None
+
+
 def build_metafield_inputs(
     record: ProductRecord,
     owner_id: str,
@@ -815,11 +880,10 @@ def build_metafield_inputs(
                 f"{namespace}.{key}; skipped."
             )
             continue
-        if type_name not in DIRECT_METAFIELD_TYPES:
-            warnings.append(
-                f"{record.handle}: metafield {namespace}.{key} has type "
-                f"'{type_name}' that needs a GID/JSON value; skipped."
-            )
+        resolved_value = resolve_metafield_value(
+            record.handle, namespace, key, type_name, value, warnings
+        )
+        if resolved_value is None:
             continue
         metafields.append(
             {
@@ -827,7 +891,7 @@ def build_metafield_inputs(
                 "namespace": namespace,
                 "key": key,
                 "type": type_name,
-                "value": value,
+                "value": resolved_value,
             }
         )
     return metafields
@@ -907,12 +971,11 @@ def import_products(
                     for error in client.set_metafields(metafields):
                         warnings.append(f"{record.handle}: metafield error: {error}")
 
-            should_publish = (
-                do_publish
-                and record.published
-                and not force_draft
-                and record.status == "ACTIVE"
-            )
+            # status (active/draft/archived) and published (sales-channel
+            # publication) are independent knobs: publishing follows the
+            # Published column alone, regardless of the product status. The
+            # --draft CLI override still forces draft and skips publishing.
+            should_publish = do_publish and record.published and not force_draft
             if should_publish and publication_ids:
                 for error in client.publish(product_id, publication_ids):
                     warnings.append(f"{record.handle}: publish error: {error}")
