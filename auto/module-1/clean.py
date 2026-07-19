@@ -21,6 +21,7 @@ KEEP_CONTENT = [
 	"run.cmd",
 	"run.py",
 	"script.js",
+	"script-timing.js",
 	"temp.html",
 	"todo.md",
 ]

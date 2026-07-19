@@ -62,3 +62,9 @@ thống store của bạn, kèm theo ID (GID) của từng đối tượng:
    • GID: gid://shopify/Metaobject/195647275065
 6. Son Tran (Handle: son-tran)
    • GID: gid://shopify/Metaobject/195647701049
+
+## Rich Description Initial
+
+```html
+<div class="description-root"></div>
+```

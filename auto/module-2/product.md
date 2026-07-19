@@ -1,13 +1,13 @@
 # Task cập nhật sản phẩm đang có sẵn trong store
 
-> Dùng `../admin/access-token.md` để truy cập vào store, sau đó cập nhật sản phẩm có ID là `8346020282425` theo các yêu cầu bên dưới.
+> Dùng `../admin/access-token.md` để truy cập vào store, sau đó cập nhật sản phẩm có ID là `8346122813497` theo các yêu cầu bên dưới.
 
 ### 1. Viết lại Product Title chuẩn SEO
 
 Product Title gốc:
 
 ```text
-Modern Wooden Record Stand, Solid Wood Vinyl Record Storage Cabinet with Turntable Shelf, Sculptural Media Console for Bedroom Living Room
+Wooden Headboard Rustic Solid Wood Live Edge Headboard Panel for Cozy Bedrooms, Natural Bedroom Wall Decor, Multiple Sizes
 ```
 
 - Viết lại product title gốc trên thành product title mới.
@@ -21,19 +21,17 @@ Modern Wooden Record Stand, Solid Wood Vinyl Record Storage Cabinet with Turntab
 Mô tả sản phẩm gốc:
 
 ```text
-🎵 Designed for Vinyl Lovers – Create a stylish listening corner with this modern wooden record stand, featuring a spacious top surface for a turntable and a dedicated storage area for vinyl records, audio gear, books, and decor.
+🪵 Rustic Bedroom Statement Piece – Create a warm, cozy focal point with a wooden headboard designed to bring natural texture, organic shape, and handcrafted-style character to your bedroom or guest room.
 
-🪵 Sculptural Solid Wood Look – The flowing curved shelves, rounded edges, raised legs, and rich wood grain give this piece a premium handcrafted feel, making it more than storage—it becomes a statement furniture piece for your room.
+🌿 Live Edge Inspired Design – The uneven sculptural top, rich wood grain, and natural panel look give this headboard a one-of-a-kind rustic feel that pairs beautifully with boho, farmhouse, cabin, lodge, modern organic, and minimalist interiors.
 
-💿 Smart Record & Media Storage – The right-side cabinet section is ideal for organizing vinyl records upright, while the upper compartment can hold a receiver, amplifier, or media accessories for a clean and functional audio setup.
+🛏️ Perfect for Cozy Interiors – Use it to elevate a master bedroom, guest bedroom, vacation rental, cabin bedroom, or stylish apartment space. The bold wood look instantly makes the bed area feel warmer, more grounded, and more inviting.
 
-🏡 Beautiful for Any Interior – Perfect for bedrooms, living rooms, music rooms, apartments, studios, lounges, and reading corners. The warm modern design pairs well with mid century, rustic, organic modern, farmhouse, and vintage-inspired interiors.
+🎨 Finish Choices – Choose from Warm Wood, Dark Warm Wood, Cool Dark Wood, or Natural Finish to match your bedding, nightstands, flooring, and overall bedroom color palette.
 
-📏 Multiple Size Options – Available in 36"W x 34"H x 16"D, 43"W x 34"H x 16"D, and 49"W x 38"H x 16"D, giving customers flexible options for small spaces, larger music setups, or statement display areas.
+✨ Solid Wood Character – Designed with a substantial wood appearance, visible grain variation, and live-edge style detailing, this headboard adds depth and natural beauty that feels more premium than a basic flat panel.
 
-🎨 Finish Color Choices – Choose from Warm Wood, Dark Warm Wood, Cool Dark Wood, or Natural Finish to match your flooring, wall color, furniture, and personal style.
-
-🎁 Great Gift for Music Collectors – A thoughtful gift idea for vinyl collectors, music lovers, new homeowners, apartment decorators, audiophiles, or anyone building a cozy and organized record listening space.
+🎁 Thoughtful Home Gift – A beautiful housewarming, wedding, anniversary, new home, or bedroom makeover gift for anyone who loves rustic furniture, natural wood decor, cozy interiors, and statement bedroom styling.
 ```
 
 Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết lại mô tả sản phẩm gốc trên.
@@ -309,49 +307,11 @@ Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết
 - rich_description:
 
 ```html
-<div class="description-root">
-  <img
-    alt="d"
-    src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/7a12d03a-54ea-4974-ad8c-77fb11b633e5.__CR0,0,1594,986_PT0_SX970_V1___.png"
-    class="a-spacing-base"
-    data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/7a12d03a-54ea-4974-ad8c-77fb11b633e5.__CR0,0,1594,986_PT0_SX970_V1___.png"
-  />
-  <img
-    alt="d"
-    src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/ab54a2fd-6956-4103-afd1-89914fe65772.__CR0,0,1594,986_PT0_SX970_V1___.png"
-    class="a-spacing-base"
-    data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/ab54a2fd-6956-4103-afd1-89914fe65772.__CR0,0,1594,986_PT0_SX970_V1___.png"
-  />
-  <img
-    alt="d"
-    src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/9866a0be-7c71-48ca-aff6-3e56ef543dcf.__CR0,0,1594,986_PT0_SX970_V1___.png"
-    class="a-spacing-base"
-    data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/9866a0be-7c71-48ca-aff6-3e56ef543dcf.__CR0,0,1594,986_PT0_SX970_V1___.png"
-  />
-  <img
-    alt="d"
-    src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/ac789e41-bba0-4673-aa32-9ab8aa2b10d4.__CR0,0,1594,986_PT0_SX970_V1___.png"
-    class="a-spacing-base"
-    data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/ac789e41-bba0-4673-aa32-9ab8aa2b10d4.__CR0,0,1594,986_PT0_SX970_V1___.png"
-  />
-  <img
-    alt="d"
-    src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/de6c3f28-923c-4a32-9aa0-237a329e0f0e.__CR0,0,1594,986_PT0_SX970_V1___.png"
-    class="a-spacing-base"
-    data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/de6c3f28-923c-4a32-9aa0-237a329e0f0e.__CR0,0,1594,986_PT0_SX970_V1___.png"
-  />
-  <img
-    alt="g"
-    src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/dd2da1f2-3107-4a21-82ad-a959ebf0a2cf.__CR0,0,1594,986_PT0_SX970_V1___.png"
-    class="a-spacing-base"
-    data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/dd2da1f2-3107-4a21-82ad-a959ebf0a2cf.__CR0,0,1594,986_PT0_SX970_V1___.png"
-  />
-</div>
-
+<div class="description-root"><img alt="c" src="https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif" class="a-spacing-base a-lazy-loaded" data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/f97cc7a8-a12d-491f-b741-6067513fa1bd.__CR0,5,1586,981_PT0_SX970_V1___.png"> <img alt="x" src="https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif" class="a-spacing-base a-lazy-loaded" data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/2d7d84a7-4f52-414e-95af-96b6b19aa019.__CR0,5,1586,981_PT0_SX970_V1___.png"> <img alt="x" src="https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif" class="a-spacing-base a-lazy-loaded" data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/4e07dc04-937e-4117-a2ba-daa71f768736.__CR0,5,1586,981_PT0_SX970_V1___.png"> <img alt="x" src="https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif" class="a-spacing-base a-lazy-loaded" data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/2ef8abb7-1c1c-4f3c-9f45-89261ec82a44.__CR0,5,1586,981_PT0_SX970_V1___.png"> <img alt="x" src="https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif" class="a-spacing-base a-lazy-loaded" data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/94b03d6a-7101-40fa-907b-eac555e2ca17.__CR0,5,1586,981_PT0_SX970_V1___.png"> <img alt="g" src="https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif" class="a-spacing-base a-lazy-loaded" data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/dd2da1f2-3107-4a21-82ad-a959ebf0a2cf.__CR0,0,1594,986_PT0_SX970_V1___.png"></div>
 ```
 
-- amazon_link: "https://www.amazon.com/dp/B0H6FGCCVP?th=1"
-- author_info: "gid://shopify/Metaobject/194643198009"
+- amazon_link: "https://www.amazon.com/dp/B0H7H4NFFF?th=1"
+- author_info: "gid://shopify/Metaobject/195647701049"
 - product_material: "wood"
 - seo_product_title:
   - Viết từ product title gốc thành dạng **long-tail keyword**.
