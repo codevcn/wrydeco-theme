@@ -1,13 +1,13 @@
 # Task cập nhật sản phẩm đang có sẵn trong store
 
-> Dùng `../admin/access-token.md` để truy cập vào store, sau đó cập nhật sản phẩm có ID là `8346122780729` theo các yêu cầu bên dưới.
+> Dùng `../admin/access-token.md` để truy cập vào store, sau đó cập nhật sản phẩm có ID là `8337728700473` theo các yêu cầu bên dưới.
 
 ### 1. Viết lại Product Title chuẩn SEO
 
 Product Title gốc:
 
 ```text
-Wooden Headboard Rustic Solid Wood Live Edge Headboard Panel for Cozy Bedrooms, Natural Bedroom Wall Decor, Multiple Sizes
+Handmade Fluted Wood Floating Shelf, Solid Wood Wall Mounted Shelf with Layered Scalloped Trim, Custom Size Decorative Shelf for Plants Books Home Decor
 ```
 
 - Viết lại product title gốc trên thành product title mới.
@@ -21,17 +21,19 @@ Wooden Headboard Rustic Solid Wood Live Edge Headboard Panel for Cozy Bedrooms, 
 Mô tả sản phẩm gốc:
 
 ```text
-🪵 Rustic Bedroom Statement Piece – Create a warm, cozy focal point with a wooden headboard designed to bring natural texture, organic shape, and handcrafted-style character to your bedroom or guest room.
+🪵 Handmade fluted wood design – This floating shelf features a beautiful layered scalloped trim with vertical fluted detail, giving your wall a warm, textured, and high-end decorative look.
 
-🌿 Live Edge Inspired Design – The uneven sculptural top, rich wood grain, and natural panel look give this headboard a one-of-a-kind rustic feel that pairs beautifully with boho, farmhouse, cabin, lodge, modern organic, and minimalist interiors.
+🏡 Custom size for your space – Available in custom sizing so you can choose the right length for your wall, whether you need a small accent shelf, medium display ledge, or long statement shelf.
 
-🛏️ Perfect for Cozy Interiors – Use it to elevate a master bedroom, guest bedroom, vacation rental, cabin bedroom, or stylish apartment space. The bold wood look instantly makes the bed area feel warmer, more grounded, and more inviting.
+🌿 Perfect for plants and decor – Great for displaying potted plants, books, framed art, candles, vases, bowls, collectibles, or everyday decorative accents in a clean floating style.
 
-🎨 Finish Choices – Choose from Warm Wood, Dark Warm Wood, Cool Dark Wood, or Natural Finish to match your bedding, nightstands, flooring, and overall bedroom color palette.
+✨ Solid wood wall shelf – Made with a rich natural wood appearance and visible grain detail, this shelf adds organic warmth to modern, rustic, farmhouse, boho, wabi sabi, and minimalist interiors.
 
-✨ Solid Wood Character – Designed with a substantial wood appearance, visible grain variation, and live-edge style detailing, this headboard adds depth and natural beauty that feels more premium than a basic flat panel.
+🎨 Multiple finish options – Choose from Warm Wood, Dark Warm Wood, Cool Dark Wood, or Natural Finish to match your wall color, furniture, and home decor style.
 
-🎁 Thoughtful Home Gift – A beautiful housewarming, wedding, anniversary, new home, or bedroom makeover gift for anyone who loves rustic furniture, natural wood decor, cozy interiors, and statement bedroom styling.
+🔧 Space-saving wall mounted display – Designed to mount directly on the wall, helping you decorate vertically while keeping tables, counters, and floors less cluttered.
+
+🎁 Great gift for home decor lovers – A thoughtful choice for housewarming gifts, new apartment decor, birthdays, Mother’s Day, Christmas, or anyone who loves handmade wood shelves and cozy interior styling.
 ```
 
 Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết lại mô tả sản phẩm gốc trên.
@@ -300,18 +302,63 @@ Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết
 ### 5. Cập nhật biến thể
 
 - Cập nhật biến thể cho sản phẩm theo field product.variant_data được liệt kê trong file `./config.json`.
-- **Lưu ý:** field base_price trong file config.json sẽ được sử dụng làm giá cơ bản cho sản phẩm, field variant_data.additional_price sẽ được sử dụng để cộng thêm vào giá cơ bản để tạo ra giá cuối cùng cho biến thể.
+- **Lưu ý:**
+  - field base_price trong file config.json sẽ được sử dụng làm giá cơ bản cho sản phẩm, field variant_data.additional_price sẽ được sử dụng để cộng thêm vào giá cơ bản để tạo ra giá cuối cùng cho biến thể.
+  - tắt track quantity cho tất cả các biến thể của sản phẩm này, tức là sản phẩm này có thể được đặt mua mãi mãi.
 
 ### 6. Cập nhật metafields
 
 - rich_description:
 
 ```html
-<div class="description-root"></div>
+<div class="description-root">
+  <img
+    alt="g"
+    src="https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif"
+    class="a-spacing-base a-lazy-loaded"
+    data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/0cc6adcb-8cd9-4302-b37c-02d4f07dbf42.__CR0,0,1594,986_PT0_SX970_V1___.png"
+  />
+  <img
+    alt="h"
+    src="https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif"
+    class="a-spacing-base a-lazy-loaded"
+    data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/292aad88-b728-42c3-b532-3410e7efaaff.__CR0,0,1594,986_PT0_SX970_V1___.png"
+  />
+  <img
+    alt="f"
+    src="https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif"
+    class="a-spacing-base a-lazy-loaded"
+    data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/26f3d2ff-f8e2-41eb-ac72-93588dcfd5c0.__CR0,0,1594,986_PT0_SX970_V1___.png"
+  />
+  <img
+    alt="b"
+    src="https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif"
+    class="a-spacing-base a-lazy-loaded"
+    data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/c80caa7b-522d-498b-bde6-f02a0e2d2e56.__CR0,0,1594,986_PT0_SX970_V1___.png"
+  />
+  <img
+    alt="x"
+    src="https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif"
+    class="a-spacing-base a-lazy-loaded"
+    data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/af46e73a-9c8b-4974-bf83-1a8541bfbe0f.__CR0,0,1594,986_PT0_SX970_V1___.png"
+  />
+  <img
+    alt="d"
+    src="https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif"
+    class="a-spacing-base a-lazy-loaded"
+    data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/929a3029-8f62-42bd-9f85-44112fcdc022.__CR0,0,1594,986_PT0_SX970_V1___.png"
+  />
+  <img
+    alt="x"
+    src="https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif"
+    class="a-spacing-base a-lazy-loaded"
+    data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/b73d21f7-2260-4c81-84c9-057834992c9a.__CR0,0,1594,986_PT0_SX970_V1___.png"
+  />
+</div>
 ```
 
-- amazon_link: "https://www.amazon.com/dp/B0H7H79HNN?th=1"
-- author_info: "gid://shopify/Metaobject/194643165241"
+- amazon_link: "https://www.amazon.com/dp/B0H82J4GXR?th=1"
+- author_info: "gid://shopify/Metaobject/195646947385"
 - product_material: "wood"
 - seo_product_title:
   - Viết từ product title gốc thành dạng **long-tail keyword**.
@@ -351,7 +398,7 @@ Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết
 
 ### 10. Cập nhật product type
 
-- Cập nhật product type cho sản phẩm là `bed-frame-with-headboard`.
+- Cập nhật product type cho sản phẩm là `floating-shelf-modern`.
 
 ### 11. Cập nhật vendor
 

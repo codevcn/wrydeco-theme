@@ -290,7 +290,9 @@ Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết
 ### 5. Cập nhật biến thể
 
 - Cập nhật biến thể cho sản phẩm theo field product.variant_data được liệt kê trong file `./config.json`.
-- **Lưu ý:** field base_price trong file config.json sẽ được sử dụng làm giá cơ bản cho sản phẩm, field variant_data.additional_price sẽ được sử dụng để cộng thêm vào giá cơ bản để tạo ra giá cuối cùng cho biến thể.
+- **Lưu ý:**
+  - field base_price trong file config.json sẽ được sử dụng làm giá cơ bản cho sản phẩm, field variant_data.additional_price sẽ được sử dụng để cộng thêm vào giá cơ bản để tạo ra giá cuối cùng cho biến thể.
+  - tắt track quantity cho tất cả các biến thể của sản phẩm này, tức là sản phẩm này có thể được đặt mua mãi mãi.
 
 ### 6. Cập nhật metafields
 

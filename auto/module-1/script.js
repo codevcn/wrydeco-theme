@@ -276,14 +276,19 @@ try {
 } catch (error) {
   console.warn(">>> Không tìm thấy base price.");
 }
+
 (async () => {
   /**
-   * Customization type cần bỏ qua.
+   * Danh sách customization type cần bỏ qua.
    * So sánh không phân biệt chữ hoa/chữ thường.
    *
-   * @type {string}
+   * @type {string[]}
    */
-  const IGNORE_TYPE = "Customization Confirmation";
+  const IGNORE_TYPES = [
+    "Customization Confirmation",
+    "Note to seller (Optional)",
+    "Other requirements",
+  ];
 
   /**
    * Cách xử lý giá dạng khoảng, ví dụ "$10.00 - $20.00".
@@ -783,7 +788,12 @@ try {
 
   console.log(`Đã tìm thấy ${typeElements.length} customization type.`);
 
-  const normalizedIgnoreType = normalizeForComparison(IGNORE_TYPE);
+  /**
+   * Chuẩn hóa danh sách type cần ignore.
+   */
+  const normalizedIgnoreTypes = IGNORE_TYPES.map((type) => normalizeForComparison(type)).filter(
+    Boolean,
+  );
 
   const ignoredTypes = [];
   const emptyTypes = [];
@@ -816,9 +826,9 @@ try {
       detectedTypes.push(type);
 
       /**
-       * Ignore type không phân biệt hoa thường.
+       * Ignore nhiều type, không phân biệt hoa thường.
        */
-      if (normalizedIgnoreType && normalizedType === normalizedIgnoreType) {
+      if (normalizedIgnoreTypes.includes(normalizedType)) {
         ignoredTypes.push(type);
         return null;
       }
@@ -896,10 +906,22 @@ try {
     .filter(Boolean);
 
   /**
-   * Cảnh báo khi IGNORE_TYPE không match.
+   * Tìm các IGNORE_TYPES không khớp type nào trong DOM.
    */
-  if (normalizedIgnoreType && ignoredTypes.length === 0) {
-    console.warn(`IGNORE_TYPE="${IGNORE_TYPE}" không khớp customization type nào.`, {
+  const normalizedDetectedTypes = detectedTypes.map((type) => normalizeForComparison(type));
+
+  const unmatchedIgnoreTypes = IGNORE_TYPES.filter((ignoreType) => {
+    const normalizedIgnoreType = normalizeForComparison(ignoreType);
+
+    return normalizedIgnoreType && !normalizedDetectedTypes.includes(normalizedIgnoreType);
+  });
+
+  /**
+   * Cảnh báo các type cần ignore nhưng không tìm thấy.
+   */
+  if (unmatchedIgnoreTypes.length > 0) {
+    console.warn("Một số IGNORE_TYPES không khớp customization type nào:", {
+      unmatched_ignore_types: unmatchedIgnoreTypes,
       detected_types: detectedTypes,
     });
   }
@@ -982,6 +1004,8 @@ try {
   console.log("Detected types:", detectedTypes);
 
   console.log("Ignored types:", ignoredTypes);
+
+  console.log("Unmatched ignore types:", unmatchedIgnoreTypes);
 
   console.log("Empty types:", emptyTypes);
 

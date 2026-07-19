@@ -1,13 +1,13 @@
 # Task cập nhật sản phẩm đang có sẵn trong store
 
-> Dùng `../admin/access-token.md` để truy cập vào store, sau đó cập nhật sản phẩm có ID là `8346122813497` theo các yêu cầu bên dưới.
+> Dùng `../admin/access-token.md` để truy cập vào store, sau đó cập nhật sản phẩm có ID là `8346068549689` theo các yêu cầu bên dưới.
 
 ### 1. Viết lại Product Title chuẩn SEO
 
 Product Title gốc:
 
 ```text
-Wooden Headboard Rustic Solid Wood Live Edge Headboard Panel for Cozy Bedrooms, Natural Bedroom Wall Decor, Multiple Sizes
+Tree Bird Nest Bed Frame, Solid Wood Platform Bed with Sculptural Branch Canopy Headboard for Modern Rustic Bedroom Decor
 ```
 
 - Viết lại product title gốc trên thành product title mới.
@@ -21,17 +21,19 @@ Wooden Headboard Rustic Solid Wood Live Edge Headboard Panel for Cozy Bedrooms, 
 Mô tả sản phẩm gốc:
 
 ```text
-🪵 Rustic Bedroom Statement Piece – Create a warm, cozy focal point with a wooden headboard designed to bring natural texture, organic shape, and handcrafted-style character to your bedroom or guest room.
+🌿 Nature-Inspired Bird Nest Design – Create a magical bedroom focal point with a sculptural tree branch bed frame inspired by a cozy bird nest, combining rustic wood texture with modern organic style for a warm, artistic sleeping space.
 
-🌿 Live Edge Inspired Design – The uneven sculptural top, rich wood grain, and natural panel look give this headboard a one-of-a-kind rustic feel that pairs beautifully with boho, farmhouse, cabin, lodge, modern organic, and minimalist interiors.
+🪵 Solid Wood Craftsmanship – Designed with a solid wood look, thick platform base, chunky block legs, rounded branch details, and natural grain texture, this bed brings handcrafted character to rustic, farmhouse, boho, cabin, and nature-inspired bedrooms.
 
-🛏️ Perfect for Cozy Interiors – Use it to elevate a master bedroom, guest bedroom, vacation rental, cabin bedroom, or stylish apartment space. The bold wood look instantly makes the bed area feel warmer, more grounded, and more inviting.
+🛏️ Multiple Mattress Size Options – Available for Crib/Toddler 28" x 52", Twin 38" x 75", Twin XL 38" x 80", Full/Double 54" x 75", Queen 60" x 80", King/Eastern King 76" x 80", California King 72" x 84", and custom size requests.
 
-🎨 Finish Choices – Choose from Warm Wood, Dark Warm Wood, Cool Dark Wood, or Natural Finish to match your bedding, nightstands, flooring, and overall bedroom color palette.
+🏡 Statement Bedroom Decor – The woven branch canopy headboard adds height, depth, and visual drama, making this tree bed ideal for master bedrooms, guest rooms, themed rooms, cozy cabins, boutique stays, or creative modern interiors.
 
-✨ Solid Wood Character – Designed with a substantial wood appearance, visible grain variation, and live-edge style detailing, this headboard adds depth and natural beauty that feels more premium than a basic flat panel.
+🎨 Finish Options Available – Choose from warm wood, dark warm wood, cool dark wood, or natural finish to match your bedroom style, whether you prefer a rich rustic tone, deeper lodge look, earthy modern feel, or light natural aesthetic.
 
-🎁 Thoughtful Home Gift – A beautiful housewarming, wedding, anniversary, new home, or bedroom makeover gift for anyone who loves rustic furniture, natural wood decor, cozy interiors, and statement bedroom styling.
+🎁 Unique Gift for Home & Nature Lovers – A memorable choice for housewarmings, bedroom makeovers, weddings, anniversaries, holidays, or anyone who loves woodland decor, sculptural furniture, and one-of-a-kind statement pieces.
+
+🛠️ Designed for Assembly & Everyday Use – The platform structure is made to support daily bedroom use while the branch-style headboard creates an artisan look. Assembly is required, and clear setup guidance is recommended for best installation.
 ```
 
 Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết lại mô tả sản phẩm gốc trên.
@@ -310,7 +312,7 @@ Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết
 <div class="description-root"><img alt="c" src="https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif" class="a-spacing-base a-lazy-loaded" data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/f97cc7a8-a12d-491f-b741-6067513fa1bd.__CR0,5,1586,981_PT0_SX970_V1___.png"> <img alt="x" src="https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif" class="a-spacing-base a-lazy-loaded" data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/2d7d84a7-4f52-414e-95af-96b6b19aa019.__CR0,5,1586,981_PT0_SX970_V1___.png"> <img alt="x" src="https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif" class="a-spacing-base a-lazy-loaded" data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/4e07dc04-937e-4117-a2ba-daa71f768736.__CR0,5,1586,981_PT0_SX970_V1___.png"> <img alt="x" src="https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif" class="a-spacing-base a-lazy-loaded" data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/2ef8abb7-1c1c-4f3c-9f45-89261ec82a44.__CR0,5,1586,981_PT0_SX970_V1___.png"> <img alt="x" src="https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif" class="a-spacing-base a-lazy-loaded" data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/94b03d6a-7101-40fa-907b-eac555e2ca17.__CR0,5,1586,981_PT0_SX970_V1___.png"> <img alt="g" src="https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif" class="a-spacing-base a-lazy-loaded" data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/dd2da1f2-3107-4a21-82ad-a959ebf0a2cf.__CR0,0,1594,986_PT0_SX970_V1___.png"></div>
 ```
 
-- amazon_link: "https://www.amazon.com/dp/B0H7H4NFFF?th=1"
+- amazon_link: "https://www.amazon.com/dp/B0H7H2ZPTN?th=1"
 - author_info: "gid://shopify/Metaobject/195647701049"
 - product_material: "wood"
 - seo_product_title:
