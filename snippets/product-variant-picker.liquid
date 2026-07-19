@@ -94,7 +94,7 @@
       margin: 0;
       border: 1px solid var(--border-default);
       border-radius: var(--radius-lg);
-      background-color: var(--color-milk);
+      background-color: var(--color-white-cream);
       cursor: pointer;
       transition: border-color var(--timing-short) var(--ease-standard),
         box-shadow var(--timing-short) var(--ease-standard);
@@ -138,6 +138,10 @@
       min-height: 50px;
       background: var(--bg-secondary);
     }
+    /* Hidden when a variant image is missing or fails to load (see initVariantMediaFallback). */
+    .variant-tile__media[hidden] {
+      display: none;
+    }
     .variant-tile__media img,
     .variant-tile__swatch {
       display: block;
@@ -151,12 +155,15 @@
       -webkit-user-select: none;
     }
     .variant-tile--color .variant-tile__label {
+      display: flex;
+      align-items: center;
       margin-top: var(--sp-3);
       text-align: center;
       font-family: var(--font-roboto);
       font-size: var(--font-size-body-md);
       color: var(--text-primary);
-      white-space: nowrap;
+      white-space: pre-wrap;
+      max-width: 250px;
     }
 
     /* ---- "Custom" call-to-action tile on size / surface (links to the
@@ -259,8 +266,8 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      width: var(--sp-5);
-      height: var(--sp-5);
+      width: var(--sp-4);
+      height: var(--sp-4);
       border-radius: var(--radius-full);
       background: var(--color-earth-brown);
       color: var(--color-cream);
@@ -281,12 +288,12 @@
       height: var(--sp-4);
     }
     .variant-tile__check svg {
-      width: 14px;
-      height: 14px;
+      width: 12px;
+      height: 12px;
     }
     .variant-tile--size .variant-tile__check svg {
-      width: 11px;
-      height: 11px;
+      width: 12px;
+      height: 12px;
     }
     .variant-tile:has(.variant-tile__input:checked) .variant-tile__check {
       opacity: 1;
@@ -508,23 +515,17 @@
                   {% endunless %}
                 >
 
-                {% if is_color %}
+                {% if is_color and color_image != blank %}
                   <span class="variant-tile__media">
-                    {% if color_image != blank %}
-                      <img
-                        src="{{ color_image }}"
-                        alt="{{ value | escape }}"
-                        width="160"
-                        height="100"
-                        loading="lazy"
-                        draggable="false"
-                      >
-                    {% else %}
-                      <span
-                        class="variant-tile__swatch"
-                        style="background-color: {{ value | downcase | remove: ' ' }};"
-                      ></span>
-                    {% endif %}
+                    <img
+                      src="{{ color_image }}"
+                      alt="{{ value | escape }}"
+                      width="160"
+                      height="100"
+                      loading="lazy"
+                      draggable="false"
+                      data-variant-media-img
+                    >
                   </span>
                 {% endif %}
 
@@ -1289,7 +1290,31 @@
       });
     }
 
-    // --- 4. Size-guide popup custom element ---
+    // --- 4. Hide a variant tile's media box when its image fails to load ---
+    // Variants with no image never render a media box (handled in Liquid); this
+    // covers the case where an image URL exists but 404s / errors, so the empty
+    // grey placeholder is removed instead of shown.
+    function initVariantMediaFallback() {
+      function hideMedia(img) {
+        var media = img.closest('.variant-tile__media');
+        if (media) media.hidden = true;
+      }
+      document.querySelectorAll('[data-variant-media-img]').forEach(function (img) {
+        if (img.dataset.mediaFallbackInit === 'true') return;
+        img.dataset.mediaFallbackInit = 'true';
+
+        if (img.complete) {
+          // Already finished loading (e.g. cached) — naturalWidth 0 means it errored.
+          if (img.naturalWidth === 0) hideMedia(img);
+          return;
+        }
+        img.addEventListener('error', function () {
+          hideMedia(img);
+        });
+      });
+    }
+
+    // --- 5. Size-guide popup custom element ---
     function initSizeGuide() {
       if (customElements.get('size-guide-popup')) return;
       customElements.define(
@@ -1337,6 +1362,7 @@
       initVariantDragScroll();
       initVariantSelect();
       initCustomColorUpload();
+      initVariantMediaFallback();
       initSizeGuide();
     }
 

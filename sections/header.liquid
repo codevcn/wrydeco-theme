@@ -36,12 +36,13 @@
     </{{ header_heading_tag }}>
 
     {%- capture room_nav_data -%}
-      Living Room::Wooden Plant Stands|Boho Wooden Floating Shelves|Modern Wooden Floating Shelves|Rustic Wooden Floating Shelves
-      ||Bedroom::Wooden Bed Frames With Headboards
-      ||Kitchen::
-      ||Home Office::Modern Wooden Bookshelves|Rustic Wooden Bookshelves
+      Living Room::Wooden Plant Stands=wooden-plant-stand|Boho Wooden Floating Shelves=floating-shelf-boho|Modern Wooden Floating Shelves=floating-shelf-modern|Rustic Wooden Floating Shelves=floating-shelf-rustic
+      ||Bedroom::Wooden Bed Frames With Headboards=bed-frame-with-headboard
+      ||Kitchen::Wooden Fruit Bowls=wooden-fruit-bowl
+      ||Home Office::Modern Wooden Bookshelves=bookshelf-modern|Rustic Wooden Bookshelves=bookshelf-rustic
       ||Kid's Room::
       ||Entryway::
+      ||Business Decor::Wooden Floor Sculptures=wooden-floor-sculpture|Handcrafted Wooden Console Tables=console-table|Wooden Coat Racks=coat-rack|Modern Wooden Coffee Tables=coffee-table-modern|Wood Floor Lamp Bases=wood-floor-lamp-base|Modern Wooden Bookshelves=bookshelf-modern|Wooden Tree Wine Racks=tree-wine-rack|Wooden Plant Stands=wooden-plant-stand
     {%- endcapture -%}
     {%- assign room_nav_items = room_nav_data | strip | split: '||' -%}
 
@@ -71,9 +72,11 @@
                   {%- if room_collections_value != blank -%}
                     <ul class="cmega__collections cmega__collections--room">
                       {%- for room_collection in room_collections -%}
-                        {%- assign room_collection_title = room_collection | strip -%}
+                        {%- assign room_collection_parts = room_collection | split: '=' -%}
+                        {%- assign room_collection_title = room_collection_parts[0] | strip -%}
+                        {%- assign room_collection_handle = room_collection_parts[1] | strip -%}
                         <li>
-                          <a class="cmega__collection-link" href="{{ routes.collections_url }}/{{ room_collection_title | handleize }}">
+                          <a class="cmega__collection-link" href="{{ routes.collections_url }}/{{ room_collection_handle }}">
                             {{ room_collection_title }}
                           </a>
                         </li>
@@ -87,16 +90,8 @@
             </div>
           </li>
         {%- endfor -%}
-        <li>
-          <a href="/collections/all" class="header__nav-item">
-            EXPLORE ALL PIECES
-          </a>
-        </li>
-        <li>
-          <a href="/pages/about-us" class="header__nav-item">
-            ABOUT US
-          </a>
-        </li>
+
+
       </ul>
     </nav>
 
@@ -197,10 +192,12 @@
                     {%- if room_collections_value != blank -%}
                       <ul class="cmega__collections">
                         {%- for room_collection in room_collections -%}
-                          {%- assign room_collection_title = room_collection | strip -%}
+                          {%- assign room_collection_parts = room_collection | split: '=' -%}
+                          {%- assign room_collection_title = room_collection_parts[0] | strip -%}
+                          {%- assign room_collection_handle = room_collection_parts[1] | strip -%}
                           <li>
                             <a
-                              href="{{ routes.collections_url }}/{{ room_collection_title | handleize }}"
+                              href="{{ routes.collections_url }}/{{ room_collection_handle }}"
                               data-mobile-menu-close
                             >
                               {{ room_collection_title }}
@@ -214,20 +211,8 @@
                   </div>
                 </li>
               {%- endfor -%}
-              <li class="cmega__group">
-                <a href="/collections/all" class="cmega__group-head" style="text-decoration: none;">
-                  <span class="cmega__group-text">
-                    <span class="cmega__group-name">EXPLORE ALL PIECES</span>
-                  </span>
-                </a>
-              </li>
-              <li class="cmega__group">
-                <a href="/pages/about-us" class="cmega__group-head" style="text-decoration: none;">
-                  <span class="cmega__group-text">
-                    <span class="cmega__group-name">ABOUT US</span>
-                  </span>
-                </a>
-              </li>
+
+
             </ul>
           </div>
         </div>
@@ -595,7 +580,7 @@
   .cmega__heading {
     margin: 0 0 var(--sp-2);
     font-size: var(--font-size-caption);
-    font-weight: var(--font-weight-bold);
+    font-weight: var(--font-weight-black);
     font-family: var(--font-roboto);
     letter-spacing: 0.05em;
     text-transform: uppercase;

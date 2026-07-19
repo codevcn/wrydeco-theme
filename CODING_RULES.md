@@ -55,12 +55,8 @@ The technical implementation must align with the brand's luxury positioning.
 - When writing code that references a file (images, fonts, scripts, styles, etc.), always use the `file_url` filter instead of `asset_url`.
 - **Exception:** `asset_url` is still correct for files that genuinely live in the theme's `assets/` folder (e.g. compiled/critical assets not managed via Shopify Files).
 
-## 9. SVG Creation and Usage
+## 9. Icon & SVG Rendering, Creation, and Usage
 
-- Whenever an AI Agent needs to create an SVG image or write SVG code, it MUST use the `iconify` API tool located in the `my-tools` folder.
-- **Error Handling:** If an error occurs while using the API, the Agent is free to handle it, but it MUST explicitly notify the user that an error occurred during the API execution.
-
-## 10. Icon Creation
-
-- If an AI Agent needs to create an icon in the codebase, it MUST use inline SVG code.
-- This SVG code MUST be sourced using Iconify, strictly adhering to Rule 9.
+- **Rendering Constraint:** When rendering icons or graphical symbols on the web interface, you MUST strictly use inline SVG code. NEVER use HTML Entities (e.g., `&#x25B6;`, `&rarr;`, etc.) for this purpose.
+- **Tool Requirement:** Whenever an AI Agent needs to create an icon in the codebase, write SVG code, or source an SVG image, it MUST use the `iconify` API tool located in the `my-tools` folder.
+- **Error Handling:** If an error occurs while using the Iconify API, the Agent is free to handle it, but it MUST explicitly notify the user that an error occurred during the API execution.

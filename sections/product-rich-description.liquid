@@ -1,0 +1,312 @@
+{% doc %}
+  Renders the product rich-description HTML as a two-column editorial gallery.
+
+  The source HTML is stored in product.metafields.custom.rich_description and is
+  rendered on the server so its copy, image sources, and alt text remain available
+  in the initial product-page response.
+{% enddoc %}
+
+{%- liquid
+  assign rich_description_metafield = product.metafields.custom.rich_description
+  assign rich_description = blank
+  assign has_rich_description = false
+  if rich_description_metafield != blank
+    if rich_description_metafield.value != blank
+      assign rich_description = rich_description_metafield.value
+    else
+      assign rich_description = rich_description_metafield
+    endif
+  endif
+  if rich_description contains '<img'
+    assign has_rich_description = true
+  endif
+
+  assign cta_url = section.settings.cta_link
+  if cta_url == blank
+    assign cta_url = pages.customization.url
+  endif
+  if cta_url == blank
+    assign cta_url = '/pages/customization'
+  endif
+
+  assign amazon_placeholder_source = 'src="https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif"'
+  assign rich_description_html = rich_description
+  if rich_description_html contains amazon_placeholder_source
+    assign rich_description_html = rich_description_html | replace: amazon_placeholder_source, ''
+    assign rich_description_html = rich_description_html | replace: 'data-src=', 'src='
+  endif
+  assign rich_description_html = rich_description_html | replace: '<img ', '<img loading="lazy" decoding="async" fetchpriority="low" '
+-%}
+
+{%- if has_rich_description -%}
+  <section
+    class="product-rich-description"
+    aria-labelledby="ProductRichDescriptionHeading-{{ section.id }}"
+  >
+    <div class="horizon-section-divider divider-top" aria-hidden="true">
+      <span></span>
+    </div>
+
+    <div class="product-rich-description__inner">
+      <header class="product-rich-description__header">
+        {%- if section.settings.eyebrow != blank -%}
+          <p class="product-rich-description__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+        {%- endif -%}
+
+        <h2 class="product-rich-description__title" id="ProductRichDescriptionHeading-{{ section.id }}">
+          {{ section.settings.heading | escape }}
+        </h2>
+
+        <span class="product-rich-description__accent" aria-hidden="true"></span>
+
+        {%- if section.settings.description != blank -%}
+          <p class="product-rich-description__description">{{ section.settings.description | escape }}</p>
+        {%- endif -%}
+
+        {%- if section.settings.cta_label != blank -%}
+          <a class="product-rich-description__cta" href="{{ cta_url }}">
+            <span>{{ section.settings.cta_label | escape }}</span>
+            <span class="product-rich-description__cta-arrow" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 1024 1024">
+                <path d="M0 0h1024v1024H0z" fill="none" />
+                <path fill="currentColor" d="M754.8 480H160a32 32 0 1 0 0 64h594.8L521.3 777.3a32 32 0 0 0 45.4 45.4l288-288a32 32 0 0 0 0-45.4l-288-288a32 32 0 1 0-45.4 45.4z" />
+              </svg>
+            </span>
+          </a>
+        {%- endif -%}
+      </header>
+
+      <div class="product-rich-description__content">
+        {{ rich_description_html }}
+      </div>
+    </div>
+
+    <div class="horizon-section-divider divider-top" aria-hidden="true">
+      <span></span>
+    </div>
+  </section>
+{%- endif -%}
+
+{% stylesheet %}
+  .product-rich-description {
+    display: block;
+    padding: var(--section-spacing-mobile) var(--container-padding-x) 0;
+    background-color: var(--bg-primary);
+  }
+
+  .product-rich-description__inner {
+    width: calc(100% - var(--layout-padding-desktop) * 2);
+    margin-inline: auto;
+    padding-top: var(--sp-5);
+    padding-bottom: var(--sp-6);
+  }
+
+  .product-rich-description__header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: calc(var(--layout-hero-copy-width) - var(--sp-12));
+    margin-inline: auto;
+    margin-block-end: var(--sp-6);
+    text-align: center;
+  }
+
+  .product-rich-description__eyebrow {
+    margin: var(--sp-0) var(--sp-0) var(--sp-2);
+    color: var(--color-clay);
+    font-family: var(--font-body);
+    font-size: var(--eyebrow-size);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--eyebrow-tracking);
+    line-height: var(--line-height-normal);
+    text-transform: uppercase;
+  }
+
+  .product-rich-description__title {
+    margin: var(--sp-0);
+    color: var(--text-primary);
+    font-family: var(--font-heading);
+    font-size: var(--section-heading-size);
+    font-weight: var(--font-weight-light);
+    letter-spacing: var(--section-heading-tracking);
+    line-height: var(--section-heading-line);
+  }
+
+  .product-rich-description__accent {
+    width: var(--sp-6);
+    height: var(--border-width);
+    margin-block: var(--sp-4);
+    background-color: var(--color-clay);
+  }
+
+  .product-rich-description__description {
+    max-width: calc(var(--layout-hero-copy-width) - (var(--sp-12) * 2));
+    margin: var(--sp-0);
+    color: var(--text-secondary);
+    font-family: var(--font-body);
+    font-size: var(--section-subtitle-size);
+    line-height: var(--line-height-generous);
+  }
+
+  .product-rich-description__cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--btn-height);
+    margin-block-start: var(--sp-5);
+    padding-inline: var(--btn-padding-x);
+    border: var(--border-width) solid var(--color-clay);
+    border-radius: var(--btn-radius);
+    color: var(--color-clay);
+    font-family: var(--font-body);
+    font-size: var(--btn-font-size);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--letter-spacing-wide);
+    text-decoration: none;
+    text-transform: uppercase;
+    transition: var(--transition-fast);
+  }
+
+  .product-rich-description__cta:hover {
+    border-color: var(--color-earth-brown);
+    background-color: var(--color-earth-brown);
+    color: var(--text-inverse);
+  }
+
+  .product-rich-description__cta:focus-visible {
+    outline: var(--border-width) solid var(--color-earth-brown);
+    outline-offset: var(--sp-1);
+  }
+
+  .product-rich-description__cta-arrow {
+    margin-inline-start: var(--sp-5);
+    font-size: var(--font-size-body-lg);
+    line-height: var(--line-height-tight);
+  }
+
+  .product-rich-description__content .description-root {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(var(--sp-0), 1fr));
+    gap: var(--sp-3);
+    margin: var(--sp-0);
+  }
+
+  /* Khi tổng số item là số lẻ, item cuối chiếm cả 2 cột */
+  .product-rich-description__content .description-root > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
+  .product-rich-description__content .description-root > img {
+    display: block;
+    width: 100%;
+    margin: var(--sp-0);
+    border-radius: var(--radius-lg);
+    object-fit: cover;
+    object-position: center;
+  }
+
+  @media screen and (max-width: 768px) {
+    .product-rich-description {
+      padding: var(--section-spacing-tablet) var(--layout-padding-mobile);
+    }
+
+    .product-rich-description__header {
+      margin-block-end: var(--sp-5);
+    }
+
+    .product-rich-description__title {
+      font-size: var(--font-size-display-sm);
+    }
+
+    .product-rich-description__description {
+      font-size: var(--font-size-body-sm);
+    }
+
+    .product-rich-description__cta {
+      width: 100%;
+      max-width: calc(var(--sp-12) * 3);
+    }
+
+    .product-rich-description__content .description-root {
+      grid-template-columns: minmax(var(--sp-0), 1fr);
+      gap: var(--sp-3);
+    }
+
+    .product-rich-description__content .description-root > img {
+      height: auto;
+      max-height: var(--rich-description-card-max-height);
+      aspect-ratio: 8 / 5;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .product-rich-description__cta {
+      transition: none;
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  (function () {
+    function initRichDescriptionImages() {
+      document.querySelectorAll('.product-rich-description__content img[data-src]').forEach(function (image) {
+        var currentSource = image.getAttribute('src') || '';
+        var richSource = image.getAttribute('data-src');
+        if (!richSource || currentSource.indexOf('grey-pixel.gif') === -1) return;
+        image.setAttribute('src', richSource);
+      });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initRichDescriptionImages);
+    } else {
+      initRichDescriptionImages();
+    }
+
+    document.addEventListener('shopify:section:load', initRichDescriptionImages);
+  })();
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "Product rich gallery",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "Eyebrow",
+      "default": "Product gallery"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "The beauty is in the details."
+    },
+    {
+      "type": "textarea",
+      "id": "description",
+      "label": "Description",
+      "default": "Explore the craftsmanship, texture, and natural character that make each piece truly one of a kind."
+    },
+    {
+      "type": "text",
+      "id": "cta_label",
+      "label": "Button label",
+      "default": "View in your space"
+    },
+    {
+      "type": "url",
+      "id": "cta_link",
+      "label": "Button link"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Product rich gallery"
+    }
+  ]
+}
+{% endschema %}
