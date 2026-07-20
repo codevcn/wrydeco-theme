@@ -15,6 +15,7 @@
       assign collection_is_empty = true
     endif
     assign consultation_url = section.settings.consultation_url | default: pages.customization.url | default: routes.root_url
+    assign market_currency_code = localization.country.currency.iso_code | default: cart.currency.iso_code | default: shop.currency
   -%}
 
   {%- unless collection_is_empty -%}
@@ -109,8 +110,8 @@
               <div class="col-dropdown__menu">
                 <form class="col-price-form">
                   <div class="col-price-form__header">
-                    <span>MIN</span>
-                    <span>MAX</span>
+                    <span>MIN ({{ market_currency_code | escape }})</span>
+                    <span>MAX ({{ market_currency_code | escape }})</span>
                   </div>
                   <div class="col-price-form__inputs">
                     <label class="visually-hidden" for="CollectionPriceMin-{{ section.id }}">Minimum price</label>
