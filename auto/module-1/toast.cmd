@@ -1,1 +1,1 @@
-powershell.exe -NoProfile -Command "New-BurntToastNotification -Text 'Antigravity hoàn tất', 'Sản phẩm đã update thành công.'"
+powershell.exe -NoProfile -Command "New-BurntToastNotification -Text 'Antigravity completed', 'Product updated successfully.'"

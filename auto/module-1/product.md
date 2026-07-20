@@ -1,13 +1,13 @@
 # Task cập nhật sản phẩm đang có sẵn trong store
 
-> Dùng `../admin/access-token.md` để truy cập vào store, sau đó cập nhật sản phẩm có ID là `8337727127609` theo các yêu cầu bên dưới.
+> Dùng `../admin/access-token.md` để truy cập vào store, sau đó cập nhật sản phẩm có ID là `8346217087033` theo các yêu cầu bên dưới.
 
 ### 1. Viết lại Product Title chuẩn SEO
 
 Product Title gốc:
 
 ```text
-Solid Wood Bookshelf, Organic Curved Freestanding Bookcase for Living Room Decor, Sculptural Display Shelf Room Divider, Multiple Sizes & Finishes (Option 2)
+Handcrafted Wooden Floor Sculpture with Twisted Open Cutout Design, Tall Rustic Wood Art Decor for Living Room, Entryway & Boho Home (Option 1)
 ```
 
 - Viết lại product title gốc trên thành product title mới.
@@ -21,19 +21,19 @@ Solid Wood Bookshelf, Organic Curved Freestanding Bookcase for Living Room Decor
 Mô tả sản phẩm gốc:
 
 ```text
-📚 Statement Bookshelf for Stylish Spaces – Turn everyday storage into a design feature with this sculptural solid wood bookshelf. Its organic curved silhouette adds warmth, movement, and visual interest while giving you a beautiful place to display books, pottery, candles, framed photos, and decor.
+🪵 Handcrafted wooden floor sculpture – A tall sculptural wood decor piece featuring a flowing twisted silhouette and organic open cutouts, designed to bring warmth, movement, and artistic character to your home.
 
-🪵 Solid Wood Look with Smooth Flowing Form – Designed with a substantial solid wood appearance, this freestanding bookcase features soft rounded edges, open compartments, and a seamless carved style that feels both artistic and functional. It brings a premium furniture look to living rooms, reading corners, offices, and creative interiors.
+🌿 Natural wood grain statement piece – The rich wood tone, visible grain pattern, smooth curves, and polished finish create an earthy handmade look that feels elegant, rustic, and unique in any room.
 
-🏡 Display, Store, and Divide Your Space – More than a standard bookcase, this piece works as a bookshelf, decor shelf, display unit, and room divider. The open layout keeps your room feeling airy while helping organize books, baskets, vases, plants, and collectibles in a clean, elevated way.
+🏡 Perfect for living room & entryway styling – Use it as a floor sculpture, corner accent, entryway decor, hallway statement piece, bedroom accent, office decor, or artistic display for nature-inspired interiors.
 
-🎨 Four Finish Options to Match Your Home – Choose the tone that best fits your interior style: Warm Wood, Dark Warm Wood, Cool Dark Wood, or Natural Finish. Each option complements a range of decor styles including modern organic, rustic, minimalist, wabi-sabi, Japandi, and contemporary living rooms.
+✨ Sculptural open cutout design – The curved vertical form and carved openings create visual depth and shadow, making this piece stand out as functional-style art without needing added lighting.
 
-📏 Available in Multiple Sizes – Offered in 59"H x 45"W x 12"D, 63"H x 45"W x 12"D, 71"H x 51"W x 12"D, and 79"H x 51"W x 12"D, giving you flexible options for smaller corners, larger living spaces, or open-plan rooms that need both storage and visual separation.
+🎁 Beautiful home upgrade or gift – A thoughtful choice for housewarming gifts, weddings, new homes, apartment makeovers, living room refreshes, or anyone who loves handcrafted-style wooden decor.
 
-✨ Decorative Yet Practical – The varied shelf openings create a curated, custom look while still offering useful storage space for daily essentials and favorite display pieces. Use it to style a living room wall, define a seating area, or create a cozy library-inspired corner without overwhelming the room.
+🧡 Warm rustic, boho & organic modern style – Pairs beautifully with farmhouse, bohemian, rustic modern, Mediterranean, vintage, lodge, cabin, natural, and organic modern home decor.
 
-🎁 Beautiful Gift for Home Lovers – A thoughtful housewarming, wedding, anniversary, or new home gift for anyone who loves timeless furniture, modern rustic decor, and unique storage pieces that feel artistic as well as useful.
+📦 Carefully packed for delivery – Each wooden sculpture is prepared with protective packing to help safeguard the curved body, smooth finish, base, and carved cutout details during shipping.
 ```
 
 Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết lại mô tả sản phẩm gốc trên.
@@ -317,8 +317,8 @@ Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết
 <div class="description-root"></div>
 ```
 
-- amazon_link: "https://www.amazon.com/dp/B0H7BNG6TF?th=1"
-- author_info: "gid://shopify/Metaobject/195646947385"
+- amazon_link: "https://www.amazon.com/dp/B0H8311RPS?th=1"
+- author_info: "gid://shopify/Metaobject/194643296313"
 - product_material: "wood"
 - seo_product_title:
   - Viết từ product title gốc thành dạng **long-tail keyword**.
@@ -358,7 +358,7 @@ Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết
 
 ### 10. Cập nhật product type
 
-- Cập nhật product type cho sản phẩm là `bookshelf-modern`.
+- Cập nhật product type cho sản phẩm là `wooden-floor-sculpture`.
 
 ### 11. Cập nhật vendor
 

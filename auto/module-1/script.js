@@ -9,6 +9,7 @@ const IGNORE_TYPES = [
   "Note to seller (Optional)",
   "Other requirements",
   "Review Photo Before Final Finish",
+  "Additional Note for Seller"
 ];
 
 function showCopyJsonButton(json) {
