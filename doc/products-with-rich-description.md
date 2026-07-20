@@ -25,4 +25,4 @@ Dưới đây là danh sách toàn bộ các sản phẩm hiện tại trên sto
 - PREAUREUM Tall Rustic Twisted Wood Floor Sculpture (Handle: `preaureum-tall-rustic-twisted-wood-floor-sculpture-b0h82swt17`, ID: `8346217185337`)
 - Rustic Tree Console Table Bookshelf 3 Tier Display (Handle: `rustic-tree-console-table-bookshelf-3-tier-display`, ID: `8346218070073`)
 
-*(Tổng cộng: 22 sản phẩm)*
+_(Tổng cộng: 22 sản phẩm)_

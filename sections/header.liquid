@@ -36,13 +36,13 @@
     </{{ header_heading_tag }}>
 
     {%- capture room_nav_data -%}
-      Living Room::Wooden Plant Stands=wooden-plant-stand|Boho Wooden Floating Shelves=floating-shelf-boho|Modern Wooden Floating Shelves=floating-shelf-modern|Rustic Wooden Floating Shelves=floating-shelf-rustic
+      Living Room::Modern Wooden Floating Shelves=floating-shelf-modern|Rustic Wooden Floating Shelves=floating-shelf-rustic
       ||Bedroom::Wooden Bed Frames With Headboards=bed-frame-with-headboard
       ||Kitchen::Wooden Fruit Bowls=wooden-fruit-bowl
       ||Home Office::Modern Wooden Bookshelves=bookshelf-modern|Rustic Wooden Bookshelves=bookshelf-rustic
       ||Kid's Room::
       ||Entryway::
-      ||Business Decor::Wooden Floor Sculptures=wooden-floor-sculpture|Handcrafted Wooden Console Tables=console-table|Wooden Coat Racks=coat-rack|Modern Wooden Coffee Tables=coffee-table-modern|Wood Floor Lamp Bases=wood-floor-lamp-base|Modern Wooden Bookshelves=bookshelf-modern|Wooden Tree Wine Racks=tree-wine-rack|Wooden Plant Stands=wooden-plant-stand
+      ||Business Decor::Wooden Floor Sculptures=wooden-floor-sculpture|Modern Wooden Coffee Tables=coffee-table-modern|Modern Wooden Bookshelves=bookshelf-modern
     {%- endcapture -%}
     {%- assign room_nav_items = room_nav_data | strip | split: '||' -%}
 
@@ -75,9 +75,18 @@
                         {%- assign room_collection_parts = room_collection | split: '=' -%}
                         {%- assign room_collection_title = room_collection_parts[0] | strip -%}
                         {%- assign room_collection_handle = room_collection_parts[1] | strip -%}
+                        {%- assign coll = collections[room_collection_handle] -%}
+                        {%- assign coll_image = coll.image | default: coll.products.first.featured_image -%}
                         <li>
                           <a class="cmega__collection-link" href="{{ routes.collections_url }}/{{ room_collection_handle }}">
-                            {{ room_collection_title }}
+                            <div class="cmega__collection-image-wrapper">
+                              {%- if coll_image != blank -%}
+                                <img src="{{ coll_image | image_url: width: 400 }}" alt="{{ room_collection_title | escape }}" loading="lazy" class="cmega__collection-image">
+                              {%- else -%}
+                                {{ 'collection-1' | placeholder_svg_tag: 'cmega__collection-image placeholder-svg' }}
+                              {%- endif -%}
+                            </div>
+                            <span class="cmega__collection-title">{{ room_collection_title }}</span>
                           </a>
                         </li>
                       {%- endfor -%}
@@ -190,17 +199,27 @@
                   </button>
                   <div class="cmega__panel">
                     {%- if room_collections_value != blank -%}
-                      <ul class="cmega__collections">
+                      <ul class="cmega__collections cmega__collections--room">
                         {%- for room_collection in room_collections -%}
                           {%- assign room_collection_parts = room_collection | split: '=' -%}
                           {%- assign room_collection_title = room_collection_parts[0] | strip -%}
                           {%- assign room_collection_handle = room_collection_parts[1] | strip -%}
+                          {%- assign coll = collections[room_collection_handle] -%}
+                          {%- assign coll_image = coll.image | default: coll.products.first.featured_image -%}
                           <li>
                             <a
                               href="{{ routes.collections_url }}/{{ room_collection_handle }}"
                               data-mobile-menu-close
+                              class="cmega__collection-link"
                             >
-                              {{ room_collection_title }}
+                              <div class="cmega__collection-image-wrapper">
+                                {%- if coll_image != blank -%}
+                                  <img src="{{ coll_image | image_url: width: 400 }}" alt="{{ room_collection_title | escape }}" loading="lazy" class="cmega__collection-image">
+                                {%- else -%}
+                                  {{ 'collection-1' | placeholder_svg_tag: 'cmega__collection-image placeholder-svg' }}
+                                {%- endif -%}
+                              </div>
+                              <span class="cmega__collection-title">{{ room_collection_title }}</span>
                             </a>
                           </li>
                         {%- endfor -%}
@@ -711,9 +730,82 @@
     padding-bottom: var(--sp-3);
   }
 
+  .cmega__collections--room {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-4, 16px);
+  }
+
+  .cmega__collections--room li {
+    flex: 0 0 auto;
+    margin: 0;
+  }
+
   .cmega__collections--room a {
-    padding-inline: var(--sp-4);
-    width: max-content !important;
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    height: 160px;
+    aspect-ratio: 5 / 3;
+    padding: var(--sp-4);
+    border-radius: var(--radius-md, 8px);
+    overflow: hidden;
+    text-decoration: none;
+    background-color: var(--color-milk, #f5f5f5);
+  }
+
+  .cmega__collections--room a:hover {
+    background-color: var(--color-milk, #f5f5f5);
+  }
+
+  .cmega__collections--room a::after {
+    display: none;
+  }
+
+  .cmega__collection-image-wrapper {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+  }
+
+  .cmega__collection-image-wrapper::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 50%);
+    z-index: 1;
+  }
+
+  .cmega__collection-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  .placeholder-svg {
+    background-color: #f1f1f1;
+  }
+
+  .cmega__collection-title {
+    position: relative;
+    z-index: 2;
+    color: #ffffff;
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-md, 14px);
+    font-weight: var(--font-weight-bold, 700);
+    text-align: center;
+    line-height: 1.3;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    transition: transform 0.3s ease;
+  }
+
+  .cmega__collections--room a:hover .cmega__collection-title {
+    transform: translateY(-5px);
+    color: #ffffff;
   }
 
   .cmega__empty {
@@ -746,6 +838,20 @@
   }
 
   @media screen and (max-width: 46.8125rem) {
+    .cmega__collections--room {
+      gap: 12px;
+      padding: var(--sp-2) 0;
+      flex-direction: column;
+    }
+    .cmega__collections--room a {
+      width: 100% !important;
+      height: 150px;
+      padding: var(--sp-3);
+    }
+    .cmega__collection-title {
+      font-size: var(--font-size-body-sm, 12px);
+    }
+    
     .mobile-menu-is-open {
       overflow: hidden;
     }
