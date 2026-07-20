@@ -62,3 +62,7 @@ thống store của bạn, kèm theo ID (GID) của từng đối tượng:
    • GID: gid://shopify/Metaobject/195647275065
 6. Son Tran (Handle: son-tran)
    • GID: gid://shopify/Metaobject/195647701049
+
+## Sản phẩm có checkmark trong biến thể
+
+B0H6BRT2WD

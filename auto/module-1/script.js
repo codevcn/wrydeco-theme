@@ -1,45 +1,231 @@
-try {
-  console.log("======================================");
-  console.log("======================================");
-  console.log("======================================");
-  console.log("Tiêu đề sản phẩm:");
-  console.log("======================================");
-  console.log(document.getElementById("productTitle").textContent.trim());
-  console.log("======================================");
-  console.log("======================================");
-  console.log("======================================");
-} catch (error) {
-  console.warn(">>> Không tìm thấy tiêu đề sản phẩm.");
+/**
+ * Danh sách customization type cần bỏ qua.
+ * So sánh không phân biệt chữ hoa/chữ thường.
+ *
+ * @type {string[]}
+ */
+const IGNORE_TYPES = [
+  "Customization Confirmation",
+  "Note to seller (Optional)",
+  "Other requirements",
+  "Review Photo Before Final Finish",
+];
+
+function showCopyJsonButton(json) {
+  const oldButton = document.getElementById("amazon-product-json-copy-button");
+
+  if (oldButton) {
+    oldButton.remove();
+  }
+
+  const button = document.createElement("button");
+
+  button.id = "amazon-product-json-copy-button";
+  button.type = "button";
+  button.textContent = "Copy product JSON";
+
+  Object.assign(button.style, {
+    position: "fixed",
+    right: "24px",
+    bottom: "24px",
+    zIndex: "2147483647",
+    padding: "14px 20px",
+    border: "none",
+    borderRadius: "8px",
+    background: "#131921",
+    color: "#ffffff",
+    fontSize: "14px",
+    fontWeight: "700",
+    fontFamily: "Arial, sans-serif",
+    cursor: "pointer",
+    boxShadow: "0 6px 24px rgba(0, 0, 0, 0.3)",
+  });
+
+  button.addEventListener("mouseenter", () => {
+    button.style.background = "#232f3e";
+  });
+
+  button.addEventListener("mouseleave", () => {
+    button.style.background = "#131921";
+  });
+
+  button.addEventListener("click", async () => {
+    const originalText = button.textContent;
+
+    button.disabled = true;
+    button.textContent = "Copying...";
+
+    try {
+      const copied = await copyToClipboard(json);
+
+      if (!copied) {
+        throw new Error("Trình duyệt từ chối thao tác copy.");
+      }
+
+      button.textContent = "Copied successfully";
+    } catch (error) {
+      console.warn(">>> Không thể copy JSON vào clipboard.", error);
+
+      button.textContent = "Copy failed — try again";
+      button.disabled = false;
+
+      setTimeout(() => {
+        button.textContent = originalText;
+      }, 2000);
+    }
+  });
+
+  document.body.appendChild(button);
 }
 
-try {
-  const productDescription = Array.from(
-    document.querySelectorAll("ul.a-unordered-list.a-vertical.a-spacing-mini > li .a-list-item"),
-  )
-    .map((element) => element.textContent.replace(/\s+/g, " ").trim())
-    .filter(Boolean);
+async function copyToClipboard(text) {
+  if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      // Chuyển sang fallback bên dưới.
+    }
+  }
 
-  const result = {
-    product_description: productDescription,
-  };
+  const textarea = document.createElement("textarea");
 
-  console.log("======================================");
-  console.log("======================================");
-  console.log("======================================");
-  console.log("Mô tả sản phẩm:");
-  console.log("======================================");
-  console.log(result);
-  console.log("======================================");
-  console.log("======================================");
-  console.log("======================================");
-} catch (error) {
-  console.warn(">>> Không tìm thấy mô tả sản phẩm.");
-  throw error;
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.left = "-9999px";
+  textarea.style.top = "0";
+
+  document.body.appendChild(textarea);
+
+  textarea.focus();
+  textarea.select();
+  textarea.setSelectionRange(0, textarea.value.length);
+
+  let copied = false;
+
+  try {
+    copied = document.execCommand("copy");
+  } finally {
+    textarea.remove();
+  }
+
+  return copied;
 }
 
 (async () => {
-  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  /**
+   * Cách xử lý giá dạng khoảng, ví dụ "$10.00 - $20.00".
+   *
+   * - "error": dừng phần lấy customization
+   * - "min": lấy mức giá thấp nhất
+   * - "max": lấy mức giá cao nhất
+   *
+   * @type {"error" | "min" | "max"}
+   */
+  const PRICE_RANGE_STRATEGY = "error";
 
+  /**
+   * Thời gian tối đa chờ iframe và customization render.
+   *
+   * @type {number}
+   */
+  const DOM_WAIT_TIMEOUT_MS = 30000;
+
+  /**
+   * Thời gian chờ sau khi click nút mở rộng option.
+   *
+   * @type {number}
+   */
+  const EXPAND_WAIT_MS = 1000;
+
+  const IFRAME_SELECTOR = "#gc-iframe";
+  const TYPE_SELECTOR = ".gc-OptionChooserComponent";
+  const OPTION_SELECTOR = '.gc-toggle-list-option[role="radio"]';
+
+  /**
+   * Tất cả field mặc định là null.
+   *
+   * Field chỉ được gán giá trị khi lấy dữ liệu thành công.
+   */
+  const product = {
+    product_title: null,
+    product_description: null,
+    product_images: null,
+    base_price: null,
+    variant_data: null,
+    product_rich_description: null,
+    product_amazon_link: null,
+  };
+
+  /**
+   * Chuẩn hóa text.
+   *
+   * @param {unknown} value
+   * @returns {string}
+   */
+  const normalizeText = (value) =>
+    String(value ?? "")
+      .replace(/\u00a0/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+  /**
+   * Chuẩn hóa text để so sánh không phân biệt chữ hoa/chữ thường.
+   *
+   * @param {unknown} value
+   * @returns {string}
+   */
+  const normalizeForComparison = (value) => normalizeText(value).toLocaleLowerCase();
+
+  /**
+   * Tạm dừng.
+   *
+   * @param {number} milliseconds
+   * @returns {Promise<void>}
+   */
+  const sleep = (milliseconds) =>
+    new Promise((resolve) => {
+      setTimeout(resolve, milliseconds);
+    });
+
+  /**
+   * Chuyển lỗi thành message.
+   *
+   * @param {unknown} error
+   * @returns {string}
+   */
+  const getErrorMessage = (error) => {
+    if (error instanceof Error) {
+      return error.message;
+    }
+
+    return String(error);
+  };
+
+  /**
+   * In warning khi không lấy được field.
+   *
+   * Không thay đổi giá trị của field.
+   *
+   * @param {keyof typeof product} field
+   * @param {unknown} error
+   */
+  const warnFieldError = (field, error) => {
+    console.warn(`>>> Không thể lấy field "${field}". Field này được giữ nguyên là null.`, {
+      field,
+      error: getErrorMessage(error),
+    });
+  };
+
+  /**
+   * Chờ condition trả về giá trị truthy.
+   *
+   * @param {() => unknown} condition
+   * @param {number} timeout
+   * @param {number} interval
+   * @returns {Promise<unknown>}
+   */
   const waitFor = async (condition, timeout = 5000, interval = 100) => {
     const startedAt = Date.now();
 
@@ -60,6 +246,85 @@ try {
     return null;
   };
 
+  /**
+   * Parse giá từ một Amazon .a-price element.
+   *
+   * Ví dụ:
+   *
+   * <span class="a-price">
+   *   <span class="a-price-whole">14,995.</span>
+   *   <span class="a-price-fraction">65</span>
+   * </span>
+   *
+   * Kết quả:
+   * 14995.65
+   *
+   * @param {Element | null} priceElement
+   * @returns {number}
+   */
+  const parseAmazonPriceElement = (priceElement) => {
+    if (!priceElement) {
+      throw new Error("Không tìm thấy phần tử giá sản phẩm.");
+    }
+
+    const wholeText = priceElement.querySelector(".a-price-whole")?.textContent;
+
+    const fractionText = priceElement.querySelector(".a-price-fraction")?.textContent;
+
+    const whole = String(wholeText ?? "").replace(/[^\d]/g, "");
+
+    const fraction = String(fractionText ?? "00")
+      .replace(/[^\d]/g, "")
+      .padEnd(2, "0")
+      .slice(0, 2);
+
+    if (!whole) {
+      throw new Error("Không thể đọc phần nguyên của giá sản phẩm.");
+    }
+
+    const price = Number(`${whole}.${fraction}`);
+
+    if (!Number.isFinite(price)) {
+      throw new Error("Giá sản phẩm không hợp lệ.");
+    }
+
+    return price;
+  };
+
+  /**
+   * Lấy base price.
+   *
+   * Ưu tiên:
+   * 1. Giá chính trên trang sản phẩm.
+   * 2. Giá trong footer của customization form.
+   *
+   * @returns {number}
+   */
+  const getBasePrice = () => {
+    const mainPriceElement = document.querySelector(
+      "#corePriceDisplay_desktop_feature_div .a-price",
+    );
+
+    if (mainPriceElement) {
+      return parseAmazonPriceElement(mainPriceElement);
+    }
+
+    const customizationPriceElement = document.querySelector(
+      '#gc-desktop-footer-wrapper .a-price[data-a-size="xl"][data-a-color="base"]',
+    );
+
+    if (customizationPriceElement) {
+      return parseAmazonPriceElement(customizationPriceElement);
+    }
+
+    throw new Error("Không tìm thấy giá ở cả khu vực giá chính và customization footer.");
+  };
+
+  /**
+   * Lấy URL ảnh lớn hiện tại trong Amazon image viewer.
+   *
+   * @returns {string | null}
+   */
   const getLargeImageUrl = () => {
     const image = document.querySelector("#ivLargeImage img");
 
@@ -70,285 +335,160 @@ try {
     return image.currentSrc || image.src || image.getAttribute("src") || null;
   };
 
-  const getThumbnailItems = () => {
-    return [...document.querySelectorAll('#ivThumbs .ivThumb[id^="ivImage_"]')].filter(
-      (thumbnail) => {
-        return (
-          !thumbnail.classList.contains("placeholder") && thumbnail.querySelector(".ivThumbImage")
+  /**
+   * Lấy danh sách thumbnail ảnh hợp lệ.
+   *
+   * @returns {Element[]}
+   */
+  const getThumbnailItems = () =>
+    [...document.querySelectorAll('#ivThumbs .ivThumb[id^="ivImage_"]')].filter(
+      (thumbnail) =>
+        !thumbnail.classList.contains("placeholder") &&
+        Boolean(thumbnail.querySelector(".ivThumbImage")),
+    );
+
+  /**
+   * Click lần lượt từng thumbnail và lấy URL ảnh lớn.
+   *
+   * @returns {Promise<string[]>}
+   */
+  const extractProductImages = async () => {
+    const thumbnailItems = getThumbnailItems();
+
+    if (thumbnailItems.length === 0) {
+      throw new Error('Không tìm thấy thumbnail ảnh trong selector "#ivThumbs".');
+    }
+
+    const links = [];
+
+    for (let index = 0; index < thumbnailItems.length; index++) {
+      const thumbnail = thumbnailItems[index];
+      const thumbnailId = thumbnail.id || `thumbnail-${index}`;
+
+      try {
+        thumbnail.scrollIntoView({
+          behavior: "auto",
+          block: "nearest",
+          inline: "nearest",
+        });
+
+        await sleep(200);
+
+        const previousImageUrl = getLargeImageUrl();
+
+        thumbnail.dispatchEvent(
+          new MouseEvent("click", {
+            bubbles: true,
+            cancelable: true,
+            view: window,
+          }),
         );
-      },
-    );
-  };
 
-  const thumbnailItems = getThumbnailItems();
+        const largeImageUrl = await waitFor(
+          () => {
+            const selected =
+              thumbnail.classList.contains("selected") ||
+              thumbnail.getAttribute("aria-pressed") === "true";
 
-  if (thumbnailItems.length === 0) {
-    console.warn("Không tìm thấy thumbnail nào trong #ivThumbs.");
+            const currentImageUrl = getLargeImageUrl();
 
-    return {
-      links: [],
-    };
-  }
+            if (!currentImageUrl) {
+              return null;
+            }
 
-  console.log(`Tìm thấy ${thumbnailItems.length} thumbnail.`);
+            /*
+             * Thumbnail đầu tiên có thể đã được chọn sẵn,
+             * vì vậy URL ảnh lớn không nhất thiết phải thay đổi.
+             */
+            if (selected || currentImageUrl !== previousImageUrl) {
+              const imageElement = document.querySelector("#ivLargeImage img");
 
-  const links = [];
+              if (imageElement?.complete && imageElement.naturalWidth > 0) {
+                return currentImageUrl;
+              }
+            }
 
-  for (let index = 0; index < thumbnailItems.length; index++) {
-    const thumbnail = thumbnailItems[index];
-    const thumbnailId = thumbnail.id || `thumbnail-${index}`;
+            return null;
+          },
+          7000,
+          100,
+        );
 
-    console.log(`Đang xử lý ${index + 1}/${thumbnailItems.length}: ${thumbnailId}`);
+        if (!largeImageUrl) {
+          console.warn(`>>> Không lấy được URL ảnh lớn của thumbnail "${thumbnailId}".`);
 
-    thumbnail.scrollIntoView({
-      behavior: "auto",
-      block: "nearest",
-      inline: "nearest",
-    });
-
-    await sleep(200);
-
-    const previousImageUrl = getLargeImageUrl();
-
-    thumbnail.dispatchEvent(
-      new MouseEvent("click", {
-        bubbles: true,
-        cancelable: true,
-        view: window,
-      }),
-    );
-
-    const largeImageUrl = await waitFor(
-      () => {
-        const selected =
-          thumbnail.classList.contains("selected") ||
-          thumbnail.getAttribute("aria-pressed") === "true";
-
-        const currentImageUrl = getLargeImageUrl();
-
-        if (!currentImageUrl) {
-          return null;
+          continue;
         }
 
-        /*
-         * Với thumbnail đầu tiên, URL ảnh lớn có thể không đổi vì
-         * ảnh đó đã được chọn sẵn. Vì vậy chỉ cần thumbnail được
-         * selected hoặc ảnh lớn đã đổi.
-         */
-        if (selected || currentImageUrl !== previousImageUrl) {
-          const imageElement = document.querySelector("#ivLargeImage img");
-
-          if (imageElement?.complete && imageElement.naturalWidth > 0) {
-            return currentImageUrl;
-          }
+        if (!links.includes(largeImageUrl)) {
+          links.push(largeImageUrl);
         }
+      } catch (error) {
+        console.warn(`>>> Có lỗi khi xử lý thumbnail "${thumbnailId}".`, error);
+      }
 
-        return null;
-      },
-      7000,
-      100,
-    );
-
-    if (!largeImageUrl) {
-      console.warn(`Không lấy được ảnh lớn của ${thumbnailId}.`);
-
-      continue;
+      await sleep(300);
     }
 
-    if (!links.includes(largeImageUrl)) {
-      links.push(largeImageUrl);
-      console.log(largeImageUrl);
-    } else {
-      console.log(`Bỏ qua URL trùng: ${largeImageUrl}`);
+    if (links.length === 0) {
+      throw new Error("Không lấy được URL ảnh lớn hợp lệ từ bất kỳ thumbnail nào.");
     }
 
-    await sleep(300);
-  }
-
-  const result = {
-    product_images: links,
+    return links;
   };
 
-  console.log(`Hoàn tất: lấy được ${links.length}/${thumbnailItems.length} URL ảnh.`);
-
-  console.log("======================================");
-  console.log("======================================");
-  console.log("======================================");
-  console.log("Danh sách URL ảnh sản phẩm:");
-  console.log("======================================");
-  console.log(result);
-  console.log(JSON.stringify(result, null, 2));
-  console.log("======================================");
-  console.log("======================================");
-  console.log("======================================");
-
-  try {
-    await navigator.clipboard.writeText(JSON.stringify(result, null, 2));
-
-    console.log("Đã copy kết quả JSON vào clipboard.");
-  } catch {
-    console.warn("Không thể tự động copy. Hãy copy kết quả trong Console.");
-  }
-
-  return result;
-})().catch((error) => {
-  console.error("Không thể lấy URL ảnh sản phẩm:", error);
-});
-
-try {
-  const aplusImages = document
-    .getElementById("aplus_feature_div")
-    .querySelector(".aplus-v2 .aplus-content-wrapper")
-    .querySelectorAll(".aplus-module-wrapper img");
-  const htmlString = Array.from(aplusImages)
-    .map((node) => node.outerHTML)
-    .join(" ");
-  const aplus_content = `<div class="description-root">${htmlString}</div>`;
-  console.log("======================================");
-  console.log("======================================");
-  console.log("======================================");
-  console.log("A+ Content:");
-  console.log("======================================");
-  console.log(aplus_content);
-  console.log("======================================");
-  console.log("======================================");
-  console.log("======================================\n\n");
-} catch (error) {
-  console.warn(">>> Không tìm thấy A+ Content.");
-}
-
-try {
-  const result = {
-    amazon_link: window.location.href,
-  };
-
-  console.log("======================================");
-  console.log("======================================");
-  console.log("======================================");
-  console.log("Link sản phẩm:");
-  console.log("======================================");
-  console.log(result);
-  console.log("======================================");
-  console.log("======================================");
-  console.log("======================================");
-} catch (error) {
-  console.warn(">>> Không tìm thấy link sản phẩm.");
-}
-
-try {
-  const priceElement = document.querySelector(
-    '#gc-desktop-footer-wrapper .a-price[data-a-size="xl"][data-a-color="base"]',
-  );
-
-  if (!priceElement) {
-    throw new Error("Không tìm thấy phần tử base price.");
-  }
-
-  const wholeText = priceElement.querySelector(".a-price-whole")?.textContent;
-  const fractionText = priceElement.querySelector(".a-price-fraction")?.textContent;
-
-  const whole = String(wholeText ?? "").replace(/[^\d]/g, "");
-
-  const fraction = String(fractionText ?? "00")
-    .replace(/[^\d]/g, "")
-    .padEnd(2, "0")
-    .slice(0, 2);
-
-  if (!whole) {
-    throw new Error("Không thể đọc phần nguyên của base price.");
-  }
-
-  const basePrice = Number(`${whole}.${fraction}`);
-
-  const result = {
-    base_price: basePrice,
-  };
-
-  console.log("======================================");
-  console.log("======================================");
-  console.log("======================================");
-  console.log("Giá gốc của sản phẩm:");
-  console.log("======================================");
-  console.log(result);
-  console.log("======================================");
-  console.log("======================================");
-  console.log("======================================");
-} catch (error) {
-  console.warn(">>> Không tìm thấy base price.");
-}
-
-(async () => {
   /**
-   * Danh sách customization type cần bỏ qua.
-   * So sánh không phân biệt chữ hoa/chữ thường.
+   * Lấy A+ Content và ghép các thẻ img vào description-root.
    *
-   * @type {string[]}
-   */
-  const IGNORE_TYPES = [
-    "Customization Confirmation",
-    "Note to seller (Optional)",
-    "Other requirements",
-  ];
-
-  /**
-   * Cách xử lý giá dạng khoảng, ví dụ "$10.00 - $20.00".
-   *
-   * - "error": dừng script
-   * - "min": lấy mức thấp nhất
-   * - "max": lấy mức cao nhất
-   *
-   * @type {"error" | "min" | "max"}
-   */
-  const PRICE_RANGE_STRATEGY = "error";
-
-  /**
-   * Thời gian tối đa chờ iframe và customization render.
-   *
-   * @type {number}
-   */
-  const DOM_WAIT_TIMEOUT_MS = 30000;
-
-  /**
-   * Thời gian chờ sau khi click "See all options".
-   *
-   * @type {number}
-   */
-  const EXPAND_WAIT_MS = 1000;
-
-  const IFRAME_SELECTOR = "#gc-iframe";
-  const TYPE_SELECTOR = ".gc-OptionChooserComponent";
-  const OPTION_SELECTOR = '.gc-toggle-list-option[role="radio"]';
-
-  /**
-   * Chuẩn hóa text.
-   *
-   * @param {unknown} value
    * @returns {string}
    */
-  const normalizeText = (value) =>
-    String(value ?? "")
-      .replace(/\u00a0/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-
   /**
-   * Chuẩn hóa để so sánh không phân biệt hoa thường.
+   * Lấy A+ Content và ghép các thẻ img vào description-root.
    *
-   * @param {unknown} value
+   * Nếu không tìm thấy A+ Content hoặc không có ảnh,
+   * trả về description-root rỗng.
+   *
    * @returns {string}
    */
-  const normalizeForComparison = (value) => normalizeText(value).toLocaleLowerCase();
+  const extractProductRichDescription = () => {
+    const emptyRichDescription = '<div class="description-root"></div>';
 
-  /**
-   * Tạm dừng.
-   *
-   * @param {number} milliseconds
-   * @returns {Promise<void>}
-   */
-  const sleep = (milliseconds) =>
-    new Promise((resolve) => {
-      setTimeout(resolve, milliseconds);
-    });
+    const aplusFeature = document.getElementById("aplus_feature_div");
+
+    if (!aplusFeature) {
+      console.warn(
+        '>>> Không tìm thấy element "#aplus_feature_div". ' + "Đang sử dụng rich description rỗng.",
+      );
+
+      return emptyRichDescription;
+    }
+
+    const contentWrapper = aplusFeature.querySelector(".aplus-v2 .aplus-content-wrapper");
+
+    if (!contentWrapper) {
+      console.warn(
+        ">>> Không tìm thấy A+ Content wrapper. " + "Đang sử dụng rich description rỗng.",
+      );
+
+      return emptyRichDescription;
+    }
+
+    const aplusImages = contentWrapper.querySelectorAll(".aplus-module-wrapper img");
+
+    if (aplusImages.length === 0) {
+      console.warn(
+        ">>> Không tìm thấy ảnh trong A+ Content. " + "Đang sử dụng rich description rỗng.",
+      );
+
+      return emptyRichDescription;
+    }
+
+    const htmlString = Array.from(aplusImages)
+      .map((image) => image.outerHTML)
+      .join(" ");
+
+    return `<div class="description-root">${htmlString}</div>`;
+  };
 
   /**
    * Thông tin execution context hiện tại.
@@ -395,11 +535,11 @@ try {
   };
 
   /**
-   * Tìm document của customization form.
+   * Tìm document chứa customization form.
    *
    * Hỗ trợ:
-   * - Console đang chạy trực tiếp trong iframe
-   * - Console đang chạy ở trang cha
+   * - Console đang chạy trực tiếp trong iframe.
+   * - Console đang chạy ở trang cha.
    *
    * @param {{
    *   timeoutMs?: number,
@@ -414,26 +554,22 @@ try {
     contentSelector = TYPE_SELECTOR,
   } = {}) => {
     const startedAt = Date.now();
+
     let lastError = null;
     let lastIframeInfo = null;
 
     while (Date.now() - startedAt < timeoutMs) {
-      /**
-       * Trường hợp document hiện tại đã chính là DOM
-       * của customization iframe.
+      /*
+       * Trường hợp Console đang chạy trực tiếp trong iframe.
        */
       const currentDocumentComponents = document.querySelectorAll(contentSelector);
 
       if (currentDocumentComponents.length > 0) {
-        console.log(
-          `Đang sử dụng document hiện tại. Tìm thấy ${currentDocumentComponents.length} customization component.`,
-        );
-
         return document;
       }
 
-      /**
-       * Trường hợp Console đang ở trang cha.
+      /*
+       * Trường hợp Console đang chạy ở trang cha.
        */
       const iframeElement = document.querySelector(iframeSelector);
 
@@ -444,9 +580,8 @@ try {
           src: iframeElement.src || null,
         };
 
-        /**
-         * Kích hoạt lazy loading bằng cách đưa iframe
-         * vào vùng nhìn thấy.
+        /*
+         * Đưa iframe vào viewport để kích hoạt lazy loading.
          */
         try {
           iframeElement.scrollIntoView({
@@ -454,7 +589,7 @@ try {
             inline: "nearest",
           });
         } catch {
-          // Không ảnh hưởng tới việc đọc iframe.
+          // Không ảnh hưởng tới việc truy cập iframe.
         }
 
         try {
@@ -465,41 +600,34 @@ try {
             const iframeComponents = iframeDocument.querySelectorAll(contentSelector);
 
             if (iframeComponents.length > 0) {
-              console.log(
-                `Đã truy cập #gc-iframe và tìm thấy ${iframeComponents.length} customization component.`,
-              );
-
               return iframeDocument;
             }
           }
         } catch (error) {
-          lastError = error;
-
-          /**
-           * Không throw ngay vì iframe có thể đang chuyển
-           * từ about:blank sang URL thật.
+          /*
+           * Iframe có thể đang chuyển từ about:blank
+           * sang URL customization thật.
            */
+          lastError = error;
         }
       }
 
       await sleep(200);
     }
 
-    console.table(
-      [...document.querySelectorAll("iframe")].map((iframe, index) => ({
-        index,
-        id: iframe.id || null,
-        name: iframe.name || null,
-        src: iframe.src || null,
-      })),
-    );
+    const iframeList = [...document.querySelectorAll("iframe")].map((iframe, index) => ({
+      index,
+      id: iframe.id || null,
+      name: iframe.name || null,
+      src: iframe.src || null,
+    }));
 
     throw new Error(
       `Không lấy được customization document sau ${timeoutMs}ms. ` +
         `Context: ${JSON.stringify(getCurrentContextInfo())}. ` +
         `Iframe gần nhất: ${JSON.stringify(lastIframeInfo)}. ` +
-        `Lỗi gần nhất: ${lastError?.message || "không có"}. ` +
-        "Nếu iframe khác origin hoặc Console context không đúng, hãy chuyển execution context sang gc-iframe rồi chạy lại.",
+        `Danh sách iframe: ${JSON.stringify(iframeList)}. ` +
+        `Lỗi gần nhất: ${lastError?.message || "không có"}.`,
     );
   };
 
@@ -573,28 +701,17 @@ try {
       return isNegative ? -prices[0] : prices[0];
     }
 
-    const warningMessage =
-      `Phát hiện nhiều mức giá trong "${normalizedPrice}" ` +
-      `của option "${option}" thuộc type "${type}".`;
-
     if (PRICE_RANGE_STRATEGY === "min") {
-      const selectedPrice = Math.min(...prices);
-
-      console.warn(`${warningMessage} Đang lấy giá nhỏ nhất: ${selectedPrice}.`);
-
-      return selectedPrice;
+      return Math.min(...prices);
     }
 
     if (PRICE_RANGE_STRATEGY === "max") {
-      const selectedPrice = Math.max(...prices);
-
-      console.warn(`${warningMessage} Đang lấy giá lớn nhất: ${selectedPrice}.`);
-
-      return selectedPrice;
+      return Math.max(...prices);
     }
 
     throw new Error(
-      `${warningMessage} Script đã dừng để tránh mất dữ liệu. ` +
+      `Phát hiện nhiều mức giá trong "${normalizedPrice}" ` +
+        `của option "${option}" thuộc type "${type}". ` +
         'Đổi PRICE_RANGE_STRATEGY thành "min" hoặc "max" nếu cần.',
     );
   };
@@ -628,7 +745,7 @@ try {
 
     const ariaLabel = normalizeText(optionElement.getAttribute("aria-label"));
 
-    /**
+    /*
      * Match:
      * ", + $850.00"
      * ", - $100.00"
@@ -669,15 +786,11 @@ try {
   /**
    * Bỏ option mặc định của type Size.
    *
-   * Không dùng options.slice(1) một cách âm thầm.
-   *
    * Quy tắc:
-   * 1. Nếu chỉ có một option không tăng giá,
-   *    loại option đó.
-   * 2. Nếu có nhiều option không tăng giá và option
-   *    đầu DOM nằm trong số đó, loại option đầu DOM
-   *    và ghi cảnh báo.
-   * 3. Nếu không xác định được, dừng script.
+   * 1. Nếu chỉ có một option không tăng giá, loại option đó.
+   * 2. Nếu có nhiều option không tăng giá và option đầu DOM
+   *    nằm trong số đó, loại option đầu DOM.
+   * 3. Nếu không xác định được, dừng phần lấy variant.
    *
    * @param {string} type
    * @param {Array<{
@@ -708,12 +821,15 @@ try {
       zeroPriceOptions.length > 1 &&
       zeroPriceOptions.some((option) => option.dom_index === 0)
     ) {
-      optionToRemove = zeroPriceOptions.find((option) => option.dom_index === 0);
+      optionToRemove = zeroPriceOptions.find((option) => option.dom_index === 0) || null;
 
       console.warn(
-        `Type size "${type}" có nhiều option không tăng giá. ` +
-          `Đang loại option đầu tiên trong DOM: "${optionToRemove.value}".`,
-        zeroPriceOptions,
+        `>>> Type size "${type}" có nhiều option không tăng giá. ` +
+          `Đang loại option đầu tiên trong DOM.`,
+        {
+          removed_option: optionToRemove,
+          zero_price_options: zeroPriceOptions,
+        },
       );
     } else {
       throw new Error(
@@ -731,319 +847,333 @@ try {
       );
     }
 
-    console.warn(`Đã loại option mặc định của type size "${type}":`, {
-      value: optionToRemove.value,
-      additional_price: optionToRemove.additional_price,
-      dom_index: optionToRemove.dom_index,
-    });
+    if (!optionToRemove) {
+      throw new Error(`Không xác định được option mặc định của type size "${type}".`);
+    }
 
     return options.filter((option) => option !== optionToRemove);
   };
 
-  console.log("Execution context ban đầu:", getCurrentContextInfo());
-
   /**
-   * Tìm document thực sự chứa customization form.
-   */
-  const customizationDocument = await getCustomizationDocument();
-
-  /**
-   * Mở tất cả nút "See all ... options".
+   * Lấy toàn bộ Cartesian product của customization options.
    *
-   * Quan trọng: sử dụng customizationDocument,
-   * không dùng document của trang cha.
+   * @returns {Promise<Array<{
+   *   options: string[],
+   *   additional_price: number
+   * }>>}
    */
-  const collapsedButtons = [
-    ...customizationDocument.querySelectorAll(
-      '.gc-toggle-list-toggle-button[aria-expanded="false"]',
-    ),
-  ];
+  const extractVariantData = async () => {
+    const customizationDocument = await getCustomizationDocument();
 
-  if (collapsedButtons.length > 0) {
-    console.log(`Đang mở ${collapsedButtons.length} danh sách option bị thu gọn.`);
+    /*
+     * Mở tất cả danh sách option đang bị thu gọn.
+     */
+    const collapsedButtons = [
+      ...customizationDocument.querySelectorAll(
+        '.gc-toggle-list-toggle-button[aria-expanded="false"]',
+      ),
+    ];
 
-    collapsedButtons.forEach((button) => {
-      try {
-        button.click();
-      } catch (error) {
-        console.warn("Không thể click nút mở rộng:", button, error);
-      }
-    });
+    if (collapsedButtons.length > 0) {
+      collapsedButtons.forEach((button, index) => {
+        try {
+          button.click();
+        } catch (error) {
+          console.warn(`>>> Không thể mở danh sách customization tại index ${index}.`, error);
+        }
+      });
 
-    await sleep(EXPAND_WAIT_MS);
-  }
+      await sleep(EXPAND_WAIT_MS);
+    }
 
-  /**
-   * Query lại sau khi expand vì Amazon có thể
-   * render thêm option.
-   */
-  const typeElements = [...customizationDocument.querySelectorAll(TYPE_SELECTOR)];
+    /*
+     * Query lại sau khi expand vì Amazon có thể
+     * render thêm option.
+     */
+    const typeElements = [...customizationDocument.querySelectorAll(TYPE_SELECTOR)];
 
-  if (typeElements.length === 0) {
-    throw new Error(
-      `Không tìm thấy "${TYPE_SELECTOR}" trong customization iframe. ` +
-        "DOM có thể vừa thay đổi hoặc iframe vừa reload.",
+    if (typeElements.length === 0) {
+      throw new Error(`Không tìm thấy "${TYPE_SELECTOR}" trong customization iframe.`);
+    }
+
+    const normalizedIgnoreTypes = IGNORE_TYPES.map((type) => normalizeForComparison(type)).filter(
+      Boolean,
     );
-  }
 
-  console.log(`Đã tìm thấy ${typeElements.length} customization type.`);
+    const customizationTypes = typeElements
+      .map((typeElement, typeIndex) => {
+        const type = getCustomizationTypeName(typeElement);
 
-  /**
-   * Chuẩn hóa danh sách type cần ignore.
-   */
-  const normalizedIgnoreTypes = IGNORE_TYPES.map((type) => normalizeForComparison(type)).filter(
-    Boolean,
-  );
+        const normalizedType = normalizeForComparison(type);
 
-  const ignoredTypes = [];
-  const emptyTypes = [];
-  const detectedTypes = [];
-  const invalidComponents = [];
-
-  /**
-   * Đọc từng customization type.
-   */
-  const customizationTypes = typeElements
-    .map((typeElement, typeIndex) => {
-      const type = getCustomizationTypeName(typeElement);
-
-      const normalizedType = normalizeForComparison(type);
-
-      if (!type) {
-        invalidComponents.push({
-          type_index: typeIndex,
-          reason: "Không tìm thấy tên type",
-        });
-
-        console.warn(
-          `Customization component tại index ${typeIndex} không có tên hợp lệ.`,
-          typeElement,
-        );
-
-        return null;
-      }
-
-      detectedTypes.push(type);
-
-      /**
-       * Ignore nhiều type, không phân biệt hoa thường.
-       */
-      if (normalizedIgnoreTypes.includes(normalizedType)) {
-        ignoredTypes.push(type);
-        return null;
-      }
-
-      const optionElements = [...typeElement.querySelectorAll(OPTION_SELECTOR)];
-
-      if (optionElements.length === 0) {
-        console.warn(
-          `Không tìm thấy option theo selector ` + `"${OPTION_SELECTOR}" trong type "${type}".`,
-          typeElement,
-        );
-      }
-
-      let options = optionElements
-        .filter((optionElement) => optionElement.getAttribute("aria-disabled") !== "true")
-        .map((optionElement, domIndex) => {
-          const value =
-            normalizeText(optionElement.querySelector(".gc-swatch-label")?.textContent) ||
-            normalizeText(optionElement.getAttribute("aria-label"));
-
-          if (!value) {
-            console.warn(`Bỏ option không có value trong type "${type}".`, optionElement);
-
-            return null;
-          }
-
-          const { additionalPrice, hasExplicitPrice, rawPriceText } = getOptionPrice(
-            optionElement,
-            type,
-            value,
+        if (!type) {
+          console.warn(
+            `>>> Bỏ customization component tại index ${typeIndex} vì không tìm thấy tên type.`,
           );
 
-          return {
-            value,
-            additional_price: additionalPrice,
-            has_explicit_price: hasExplicitPrice,
-            raw_price_text: rawPriceText,
-            dom_index: domIndex,
-          };
-        })
-        .filter(Boolean);
+          return null;
+        }
 
-      /**
-       * Loại option trùng do DOM render lặp.
-       */
-      options = Array.from(
-        new Map(
-          options.map((option) => [
-            [normalizeForComparison(option.value), option.additional_price].join("__"),
-            option,
-          ]),
-        ).values(),
-      );
+        /*
+         * Ignore nhiều type, không phân biệt chữ hoa/chữ thường.
+         */
+        if (normalizedIgnoreTypes.includes(normalizedType)) {
+          return null;
+        }
 
-      /**
-       * Xử lý type Size.
-       */
-      if (isSizeType(normalizedType)) {
-        options = removeDefaultSizeOption(type, options);
-      }
+        const optionElements = [...typeElement.querySelectorAll(OPTION_SELECTOR)];
 
-      /**
-       * Theo dõi type bị rỗng.
-       */
-      if (options.length === 0) {
-        emptyTypes.push(type);
-        return null;
-      }
+        if (optionElements.length === 0) {
+          console.warn(`>>> Không tìm thấy option trong customization type "${type}".`);
 
-      return {
-        type,
-        options,
-      };
-    })
-    .filter(Boolean);
+          return null;
+        }
 
-  /**
-   * Tìm các IGNORE_TYPES không khớp type nào trong DOM.
-   */
-  const normalizedDetectedTypes = detectedTypes.map((type) => normalizeForComparison(type));
+        let options = optionElements
+          .filter((optionElement) => optionElement.getAttribute("aria-disabled") !== "true")
+          .map((optionElement, domIndex) => {
+            try {
+              const value =
+                normalizeText(optionElement.querySelector(".gc-swatch-label")?.textContent) ||
+                normalizeText(optionElement.getAttribute("aria-label"));
 
-  const unmatchedIgnoreTypes = IGNORE_TYPES.filter((ignoreType) => {
-    const normalizedIgnoreType = normalizeForComparison(ignoreType);
+              if (!value) {
+                console.warn(
+                  `>>> Bỏ option tại index ${domIndex} trong type "${type}" vì không có value.`,
+                );
 
-    return normalizedIgnoreType && !normalizedDetectedTypes.includes(normalizedIgnoreType);
-  });
+                return null;
+              }
 
-  /**
-   * Cảnh báo các type cần ignore nhưng không tìm thấy.
-   */
-  if (unmatchedIgnoreTypes.length > 0) {
-    console.warn("Một số IGNORE_TYPES không khớp customization type nào:", {
-      unmatched_ignore_types: unmatchedIgnoreTypes,
-      detected_types: detectedTypes,
-    });
-  }
+              const { additionalPrice, hasExplicitPrice, rawPriceText } = getOptionPrice(
+                optionElement,
+                type,
+                value,
+              );
 
-  /**
-   * Cảnh báo type bị bỏ vì không còn option.
-   */
-  if (emptyTypes.length > 0) {
-    console.warn("Các customization type bị bỏ vì không còn option hợp lệ:", emptyTypes);
-  }
+              return {
+                value,
+                additional_price: additionalPrice,
+                has_explicit_price: hasExplicitPrice,
+                raw_price_text: rawPriceText,
+                dom_index: domIndex,
+              };
+            } catch (error) {
+              console.warn(
+                `>>> Không thể đọc option tại index ${domIndex} trong type "${type}".`,
+                error,
+              );
 
-  /**
-   * Cảnh báo component không đọc được tên.
-   */
-  if (invalidComponents.length > 0) {
-    console.warn("Các customization component không hợp lệ:", invalidComponents);
-  }
+              return null;
+            }
+          })
+          .filter(Boolean);
 
-  /**
-   * Dừng nếu không còn type hợp lệ.
-   */
-  if (customizationTypes.length === 0) {
-    throw new Error(
-      "Không còn customization type hợp lệ sau khi xử lý. " +
-        `Detected: ${JSON.stringify(detectedTypes)}. ` +
-        `Ignored: ${JSON.stringify(ignoredTypes)}. ` +
-        `Empty: ${JSON.stringify(emptyTypes)}. ` +
-        `Invalid: ${JSON.stringify(invalidComponents)}.`,
-    );
-  }
+        /*
+         * Loại option trùng do DOM render lặp.
+         */
+        options = Array.from(
+          new Map(
+            options.map((option) => [
+              [normalizeForComparison(option.value), option.additional_price].join("__"),
+              option,
+            ]),
+          ).values(),
+        );
 
-  /**
-   * Tạo Cartesian product.
-   */
-  const combinations = customizationTypes.reduce(
-    (currentCombinations, customizationType) =>
-      currentCombinations.flatMap((currentCombination) =>
-        customizationType.options.map((option) => ({
-          options: [...currentCombination.options, option.value],
-          additional_price: roundPrice(
-            currentCombination.additional_price + option.additional_price,
-          ),
-        })),
-      ),
-    [
-      {
-        options: [],
-        additional_price: 0,
-      },
-    ],
-  );
+        /*
+         * Xử lý type Size.
+         */
+        if (isSizeType(normalizedType)) {
+          options = removeDefaultSizeOption(type, options);
+        }
 
-  if (combinations.length === 0) {
-    throw new Error("Không tạo được customization combination nào.");
-  }
+        if (options.length === 0) {
+          console.warn(`>>> Bỏ customization type "${type}" vì không còn option hợp lệ.`);
 
-  /**
-   * JSON cuối cùng.
-   */
-  const result = combinations.map((combination) => ({
-    options: combination.options,
-    additional_price: combination.additional_price,
-  }));
+          return null;
+        }
 
-  const json = JSON.stringify(result, null, 2);
+        return {
+          type,
+          options,
+        };
+      })
+      .filter(Boolean);
 
-  console.log("======================================");
-  console.log("======================================");
-  console.log("======================================");
-  console.log("CUSTOMIZATION EXTRACTION RESULT");
-  console.log("======================================");
-
-  console.table(
-    customizationTypes.map((item) => ({
-      type: item.type,
-      option_count: item.options.length,
-    })),
-  );
-
-  console.log("Detected types:", detectedTypes);
-
-  console.log("Ignored types:", ignoredTypes);
-
-  console.log("Unmatched ignore types:", unmatchedIgnoreTypes);
-
-  console.log("Empty types:", emptyTypes);
-
-  console.log(`Đã tạo ${result.length} tổ hợp customization.`);
-
-  console.log(result);
-
-  console.log("=======================================");
-  console.log("=======================================");
-  console.log("=======================================");
-
-  /**
-   * Sao chép JSON vào clipboard.
-   */
-  if (typeof copy === "function") {
-    copy(json);
-
-    console.log("Đã sao chép JSON vào clipboard bằng copy().");
-  } else {
-    try {
-      await navigator.clipboard.writeText(json);
-
-      console.log("Đã sao chép JSON vào clipboard.");
-    } catch (error) {
-      console.warn(
-        "Không thể tự động sao chép JSON. " + "Kết quả vẫn được in trong Console.",
-        error,
-      );
+    if (customizationTypes.length === 0) {
+      throw new Error("Không còn customization type hợp lệ sau khi xử lý.");
     }
-  }
 
-  return result;
-})().catch((error) => {
-  console.error(">>> Không thể lấy customization:", error);
+    /*
+     * Tạo Cartesian product.
+     */
+    const combinations = customizationTypes.reduce(
+      (currentCombinations, customizationType) =>
+        currentCombinations.flatMap((currentCombination) =>
+          customizationType.options.map((option) => ({
+            options: [
+              ...currentCombination.options,
+              {
+                name: customizationType.type,
+                value: option.value,
+              },
+            ],
+            additional_price: roundPrice(
+              currentCombination.additional_price + option.additional_price,
+            ),
+          })),
+        ),
+      [
+        {
+          options: [],
+          additional_price: 0,
+        },
+      ],
+    );
+
+    if (combinations.length === 0) {
+      throw new Error("Không tạo được customization combination nào.");
+    }
+
+    return combinations.map((combination) => ({
+      options: combination.options,
+      additional_price: combination.additional_price,
+    }));
+  };
 
   /**
-   * Không throw lại để tránh xuất hiện thêm
-   * "Uncaught (in promise)".
+   * Lấy product title.
    */
-  return null;
-});
+  try {
+    const productTitleElement = document.getElementById("productTitle");
+
+    if (!productTitleElement) {
+      throw new Error('Không tìm thấy element "#productTitle".');
+    }
+
+    const productTitle = normalizeText(productTitleElement.textContent);
+
+    if (!productTitle) {
+      throw new Error("Element product title không có nội dung.");
+    }
+
+    product.product_title = productTitle;
+  } catch (error) {
+    warnFieldError("product_title", error);
+  }
+
+  /**
+   * Lấy product description.
+   */
+  try {
+    const productDescription = Array.from(
+      document.querySelectorAll("ul.a-unordered-list.a-vertical.a-spacing-mini > li .a-list-item"),
+    )
+      .map((element) => normalizeText(element.textContent))
+      .filter(Boolean);
+
+    if (productDescription.length === 0) {
+      throw new Error("Không tìm thấy mô tả sản phẩm hợp lệ.");
+    }
+
+    product.product_description = productDescription;
+  } catch (error) {
+    warnFieldError("product_description", error);
+  }
+
+  /**
+   * Lấy product images.
+   */
+  try {
+    const productImages = await extractProductImages();
+
+    if (productImages.length === 0) {
+      throw new Error("Danh sách ảnh sản phẩm rỗng.");
+    }
+
+    product.product_images = productImages;
+  } catch (error) {
+    warnFieldError("product_images", error);
+  }
+
+  /**
+   * Lấy base price.
+   */
+  try {
+    const basePrice = getBasePrice();
+
+    if (!Number.isFinite(basePrice)) {
+      throw new Error("Base price không phải số hợp lệ.");
+    }
+
+    product.base_price = basePrice;
+  } catch (error) {
+    warnFieldError("base_price", error);
+  }
+
+  /**
+   * Lấy variant data.
+   */
+  try {
+    const variantData = await extractVariantData();
+
+    if (variantData.length === 0) {
+      throw new Error("Danh sách variant data rỗng.");
+    }
+
+    product.variant_data = variantData;
+  } catch (error) {
+    warnFieldError("variant_data", error);
+  }
+
+  /**
+   * Lấy product rich description.
+   */
+  try {
+    product.product_rich_description = extractProductRichDescription();
+  } catch (error) {
+    console.warn(">>> Có lỗi khi lấy A+ Content. " + "Đang sử dụng rich description rỗng.", error);
+
+    product.product_rich_description = '<div class="description-root"></div>';
+  }
+
+  /**
+   * Lấy Amazon product link.
+   */
+  try {
+    const amazonLink = normalizeText(window.location.href);
+
+    if (!amazonLink) {
+      throw new Error("Không thể đọc window.location.href.");
+    }
+
+    product.product_amazon_link = amazonLink;
+  } catch (error) {
+    warnFieldError("product_amazon_link", error);
+  }
+
+  /**
+   * Tạo JSON cuối cùng.
+   */
+  const output = {
+    product,
+  };
+
+  const json = JSON.stringify(output, null, 2);
+
+  /**
+   * Chỉ console.log đúng một lần.
+   */
+  console.log(json);
+
+  /**
+   * Hiển thị nút để người dùng chủ động click copy.
+   *
+   * Clipboard API yêu cầu thao tác trực tiếp từ người dùng,
+   * vì vậy không tự động copy sau chuỗi xử lý async dài.
+   */
+  showCopyJsonButton(json);
+
+  return output;
+})();

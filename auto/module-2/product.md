@@ -1,13 +1,13 @@
 # Task cập nhật sản phẩm đang có sẵn trong store
 
-> Dùng `../admin/access-token.md` để truy cập vào store, sau đó cập nhật sản phẩm có ID là `8346068549689` theo các yêu cầu bên dưới.
+> Dùng `../admin/access-token.md` để truy cập vào store, sau đó cập nhật sản phẩm có ID là `8337726963769` theo các yêu cầu bên dưới.
 
 ### 1. Viết lại Product Title chuẩn SEO
 
 Product Title gốc:
 
 ```text
-Tree Bird Nest Bed Frame, Solid Wood Platform Bed with Sculptural Branch Canopy Headboard for Modern Rustic Bedroom Decor
+Solid Wood Bookshelf, Organic Curved Freestanding Bookcase for Living Room Decor, Sculptural Display Shelf Room Divider, Multiple Sizes & Finishes (Option 3)
 ```
 
 - Viết lại product title gốc trên thành product title mới.
@@ -21,19 +21,19 @@ Tree Bird Nest Bed Frame, Solid Wood Platform Bed with Sculptural Branch Canopy 
 Mô tả sản phẩm gốc:
 
 ```text
-🌿 Nature-Inspired Bird Nest Design – Create a magical bedroom focal point with a sculptural tree branch bed frame inspired by a cozy bird nest, combining rustic wood texture with modern organic style for a warm, artistic sleeping space.
+📚 Statement Bookshelf for Stylish Spaces – Turn everyday storage into a design feature with this sculptural solid wood bookshelf. Its organic curved silhouette adds warmth, movement, and visual interest while giving you a beautiful place to display books, pottery, candles, framed photos, and decor.
 
-🪵 Solid Wood Craftsmanship – Designed with a solid wood look, thick platform base, chunky block legs, rounded branch details, and natural grain texture, this bed brings handcrafted character to rustic, farmhouse, boho, cabin, and nature-inspired bedrooms.
+🪵 Solid Wood Look with Smooth Flowing Form – Designed with a substantial solid wood appearance, this freestanding bookcase features soft rounded edges, open compartments, and a seamless carved style that feels both artistic and functional. It brings a premium furniture look to living rooms, reading corners, offices, and creative interiors.
 
-🛏️ Multiple Mattress Size Options – Available for Crib/Toddler 28" x 52", Twin 38" x 75", Twin XL 38" x 80", Full/Double 54" x 75", Queen 60" x 80", King/Eastern King 76" x 80", California King 72" x 84", and custom size requests.
+🏡 Display, Store, and Divide Your Space – More than a standard bookcase, this piece works as a bookshelf, decor shelf, display unit, and room divider. The open layout keeps your room feeling airy while helping organize books, baskets, vases, plants, and collectibles in a clean, elevated way.
 
-🏡 Statement Bedroom Decor – The woven branch canopy headboard adds height, depth, and visual drama, making this tree bed ideal for master bedrooms, guest rooms, themed rooms, cozy cabins, boutique stays, or creative modern interiors.
+🎨 Four Finish Options to Match Your Home – Choose the tone that best fits your interior style: Warm Wood, Dark Warm Wood, Cool Dark Wood, or Natural Finish. Each option complements a range of decor styles including modern organic, rustic, minimalist, wabi-sabi, Japandi, and contemporary living rooms.
 
-🎨 Finish Options Available – Choose from warm wood, dark warm wood, cool dark wood, or natural finish to match your bedroom style, whether you prefer a rich rustic tone, deeper lodge look, earthy modern feel, or light natural aesthetic.
+📏 Available in Multiple Sizes – Offered in 59"H x 45"W x 12"D, 63"H x 45"W x 12"D, 71"H x 51"W x 12"D, and 79"H x 51"W x 12"D, giving you flexible options for smaller corners, larger living spaces, or open-plan rooms that need both storage and visual separation.
 
-🎁 Unique Gift for Home & Nature Lovers – A memorable choice for housewarmings, bedroom makeovers, weddings, anniversaries, holidays, or anyone who loves woodland decor, sculptural furniture, and one-of-a-kind statement pieces.
+✨ Decorative Yet Practical – The varied shelf openings create a curated, custom look while still offering useful storage space for daily essentials and favorite display pieces. Use it to style a living room wall, define a seating area, or create a cozy library-inspired corner without overwhelming the room.
 
-🛠️ Designed for Assembly & Everyday Use – The platform structure is made to support daily bedroom use while the branch-style headboard creates an artisan look. Assembly is required, and clear setup guidance is recommended for best installation.
+🎁 Beautiful Gift for Home Lovers – A thoughtful housewarming, wedding, anniversary, or new home gift for anyone who loves timeless furniture, modern rustic decor, and unique storage pieces that feel artistic as well as useful.
 ```
 
 Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết lại mô tả sản phẩm gốc trên.
@@ -302,18 +302,23 @@ Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết
 ### 5. Cập nhật biến thể
 
 - Cập nhật biến thể cho sản phẩm theo field product.variant_data được liệt kê trong file `./config.json`.
-- **Lưu ý:** field base_price trong file config.json sẽ được sử dụng làm giá cơ bản cho sản phẩm, field variant_data.additional_price sẽ được sử dụng để cộng thêm vào giá cơ bản để tạo ra giá cuối cùng cho biến thể.
+- **Lưu ý:**
+  - field base_price trong file config.json sẽ được sử dụng làm giá cơ bản cho sản phẩm, field variant_data.additional_price sẽ được sử dụng để cộng thêm vào giá cơ bản để tạo ra giá cuối cùng cho biến thể.
+  - tắt track quantity cho tất cả các biến thể của sản phẩm này, tức là sản phẩm này có thể được đặt mua mãi mãi.
+- **Quan trọng:**
+  - nếu sản phẩm đã có sẵn loại biến thể tên là "Wood Finish" thì giữ nguyên loại biến thể đó và chỉ cập nhật hoặc thêm các loại biến thể khác.
+  - vì shopify chỉ cho phép tối đa 3 loại biến thể, nên **NẾU TỔNG SỐ LOẠI BIẾN THỂ TÍNH THÊM CẢ "WOOD FINISH" ĐANG CÓ SẴN VƯỢT QUÁ 3 LOẠI BIẾN THỂ THÌ HÃY DỪNG TOÀN BỘ QUÁ TRÌNH CẬP NHẬT, SAU ĐÓ BÁO CHO TÔI BIẾT**.
 
 ### 6. Cập nhật metafields
 
 - rich_description:
 
 ```html
-<div class="description-root"><img alt="c" src="https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif" class="a-spacing-base a-lazy-loaded" data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/f97cc7a8-a12d-491f-b741-6067513fa1bd.__CR0,5,1586,981_PT0_SX970_V1___.png"> <img alt="x" src="https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif" class="a-spacing-base a-lazy-loaded" data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/2d7d84a7-4f52-414e-95af-96b6b19aa019.__CR0,5,1586,981_PT0_SX970_V1___.png"> <img alt="x" src="https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif" class="a-spacing-base a-lazy-loaded" data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/4e07dc04-937e-4117-a2ba-daa71f768736.__CR0,5,1586,981_PT0_SX970_V1___.png"> <img alt="x" src="https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif" class="a-spacing-base a-lazy-loaded" data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/2ef8abb7-1c1c-4f3c-9f45-89261ec82a44.__CR0,5,1586,981_PT0_SX970_V1___.png"> <img alt="x" src="https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif" class="a-spacing-base a-lazy-loaded" data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/94b03d6a-7101-40fa-907b-eac555e2ca17.__CR0,5,1586,981_PT0_SX970_V1___.png"> <img alt="g" src="https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif" class="a-spacing-base a-lazy-loaded" data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/dd2da1f2-3107-4a21-82ad-a959ebf0a2cf.__CR0,0,1594,986_PT0_SX970_V1___.png"></div>
+<div class="description-root"></div>
 ```
 
-- amazon_link: "https://www.amazon.com/dp/B0H7H2ZPTN?th=1"
-- author_info: "gid://shopify/Metaobject/195647701049"
+- amazon_link: "https://www.amazon.com/dp/B0H7BRPWN1?th=1"
+- author_info: "gid://shopify/Metaobject/195646947385"
 - product_material: "wood"
 - seo_product_title:
   - Viết từ product title gốc thành dạng **long-tail keyword**.
@@ -353,7 +358,7 @@ Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết
 
 ### 10. Cập nhật product type
 
-- Cập nhật product type cho sản phẩm là `bed-frame-with-headboard`.
+- Cập nhật product type cho sản phẩm là `bookshelf-modern`.
 
 ### 11. Cập nhật vendor
 

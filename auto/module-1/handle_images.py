@@ -882,6 +882,27 @@ def process_config_file(
     product_images = get_product_images(payload)
     product = payload["product"]
 
+    # Remove placeholder/loading images (their URL contains "loadIndicators")
+    # from product.product_images before any processing. Mutate the list in
+    # place so payload reflects the removal, then persist it to config.json.
+    removed_urls = [
+        item
+        for item in product_images
+        if isinstance(item, str) and "loadIndicators" in item
+    ]
+    if removed_urls:
+        product_images[:] = [
+            item
+            for item in product_images
+            if not (isinstance(item, str) and "loadIndicators" in item)
+        ]
+        for removed_url in removed_urls:
+            LOGGER.info(
+                "Removed placeholder image URL containing 'loadIndicators': %s",
+                removed_url,
+            )
+        atomic_write_json(config_path, payload)
+
     if make_backup:
         backup_path = create_backup(config_path)
         LOGGER.info("Backup created: %s", backup_path)

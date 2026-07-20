@@ -24,6 +24,10 @@ KEEP_CONTENT = [
 	"script-timing.js",
 	"temp.html",
 	"todo.md",
+    "prepare_config.cmd",
+    "prepare_config.py",
+    "config.prepare.json",
+    "toast.cmd",
 ]
 
 

@@ -1,0 +1,1 @@
+powershell.exe -NoProfile -Command "New-BurntToastNotification -Text 'Codex hoàn tất', 'Sản phẩm đã update thành công.'"
