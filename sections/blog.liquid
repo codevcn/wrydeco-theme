@@ -4,11 +4,13 @@
 {% endcomment %}
 
 {% liquid
-  assign hero_image = section.settings.hero_image_asset | default: 'collections-page-banner.png'
   assign blog_intro = section.settings.intro
   if blog_intro == blank
     assign blog_intro = 'Design notes, material stories, and quiet interiors shaped around sculptural wood.'
   endif
+  assign blog_trust_icons = 'sourcing|artisan|made|truck|warranty|support' | split: '|'
+  assign blog_trust_titles = 'Ethical Sourcing|Handcrafted by Artisans|Made to Order|Secure & Insured Delivery|5-Year Warranty|Dedicated Support' | split: '|'
+  assign blog_trust_subtitles = "Sustainably harvested wood|Decades of experience|Limited, not mass produced|White-glove service|For structural integrity|We're here for you" | split: '|'
 %}
 
 <div class="blog-editorial" id="BlogEditorial-{{ section.id }}">
@@ -16,7 +18,7 @@
     <div class="blog-editorial__media" aria-hidden="true">
       <img
         class="blog-editorial__hero-image"
-        src="{{ hero_image | file_url }}"
+        src="{{ 'blog-page-banner.png' | file_url }}"
         width="1792"
         height="1024"
         alt=""
@@ -26,30 +28,42 @@
     </div>
 
     <div class="blog-editorial__panel">
-      <nav class="blog-editorial__breadcrumbs" aria-label="Breadcrumb">
-        <a href="{{ routes.root_url }}">Home</a>
-        <span aria-hidden="true">/</span>
-        <span>{{ blog.title | escape }}</span>
-      </nav>
-
       <p class="blog-editorial__eyebrow">WRYDECO Journal</p>
       <h1 id="BlogEditorialTitle-{{ section.id }}" class="blog-editorial__title">{{ blog.title | escape }}</h1>
       <p class="blog-editorial__intro">{{ blog_intro | escape }}</p>
-
-      <div class="blog-editorial__signals" aria-label="Journal focus">
-        <span>Material Notes</span>
-        <span>Interior Stories</span>
-        <span>Made-to-Order Guidance</span>
-      </div>
     </div>
   </section>
 
-  {% paginate blog.articles by section.settings.posts_per_page %}
+  <aside class="blog-editorial__trust" aria-label="Why choose WRYDECO">
+    <div class="blog-editorial__trust-inner">
+      {%- for trust_icon in blog_trust_icons -%}
+        <div class="blog-editorial__trust-item">
+          <span class="blog-editorial__trust-icon" aria-hidden="true">
+            {%- render 'hero-feature-icon', icon: trust_icon -%}
+          </span>
+          <span class="blog-editorial__trust-text">
+            <span class="blog-editorial__trust-title">{{ blog_trust_titles[forloop.index0] | escape }}</span>
+            <span class="blog-editorial__trust-subtitle">
+              {{- blog_trust_subtitles[forloop.index0] | escape -}}
+            </span>
+          </span>
+        </div>
+      {%- endfor -%}
+    </div>
+  </aside>
+
+  {% paginate blog.articles by 50 %}
     {% if blog.articles.size > 0 %}
       <section class="blog-editorial__listing" aria-labelledby="BlogEditorialLatest-{{ section.id }}">
         <header class="blog-editorial__section-header">
-          <p class="blog-editorial__eyebrow">Latest Stories</p>
-          <h2 id="BlogEditorialLatest-{{ section.id }}">Thoughtful rooms, honest materials</h2>
+          <div class="blog-editorial__section-copy">
+            <p class="blog-editorial__journal-label">Journal</p>
+            <h2 id="BlogEditorialLatest-{{ section.id }}">Stories in Solid Wood</h2>
+            <span class="blog-editorial__section-rule" aria-hidden="true"></span>
+            <p class="blog-editorial__section-intro">
+              Journal entries on craftsmanship, design inspiration, and the quiet beauty of handcrafted living.
+            </p>
+          </div>
         </header>
 
         <div class="blog-editorial__grid" role="list">
@@ -60,19 +74,26 @@
                 assign article_excerpt = article.content | strip_html | strip | truncatewords: 24
               endif
               assign article_image_alt = article.image.alt | default: article.title
+              assign article_image_size = '(max-width: 767px) 100vw, (max-width: 1024px) 100vw, 25vw'
+              if forloop.first
+                assign article_image_size = '(max-width: 1024px) 100vw, 50vw'
+              endif
             %}
 
-            <article class="blog-editorial__card" role="listitem">
+            <article
+              class="blog-editorial__card{% if forloop.first %} blog-editorial__card--featured{% endif %}"
+              role="listitem"
+            >
               <a class="blog-editorial__card-media" href="{{ article.url }}" aria-label="{{ article.title | escape }}">
                 {% if article.image %}
                   {{
                     article.image
-                    | image_url: width: 960
+                    | image_url: width: 1440
                     | image_tag:
                       class: 'blog-editorial__card-image',
                       loading: 'lazy',
-                      widths: '360, 540, 720, 960',
-                      sizes: '(max-width: 767px) 100vw, 33vw',
+                      widths: '360, 540, 720, 960, 1200, 1440',
+                      sizes: article_image_size,
                       alt: article_image_alt
                   }}
                 {% else %}
@@ -81,6 +102,10 @@
               </a>
 
               <div class="blog-editorial__card-body">
+                {% if forloop.first %}
+                  <span class="blog-editorial__featured-label">Featured</span>
+                {% endif %}
+
                 <div class="blog-editorial__card-meta">
                   {{ article.published_at | time_tag: format: 'date' }}
                   <span aria-hidden="true"></span>
@@ -91,11 +116,16 @@
                   <a href="{{ article.url }}">{{ article.title | escape }}</a>
                 </h2>
 
-                {% if article_excerpt != blank %}
-                  <p class="blog-editorial__card-excerpt">{{ article_excerpt }}</p>
+                {% if forloop.first %}
+                  {% if article_excerpt != blank %}
+                    <p class="blog-editorial__card-excerpt">{{ article_excerpt }}</p>
+                  {% endif %}
                 {% endif %}
 
-                <a class="blog-editorial__read-more" href="{{ article.url }}">Read story</a>
+                <a class="blog-editorial__read-more" href="{{ article.url }}">
+                  <span>Read story</span>
+                  {%- render 'blog-link-arrow' -%}
+                </a>
               </div>
             </article>
           {% endfor %}
@@ -148,17 +178,43 @@
 </div>
 
 {% stylesheet %}
+  body:has(.blog-editorial) .header__heading-logo {
+    filter: brightness(var(--blog-header-logo-brightness)) invert(var(--blog-header-logo-invert));
+  }
+
+  body:has(.blog-editorial) .header__heading-link,
+  body:has(.blog-editorial) .header__nav-item,
+  body:has(.blog-editorial) .header__icon,
   body:has(.blog-editorial) .header__icon--search,
   body:has(.blog-editorial) .header__icon--cart,
   body:has(.blog-editorial) .header__icon--menu,
   body:has(.blog-editorial) .header__icon--account,
   body:has(.blog-editorial) .header__localization .loc-picker__code,
   body:has(.blog-editorial) .header__localization .loc-picker__chevron {
+    color: var(--color-cream);
+  }
+
+  body:has(.blog-editorial) .header {
+    border: var(--sp-0);
+    background-color: transparent;
+  }
+
+  body:has(.blog-editorial) .header__nav-item:hover,
+  body:has(.blog-editorial) .header__icon:hover {
+    color: var(--color-stone);
+  }
+
+  body:has(.blog-editorial) .header__consultation-link {
+    border-color: color-mix(in srgb, var(--color-cream) 64%, transparent);
+    background-color: transparent;
+    color: var(--color-cream);
+  }
+
+  body:has(.blog-editorial) .header__consultation-link:hover {
+    background-color: var(--color-cream);
     color: var(--color-earth-brown);
   }
-  body:has(.blog-editorial) .header {
-    border: 1px solid #cfcbc7b4;
-  }
+
   .loc-picker__option .loc-picker__code {
     color: var(--color-earth-brown) !important;
   }
@@ -168,36 +224,39 @@
     background: var(--surface-default);
     color: var(--text-primary);
     font-family: var(--font-body);
-    margin-top: 90px;
+    margin-top: var(--sp-0);
   }
 
   .blog-editorial__hero {
-    display: grid;
-    grid-template-columns: minmax(var(--sp-0), 1.1fr) minmax(var(--sp-0), 0.9fr);
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    align-items: center;
     min-height: min(var(--layout-hero-wide-height), 100vh);
+    overflow: hidden;
     background: var(--color-cream);
   }
 
   .blog-editorial__media {
     position: relative;
-    min-height: min(var(--layout-hero-wide-height), 100vh);
-    overflow: hidden;
+    z-index: var(--z-index-0);
+    width: 100%;
   }
 
   .blog-editorial__media::after {
     content: '';
     position: absolute;
-    inset: 0;
-    background: linear-gradient(90deg, transparent 62%, color-mix(in srgb, var(--color-earth-brown) 24%, transparent));
+    inset: var(--sp-0);
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.22) 16%, rgba(0, 0, 0, 0) 100%);
     pointer-events: none;
   }
 
   .blog-editorial__hero-image {
     width: 100%;
-    height: 100%;
-    min-height: inherit;
+    height: auto;
     display: block;
     object-fit: cover;
+    object-position: center;
   }
 
   .blog-editorial__panel {
@@ -205,34 +264,31 @@
     flex-direction: column;
     justify-content: center;
     gap: var(--sp-4);
-    min-width: 0;
-    padding: calc(var(--sp-12) + var(--sp-5)) clamp(var(--sp-6), var(--sp-8), var(--sp-10)) var(--sp-10);
-    border-left: var(--border-width) solid color-mix(in srgb, var(--color-earth-brown) 14%, transparent);
-    background: linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--color-milk) 92%, transparent),
-      color-mix(in srgb, var(--color-stone) 64%, transparent)
-    );
+    width: min(100%, var(--page-max-width));
+    min-width: var(--sp-0);
+    margin-inline: auto;
+    padding: var(--sp-12) var(--container-padding-x);
+    background: transparent;
+    position: absolute;
+    inset: var(--sp-0);
   }
 
-  .blog-editorial__breadcrumbs {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: var(--sp-2);
-    color: var(--text-secondary);
-    font-size: var(--font-size-caption);
-    letter-spacing: var(--letter-spacing-wide);
-    text-transform: uppercase;
+  .blog-editorial__panel > * {
+    opacity: var(--blog-hero-hidden-opacity);
+    transform: translateY(var(--blog-hero-reveal-distance));
+    animation: blog-editorial-reveal var(--timing-extra-long) var(--ease-out) forwards;
   }
 
-  .blog-editorial__breadcrumbs a {
-    color: inherit;
-    text-decoration: none;
+  .blog-editorial__panel > :first-child {
+    animation-delay: var(--timing-short);
   }
 
-  .blog-editorial__breadcrumbs a:hover {
-    color: var(--color-earth-brown);
+  .blog-editorial__panel > :nth-child(2) {
+    animation-delay: var(--timing-base);
+  }
+
+  .blog-editorial__panel > :nth-child(3) {
+    animation-delay: var(--timing-long);
   }
 
   .blog-editorial__eyebrow {
@@ -240,7 +296,7 @@
     align-items: center;
     gap: var(--sp-3);
     margin: 0;
-    color: var(--color-clay);
+    color: var(--color-cream);
     font-size: var(--font-size-caption);
     font-weight: var(--font-weight-bold);
     letter-spacing: calc(var(--letter-spacing-wide) * 2);
@@ -257,40 +313,88 @@
   .blog-editorial__title {
     max-width: 10ch;
     margin: 0;
-    color: var(--text-primary);
+    color: var(--color-cream);
     font-family: var(--font-display);
     font-size: var(--font-size-display-2xl);
     font-weight: var(--font-weight-regular);
     line-height: var(--line-height-display);
     letter-spacing: var(--letter-spacing-normal);
+    text-shadow: var(--blog-hero-text-shadow);
   }
 
   .blog-editorial__intro {
     max-width: 44ch;
     margin: 0;
-    color: var(--text-secondary);
+    color: var(--color-cream);
     font-size: var(--font-size-body-lg);
     line-height: var(--line-height-generous);
+    text-shadow: var(--blog-hero-text-shadow);
   }
 
-  .blog-editorial__signals {
+  .blog-editorial__trust {
+    background-color: var(--color-earth-brown);
+    color: var(--color-cream);
+  }
+
+  .blog-editorial__trust-inner {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(var(--sp-0), 1fr));
+    align-items: center;
+    width: min(100%, var(--page-max-width));
+    margin-inline: auto;
+    padding: var(--sp-5) var(--container-padding-x);
+    gap: var(--sp-4);
+  }
+
+  .blog-editorial__trust-item {
     display: flex;
-    flex-wrap: wrap;
-    gap: var(--sp-2);
-    margin-top: var(--sp-2);
+    align-items: center;
+    gap: var(--sp-3);
+    min-width: var(--sp-0);
   }
 
-  .blog-editorial__signals span {
-    padding: var(--sp-2) var(--sp-3);
-    border: var(--border-width) solid color-mix(in srgb, var(--color-earth-brown) 16%, transparent);
-    border-radius: var(--radius-full);
-    color: var(--text-secondary);
+  .blog-editorial__trust-item + .blog-editorial__trust-item {
+    padding-left: var(--sp-4);
+    border-left: var(--border-width) solid color-mix(in srgb, var(--color-cream) 24%, transparent);
+  }
+
+  .blog-editorial__trust-icon {
+    display: flex;
+    flex: none;
+    color: var(--color-cream);
+  }
+
+  .blog-editorial__trust-icon svg {
+    width: var(--sp-5);
+    height: var(--sp-5);
+  }
+
+  .blog-editorial__trust-text {
+    display: flex;
+    min-width: var(--sp-0);
+    flex-direction: column;
+    gap: var(--sp-1);
+  }
+
+  .blog-editorial__trust-title {
+    color: var(--color-cream);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-semibold);
+    line-height: var(--line-height-snug);
+  }
+
+  .blog-editorial__trust-subtitle {
+    color: var(--color-stone);
     font-size: var(--font-size-caption);
-    letter-spacing: var(--letter-spacing-wide);
-    text-transform: uppercase;
+    line-height: var(--line-height-snug);
   }
 
-  .blog-editorial__listing,
+  .blog-editorial__listing {
+    width: min(100%, var(--page-max-width));
+    margin-inline: auto;
+    padding-block: var(--sp-10);
+  }
+
   .blog-editorial__empty {
     width: min(calc(100% - (var(--layout-padding-desktop) * 2)), var(--layout-max-width));
     margin-inline: auto;
@@ -299,9 +403,24 @@
 
   .blog-editorial__section-header {
     display: grid;
-    gap: var(--sp-3);
-    max-width: 56ch;
-    margin-bottom: var(--sp-6);
+    grid-template-columns: minmax(var(--sp-0), 1fr) auto;
+    align-items: end;
+    gap: var(--sp-6);
+    margin-bottom: var(--sp-5);
+  }
+
+  .blog-editorial__section-copy {
+    display: grid;
+    gap: var(--sp-4);
+  }
+
+  .blog-editorial__journal-label {
+    margin: var(--sp-0);
+    color: var(--color-earth-brown);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: calc(var(--letter-spacing-wide) * 4);
+    text-transform: uppercase;
   }
 
   .blog-editorial__section-header h2,
@@ -315,33 +434,74 @@
     width: max-content;
   }
 
+  .blog-editorial__section-rule {
+    width: var(--sp-7);
+    height: var(--border-width);
+    background-color: var(--color-clay);
+  }
+
+  .blog-editorial__section-intro {
+    max-width: 54ch;
+    margin: var(--sp-0);
+    color: var(--text-secondary);
+    font-size: var(--font-size-body-md);
+    line-height: var(--line-height-relaxed);
+  }
+
+  .blog-editorial__link-arrow {
+    width: var(--sp-4);
+    height: var(--sp-4);
+    flex: none;
+    transition: transform var(--timing-short) var(--ease-standard);
+  }
+
+  .blog-editorial__read-more:hover .blog-editorial__link-arrow {
+    transform: translateX(var(--sp-1));
+  }
+
   .blog-editorial__grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(var(--sp-0), 1fr));
+    grid-template-columns: repeat(4, minmax(var(--sp-0), 1fr));
+    grid-auto-flow: row;
     gap: var(--sp-5);
   }
 
   .blog-editorial__card {
     display: flex;
     flex-direction: column;
+    height: fit-content;
     overflow: hidden;
     border: var(--border-width) solid color-mix(in srgb, var(--color-earth-brown) 12%, transparent);
     border-radius: var(--radius-lg);
     background: color-mix(in srgb, var(--surface-elevated) 74%, transparent);
     box-shadow: var(--shadow-elevation-1);
   }
+  .blog-editorial__card:nth-of-type(1) {
+    height: auto;
+  }
+
+  .blog-editorial__card--featured {
+    grid-column: span 2;
+    grid-row: span 2;
+  }
 
   .blog-editorial__card-media {
     display: block;
+    height: var(--blog-card-media-height);
+    flex: none;
     overflow: hidden;
     color: inherit;
     text-decoration: none;
   }
 
+  .blog-editorial__card--featured .blog-editorial__card-media {
+    height: var(--blog-featured-media-height);
+  }
+
   .blog-editorial__card-image,
   .blog-editorial__card-placeholder {
     width: 100%;
-    aspect-ratio: 4 / 3;
+    height: 100%;
     display: block;
     object-fit: cover;
     background: linear-gradient(
@@ -352,11 +512,38 @@
   }
 
   .blog-editorial__card-body {
+    position: relative;
     display: flex;
     flex: 1;
+    min-height: var(--sp-0);
     flex-direction: column;
+    gap: var(--sp-2);
+    padding: var(--sp-4);
+    height: fit-content;
+  }
+
+  .blog-editorial__card--featured .blog-editorial__card-body {
     gap: var(--sp-3);
     padding: var(--sp-5);
+  }
+
+  .blog-editorial__featured-label {
+    position: absolute;
+    top: var(--sp-4);
+    right: var(--sp-5);
+    padding: var(--sp-2) var(--sp-4);
+    border-radius: var(--radius-sm);
+    background-color: var(--color-earth-brown);
+    color: var(--color-cream);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: calc(var(--letter-spacing-wide) * 2);
+    line-height: var(--line-height-snug);
+    text-transform: uppercase;
+  }
+
+  .blog-editorial__card--featured .blog-editorial__card-meta {
+    padding-right: var(--sp-12);
   }
 
   .blog-editorial__card-meta {
@@ -380,7 +567,7 @@
   .blog-editorial__card-title {
     margin: 0;
     font-family: var(--font-display);
-    font-size: var(--font-size-body-2xl);
+    font-size: var(--font-size-body-xl);
     font-weight: var(--font-weight-regular);
     line-height: var(--line-height-snug);
   }
@@ -388,7 +575,10 @@
   .blog-editorial__card-title a {
     color: inherit;
     text-decoration: none;
-    font-family: var(--font-roboto);
+  }
+
+  .blog-editorial__card--featured .blog-editorial__card-title {
+    font-size: var(--font-size-body-3xl);
   }
 
   .blog-editorial__card-title a:hover,
@@ -401,14 +591,16 @@
     color: var(--text-secondary);
     font-size: var(--font-size-body-sm);
     line-height: var(--line-height-generous);
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
   }
 
   .blog-editorial__read-more {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
     margin-top: auto;
-    color: var(--color-earth-brown);
-    font-size: var(--font-size-body-sm);
-    font-weight: var(--font-weight-semibold);
-    text-decoration: none;
   }
 
   .blog-editorial__pagination {
@@ -504,53 +696,109 @@
     line-height: var(--line-height-generous);
   }
 
+  @keyframes blog-editorial-reveal {
+    from {
+      opacity: var(--blog-hero-hidden-opacity);
+      transform: translateY(var(--blog-hero-reveal-distance));
+    }
+
+    to {
+      opacity: var(--blog-hero-visible-opacity);
+      transform: translateY(var(--sp-0));
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .blog-editorial__panel > * {
+      opacity: var(--blog-hero-visible-opacity);
+      transform: none;
+      animation: none;
+    }
+  }
+
   @media screen and (max-width: 1024px) {
-    .blog-editorial__hero {
-      grid-template-columns: minmax(var(--sp-0), 1fr);
-    }
-
-    .blog-editorial__media {
-      min-height: calc(var(--sp-12) * 4);
-    }
-
     .blog-editorial__panel {
       padding: var(--sp-7) var(--layout-padding-tablet);
-      border-left: 0;
-      border-top: var(--border-width) solid color-mix(in srgb, var(--color-earth-brown) 14%, transparent);
     }
 
-    .blog-editorial__listing,
+    .blog-editorial__listing {
+      width: min(calc(100% - (var(--layout-padding-tablet) * 2)), var(--page-max-width));
+      padding-block: var(--sp-8);
+    }
+
     .blog-editorial__empty {
       width: min(calc(100% - (var(--layout-padding-tablet) * 2)), var(--layout-max-width));
       padding-block: var(--sp-8);
     }
 
-    .blog-editorial__grid,
+    .blog-editorial__grid {
+      grid-template-columns: repeat(2, minmax(var(--sp-0), 1fr));
+      grid-auto-rows: auto;
+    }
+
     .blog-editorial__empty-notes {
       grid-template-columns: repeat(2, minmax(var(--sp-0), 1fr));
+    }
+
+    .blog-editorial__card--featured {
+      grid-column: span 2;
+      grid-row: auto;
+    }
+
+    .blog-editorial__card-media,
+    .blog-editorial__card--featured .blog-editorial__card-media {
+      height: auto;
+    }
+
+    .blog-editorial__card-image,
+    .blog-editorial__card-placeholder {
+      height: auto;
+      aspect-ratio: var(--blog-card-image-ratio);
+    }
+
+    .blog-editorial__card--featured .blog-editorial__card-image,
+    .blog-editorial__card--featured .blog-editorial__card-placeholder {
+      aspect-ratio: var(--blog-featured-image-ratio);
     }
 
     .blog-editorial__empty {
       grid-template-columns: minmax(var(--sp-0), 1fr);
       gap: var(--sp-5);
     }
+
+    .blog-editorial__trust-inner {
+      grid-template-columns: repeat(3, minmax(var(--sp-0), 1fr));
+      gap: var(--sp-5);
+    }
+
+    .blog-editorial__trust-item:nth-child(3n + 1) {
+      padding-left: var(--sp-0);
+      border-left: var(--sp-0);
+    }
   }
 
   @media screen and (max-width: 767px) {
+    .blog-editorial__hero {
+      min-height: calc(var(--sp-12) * 2);
+    }
+
     .blog-editorial__media {
-      min-height: min(calc(var(--sp-12) * 3.5), 62vh);
+      position: absolute;
+      inset: var(--sp-0);
+      width: 100%;
+      height: 100%;
     }
 
     .blog-editorial__media::after {
-      background: linear-gradient(
-        180deg,
-        transparent 54%,
-        color-mix(in srgb, var(--color-earth-brown) 24%, transparent)
-      );
+      background: var(--blog-hero-overlay);
+    }
+
+    .blog-editorial__hero-image {
+      height: 100%;
     }
 
     .blog-editorial__panel {
-      padding: var(--sp-6) var(--layout-padding-mobile) var(--sp-7);
+      padding: var(--sp-6) var(--layout-padding-mobile) var(--sp-5);
     }
 
     .blog-editorial__title {
@@ -563,7 +811,11 @@
       font-size: var(--font-size-body-md);
     }
 
-    .blog-editorial__listing,
+    .blog-editorial__listing {
+      width: min(calc(100% - (var(--layout-padding-mobile) * 2)), var(--page-max-width));
+      padding-block: var(--sp-7);
+    }
+
     .blog-editorial__empty {
       width: min(calc(100% - (var(--layout-padding-mobile) * 2)), var(--layout-max-width));
       padding-block: var(--sp-7);
@@ -571,12 +823,27 @@
 
     .blog-editorial__section-header h2,
     .blog-editorial__empty h2 {
+      width: 100%;
       font-size: var(--font-size-display-sm);
+      text-wrap: balance;
     }
 
-    .blog-editorial__grid,
+    .blog-editorial__section-header {
+      grid-template-columns: minmax(var(--sp-0), 1fr);
+      align-items: start;
+      padding-inline: var(--sp-0);
+    }
+
+    .blog-editorial__grid {
+      grid-template-columns: minmax(var(--sp-0), 1fr);
+    }
+
     .blog-editorial__empty-notes {
       grid-template-columns: minmax(var(--sp-0), 1fr);
+    }
+
+    .blog-editorial__card--featured {
+      grid-column: span 1;
     }
 
     .blog-editorial__card-body,
@@ -589,8 +856,20 @@
       width: 100%;
     }
 
-    .blog-editorial {
-      margin-top: 65px;
+    .blog-editorial__trust-inner {
+      grid-template-columns: repeat(2, minmax(var(--sp-0), 1fr));
+      gap: var(--sp-4);
+      padding-inline: var(--layout-padding-mobile);
+    }
+
+    .blog-editorial__trust-item:nth-child(odd) {
+      padding-left: var(--sp-0);
+      border-left: var(--sp-0);
+    }
+
+    .blog-editorial__trust-item:nth-child(even) {
+      padding-left: var(--sp-4);
+      border-left: var(--border-width) solid color-mix(in srgb, var(--color-cream) 24%, transparent);
     }
   }
 {% endstylesheet %}
@@ -600,25 +879,10 @@
   "name": "Editorial blog",
   "settings": [
     {
-      "type": "text",
-      "id": "hero_image_asset",
-      "label": "Hero image file name",
-      "default": "collections-page-banner.png"
-    },
-    {
       "type": "textarea",
       "id": "intro",
       "label": "Intro",
       "default": "Design notes, material stories, and quiet interiors shaped around sculptural wood."
-    },
-    {
-      "type": "range",
-      "id": "posts_per_page",
-      "label": "Posts per page",
-      "min": 3,
-      "max": 12,
-      "step": 1,
-      "default": 6
     }
   ]
 }

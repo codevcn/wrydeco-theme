@@ -353,6 +353,16 @@
           if (panel) panel.inert = !willOpen;
         });
       });
+
+      // Fix for desktop mega menu staying open after click (due to :focus-within)
+      var desktopItems = document.querySelectorAll('.header__nav-item-has-mega-menu');
+      desktopItems.forEach(function (item) {
+        item.addEventListener('mouseleave', function () {
+          if (item.contains(document.activeElement)) {
+            document.activeElement.blur();
+          }
+        });
+      });
     }
 
     function initMobileMenu() {

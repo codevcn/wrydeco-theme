@@ -1,4 +1,8 @@
-<div class="client-reviews">
+{%- assign customer_testimonials = shop.metaobjects.customer_testimonial.values -%}
+{%- assign first_testimonial = customer_testimonials | first -%}
+
+{%- if customer_testimonials != blank -%}
+<div class="client-reviews" data-client-reviews>
   <div class="client-reviews__inner">
     <!-- Left Column: Fixed Text -->
     <div class="client-reviews__left">
@@ -12,43 +16,47 @@
         Clients Say
       </h2>
 
-      <div class="client-reviews__quote-mark">“</div>
+      <div class="client-reviews__quote-mark">&ldquo;</div>
 
-      <p class="client-reviews__quote-text" id="client-review-text"></p>
+      <p class="client-reviews__quote-text" data-client-review-text>
+        {{- first_testimonial.customer_comment.value | escape -}}
+      </p>
 
       <div class="client-reviews__author-box">
-        <p class="client-reviews__author-name" id="client-review-author"></p>
-        <p class="client-reviews__author-location" id="client-review-location"></p>
+        <p class="client-reviews__author-name" data-client-review-author>
+          {{- first_testimonial.customer_name.value | escape -}}
+        </p>
+        <p class="client-reviews__author-location" data-client-review-location>
+          {{- first_testimonial.customer_location.value | escape -}}
+        </p>
       </div>
     </div>
 
     <!-- Right Column: Image Slider -->
     <div class="client-reviews__right">
-      <div class="client-reviews__slider" id="client-reviews-slider">
-        {%- for block in section.blocks -%}
+      <div class="client-reviews__slider" data-client-reviews-slider>
+        {%- for testimonial in customer_testimonials -%}
+          {%- assign customer_name = testimonial.customer_name.value -%}
+          {%- assign customer_comment = testimonial.customer_comment.value -%}
+          {%- assign customer_location = testimonial.customer_location.value -%}
+          {%- assign review_image_url = testimonial.review_image_url.value -%}
+          {%- assign product_type = testimonial.product_type_to_review.value -%}
+          {%- assign review_image_alt = 'WRYDECO customer testimonial' -%}
+          {%- if product_type != blank -%}
+            {%- capture review_image_alt -%}{{ product_type }} reviewed by {{ customer_name }}{%- endcapture -%}
+          {%- elsif customer_name != blank -%}
+            {%- capture review_image_alt -%}WRYDECO customer testimonial from {{ customer_name }}{%- endcapture -%}
+          {%- endif -%}
           <div
-            class="client-reviews__card"
-            data-review="{{ block.settings.review_text | escape }}"
-            data-author="{{ block.settings.author_name | escape }}"
-            data-location="{{ block.settings.author_location | escape }}"
-            {{ block.shopify_attributes }}
+            class="client-reviews__card{% if forloop.first %} slider-focused{% endif %}"
+            data-review="{{ customer_comment | escape }}"
+            data-author="{{ customer_name | escape }}"
+            data-location="{{ customer_location | escape }}"
+            data-product-type="{{ product_type | escape }}"
           >
-            {%- assign review_image_alt = block.settings.image.alt | default: block.settings.author_name | default: 'WRYDECO client home' -%}
-            {%- if block.settings.image != blank -%}
-              {{
-                block.settings.image
-                | image_url: width: 800
-                | image_tag: class: 'client-reviews__img', loading: 'lazy', draggable: 'false', alt: review_image_alt
-              }}
-            {%- else -%}
-              {%- assign fallback_asset = block.settings.fallback_image -%}
-              {%- if forloop.index == 1 -%}
-                {%- assign fallback_asset = 'curated-collections-img-2.png' -%}
-              {%- elsif forloop.index == 2 -%}
-                {%- assign fallback_asset = 'curated-collections-img-3.png' -%}
-              {%- endif -%}
+            {%- if review_image_url != blank -%}
               <img
-                src="{{ fallback_asset | file_url }}"
+                src="{{ review_image_url | escape }}"
                 alt="{{ review_image_alt | escape }}"
                 class="client-reviews__img"
                 loading="lazy"
@@ -63,6 +71,7 @@
     </div>
   </div>
 </div>
+{%- endif -%}
 
 {% stylesheet %}
   .client-reviews {
@@ -322,13 +331,16 @@
 
 {% javascript %}
   document.addEventListener('DOMContentLoaded', () => {
-    const slider = document.getElementById('client-reviews-slider');
+    const sectionRoot = document.querySelector('[data-client-reviews]');
+    if (!sectionRoot) return;
+
+    const slider = sectionRoot.querySelector('[data-client-reviews-slider]');
     if (!slider) return;
 
     const cards = Array.from(slider.querySelectorAll('.client-reviews__card'));
-    const textEl = document.getElementById('client-review-text');
-    const authorEl = document.getElementById('client-review-author');
-    const locationEl = document.getElementById('client-review-location');
+    const textEl = sectionRoot.querySelector('[data-client-review-text]');
+    const authorEl = sectionRoot.querySelector('[data-client-review-author]');
+    const locationEl = sectionRoot.querySelector('[data-client-review-location]');
 
     let isUpdating = false;
     let currentFocusedCard = null;
@@ -347,7 +359,7 @@
       authorEl.style.opacity = '0';
 
       setTimeout(() => {
-        textEl.textContent = `“${card.dataset.review}”`;
+        textEl.textContent = card.dataset.review;
         authorEl.textContent = card.dataset.author;
         if (locationEl) locationEl.textContent = card.dataset.location || '';
         textEl.style.opacity = '1';
@@ -457,89 +469,9 @@
   "tag": "section",
   "class": "section section-client-reviews",
   "settings": [],
-  "blocks": [
-    {
-      "type": "review",
-      "name": "Review",
-      "limit": 12,
-      "settings": [
-        {
-          "type": "image_picker",
-          "id": "image",
-          "label": "Room Image"
-        },
-        {
-          "type": "text",
-          "id": "fallback_image",
-          "label": "Fallback Asset Filename",
-          "default": "review-1.jpg"
-        },
-        {
-          "type": "textarea",
-          "id": "review_text",
-          "label": "Review Text",
-          "default": "Every piece from WRYDECO brings a sense of calm and character to our home. The craftsmanship is exceptional, and you can truly feel the beauty of natural wood in every detail."
-        },
-        {
-          "type": "text",
-          "id": "author_name",
-          "label": "Author Name",
-          "default": "Nguyen H. Minh"
-        },
-        {
-          "type": "text",
-          "id": "author_location",
-          "label": "Author Location",
-          "default": "New York, USA"
-        }
-      ]
-    }
-  ],
   "presets": [
     {
-      "name": "What Our Clients Say",
-      "blocks": [
-        {
-          "type": "review",
-          "settings": {
-            "fallback_image": "review-1.jpg",
-            "review_text": "Love the table and the craftsmanship. Two things to be aware of: the piece is substantial and beautifully made.",
-            "author_name": "David N."
-          }
-        },
-        {
-          "type": "review",
-          "settings": {
-            "fallback_image": "review-2.jpg",
-            "review_text": "The grain and hand-shaped edges are even more beautiful in person. It changed the whole room.",
-            "author_name": "Melissa O."
-          }
-        },
-        {
-          "type": "review",
-          "settings": {
-            "fallback_image": "review-3.jpg",
-            "review_text": "Every guest asks who made it. The craftsmanship feels personal, thoughtful, and built to last.",
-            "author_name": "Ryan C."
-          }
-        },
-        {
-          "type": "review",
-          "settings": {
-            "fallback_image": "review-4.jpg",
-            "review_text": "Our shelf looks like it grew into the room. Installation was clear and the finish is flawless.",
-            "author_name": "Nicole P."
-          }
-        },
-        {
-          "type": "review",
-          "settings": {
-            "fallback_image": "review-5.jpg",
-            "review_text": "A functional piece of art. The scale, warmth, and natural form are exactly what the space needed.",
-            "author_name": "Jasmine W."
-          }
-        }
-      ]
+      "name": "What Our Clients Say"
     }
   ]
 }

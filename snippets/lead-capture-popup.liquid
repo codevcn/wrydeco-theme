@@ -175,7 +175,6 @@
 <div
   class="lead-capture-reminder"
   data-lead-capture-reminder
-  style="--reminder-bg: url('{{ 'lead-capture-popup.png' | file_url }}');"
   hidden
 >
   <button
@@ -185,8 +184,8 @@
     aria-haspopup="dialog"
     aria-controls="LeadCaptureDialog"
   >
-    <span class="lead-capture-reminder__text">
-      <svg xmlns="http://www.w3.org/2000/svg" width="1.8em" height="1.8em" viewBox="0 0 1024 1024">
+    <span class="lead-capture-reminder__icon" aria-hidden="true">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
         <path d="M0 0h1024v1024H0z" fill="none" />
         <path fill="currentColor" d="M160 894c0 17.7 14.3 32 32 32h286V550H160zm386 32h286c17.7 0 32-14.3 32-32V550H546zm334-616H732.4c13.6-21.4 21.6-46.8 21.6-74c0-76.1-61.9-138-138-138c-41.4 0-78.7 18.4-104 47.4c-25.3-29-62.6-47.4-104-47.4c-76.1 0-138 61.9-138 138c0 27.2 7.9 52.6 21.6 74H144c-17.7 0-32 14.3-32 32v140h366V310h68v172h366V342c0-17.7-14.3-32-32-32m-402-4h-70c-38.6 0-70-31.4-70-70s31.4-70 70-70s70 31.4 70 70zm138 0h-70v-70c0-38.6 31.4-70 70-70s70 31.4 70 70s-31.4 70-70 70" />
       </svg>
@@ -254,18 +253,15 @@
   .lead-capture-reminder {
     position: fixed;
     z-index: calc(var(--z-drawer) + 9);
-    bottom: var(--sp-4);
-    left: var(--sp-4);
-    display: inline-flex;
+    bottom: var(--sp-5);
+    left: var(--sp-6);
+    display: flex;
+    height: var(--lead-capture-reminder-height);
+    width: var(--lead-capture-reminder-width);
     align-items: stretch;
-    overflow: hidden;
-    border: var(--border-width) solid var(--color-clay);
+    border: 3px solid var(--color-beige);
     border-radius: var(--radius-full);
-    background-color: var(--color-brown-dark);
-    background-image: var(--reminder-bg);
-    background-position: center;
-    background-repeat: no-repeat;
-    background-size: cover;
+    background: #000;
     box-shadow: var(--shadow-elevation-2);
     opacity: 0;
     transform: translateY(var(--sp-3));
@@ -276,31 +272,46 @@
   .lead-capture-reminder.is-visible {
     opacity: 1;
     transform: translateY(var(--sp-0));
+    animation: lead-capture-reminder-shake var(--lead-capture-reminder-shake-duration) var(--ease-in-out)
+      var(--lead-capture-reminder-shake-delay) infinite;
   }
 
-  .lead-capture-reminder:hover {
+  .lead-capture-reminder:hover,
+  .lead-capture-reminder:focus-within {
     box-shadow: var(--shadow-elevation-3);
+    animation-play-state: paused;
   }
 
   .lead-capture-reminder__open {
     display: flex;
-    min-height: var(--sp-6-bigger);
     align-items: center;
-    padding: var(--sp-2) var(--sp-4);
+    gap: calc(var(--sp-1) / 2);
     border: var(--sp-0);
     background: transparent;
     color: var(--text-inverse);
     cursor: pointer;
     font-family: var(--font-body);
-    font-size: var(--font-size-body-md);
+    font-size: var(--lead-capture-reminder-label-size);
     font-weight: var(--font-weight-semibold);
-    letter-spacing: 0.05rem;
+    letter-spacing: var(--letter-spacing-normal);
     line-height: var(--line-height-normal);
-    text-transform: uppercase;
+    margin: auto;
+    width: fit-content;
+    height: fit-content;
   }
 
-  .lead-capture-reminder__text {
+  .lead-capture-reminder__icon {
+    display: grid;
+    width: var(--lead-capture-reminder-icon-size);
+    height: var(--lead-capture-reminder-icon-size);
+    flex: none;
+    place-items: center;
     text-shadow: var(--sp-0) var(--border-width) var(--sp-2) color-mix(in srgb, var(--color-ebony) 65%, transparent);
+  }
+
+  .lead-capture-reminder__icon svg {
+    width: 100%;
+    height: 100%;
   }
 
   .lead-capture-reminder__open:focus-visible {
@@ -309,26 +320,31 @@
   }
 
   .lead-capture-reminder__close {
-    display: grid;
-    width: var(--sp-6-bigger);
-    min-height: var(--sp-6-bigger);
+    display: flex;
     place-items: center;
     padding: var(--sp-0);
     border: var(--sp-0);
-    border-left: var(--border-width) solid color-mix(in srgb, var(--color-clay) 60%, transparent);
-    background: color-mix(in srgb, var(--color-ebony) 28%, transparent);
     color: var(--text-inverse);
     cursor: pointer;
+    transition: var(--transition-fast);
+    position: absolute;
+    right: var(--sp-0);
+    top: 5%;
+    transform: translate(80%, -80%);
+    background: #000;
+    border-radius: var(--radius-full);
+    padding: var(--sp-1);
+    border: 2px solid var(--color-beige);
     transition: var(--transition-fast);
   }
 
   .lead-capture-reminder__close svg {
-    width: var(--sp-5);
-    height: var(--sp-5);
+    width: 16px;
+    height: 16px;
+    border-radius: var(--radius-full);
   }
-
   .lead-capture-reminder__close:hover {
-    background: color-mix(in srgb, var(--color-ebony) 50%, transparent);
+    transform: translate(80%, -80%) scale(1.1);
   }
 
   .lead-capture-reminder__close:focus-visible {
@@ -642,6 +658,34 @@
   @keyframes lead-capture-spin {
     to {
       transform: rotate(360deg);
+    }
+  }
+
+  @keyframes lead-capture-reminder-shake {
+    0%,
+    74%,
+    100% {
+      transform: translateY(var(--sp-0)) translateX(var(--sp-0)) rotate(var(--lead-capture-reminder-rest-angle));
+    }
+
+    77%,
+    83%,
+    89% {
+      transform: translateY(var(--sp-0)) translateX(calc(var(--lead-capture-reminder-shake-distance) * -1))
+        rotate(calc(var(--lead-capture-reminder-shake-angle) * -1));
+    }
+
+    80%,
+    86%,
+    92% {
+      transform: translateY(var(--sp-0)) translateX(var(--lead-capture-reminder-shake-distance))
+        rotate(var(--lead-capture-reminder-shake-angle));
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .lead-capture-reminder.is-visible {
+      animation: none;
     }
   }
 
