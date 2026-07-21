@@ -1,0 +1,43 @@
+# Products matching conditions:
+
+- CÓ ít nhất một variant option chứa 'Wood Finish' hoặc 'Color' (case insensitive)
+
+- Contemporary Wooden Tree Branch Display Bookcase Shelf (ID: 8337726373945) - Options: Wood Finish, Choose Size, Add On-Site Installation
+- Contemporary Wooden Tree Branch Display Bookcase Shelf (ID: 8337726636089) - Options: Wood Finish, Choose Size, Add On-Site Installation
+- Custom Handcrafted Organic Wave Solid Wood Coffee Table (ID: 8345189482553) - Options: Color, Size
+- Custom Handcrafted Organic Wave Solid Wood Coffee Table (ID: 8345189515321) - Options: Color, Size
+- Handcrafted Curved Oak Wood Coffee Table Centerpiece (ID: 8345189449785) - Options: Color, Size
+- Handcrafted Tree Branch 3-Level Floating Wood Shelf C2 (ID: 8337724244025) - Options: Choose Wood Finish, Choose Size (W X H X D)
+- Handcrafted Tree Branch 3-Level Floating Wood Shelf C5 (ID: 8337724571705) - Options: Choose Wood Finish, Choose Size (W X H X D)
+- Handcrafted Tree Branch Floating Shelf for Wall Display (ID: 8337723949113) - Options: Wood Finish, Branches Decoration, Choose Size (W X H X D)
+- Handcrafted Tree Branch Floating Shelf Set, Two Levels (ID: 8337725194297) - Options: Wood Finish, Choose Size (W X H X D), Choose Wood Finish
+- Handcrafted Tree Branch Floating Shelf, Three Levels (ID: 8337724768313) - Options: Wood Finish, Choose Size (W X H X D), Choose Wood Finish
+- Handcrafted Tree Branch Floating Wood Wall Shelf C2 (ID: 8337725128761) - Options: Choose Wood Finish, Choose Size (W X H X D)
+- Handcrafted Tree Branch Floating Wood Wall Shelf C5 (ID: 8337724932153) - Options: Choose Wood Finish, Choose Size (W X H X D)
+- Handcrafted Tree Branch Floating Wood Wall Shelf Set (ID: 8337725358137) - Options: Choose Wood Finish, Choose Size (W X H X D)
+- Handmade Fluted Wood Floating Shelf Scalloped Edge (ID: 8337728471097) - Options: Wood Finish, Choose Width Option, Choose Depth Option
+- Handmade Fluted Wood Floating Shelf Scalloped Trim (ID: 8337728700473) - Options: Choose Width Option, Choose Depth Option, Wood Finish
+- Handmade Fluted Wood Floating Shelf Scalloped Trim (ID: 8337729355833) - Options: Wood Finish, Choose Width Option, Choose Depth Option
+- Handmade Solid Wood Tree Branch Bookshelf and Wall Decor (ID: 8346124386361) - Options: Color, Size
+- Handmade Wooden Tree Bookshelf for Kids Reading Spaces (ID: 8337725587513) - Options: Wood Finish, Choose Size, Add On-Site Installation
+- Large Wood Tree-Shaped Bookcase Rustic Branch Shelf (ID: 8337725521977) - Options: Wood Finish, Choose Size (W X H X D), Add On-Site Installation
+- Modern Curved Sculptural Wood Bookcase Living Room (ID: 8337727389753) - Options: Wood Finish, Choose Size (W X H X D), Add On-Site Installation
+- Modern Sculptural Curved Solid Wood Bookshelf Decor (ID: 8337727651897) - Options: Wood Finish, Choose Size (W X H X D), Add On-Site Installation
+- Mushroom Tree Bookshelf with Tiered Wooden Display Shelves (ID: 8337726144569) - Options: Wood Finish, Choose Size, Add On-Site Installation
+- Natural Wood Tree Branch Floating Shelf, Three Levels (ID: 8337724407865) - Options: Wood Finish, Choose Size (W X H X D), Choose Wood Finish
+- Nature Inspired Display Wooden Mushroom Tree Bookshelf (ID: 8337725718585) - Options: Wood Finish, Choose Size, Add On-Site Installation
+- Nature Inspired Mushroom Tree Bookshelf Fantasy Display (ID: 8337725947961) - Options: Wood Finish, Choose Size, Add On-Site Installation
+- Organic Curved Solid Wood Bookshelf Freestanding (ID: 8337726799929) - Options: Wood Finish, Choose Size (H X D inches), Choose Width
+- Rustic Driftwood Solid Wood Floating Shelf Wall Decor (ID: 8346124484665) - Options: Color, Size
+- Rustic Solid Wood Tree Branch Bookshelf Vintage Decor (ID: 8337727979577) - Options: Wood Finish, Choose Size
+- Sculptural Solid Wood Curved Bookshelf Display Decor (ID: 8337727258681) - Options: Wood Finish, Choose Size (W X H X D), Add On-Site Installation
+- Sculptural Tree Branch Floating Shelf, Three Levels (ID: 8337724178489) - Options: Wood Finish, Choose Size (W X H X D)
+- Solid Wood Arched Floating Two Tier Wall Shelf Option 1 (ID: 8337724080185) - Options: Choose Wood Finish, Do You Need A Custom Size?, Would You Like To HAND-CARVE Text/Art To Custom Your Product?
+- Solid Wood Fluted Floating Shelf Scalloped Edge Decor (ID: 8337728929849) - Options: Wood Finish, Choose Width Option, Choose Depth Option
+- Solid Wood Organic Curved Bookshelf and Room Divider (ID: 8337726963769) - Options: Wood Finish, Choose Size (H X D inches), Choose Width
+- Solid Wood Organic Curved Freestanding Bookcase Decor (ID: 8337727127609) - Options: Wood Finish, Choose Size (H X D inches), Choose Width
+- Solid Wood Sculptural Curved Bookshelf Modern Storage (ID: 8337727455289) - Options: Wood Finish, Choose Size (W X H X D), Add On-Site Installation
+- Solid Wood Tree Branch Wall-Mounted Display Bookcase (ID: 8337727848505) - Options: Wood Finish, Choose Size
+- Wooden Mushroom Tree Bookshelf Nature Inspired Display (ID: 8337725816889) - Options: Wood Finish, Choose Size, Add On-Site Installation
+- Wooden Mushroom Tree Bookshelf with Tiered Display Shelves (ID: 8337726079033) - Options: Wood Finish, Choose Size, Add On-Site Installation
+- Wooden Tree Bookcase with Wall-Mounted Branch Display (ID: 8337726537785) - Options: Wood Finish, Choose Size, Add On-Site Installation
