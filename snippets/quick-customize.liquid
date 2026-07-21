@@ -1,0 +1,951 @@
+{% doc %}
+  Renders a single, page-wide "quick customize" dialog: a variant picker with
+  gallery, live price and add-to-cart. It is data-source agnostic — product data
+  is fetched lazily from `/products/{handle}.js` the moment a trigger is clicked,
+  so nothing is embedded in the page HTML.
+
+  Render this once per page (any section/template that shows customizable product
+  cards can render it). Rendering it more than once is safe — duplicate dialogs
+  are de-duplicated at runtime.
+
+  To open the dialog from a card, give the trigger element:
+    - the `data-quick-customize` attribute, and
+    - a product handle via its own `data-product-handle` OR any ancestor that
+      carries `data-product-handle`.
+
+  @param {string} [eyebrow] - Small label above the title. Default "Quick customize".
+  @param {string} [add_label] - Add-to-cart button label. Default "Add to cart".
+  @param {string} [details_label] - "View details" link label. Default "View details".
+  @param {string} [toast_position] - Toast position for feedback. Default "bottom-left".
+
+  @example
+  {% render 'quick-customize' %}
+  {% render 'quick-customize',
+    eyebrow: section.settings.quick_eyebrow,
+    add_label: section.settings.quick_add_label,
+    details_label: section.settings.details_label
+  %}
+{% enddoc %}
+
+<div
+  class="sp-quick"
+  data-quick-modal
+  hidden
+  aria-hidden="true"
+  data-money-format="{{ shop.money_format | escape }}"
+  data-toast-position="{{ toast_position | default: 'bottom-left' }}"
+>
+  <div class="sp-quick__overlay" data-quick-close></div>
+  <div class="sp-quick__panel" role="dialog" aria-modal="true" aria-labelledby="QuickCustomizeTitle">
+    <button type="button" class="sp-quick__close" aria-label="Close" data-quick-close>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <path d="M6 6l12 12M18 6 6 18"></path>
+      </svg>
+    </button>
+
+    <div class="sp-quick__loading" data-quick-loading hidden>
+      <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><g stroke="currentColor"><circle cx="12" cy="12" r="9.5" fill="none" stroke-linecap="round" stroke-width="3"><animate attributeName="stroke-dasharray" calcMode="spline" dur="1.5s" keySplines="0.42,0,0.58,1;0.42,0,0.58,1;0.42,0,0.58,1" keyTimes="0;0.475;0.95;1" repeatCount="indefinite" values="0 150;42 150;42 150;42 150"/><animate attributeName="stroke-dashoffset" calcMode="spline" dur="1.5s" keySplines="0.42,0,0.58,1;0.42,0,0.58,1;0.42,0,0.58,1" keyTimes="0;0.475;0.95;1" repeatCount="indefinite" values="0;-16;-59;-59"/></circle><animateTransform attributeName="transform" dur="2s" repeatCount="indefinite" type="rotate" values="0 12 12;360 12 12"/></g></svg>
+    </div>
+
+    <div class="sp-quick__media" data-quick-media hidden>
+      <div class="sp-quick__media-main">
+        <img data-quick-image src="" alt="" width="800" height="800" loading="lazy">
+      </div>
+      <div class="sp-quick__thumbs" data-quick-thumbs hidden></div>
+    </div>
+
+    <div class="sp-quick__body custom-scrollbar" data-quick-body hidden>
+      <p class="sp-quick__eyebrow">{{ eyebrow | default: 'Quick customize' | escape }}</p>
+      <h3 class="sp-quick__title" id="QuickCustomizeTitle" data-quick-title></h3>
+
+      <div class="sp-quick__options" data-quick-options></div>
+
+      <div class="sp-quick__price">
+        <span class="sp-quick__price-current" data-quick-price></span>
+        <span class="sp-quick__price-compare" data-quick-compare hidden></span>
+      </div>
+
+      <div class="sp-quick__add-base">
+        <button type="button" class="sp-quick__add" data-quick-add>
+          <span class="sp-quick__add-icon" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 16 16"><path fill="currentColor" d="M.5 1a.5.5 0 0 0 0 1h1.11l.401 1.607l1.498 7.985A.5.5 0 0 0 4 12h1a2 2 0 1 0 0 4a2 2 0 0 0 0-4h7a2 2 0 1 0 0 4a2 2 0 0 0 0-4h1a.5.5 0 0 0 .491-.408l1.5-8A.5.5 0 0 0 14.5 3H2.89l-.405-1.621A.5.5 0 0 0 2 1zM6 14a1 1 0 1 1-2 0a1 1 0 0 1 2 0m7 0a1 1 0 1 1-2 0a1 1 0 0 1 2 0M9 5.5V7h1.5a.5.5 0 0 1 0 1H9v1.5a.5.5 0 0 1-1 0V8H6.5a.5.5 0 0 1 0-1H8V5.5a.5.5 0 0 1 1 0"/></svg>
+          </span>
+          <span data-quick-add-text>{{ add_label | default: 'Add to cart' | escape }}</span>
+        </button>
+      </div>
+
+      <a class="sp-quick__details" data-quick-details href="#">{{ details_label | default: 'View details' | escape }}</a>
+    </div>
+  </div>
+</div>
+
+{% stylesheet %}
+  html.sp-quick-open {
+    overflow: hidden;
+  }
+
+  /* Hide the live-chat launcher while the popup is open so it doesn't overlap the
+     dialog. The chat widget renders at a near-max z-index, so hiding it is more
+     reliable than out-stacking it. */
+  .sp-quick-open #shopify-chat,
+  .sp-quick-open .shopify-chat,
+  .sp-quick-open #chat-widget-container,
+  .sp-quick-open iframe[title*='chat' i],
+  .sp-quick-open iframe[id*='chat' i] {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+
+  .sp-quick {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-modal, 1000);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--sp-5);
+  }
+
+  .sp-quick[hidden] {
+    display: none;
+  }
+
+  .sp-quick__overlay {
+    position: absolute;
+    inset: 0;
+    background: var(--bg-overlay, rgba(30, 20, 12, 0.55));
+    opacity: 0;
+    transition: opacity var(--timing-base) var(--ease-standard);
+  }
+
+  .sp-quick.is-open .sp-quick__overlay {
+    opacity: 1;
+  }
+
+  .sp-quick__panel {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+    grid-template-rows: minmax(0, 1fr);
+    max-width: 80vw;
+    max-height: calc(100dvh - var(--sp-8));
+    overflow: hidden;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    background: var(--surface-elevated, #fffcf8);
+    box-shadow: var(--shadow-modal, 0 30px 80px rgba(30, 20, 12, 0.28));
+    opacity: 0;
+    transform: translateY(var(--sp-3));
+    transition: opacity var(--timing-base) var(--ease-standard), transform var(--timing-base) var(--ease-out);
+  }
+
+  .sp-quick.is-open .sp-quick__panel {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* While product data is loading the media/body are hidden; keep a sensible box. */
+  .sp-quick__panel.is-loading {
+    display: block;
+    min-width: min(360px, 90vw);
+    min-height: 220px;
+  }
+
+  .sp-quick__loading {
+    position: absolute;
+    inset: 0;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-earth-brown, #4a2c18);
+  }
+
+  .sp-quick__loading[hidden] {
+    display: none;
+  }
+
+  .sp-quick__panel.is-loading .sp-quick__loading {
+    display: flex;
+  }
+
+  .sp-quick__loading svg {
+    width: var(--sp-8);
+    height: var(--sp-8);
+  }
+
+  .sp-quick__close {
+    position: absolute;
+    top: var(--sp-3);
+    right: var(--sp-3);
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--sp-7);
+    height: var(--sp-7);
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-full);
+    background: color-mix(in srgb, var(--surface-elevated) 88%, transparent);
+    color: var(--color-bark, #4a2c18);
+    cursor: pointer;
+    transition: background-color var(--timing-short) var(--ease-standard);
+  }
+
+  .sp-quick__close:hover {
+    background: var(--color-cream, #f0e9e1);
+  }
+
+  .sp-quick__close svg {
+    width: var(--sp-5);
+    height: var(--sp-5);
+  }
+
+  .sp-quick__media {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+    background: var(--color-stone, #e5dbd0);
+  }
+
+  .sp-quick__media[hidden] {
+    display: none;
+  }
+
+  .sp-quick__media-main {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .sp-quick__media-main img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .sp-quick__thumbs {
+    display: flex;
+    flex: 0 0 auto;
+    gap: var(--sp-2);
+    padding: var(--sp-2);
+    background: var(--surface-elevated, #fffcf8);
+    border-top: 1px solid var(--border-light);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .sp-quick__thumbs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .sp-quick__thumbs[hidden] {
+    display: none;
+  }
+
+  .sp-quick__thumb {
+    flex: 0 0 auto;
+    width: var(--sp-8);
+    height: var(--sp-8);
+    padding: 0;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: var(--color-stone, #e5dbd0);
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity var(--timing-short) var(--ease-standard), border-color var(--timing-short) var(--ease-standard);
+  }
+
+  .sp-quick__thumb img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .sp-quick__thumb:hover {
+    opacity: 1;
+  }
+
+  .sp-quick__thumb[aria-current='true'] {
+    opacity: 1;
+    border-color: var(--color-earth-brown, #4a2c18);
+  }
+
+  .sp-quick__body {
+    display: flex;
+    flex-direction: column;
+    padding: var(--sp-6);
+    overflow-y: auto;
+    min-height: 0;
+    height: 100%;
+  }
+
+  .sp-quick__body[hidden] {
+    display: none;
+  }
+
+  .sp-quick__eyebrow {
+    margin: 0 0 var(--sp-2);
+    color: var(--color-earth-brown, #4a2c18);
+    font-family: var(--font-body);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--eyebrow-tracking, 0.3em);
+    text-transform: uppercase;
+  }
+
+  .sp-quick__title {
+    margin: 0 0 var(--sp-4);
+    color: var(--color-text, #2e1d14);
+    font-family: var(--font-heading);
+    font-size: clamp(22px, 2.4vw, 28px);
+    font-weight: var(--font-weight-semibold);
+    line-height: 1.12;
+  }
+
+  .sp-quick__options {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-4);
+    margin-bottom: var(--sp-5);
+  }
+
+  .sp-quick__option {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+  }
+
+  .sp-quick__option-label {
+    font-family: var(--font-body);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--letter-spacing-wide);
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+
+  .sp-quick__pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-2);
+  }
+
+  .sp-quick__pill {
+    min-height: var(--sp-7);
+    padding: var(--sp-2) var(--sp-4);
+    border: 1px solid var(--border-dark, rgba(74, 44, 24, 0.4));
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-sm);
+    cursor: pointer;
+    transition: var(--transition-fast);
+  }
+
+  .sp-quick__pill:hover {
+    border-color: var(--color-earth-brown, #4a2c18);
+  }
+
+  .sp-quick__pill[aria-pressed='true'] {
+    border-color: var(--color-earth-brown, #4a2c18);
+    background: var(--color-earth-brown, #4a2c18);
+    color: var(--text-inverse, #fff8f0);
+  }
+
+  .sp-quick__price {
+    display: flex;
+    align-items: baseline;
+    gap: var(--sp-3);
+    margin-top: auto;
+    padding-top: var(--sp-4);
+    border-top: 1px solid var(--border-light);
+  }
+
+  .sp-quick__price-current {
+    color: var(--color-text, #2e1d14);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-xl);
+    font-weight: var(--font-weight-bold);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .sp-quick__price-compare {
+    color: var(--text-secondary);
+    font-size: var(--font-size-body-md);
+    text-decoration: line-through;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .sp-quick__price-compare[hidden] {
+    display: none;
+  }
+
+  /* Add-to-cart matches the PDP button exactly: a "3D pushable" button whose
+     base (the wrapper) shows a soft shadow under the button's feet, and the
+     button lifts on hover / presses down on active. Values mirror the PDP source
+     (snippets/product-buy-buttons.liquid) so the two stay visually identical. */
+  .sp-quick__add-base {
+    width: 100%;
+    margin-top: var(--sp-4);
+    padding-bottom: 6px;
+    border-radius: 8px;
+    background-image: linear-gradient(
+      to top,
+      rgba(128, 128, 128, 0.9) 0%,
+      rgba(0, 0, 0, 0.5) 28%,
+      rgba(0, 0, 0, 0) 100%
+    );
+  }
+
+  .sp-quick__add {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    height: 48px;
+    border: none;
+    border-radius: 4px;
+    background-color: #3196b6;
+    color: #ffffff;
+    font-family: var(--font-body, inherit);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    box-sizing: content-box;
+  }
+  .sp-quick__add [data-quick-add-text] {
+    font-size: 1rem;
+    text-transform: uppercase;
+  }
+
+  .sp-quick__add-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .sp-quick__add-icon svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .sp-quick__add-base:hover .sp-quick__add {
+    transform: translateY(-3px);
+  }
+
+  .sp-quick__add-base:active .sp-quick__add {
+    transform: translateY(3px);
+  }
+
+  .sp-quick__add:disabled,
+  .sp-quick__add.is-loading {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .sp-quick__details {
+    margin-top: var(--sp-3);
+    color: var(--text-secondary);
+    font-size: var(--font-size-body-sm);
+    text-align: center;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .sp-quick__details:hover {
+    color: var(--color-earth-brown, #4a2c18);
+  }
+
+  .sp-quick :focus-visible {
+    outline: 2px solid var(--color-sage, #7a8968);
+    outline-offset: 2px;
+  }
+
+  @media screen and (max-width: 40rem) {
+    .sp-quick {
+      align-items: flex-end;
+      padding: 0;
+    }
+
+    .sp-quick__panel {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto;
+      width: 100%;
+      max-height: 92dvh;
+      overflow-y: auto;
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+      transform: translateY(100%);
+      max-width: 95vw;
+    }
+
+    .sp-quick.is-open .sp-quick__panel {
+      transform: none;
+    }
+
+    .sp-quick__media {
+      min-height: 0;
+    }
+
+    .sp-quick__media-main {
+      flex: 0 0 auto;
+      height: 42vh;
+    }
+
+    .sp-quick__body {
+      min-height: 0;
+      height: auto;
+      overflow: visible;
+      padding: var(--sp-5);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sp-quick__overlay,
+    .sp-quick__panel {
+      transition-duration: 0s;
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  (function () {
+    var cartRoot = (window.Shopify && window.Shopify.routes && window.Shopify.routes.root) || '/';
+    var cache = {}; // handle -> product JSON from /products/{handle}.js
+    var requestId = 0; // guards against out-of-order fetches
+    var bound = false; // whether global (document) listeners are attached
+
+    var modal = null; // the single active dialog element
+    var els = null; // cached child references of `modal`
+    var state = null; // { product, selected: [], variant, optionNames: [] }
+    var addLabel = 'Add to cart';
+    var moneyFormat = '${{amount}}';
+    var toastPosition = 'bottom-left';
+    var lastFocused = null; // element to restore focus to on close
+
+    function toast(message, type) {
+      if (window.showToast) window.showToast({ message: message, type: type, position: toastPosition });
+    }
+
+    // --- Money formatting (mirrors Shopify's `money` filter, fed by shop.money_format) ---
+    function formatWithDelimiters(cents, precision, thousands, decimal) {
+      precision = precision == null ? 2 : precision;
+      thousands = thousands == null ? ',' : thousands;
+      decimal = decimal == null ? '.' : decimal;
+      if (isNaN(cents) || cents == null) return '0';
+      var number = (cents / 100.0).toFixed(precision);
+      var parts = number.split('.');
+      var dollars = parts[0].replace(/(\d)(?=(\d\d\d)+(?!\d))/g, '$1' + thousands);
+      var rest = parts[1] ? decimal + parts[1] : '';
+      return dollars + rest;
+    }
+
+    function money(cents) {
+      var format = moneyFormat || '${{amount}}';
+      var match = format.match(/\{\{\s*(\w+)\s*\}\}/);
+      var placeholder = match ? match[1] : 'amount';
+      var value;
+      switch (placeholder) {
+        case 'amount_no_decimals':
+          value = formatWithDelimiters(cents, 0);
+          break;
+        case 'amount_with_comma_separator':
+          value = formatWithDelimiters(cents, 2, '.', ',');
+          break;
+        case 'amount_no_decimals_with_comma_separator':
+          value = formatWithDelimiters(cents, 0, '.', ',');
+          break;
+        case 'amount_with_space_separator':
+          value = formatWithDelimiters(cents, 2, ' ', ',');
+          break;
+        case 'amount_no_decimals_with_space_separator':
+          value = formatWithDelimiters(cents, 0, ' ', '');
+          break;
+        case 'amount_with_apostrophe_separator':
+          value = formatWithDelimiters(cents, 2, "'", '.');
+          break;
+        default:
+          value = formatWithDelimiters(cents, 2);
+      }
+      // Strip any HTML the money format may carry so it's safe as textContent.
+      return format.replace(/\{\{\s*\w+\s*\}\}/, value).replace(/<[^>]*>/g, '');
+    }
+
+    // Ask the Shopify CDN for a right-sized image without breaking existing params.
+    function sizeImg(url, w) {
+      if (!url) return url;
+      return url + (url.indexOf('?') > -1 ? '&' : '?') + 'width=' + w;
+    }
+
+    function optionNamesOf(product) {
+      return (product.options || []).map(function (o) {
+        return typeof o === 'string' ? o : o.name;
+      });
+    }
+
+    function fetchProduct(handle) {
+      if (cache[handle]) return Promise.resolve(cache[handle]);
+      return fetch(cartRoot + 'products/' + handle + '.js', { headers: { Accept: 'application/json' } })
+        .then(function (res) {
+          if (!res.ok) throw new Error('Could not load product');
+          return res.json();
+        })
+        .then(function (product) {
+          cache[handle] = product;
+          return product;
+        });
+    }
+
+    function addVariantToCart(variantId, onDone) {
+      fetch(cartRoot + 'cart/add.js', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/javascript' },
+        body: JSON.stringify({ id: variantId, quantity: 1 }),
+      })
+        .then(function (res) {
+          return res.json();
+        })
+        .then(function (data) {
+          if (data.status) throw new Error(data.description || 'Could not add to cart');
+          toast('Item added to your cart.', 'success');
+          document.dispatchEvent(new CustomEvent('cart:updated', { detail: { open: true } }));
+          if (onDone) onDone(true);
+        })
+        .catch(function (err) {
+          toast(err.message, 'error');
+          if (onDone) onDone(false);
+        });
+    }
+
+    // --- Variant resolution + live price ---
+    function findVariant(product, selected) {
+      for (var i = 0; i < product.variants.length; i++) {
+        var v = product.variants[i];
+        var match = true;
+        for (var j = 0; j < v.options.length; j++) {
+          if (v.options[j] !== selected[j]) {
+            match = false;
+            break;
+          }
+        }
+        if (match) return v;
+      }
+      return null;
+    }
+
+    function updateSelection() {
+      var variant = findVariant(state.product, state.selected);
+      state.variant = variant;
+      if (variant) {
+        els.price.textContent = money(variant.price);
+        if (variant.compare_at_price && variant.compare_at_price > variant.price) {
+          els.compare.textContent = money(variant.compare_at_price);
+          els.compare.hidden = false;
+        } else {
+          els.compare.hidden = true;
+        }
+        els.add.disabled = !variant.available;
+        els.addText.textContent = variant.available ? addLabel : 'Sold out';
+      } else {
+        els.price.textContent = '';
+        els.compare.hidden = true;
+        els.add.disabled = true;
+        els.addText.textContent = 'Unavailable';
+      }
+    }
+
+    function renderOptions() {
+      els.options.innerHTML = '';
+      var product = state.product;
+      var names = state.optionNames;
+      var isSingleDefault = product.variants.length === 1 && names.length === 1 && names[0] === 'Title';
+      if (isSingleDefault) return;
+
+      names.forEach(function (optName, oi) {
+        var group = document.createElement('div');
+        group.className = 'sp-quick__option';
+
+        var label = document.createElement('span');
+        label.className = 'sp-quick__option-label';
+        label.textContent = optName;
+        group.appendChild(label);
+
+        var pills = document.createElement('div');
+        pills.className = 'sp-quick__pills';
+
+        var values = [];
+        product.variants.forEach(function (v) {
+          if (values.indexOf(v.options[oi]) === -1) values.push(v.options[oi]);
+        });
+
+        values.forEach(function (val) {
+          var pill = document.createElement('button');
+          pill.type = 'button';
+          pill.className = 'sp-quick__pill';
+          pill.textContent = val;
+          if (state.selected[oi] === val) pill.setAttribute('aria-pressed', 'true');
+          pill.addEventListener('click', function () {
+            state.selected[oi] = val;
+            Array.prototype.forEach.call(pills.children, function (c) {
+              c.removeAttribute('aria-pressed');
+            });
+            pill.setAttribute('aria-pressed', 'true');
+            updateSelection();
+          });
+          pills.appendChild(pill);
+        });
+
+        group.appendChild(pills);
+        els.options.appendChild(group);
+      });
+    }
+
+    // --- Focus trap helpers ---
+    function getFocusable() {
+      var panel = modal.querySelector('.sp-quick__panel');
+      if (!panel) return [];
+      var nodes = panel.querySelectorAll('a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      return Array.prototype.filter.call(nodes, function (el) {
+        return !el.disabled && el.offsetParent !== null;
+      });
+    }
+
+    function openModal(loading) {
+      var panel = modal.querySelector('.sp-quick__panel');
+      modal.hidden = false;
+      modal.setAttribute('aria-hidden', 'false');
+      document.documentElement.classList.add('sp-quick-open');
+      if (loading) {
+        panel.classList.add('is-loading');
+        els.loading.hidden = false;
+        els.media.hidden = true;
+        els.body.hidden = true;
+      }
+      window.requestAnimationFrame(function () {
+        modal.classList.add('is-open');
+      });
+    }
+
+    function closeModal() {
+      modal.classList.remove('is-open');
+      modal.setAttribute('aria-hidden', 'true');
+      document.documentElement.classList.remove('sp-quick-open');
+      window.setTimeout(function () {
+        modal.hidden = true;
+      }, 240);
+      if (lastFocused && typeof lastFocused.focus === 'function') lastFocused.focus();
+    }
+
+    function populate(product) {
+      var panel = modal.querySelector('.sp-quick__panel');
+      panel.classList.remove('is-loading');
+      els.loading.hidden = true;
+      els.body.hidden = false;
+
+      var names = optionNamesOf(product);
+      var initial = null;
+      for (var i = 0; i < product.variants.length; i++) {
+        if (product.variants[i].available) {
+          initial = product.variants[i];
+          break;
+        }
+      }
+      if (!initial) initial = product.variants[0];
+      state = { product: product, selected: initial.options.slice(), variant: initial, optionNames: names };
+
+      els.title.textContent = product.title;
+
+      // Gallery: one large image + a row of thumbnails.
+      var raw = product.images && product.images.length ? product.images : product.featured_image ? [product.featured_image] : [];
+      var gallery = raw.map(function (src) {
+        return sizeImg(src, 800);
+      });
+      els.thumbs.innerHTML = '';
+      if (gallery.length) {
+        els.image.src = gallery[0];
+        els.image.alt = product.title;
+        els.media.hidden = false;
+      } else {
+        els.media.hidden = true;
+      }
+
+      if (gallery.length > 1) {
+        gallery.forEach(function (src, idx) {
+          var thumb = document.createElement('button');
+          thumb.type = 'button';
+          thumb.className = 'sp-quick__thumb';
+          thumb.setAttribute('aria-label', 'View image ' + (idx + 1));
+          if (idx === 0) thumb.setAttribute('aria-current', 'true');
+          var timg = document.createElement('img');
+          timg.src = src;
+          timg.alt = '';
+          timg.loading = 'lazy';
+          thumb.appendChild(timg);
+          thumb.addEventListener('click', function () {
+            els.image.src = src;
+            Array.prototype.forEach.call(els.thumbs.children, function (c) {
+              c.removeAttribute('aria-current');
+            });
+            thumb.setAttribute('aria-current', 'true');
+          });
+          els.thumbs.appendChild(thumb);
+        });
+        els.thumbs.hidden = false;
+      } else {
+        els.thumbs.hidden = true;
+      }
+
+      els.details.setAttribute('href', product.url || '#');
+
+      renderOptions();
+      updateSelection();
+
+      var firstPill = els.options.querySelector('.sp-quick__pill');
+      (firstPill || els.add).focus();
+    }
+
+    function openFor(trigger) {
+      var handle = trigger.getAttribute('data-product-handle');
+      if (!handle) {
+        var host = trigger.closest('[data-product-handle]');
+        handle = host && host.getAttribute('data-product-handle');
+      }
+      if (!handle) return;
+
+      lastFocused = trigger;
+      var reqId = ++requestId;
+      openModal(true);
+
+      fetchProduct(handle)
+        .then(function (product) {
+          if (reqId !== requestId) return; // a newer open superseded this one
+          if (!product.variants || !product.variants.length) {
+            closeModal();
+            return;
+          }
+          populate(product);
+        })
+        .catch(function (err) {
+          if (reqId !== requestId) return;
+          closeModal();
+          toast((err && err.message) || 'Could not load product', 'error');
+        });
+    }
+
+    // --- Global (document-level) listeners: one set, via event delegation ---
+    function onDocClick(e) {
+      if (!modal) return;
+      var trigger = e.target.closest('[data-quick-customize]');
+      if (!trigger) return;
+      e.preventDefault();
+      openFor(trigger);
+    }
+
+    function onKeydown(e) {
+      if (!modal || modal.hidden) return;
+      if (e.key === 'Escape') {
+        closeModal();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+
+      var focusable = getFocusable();
+      if (!focusable.length) {
+        e.preventDefault();
+        return;
+      }
+      var first = focusable[0];
+      var last = focusable[focusable.length - 1];
+      var panel = modal.querySelector('.sp-quick__panel');
+      var active = document.activeElement;
+
+      if (!panel || !panel.contains(active)) {
+        e.preventDefault();
+        first.focus();
+      } else if (e.shiftKey && active === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+
+    function onAdd() {
+      if (!state || !state.variant || els.add.disabled || els.add.classList.contains('is-loading')) return;
+      els.add.classList.add('is-loading');
+      els.addText.textContent = 'Adding…';
+      addVariantToCart(state.variant.id, function (ok) {
+        els.add.classList.remove('is-loading');
+        if (ok) closeModal();
+        else updateSelection();
+      });
+    }
+
+    // Cache the active dialog + its children. De-dupes if rendered more than once.
+    function wireModal() {
+      var modals = document.querySelectorAll('[data-quick-modal]');
+      if (!modals.length) {
+        modal = null;
+        return;
+      }
+      // Keep the first, drop any duplicates so ids stay unique.
+      for (var i = 1; i < modals.length; i++) {
+        if (modals[i].parentNode) modals[i].parentNode.removeChild(modals[i]);
+      }
+      modal = modals[0];
+      els = {
+        title: modal.querySelector('[data-quick-title]'),
+        media: modal.querySelector('[data-quick-media]'),
+        image: modal.querySelector('[data-quick-image]'),
+        thumbs: modal.querySelector('[data-quick-thumbs]'),
+        options: modal.querySelector('[data-quick-options]'),
+        price: modal.querySelector('[data-quick-price]'),
+        compare: modal.querySelector('[data-quick-compare]'),
+        add: modal.querySelector('[data-quick-add]'),
+        addText: modal.querySelector('[data-quick-add-text]'),
+        details: modal.querySelector('[data-quick-details]'),
+        loading: modal.querySelector('[data-quick-loading]'),
+        body: modal.querySelector('[data-quick-body]'),
+      };
+      moneyFormat = modal.getAttribute('data-money-format') || '${{amount}}';
+      toastPosition = modal.getAttribute('data-toast-position') || 'bottom-left';
+
+      if (modal.dataset.wired !== 'true') {
+        modal.dataset.wired = 'true';
+        addLabel = els.addText.textContent.trim();
+        modal.querySelectorAll('[data-quick-close]').forEach(function (el) {
+          el.addEventListener('click', closeModal);
+        });
+        els.add.addEventListener('click', onAdd);
+      }
+    }
+
+    function init() {
+      wireModal();
+      if (!bound) {
+        bound = true;
+        document.addEventListener('click', onDocClick);
+        document.addEventListener('keydown', onKeydown);
+      }
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+
+    // Theme editor: a re-rendered section may ship a fresh dialog — re-cache it.
+    document.addEventListener('shopify:section:load', wireModal);
+  })();
+{% endjavascript %}
