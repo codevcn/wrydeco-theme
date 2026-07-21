@@ -134,7 +134,7 @@
       display: block;
       overflow: hidden;
       border-radius: var(--radius-md);
-      width: var(--sp-9);
+      width: var(--sp-11);
       aspect-ratio: 4 / 3;
       min-height: 50px;
       background: var(--bg-secondary);
@@ -334,6 +334,17 @@
           {% assign is_finish = true %}
         {% endunless %}
       {% endif %}
+      {% comment %}
+        Branches Decoration renders as media tiles (identical to Wood Finish / color),
+        but its thumbnails come from the `variant_branches_decoration` metaobject.
+        Marking it as `is_color` reuses all the color tile visuals; `is_branches`
+        only redirects which metaobject entry and field-key prefix are used below.
+      {% endcomment %}
+      {% assign is_branches = false %}
+      {% if downcased_option contains 'branch' %}
+        {% assign is_branches = true %}
+        {% assign is_color = true %}
+      {% endif %}
       {% assign option_prop = 'option' | append: option.position %}
 
       <div
@@ -485,6 +496,9 @@
                 {% assign thumbnail_entry = finish_color_entry %}
                 {% if is_surface %}
                   {% assign thumbnail_entry = wood_surface_entry %}
+                {% endif %}
+                {% if is_branches %}
+                  {% assign thumbnail_entry = branches_decoration_entry %}
                 {% endif %}
                 {% if thumbnail_entry != blank %}
                   {% assign finish_field = thumbnail_entry[finish_key] %}
