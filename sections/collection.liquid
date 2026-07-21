@@ -32,14 +32,11 @@
           {%- liquid
             assign avail_filter = null
             assign price_filter = null
-            assign wood_native = null
             for f in collection.filters
               if f.type == 'price_range'
                 assign price_filter = f
               elsif f.param_name == 'filter.v.availability'
                 assign avail_filter = f
-              elsif f.param_name contains 'wood_type'
-                assign wood_native = f
               endif
             endfor
           -%}
@@ -155,53 +152,7 @@
             </div>
           {%- endif -%}
 
-          {%- comment -%}
-            Wood Type is rendered only when the custom.wood_type metafield filter is
-            enabled in Shopify Search & Discovery. A client-side fallback would only
-            filter the current pagination page and would produce incomplete results.
-          {%- endcomment -%}
-          {%- comment -%}tạm thời ẩn, hoàn thiện sẽ fix sau{%- endcomment -%}
-          {%- if wood_native != blank and collection.handle != 'all' -%}
-            <div
-              class="col-dropdown col-dropdown--left col-toolbar__facet{% if wood_native.active_values.size > 0 %} has-active{% endif %}"
-              data-dropdown
-            >
-              <button
-                type="button"
-                class="col-dropdown__trigger"
-                data-dropdown-toggle
-                aria-expanded="false"
-                aria-haspopup="true"
-              >
-                <span>Wood Type</span>
-                {{ col_caret }}
-              </button>
-              <div class="col-dropdown__menu">
-                {%- for value in wood_native.values -%}
-                  <a
-                    href="{% if value.active %}{{ value.url_to_remove }}{% else %}{{ value.url_to_add }}{% endif %}"
-                    class="col-dropdown__option{% if value.active %} is-active{% endif %}"
-                  >
-                    <input
-                      type="checkbox"
-                      class="visually-hidden"
-                      {% if value.active %}
-                        checked
-                      {% endif %}
-                      tabindex="-1"
-                      aria-hidden="true"
-                    >
-                    {{ col_check }}
-                    <span class="col-dropdown__option-label">{{ value.label | escape }}</span>
-                    <span class="col-dropdown__option-count">({{ value.count }})</span>
-                  </a>
-                {%- endfor -%}
-                {%- if wood_native.active_values.size > 0 -%}
-                  <a href="{{ wood_native.url_to_remove }}" class="col-dropdown__clear">Clear</a>
-                {%- endif -%}
-              </div>
-            </div>
-          {%- endif -%}
+
         </div>
       </div>
 
@@ -435,6 +386,27 @@
                     {% endif %}
                   </a>
 
+                  {%- comment -%}
+                    Wishlist heart (Wishlist by Square / Vtl app). The app hydrates the
+                    wrapper by its `Vtl-WishlistIcon__Wrapper--Id-{id}-{handle}` class and
+                    replaces the fallback SVG below with its own button once the
+                    `vitals:RenderWishlistIcons` event fires (see script). HTTPS only.
+                  {%- endcomment -%}
+                  <div
+                    class="pcard__wishlist Vtl-WishlistIcon__Wrapper Vtl-WishlistIcon__Wrapper--Id-{{ product.id }}-{{ product.handle | escape }} Vtl-CollectionCardWidget"
+                    data-pcard-wishlist
+                    data-source="os2"
+                    data-app-block="wishlist-button"
+                    data-product-id="{{ product.id }}"
+                    data-product-handle="{{ product.handle | escape }}"
+                    data-variant-id="{{ card_variant.id }}"
+                    aria-label="Add {{ product.title | escape }} to wishlist"
+                  >
+                    <span class="pcard__wishlist-icon" aria-hidden="true">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="m12.1 18.55l-.1.1l-.11-.1C7.14 14.24 4 11.39 4 8.5C4 6.5 5.5 5 7.5 5c1.54 0 3.04 1 3.57 2.36h1.86C13.46 6 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5c0 2.89-3.14 5.74-7.9 10.05M16.5 3c-1.74 0-3.41.81-4.5 2.08C10.91 3.81 9.24 3 7.5 3C4.42 3 2 5.41 2 8.5c0 3.77 3.4 6.86 8.55 11.53L12 21.35l1.45-1.32C18.6 15.36 22 12.27 22 8.5C22 5.41 19.58 3 16.5 3"/></svg>
+                    </span>
+                  </div>
+
                   <button
                     type="button"
                     class="pcard__add"
@@ -471,10 +443,6 @@
                 </div>
 
                 <div class="pcard__info">
-                  {% if ptype != blank %}
-                    <span class="pcard__pill">{{ ptype | escape }}</span>
-                  {% endif %}
-
                   <h2 class="pcard__title">
                     <a class="pcard__title-link" href="{{ product.url }}">
                       {{- product.title | split: ',' | first | split: ' - ' | first | strip | escape -}}
@@ -1164,6 +1132,74 @@
     fill: currentColor;
   }
 
+  /* Wishlist heart — top-right of the card media (opposite the "New" badge).
+     The Vtl app writes an inline `top/left` on the wrapper to honour its global
+     corner setting; force our top-right placement over it with `!important`
+     (a stylesheet !important beats a non-important inline style). */
+  .pcard__wishlist {
+    position: absolute;
+    top: var(--sp-3) !important;
+    right: var(--sp-3) !important;
+    left: auto !important;
+    z-index: 3;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-full);
+    background-color: #ffffff8a;
+    color: var(--color-earth-brown);
+    box-shadow: var(--shadow-elevation-2);
+    cursor: pointer;
+    overflow: hidden;
+    transition: transform var(--timing-short) var(--ease-standard),
+      background-color var(--timing-short) var(--ease-standard), color var(--timing-short) var(--ease-standard);
+  }
+  .pcard__wishlist:hover {
+    transform: translateY(-2px);
+    background-color: var(--color-cream);
+  }
+  .pcard__wishlist.is-loading {
+    pointer-events: none;
+    opacity: 0.6;
+  }
+  .pcard__wishlist-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-body-xl);
+    line-height: 1;
+  }
+  .pcard__wishlist-icon svg {
+    width: 20px;
+    height: 20px;
+    display: block;
+  }
+  /* Once the Vtl app hydrates it replaces the wrapper contents with its own
+     button, so the fallback SVG is removed. This rule is a safety net in case a
+     future app version appends instead of replacing. */
+  .pcard__wishlist:has(.Vtl-WishlistButton__WishlistIconButton) .pcard__wishlist-icon {
+    display: none;
+  }
+  .pcard__wishlist .Vtl-WishlistButton,
+  .pcard__wishlist .Vtl-WishlistButton__AddToWishlist {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+  }
+  .pcard__wishlist .Vtl-WishlistButton__AddToWishlist {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: currentColor;
+  }
+
   .pcard__rating {
     margin: var(--sp-2) 0 0;
     line-height: 1;
@@ -1202,16 +1238,6 @@
     flex-direction: column;
     padding: var(--sp-5) var(--sp-2) var(--sp-2);
     position: relative;
-  }
-  .pcard__pill {
-    align-self: flex-start;
-    border-radius: var(--radius-full);
-    font-family: var(--font-roboto);
-    font-size: var(--font-size-caption);
-    font-weight: var(--font-weight-semibold);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--color-clay);
   }
   .pcard__title {
     margin: var(--sp-2) 0 0;
@@ -1474,13 +1500,6 @@
     .col-pagination {
       margin-top: var(--sp-5);
     }
-    .pcard__pill {
-      display: block;
-      max-width: 100%;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
     .pcard__info {
       padding-top: var(--sp-3);
     }
@@ -1676,6 +1695,24 @@
           if (e.key === 'Escape') closeDropdowns(null);
         });
       }
+
+      // Wishlist (Wishlist by Square / Vtl app): ask the app to (re)render the
+      // heart icons into the card wrappers, and re-render on click. The app only
+      // hydrates over HTTPS.
+      function requestWishlistRender() {
+        document.dispatchEvent(new CustomEvent('vitals:ProductCardsDetected'));
+        document.dispatchEvent(new CustomEvent('vitals:RenderWishlistIcons'));
+        window.dispatchEvent(new CustomEvent('vitals:ProductCardsDetected'));
+        window.dispatchEvent(new CustomEvent('vitals:RenderWishlistIcons'));
+      }
+      document.querySelectorAll('[data-pcard-wishlist]').forEach(function (btn) {
+        if (btn.dataset.init === 'true') return;
+        btn.dataset.init = 'true';
+        btn.addEventListener('click', function () {
+          requestWishlistRender();
+        });
+      });
+      requestWishlistRender();
 
       // Sort: preserve active filters (and wood-type params) when changing sort.
       document.querySelectorAll('[data-sort-value]').forEach(function (el) {

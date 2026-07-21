@@ -70,14 +70,9 @@
 
     .variant-group__list {
       display: flex;
-      flex-wrap: nowrap;
+      flex-wrap: wrap;
       gap: var(--sp-4);
-      overflow-x: auto;
-      /* Room so selected borders / focus outlines aren't clipped by the scroll box */
       padding-block: var(--sp-1);
-      -webkit-overflow-scrolling: touch;
-      /* Scrollbar appearance comes from the shared `.custom-scrollbar` utility. */
-      cursor: grab;
       user-select: none;
       -webkit-user-select: none;
     }
@@ -134,9 +129,8 @@
       display: block;
       overflow: hidden;
       border-radius: var(--radius-md);
-      width: var(--sp-11);
       aspect-ratio: 4 / 3;
-      min-height: 50px;
+      height: 60px;
       background: var(--bg-secondary);
     }
     /* Hidden when a variant image is missing or fails to load (see initVariantMediaFallback). */
@@ -299,6 +293,13 @@
     .variant-tile:has(.variant-tile__input:checked) .variant-tile__check {
       opacity: 1;
       transform: scale(1);
+    }
+
+    @media screen and (max-width: 480px) {
+      .variant-group__list {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+      }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -596,12 +597,28 @@
     <div class="custom-color-guide__backdrop" data-custom-color-guide-close></div>
     <div class="custom-color-guide__dialog" role="dialog" aria-modal="true" aria-labelledby="CustomColorGuideTitle">
       <button type="button" class="custom-color-guide__close" data-custom-color-guide-close aria-label="Close">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
           <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
         </svg>
       </button>
       <span class="custom-color-guide__icon" aria-hidden="true">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.6"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
           <rect x="3" y="3" width="18" height="18" rx="2"></rect>
           <circle cx="8.5" cy="8.5" r="1.5"></circle>
           <path d="m21 15-5-5L5 21"></path>
@@ -609,8 +626,9 @@
       </span>
       <h2 class="custom-color-guide__title" id="CustomColorGuideTitle">Upload Your Custom Color</h2>
       <p class="custom-color-guide__text">
-        Choose Custom Color to have your piece hand-finished in your preferred shade.
-        In the next step, upload one clear, well-lit, unfiltered reference photo—such as a paint chip, fabric swatch, or wood sample—for the closest possible color match.
+        Choose Custom Color to have your piece hand-finished in your preferred shade. In the next step, upload one
+        clear, well-lit, unfiltered reference photo—such as a paint chip, fabric swatch, or wood sample—for the closest
+        possible color match.
       </p>
       <button type="button" class="custom-color-guide__continue" data-custom-color-guide-continue>Continue</button>
     </div>
@@ -673,7 +691,8 @@
       background: transparent;
       color: var(--text-secondary);
       cursor: pointer;
-      transition: background-color var(--timing-short) var(--ease-standard), color var(--timing-short) var(--ease-standard);
+      transition: background-color var(--timing-short) var(--ease-standard),
+        color var(--timing-short) var(--ease-standard);
     }
     .custom-color-guide__close:hover {
       background: var(--color-cream);
@@ -1058,9 +1077,7 @@
 
           // Let other components (e.g. the gallery wishlist heart) react to the
           // newly-selected variant. Fired after the form id and URL are updated.
-          document.dispatchEvent(
-            new CustomEvent('variant:change', { detail: { variantId: selectedVariant.id } })
-          );
+          document.dispatchEvent(new CustomEvent('variant:change', { detail: { variantId: selectedVariant.id } }));
 
           // Filter the gallery by the variant's `variant_images` metafield.
           var variantImagesRaw = variantMetafieldsMap[selectedVariant.id];
