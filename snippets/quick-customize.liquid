@@ -506,7 +506,7 @@
     height: 48px;
     border: none;
     border-radius: 4px;
-    background-color: #3196b6;
+    background-color: #ff8233;
     color: #ffffff;
     font-family: var(--font-body, inherit);
     font-size: 12px;
@@ -936,6 +936,7 @@
     var fileInput = null; // hidden device file input
     var sizePopup = null; // custom size request form
     var pendingGuideContinue = null; // runs when the guide's "Continue" is pressed
+    var pendingColorCommit = null; // commits the "Custom" colour/finish selection once its reference image uploads
     var customImage = { url: '', optionIndex: -1 }; // uploaded URL + which option it belongs to
 
     function toast(message, type) {
@@ -1088,10 +1089,14 @@
     function closeColorGuide() {
       if (guide) guide.hidden = true;
       pendingGuideContinue = null;
+      // Backing out of the guide abandons the pending "Custom" selection, so it
+      // is never committed (no dangling selected pill without an image).
+      pendingColorCommit = null;
     }
 
-    function openColorGuide(optionIndex, onContinue) {
+    function openColorGuide(optionIndex, onContinue, onCommit) {
       customImage.optionIndex = optionIndex;
+      pendingColorCommit = onCommit || null;
       // No popup in the DOM → open the file dialog directly (keeps the gesture).
       if (!guide) {
         if (onContinue) onContinue();
@@ -1124,6 +1129,12 @@
         .then(function (r) {
           if (r.ok && r.data && r.data.image_url) {
             customImage.url = r.data.image_url;
+            // Only now that a reference image exists do we commit the "Custom"
+            // selection (select the pill + update price/variant).
+            if (pendingColorCommit) {
+              pendingColorCommit();
+              pendingColorCommit = null;
+            }
             toast('Custom color uploaded.', 'success');
           } else {
             toast((r.data && r.data.detail) || 'Upload failed. Please try again.', 'error');
@@ -1280,6 +1291,15 @@
           pill.textContent = val;
           var custom = isCustomValue(val);
           if (state.selected[oi] === val) pill.setAttribute('aria-pressed', 'true');
+          function commitSelection() {
+            state.selected[oi] = val;
+            Array.prototype.forEach.call(pills.children, function (c) {
+              c.removeAttribute('aria-pressed');
+            });
+            pill.setAttribute('aria-pressed', 'true');
+            updateSelection();
+          }
+
           pill.addEventListener('click', function () {
             // Size "Custom": open the request form. It is a lead, not a purchase,
             // so it never becomes the selected variant.
@@ -1288,20 +1308,19 @@
               return;
             }
 
-            // Normal selection (also used by Colour / Wood Finish "Custom").
-            state.selected[oi] = val;
-            Array.prototype.forEach.call(pills.children, function (c) {
-              c.removeAttribute('aria-pressed');
-            });
-            pill.setAttribute('aria-pressed', 'true');
-            updateSelection();
-
-            // Colour / Wood Finish "Custom": guide → device picker → upload.
+            // Colour / Wood Finish "Custom": don't select the pill yet. The
+            // selection is committed only after a reference image is actually
+            // uploaded (guide → device picker → upload). Backing out of the
+            // guide therefore leaves the previous choice untouched.
             if (custom && cls.isColorOrFinish) {
               openColorGuide(oi, function () {
                 if (fileInput) fileInput.click();
-              });
+              }, commitSelection);
+              return;
             }
+
+            // Normal selection.
+            commitSelection();
           });
           pills.appendChild(pill);
         });
@@ -1573,10 +1592,13 @@
         var cont = guide.querySelector('[data-sp-color-guide-continue]');
         if (cont) {
           cont.addEventListener('click', function () {
-            // Capture before closing (close clears it); running it here keeps the
-            // user gesture so the browser allows the file dialog to open.
+            // Capture before hiding; running it here keeps the user gesture so
+            // the browser allows the file dialog to open. Only hide the guide —
+            // keep `pendingColorCommit` alive so a successful upload can commit
+            // the "Custom" selection (closeColorGuide would clear it).
             var next = pendingGuideContinue;
-            closeColorGuide();
+            guide.hidden = true;
+            pendingGuideContinue = null;
             if (next) next();
           });
         }
