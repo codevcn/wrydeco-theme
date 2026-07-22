@@ -18,14 +18,7 @@
   endcomment
   assign display_terms = search.terms | remove: '*' | strip
   assign current_sort = search.sort_by | default: 'relevance'
-  assign show_off_collections_entry = metaobjects.show_off_collections.values | first
-  assign popular_collection = blank
-  if show_off_collections_entry != blank
-    assign popular_collection_handles_value = show_off_collections_entry.collections_handle.value
-    assign popular_collection_handles = popular_collection_handles_value | split: ','
-    assign popular_collection_handle = popular_collection_handles.first | strip
-    assign popular_collection = collections[popular_collection_handle]
-  endif
+  assign popular_collection = collections['best-sellers']
   capture search_base_url
     echo routes.search_url | append: '?q=' | append: q_param | append: '&type=product'
   endcapture
@@ -260,22 +253,25 @@
               assign ptype = result.type
             %}
             <article class="srp-card">
-              <a class="srp-card__media" href="{{ result.url }}" aria-label="{{ result.title | escape }}">
-                {% if result.featured_image %}
-                  {{
-                    result.featured_image
-                    | image_url: width: 720
-                    | image_tag:
-                      loading: 'lazy',
-                      widths: '280, 420, 560, 720',
-                      sizes: '(min-width: 1024px) 24vw, (min-width: 768px) 33vw, 90vw',
-                      alt: result.featured_image.alt
-                    | default: result.title
-                  }}
-                {% else %}
-                  {{ 'product-1' | placeholder_svg_tag: 'placeholder-svg' }}
-                {% endif %}
-              </a>
+              <div class="srp-card__media-wrap">
+                <a class="srp-card__media" href="{{ result.url }}" aria-label="{{ result.title | escape }}">
+                  {% if result.featured_image %}
+                    {{
+                      result.featured_image
+                      | image_url: width: 720
+                      | image_tag:
+                        loading: 'lazy',
+                        widths: '280, 420, 560, 720',
+                        sizes: '(min-width: 1024px) 24vw, (min-width: 768px) 33vw, 90vw',
+                        alt: result.featured_image.alt
+                      | default: result.title
+                    }}
+                  {% else %}
+                    {{ 'product-1' | placeholder_svg_tag: 'placeholder-svg' }}
+                  {% endif %}
+                </a>
+                {% render 'wishlist-card-button', product: result %}
+              </div>
 
               <div class="srp-card__info">
                 {% if ptype != blank %}
@@ -293,6 +289,8 @@
                 <p class="srp-card__price">
                   <span class="srp-card__price-label">{{ 'search.from_price' | t }}</span> {{ result.price | money }}
                 </p>
+
+                {% render 'free-shipping-badge' %}
               </div>
             </article>
           {% endfor %}
@@ -467,6 +465,8 @@
               {% if is_new %}
                 <span class="srp-popular-card__new">New</span>
               {% endif %}
+
+              {% render 'wishlist-card-button', product: popular_product %}
             </div>
 
             <div class="srp-popular-card__info">
@@ -491,6 +491,8 @@
               {% if material != blank %}
                 <p class="srp-popular-card__material">{{ material | metafield_text }}</p>
               {% endif %}
+
+              {% render 'free-shipping-badge' %}
             </div>
           </article>
         {% endfor %}
@@ -818,6 +820,7 @@
     font-weight: var(--font-weight-bold);
   }
   .srp-popular-card__info {
+    position: relative;
     display: flex;
     flex-direction: column;
     padding: var(--sp-4) var(--sp-1) var(--sp-1);
@@ -847,6 +850,7 @@
     text-decoration: none;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
+    font-weight: var(--font-weight-semibold);
   }
   .srp-popular-card__divider {
     width: var(--sp-5);
@@ -866,7 +870,7 @@
     margin: var(--sp-2) 0 0;
     color: var(--text-primary);
     font-size: var(--font-size-body-md);
-    font-weight: var(--font-weight-semibold);
+    font-weight: var(--font-weight-bold);
   }
   .srp-popular-card__price span {
     font-weight: var(--font-weight-light);
@@ -997,6 +1001,9 @@
     border-radius: var(--radius-lg);
     padding: var(--sp-2);
   }
+  .srp-card__media-wrap {
+    position: relative;
+  }
   .srp-card__media {
     display: block;
     aspect-ratio: 6 / 5;
@@ -1015,6 +1022,7 @@
     transform: scale(1.03);
   }
   .srp-card__info {
+    position: relative;
     display: flex;
     flex-direction: column;
     padding: var(--sp-4) var(--sp-1) var(--sp-1);
@@ -1074,7 +1082,7 @@
     gap: var(--sp-5);
     align-items: flex-start;
   }
-  .srp-grid.is-list .srp-card__media {
+  .srp-grid.is-list .srp-card__media-wrap {
     flex: 0 0 220px;
     width: 220px;
   }
@@ -1177,7 +1185,7 @@
     .srp-grid.is-list .srp-card {
       flex-direction: column;
     }
-    .srp-grid.is-list .srp-card__media {
+    .srp-grid.is-list .srp-card__media-wrap {
       width: 100%;
     }
   }
@@ -1300,7 +1308,7 @@
       justify-content: space-between;
     }
     .srp-grid-wrap {
-      padding: var(--sp-5) calc(var(--layout-padding-mobile) - 6px) var(--section-spacing-mobile);
+      padding: var(--sp-5) calc(var(--layout-padding-mobile) - 6px) var(--section-spacing-tablet);
     }
     .srp-grid {
       column-gap: var(--sp-4);
@@ -1341,7 +1349,7 @@
       transform: translateX(-50%);
     }
     .srp .srp-popular__grid--fixed {
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr;
       margin-inline: 0;
       padding-inline: 0;
       overflow-x: visible;
@@ -1382,6 +1390,12 @@
       flex-direction: column;
       align-items: flex-start;
     }
+    .srp-pagination {
+      margin-top: var(--sp-6);
+    }
+    .srp-pagination__inner {
+      border-radius: 0;
+    }
   }
 {% endstylesheet %}
 
@@ -1417,6 +1431,24 @@
           window.location.assign('/search?' + params.toString());
         });
       });
+
+      // Wishlist (Wishlist by Square / Vtl app): ask the app to (re)render the
+      // heart icons into the card wrappers, and re-render on click. The app only
+      // hydrates over HTTPS.
+      function requestWishlistRender() {
+        document.dispatchEvent(new CustomEvent('vitals:ProductCardsDetected'));
+        document.dispatchEvent(new CustomEvent('vitals:RenderWishlistIcons'));
+        window.dispatchEvent(new CustomEvent('vitals:ProductCardsDetected'));
+        window.dispatchEvent(new CustomEvent('vitals:RenderWishlistIcons'));
+      }
+      document.querySelectorAll('[data-card-wishlist]').forEach(function (btn) {
+        if (btn.dataset.init === 'true') return;
+        btn.dataset.init = 'true';
+        btn.addEventListener('click', function () {
+          requestWishlistRender();
+        });
+      });
+      requestWishlistRender();
 
       document.querySelectorAll('[data-hover-gallery]').forEach(function (gallery) {
         if (gallery.dataset.initHover === 'true') return;

@@ -1,0 +1,105 @@
+{% doc %}
+  Renders the Wishlist by Square (Vtl app) mount target for a product card.
+
+  The app hydrates the wrapper by its `Vtl-WishlistIcon__Wrapper--Id-{id}-{handle}`
+  class and replaces the fallback heart SVG below with its own button once the
+  `vitals:RenderWishlistIcons` event fires (the host section must dispatch it).
+  The app only hydrates over HTTPS. Mirrors the wishlist heart on the collection
+  product card (see sections/collection.liquid).
+
+  Place it inside a `position: relative` ancestor (the card media wrapper).
+
+  @param {product} product - The product the wishlist button is for
+  @param {string} [class] - Optional extra class(es) for the wrapper
+
+  @example
+  {% render 'wishlist-card-button', product: product %}
+{% enddoc %}
+
+{%- liquid
+  assign wl_variant = product.selected_or_first_available_variant | default: product.variants.first
+-%}
+<div
+  class="card-wishlist Vtl-WishlistIcon__Wrapper Vtl-WishlistIcon__Wrapper--Id-{{ product.id }}-{{ product.handle | escape }} Vtl-CollectionCardWidget {{ class }}"
+  data-card-wishlist
+  data-source="os2"
+  data-app-block="wishlist-button"
+  data-product-id="{{ product.id }}"
+  data-product-handle="{{ product.handle | escape }}"
+  {% if wl_variant %}data-variant-id="{{ wl_variant.id }}"{% endif %}
+  aria-label="Add {{ product.title | escape }} to wishlist"
+>
+  <span class="card-wishlist__icon" aria-hidden="true">
+    <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="m12.1 18.55l-.1.1l-.11-.1C7.14 14.24 4 11.39 4 8.5C4 6.5 5.5 5 7.5 5c1.54 0 3.04 1 3.57 2.36h1.86C13.46 6 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5c0 2.89-3.14 5.74-7.9 10.05M16.5 3c-1.74 0-3.41.81-4.5 2.08C10.91 3.81 9.24 3 7.5 3C4.42 3 2 5.41 2 8.5c0 3.77 3.4 6.86 8.55 11.53L12 21.35l1.45-1.32C18.6 15.36 22 12.27 22 8.5C22 5.41 19.58 3 16.5 3"/></svg>
+  </span>
+</div>
+
+{% stylesheet %}
+  /* Wishlist heart — top-right of the card media. The Vtl app writes an inline
+     `top/left` on the wrapper to honour its global corner setting; force our
+     top-right placement over it with `!important` (a stylesheet !important beats
+     a non-important inline style). */
+  .card-wishlist {
+    position: absolute;
+    top: var(--sp-3) !important;
+    right: var(--sp-3) !important;
+    left: auto !important;
+    z-index: 3;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-full);
+    background-color: #ffffff8a;
+    color: var(--color-earth-brown);
+    box-shadow: var(--shadow-elevation-2);
+    cursor: pointer;
+    overflow: hidden;
+    transition: transform var(--timing-short) var(--ease-standard),
+      background-color var(--timing-short) var(--ease-standard), color var(--timing-short) var(--ease-standard);
+  }
+  .card-wishlist:hover {
+    transform: translateY(-2px);
+    background-color: var(--color-cream);
+  }
+  .card-wishlist.is-loading {
+    pointer-events: none;
+    opacity: 0.6;
+  }
+  .card-wishlist__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-body-xl);
+    line-height: 1;
+  }
+  .card-wishlist__icon svg {
+    width: 20px;
+    height: 20px;
+    display: block;
+  }
+  /* Once the Vtl app hydrates it replaces the wrapper contents with its own
+     button, so the fallback SVG is removed. Safety net if a future app version
+     appends instead of replacing. */
+  .card-wishlist:has(.Vtl-WishlistButton__WishlistIconButton) .card-wishlist__icon {
+    display: none;
+  }
+  .card-wishlist .Vtl-WishlistButton,
+  .card-wishlist .Vtl-WishlistButton__AddToWishlist {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+  }
+  .card-wishlist .Vtl-WishlistButton__AddToWishlist {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: currentColor;
+  }
+{% endstylesheet %}
