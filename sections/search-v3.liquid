@@ -11,6 +11,12 @@
 {% liquid
   assign per_page = 24
   assign q_param = search.terms | url_param_escape
+  comment
+    Queries reach this page with a trailing `*` per word (prefix matching) so the
+    native Storefront Search engine matches the same items the popup dropdown
+    shows. Strip the `*` for anything shown back to the shopper.
+  endcomment
+  assign display_terms = search.terms | remove: '*' | strip
   assign current_sort = search.sort_by | default: 'relevance'
   assign show_off_collections_entry = metaobjects.show_off_collections.values | first
   assign popular_collection = blank
@@ -65,7 +71,7 @@
         <input
           type="search"
           name="q"
-          value="{{ search.terms | escape }}"
+          value="{{ display_terms | escape }}"
           placeholder="{{ 'search.search_placeholder' | t }}"
           class="srp-search__input"
           aria-label="{{ 'search.title' | t }}"
@@ -157,7 +163,7 @@
         <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
       </svg>
       <h2 class="srp-state__heading">{{ 'search.no_results_heading' | t }}</h2>
-      <p class="srp-state__text">{{ 'search.no_results_text_html' | t: terms: search.terms }}</p>
+      <p class="srp-state__text">{{ 'search.no_results_text_html' | t: terms: display_terms }}</p>
     </div>
   {% else %}
     <div class="srp-toolbar">
@@ -398,13 +404,13 @@
       <div class="divider"></div>
 
       <div class="srp-popular__head">
-        <h2 id="SrpPopular-{{ section.id }}" class="srp-popular__title">Explore Popular Categories</h2>
+        <h2 id="SrpPopular-{{ section.id }}" class="srp-popular__title">Explore Popular Collection</h2>
       </div>
 
       <div
         class="srp-popular__grid srp-popular__grid--fixed"
       >
-        {% for popular_product in popular_collection.products limit: 6 %}
+        {% for popular_product in popular_collection.products limit: 12 %}
           {% liquid
             assign artist = ''
             assign author = popular_product.metafields.custom.author_info.value
@@ -1381,7 +1387,37 @@
 
 <script>
   (function () {
+    function normalizeSearchQuery(raw) {
+      if (window.wrydecoNormalizeSearchQuery) return window.wrydecoNormalizeSearchQuery(raw);
+      return String(raw || '')
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)
+        .map(function (token) {
+          return token.charAt(token.length - 1) === '*' ? token : token + '*';
+        })
+        .join(' ');
+    }
+
     function initSearchPage() {
+      // Rewrite the query to prefix-match form (`console table` -> `console* table*`)
+      // on submit, so this page uses the same matching as the popup dropdown.
+      document.querySelectorAll('.srp-search__form').forEach(function (form) {
+        if (form.dataset.normInit === 'true') return;
+        form.dataset.normInit = 'true';
+        form.addEventListener('submit', function (e) {
+          var input = form.querySelector('input[name="q"]');
+          if (!input) return;
+          var norm = normalizeSearchQuery(input.value);
+          if (!norm) return; // empty query: let the browser submit as-is
+          e.preventDefault();
+          var params = new URLSearchParams();
+          params.set('q', norm);
+          params.set('type', 'product');
+          window.location.assign('/search?' + params.toString());
+        });
+      });
+
       document.querySelectorAll('[data-hover-gallery]').forEach(function (gallery) {
         if (gallery.dataset.initHover === 'true') return;
         gallery.dataset.initHover = 'true';

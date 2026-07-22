@@ -4,7 +4,10 @@
 
   Dynamic fields (single line text): author_name, author_bio,
   author_image_url, author_slogan. The slogan is shown as the pull quote.
-  The masthead, role line and craft stats are brand scaffolding.
+  Craft stats (.ap__stats) are driven by the `display_features` field of the
+  metaobject — same source/logic as `.maker-card__features` in the
+  "Meet the Makers" homepage section.
+  The masthead and role line are brand scaffolding.
 
   https://shopify.dev/docs/storefronts/themes/architecture/templates/metaobject
 {% endcomment %}
@@ -22,18 +25,6 @@
 {%- endcapture -%}
 {%- capture ap_ornament -%}
   <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2c.7 3.6 2.7 5.6 6.3 6.3-3.6.7-5.6 2.7-6.3 6.3-.7-3.6-2.7-5.6-6.3-6.3C9.3 7.6 11.3 5.6 12 2Z" transform="translate(0 3.7)"/></svg>
-{%- endcapture -%}
-{%- capture ap_ico_leaf -%}
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6"/></svg>
-{%- endcapture -%}
-{%- capture ap_ico_hand -%}
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11V6.5a1.5 1.5 0 0 1 3 0V11"/><path d="M12 11V4.5a1.5 1.5 0 0 1 3 0V11"/><path d="M15 11V6.5a1.5 1.5 0 0 1 3 0V13a6 6 0 0 1-6 6h-1a5 5 0 0 1-3.6-1.5l-2.6-2.7a1.6 1.6 0 0 1 2.3-2.2L6 14"/></svg>
-{%- endcapture -%}
-{%- capture ap_ico_rings -%}
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5.5"/><circle cx="12" cy="12" r="2"/></svg>
-{%- endcapture -%}
-{%- capture ap_ico_sprout -%}
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20v-9"/><path d="M12 12c0-3.3-2.2-5.5-5.5-5.5C6.5 9.8 8.7 12 12 12Z"/><path d="M12 13.5c0-3.3 2.2-5.5 5.5-5.5C17.5 11.3 15.3 13.5 12 13.5Z"/></svg>
 {%- endcapture -%}
 
 <section class="ap author-profile-container" id="AuthorProfile-{{ section.id }}">
@@ -90,28 +81,43 @@
         <div class="ap__bio">{{ a_bio | newline_to_br }}</div>
       {% endif %}
 
-      <ul class="ap__stats">
-        <li class="ap__stat">
-          <span class="ap__stat-icon">{{ ap_ico_leaf }}</span>
-          <span class="ap__stat-label">Solid Teak</span>
-          <span class="ap__stat-desc">Premium Natural Wood</span>
-        </li>
-        <li class="ap__stat">
-          <span class="ap__stat-icon">{{ ap_ico_hand }}</span>
-          <span class="ap__stat-label">Hand-Shaped</span>
-          <span class="ap__stat-desc">By Hand, Not by Machine</span>
-        </li>
-        <li class="ap__stat">
-          <span class="ap__stat-icon">{{ ap_ico_rings }}</span>
-          <span class="ap__stat-label">20+ Years</span>
-          <span class="ap__stat-desc">Experience Rooted in Craft</span>
-        </li>
-        <li class="ap__stat">
-          <span class="ap__stat-icon">{{ ap_ico_sprout }}</span>
-          <span class="ap__stat-label">Rooted in Craft</span>
-          <span class="ap__stat-desc">Respect for Wood. Respect for Time.</span>
-        </li>
-      </ul>
+      {%- assign display_features = author.display_features.value -%}
+      {%- if display_features.features != blank -%}
+        <ul class="ap__stats" style="--stat-count: {{ display_features.features.size }}">
+          {%- for feature in display_features.features -%}
+            <li class="ap__stat">
+              <span class="ap__stat-label">{{ feature.value }}</span>
+              <span class="ap__stat-desc">{{ feature.label }}</span>
+            </li>
+          {%- endfor -%}
+        </ul>
+      {%- elsif display_features != blank -%}
+        <ul class="ap__stats" data-raw-features="{{ display_features | escape }}"></ul>
+        <script>
+          (function () {
+            try {
+              var rawStr = decodeURIComponent("{{ display_features | url_encode }}".replace(/\+/g, '%20'));
+              var data = JSON.parse(rawStr);
+              var features = data.features || data;
+              if (Array.isArray(features)) {
+                var html = '';
+                features.forEach(function (f) {
+                  html +=
+                    '<li class="ap__stat">' +
+                    '<span class="ap__stat-label">' + f.value + '</span>' +
+                    '<span class="ap__stat-desc">' + f.label + '</span>' +
+                    '</li>';
+                });
+                var ul = document.currentScript.previousElementSibling;
+                ul.innerHTML = html;
+                ul.style.setProperty('--stat-count', features.length);
+              }
+            } catch (e) {
+              console.error('Error parsing display_features JSON:', e);
+            }
+          })();
+        </script>
+      {%- endif -%}
     </div>
   </div>
 </section>
@@ -200,7 +206,7 @@
     display: grid;
     grid-template-columns: minmax(0, 0.82fr) minmax(0, 1fr);
     gap: clamp(var(--sp-6), 4vw, var(--sp-8));
-    align-items: start;
+    align-items: center;
   }
 
   /* Left: photo card */
@@ -355,7 +361,7 @@
   /* Craft stats */
   .ap__stats {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(var(--stat-count, 4), minmax(0, 1fr));
     gap: 0;
     margin: clamp(var(--sp-6), 5vh, var(--sp-8)) 0 0;
     padding: 0;
@@ -371,14 +377,6 @@
   .ap__stat:first-child {
     padding-left: 0;
     border-left: none;
-  }
-  .ap__stat-icon {
-    color: var(--color-earth-brown);
-    margin-bottom: var(--sp-2);
-  }
-  .ap__stat-icon svg {
-    width: 30px;
-    height: 30px;
   }
   .ap__stat-label {
     font-size: var(--font-size-body-sm);

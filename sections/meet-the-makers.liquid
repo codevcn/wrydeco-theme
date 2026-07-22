@@ -57,53 +57,36 @@
                   <p class="maker-card__slogan">{{ maker_slogan | escape }}</p>
                 {%- endif -%}
 
-                <div class="maker-card__features">
-                  <div class="maker-feature">
-                    <svg width="25" height="25" viewBox="0 0 25 25" fill="none" aria-hidden="true">
-                      <circle cx="12.5" cy="12.5" r="10.5" stroke="currentColor" stroke-width="1"/>
-                      <path d="M12.5 5.7v7.1l4.2 2.5" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    <span>{{ maker_exp }}+ Years<br>Experience</span>
+                {%- assign display_features = author.display_features.value -%}
+                {%- if display_features.features != blank -%}
+                  <div class="maker-card__features">
+                    {%- for feature in display_features.features -%}
+                      <div class="maker-feature{% if forloop.index0 > 0 %} maker-feature--border{% endif %}">
+                        <span>{{ feature.value }}<br>{{ feature.label }}</span>
+                      </div>
+                    {%- endfor -%}
                   </div>
-                  <div class="maker-feature">
-                    <svg
-                      width="24"
-                      height="24"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="1"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      aria-hidden="true"
-                    >
-                      <path d="M19 4c-6.5.8-10.8 4.3-12.8 10.5"/>
-                      <path d="M5.8 14.2c3.7.7 7.3-.3 10-3.2 1.9-2.1 2.8-4.5 3.2-7-3 .3-5.6 1.2-7.7 2.8-2.8 2.1-4.7 4.8-5.5 7.4Z"/>
-                      <path d="M4.5 19.5c1.4-3.2 3.5-5.7 6.2-7.7"/>
-                    </svg>
-                    <span>Hand<br>Finished</span>
-                  </div>
-                  <div class="maker-feature">
-                    <svg
-                      width="24"
-                      height="24"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="1"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      aria-hidden="true"
-                    >
-                      <path d="M7 21h10"/>
-                      <path d="M8 21V9.5a4 4 0 0 1 8 0V21"/>
-                      <path d="M6 13h12"/>
-                      <path d="M9.5 5.5 8 3.2"/>
-                      <path d="m14.5 5.5 1.5-2.3"/>
-                    </svg>
-                    <span>Forest Sourced<br>Hardwood</span>
-                  </div>
-                </div>
+                {%- elsif display_features != blank -%}
+                  <div class="maker-card__features" data-raw-features="{{ display_features | escape }}"></div>
+                  <script>
+                    (function(){
+                      try {
+                        var rawStr = decodeURIComponent("{{ display_features | url_encode }}".replace(/\+/g, '%20'));
+                        var data = JSON.parse(rawStr);
+                        var features = data.features || data;
+                        if (Array.isArray(features)) {
+                          var html = '';
+                          features.forEach(function(f, i) {
+                            html += '<div class="maker-feature' + (i > 0 ? ' maker-feature--border' : '') + '"><span>' + f.value + '<br>' + f.label + '</span></div>';
+                          });
+                          document.currentScript.previousElementSibling.innerHTML = html;
+                        }
+                      } catch(e) {
+                        console.error("Error parsing display_features JSON:", e);
+                      }
+                    })();
+                  </script>
+                {%- endif -%}
               </div>
             </div>
           </div>

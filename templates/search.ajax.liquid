@@ -1,0 +1,21 @@
+{%- layout none -%}
+{%- comment -%}
+  Lightweight JSON results feed for the search popup.
+
+  Powered by the SAME native Storefront Search engine (`search.results`) as the
+  full /search page (sections/search-v3.liquid), so the popup dropdown and the
+  results page always agree. Fetched by snippets/search-popup.liquid via
+  `/search?q=<term>*&type=product&view=ajax`.
+{%- endcomment -%}
+{%- paginate search.results by 10 -%}
+[
+{%- assign sep = '' -%}
+{%- for result in search.results -%}
+  {%- if result.object_type == 'product' -%}
+    {{- sep -}}
+    {"title":{{ result.title | json }},"url":{{ result.url | json }},"image":{{ result.featured_image | image_url: width: 300 | json }},"type":{{ result.type | default: 'Handcrafted furniture' | json }},"price":{{ result.price | money_without_currency | json }}}
+    {%- assign sep = ',' -%}
+  {%- endif -%}
+{%- endfor -%}
+]
+{%- endpaginate -%}

@@ -200,6 +200,37 @@
         );
       };
 
+      // Unify the popup with the /search results page: both run on the native
+      // Storefront Search engine. Instead of the Predictive Search API
+      // (/search/suggest.json, a different, fuzzier engine that returned matches
+      // the results page could not), fetch the same `search.results` via the
+      // `view=ajax` template, with a trailing `*` per word for prefix matching.
+      window.wrydecoNormalizeSearchQuery = function (raw) {
+        return String(raw || '')
+          .trim()
+          .split(/\s+/)
+          .filter(Boolean)
+          .map((token) => (token.endsWith('*') ? token : token + '*'))
+          .join(' ');
+      };
+
+      SearchPopup.prototype.performSearch = async function (query) {
+        const normalized = window.wrydecoNormalizeSearchQuery(query);
+        const searchPageUrl = `/search?q=${encodeURIComponent(normalized)}&type=product`;
+        try {
+          const response = await fetch(`${searchPageUrl}&view=ajax`);
+          if (!response.ok) throw new Error('Search failed');
+          const products = await response.json();
+          this.renderPredictiveResults(products, query);
+          // renderPredictiveResults points "View all results" at the raw query;
+          // repoint it at the wildcard query so the page matches the dropdown.
+          if (this.viewAllBtn) this.viewAllBtn.href = searchPageUrl;
+        } catch (error) {
+          console.error('Search Error:', error);
+          this.showEmptyState();
+        }
+      };
+
       SearchPopup.prototype.localizedPricePatched = true;
       document.querySelectorAll('search-popup').forEach(normalizeRenderedPrices);
     });
