@@ -1298,8 +1298,19 @@
     stroke-width: var(--border-width);
   }
 
+  /* Pushable "3D" base: the gradient revealed by padding-bottom is the drop
+     shadow under the button's feet, mirroring the PDP Buy It Now button. The
+     6px depth and rgba stops match that button's source for exact parity. */
   .cart-drawer__checkout-form {
     margin: var(--sp-0);
+    padding-bottom: 6px;
+    border-radius: var(--radius-lg);
+    background-image: linear-gradient(
+      to top,
+      rgba(128, 128, 128, 0.9) 0%,
+      rgba(0, 0, 0, 0.5) 28%,
+      rgba(0, 0, 0, 0) 100%
+    );
   }
 
   .cart-drawer__checkout {
@@ -1466,6 +1477,24 @@
     inline-size: var(--sp-5);
     block-size: var(--sp-5);
     stroke-width: calc(var(--border-width) * 1.5);
+  }
+
+  /* Lift on hover / press down on active — the button rides on top of the
+     form's gradient base, revealing / hiding the drop shadow (same feel as
+     the PDP Buy It Now button). */
+  .cart-drawer__checkout-form .cart-drawer__checkout {
+    transition: transform 0.2s ease;
+  }
+  .cart-drawer__checkout-form:hover .cart-drawer__checkout {
+    transform: translateY(-3px);
+  }
+  .cart-drawer__checkout-form:active .cart-drawer__checkout {
+    transform: translateY(3px);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cart-drawer__checkout-form .cart-drawer__checkout {
+      transition: none;
+    }
   }
 
   .cart-drawer__voucher-popup[hidden] {

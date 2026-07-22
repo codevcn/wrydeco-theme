@@ -1648,6 +1648,30 @@
         });
 
         syncProperty();
+
+        // Fresh load with the "Custom" variant selected via URL (e.g. ?variant=…)
+        // server-renders this radio as checked — but no image has been uploaded
+        // this session (uploadedUrl is in-memory only). Never leave Custom
+        // pre-selected without an image: fall back to the first available
+        // non-custom value in the same option group (prefer an in-stock one).
+        if (radio.checked && !uploadedUrl) {
+          var available = null;
+          var anySibling = null;
+          document.querySelectorAll('input[name="' + groupName + '"]').forEach(function (r) {
+            if (r === radio) return;
+            if (!anySibling) anySibling = r;
+            if (!available && !r.disabled) available = r;
+          });
+          var fallbackRadio = available || anySibling;
+          radio.checked = false;
+          if (fallbackRadio) {
+            fallbackRadio.checked = true;
+            // Let the variant-select handler update price / gallery / ?variant= URL.
+            fallbackRadio.dispatchEvent(new Event('change', { bubbles: true }));
+          } else {
+            syncProperty();
+          }
+        }
       });
     }
 
