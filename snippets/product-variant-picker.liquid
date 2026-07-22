@@ -331,12 +331,6 @@
       %}
         {% assign is_color = true %}
       {% endif %}
-      {% assign is_finish = false %}
-      {% if downcased_option contains 'finish' %}
-        {% unless is_surface %}
-          {% assign is_finish = true %}
-        {% endunless %}
-      {% endif %}
       {% comment %}
         Branches Decoration renders as media tiles (identical to Wood Finish / color),
         but its thumbnails come from the `variant_branches_decoration` metaobject.
@@ -347,6 +341,20 @@
       {% if downcased_option contains 'branch' %}
         {% assign is_branches = true %}
         {% assign is_color = true %}
+      {% endif %}
+      {% comment %}
+        Custom-colour image upload applies to both Wood Finish and Colour options
+        — for the customer they are the same "pick your own shade" concept. Surface
+        and Branches keep their own "Custom" behaviour (a customization-page link),
+        so they are excluded here.
+      {% endcomment %}
+      {% assign is_custom_upload = false %}
+      {% if is_color %}
+        {% unless is_surface %}
+          {% unless is_branches %}
+            {% assign is_custom_upload = true %}
+          {% endunless %}
+        {% endunless %}
       {% endif %}
       {% assign option_prop = 'option' | append: option.position %}
 
@@ -386,7 +394,7 @@
                 and behaves as a single, mutually-exclusive choice). On the other
                 options it stays hidden but present, keeping the variant matrix intact.
               {% endcomment %}
-              {% if is_finish %}
+              {% if is_custom_upload %}
                 <div
                   class="variant-tile variant-tile--color variant-tile--upload{% unless value.available %} is-disabled{% endunless %}"
                   data-custom-color

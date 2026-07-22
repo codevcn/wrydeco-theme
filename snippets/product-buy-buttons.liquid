@@ -158,7 +158,7 @@
     color: var(--color-cream);
     transition: transform 0.2s ease, background-color 0.2s ease;
     font-size: 16px;
-    font-weight: 700;
+    font-weight: 900;
   }
   .custom-buy-it-now-wrapper:hover .custom-buy-it-now-btn {
     transform: translateY(-3px);
@@ -166,14 +166,39 @@
   .custom-buy-it-now-wrapper:active .custom-buy-it-now-btn {
     transform: translateY(3px);
   }
+  /* In-button loading state: spinner shown + button locked while the express
+     checkout is being triggered (page then navigates to checkout). Keep it
+     full-colour (not the faded [disabled] look) so it reads as "processing". */
+  .custom-buy-it-now-btn__spinner {
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+  .custom-buy-it-now-btn__spinner svg {
+    width: 20px;
+    height: 20px;
+    animation: custom-buy-now-spin 0.7s linear infinite;
+  }
+  .custom-buy-it-now-btn.is-loading .custom-buy-it-now-btn__spinner {
+    display: inline-flex;
+  }
+  .custom-buy-it-now-btn.is-loading[disabled] {
+    opacity: 1;
+    cursor: progress;
+  }
+  @keyframes custom-buy-now-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .custom-buy-it-now-btn__spinner svg {
+      animation: none;
+    }
+  }
   .shopify-payment-button__button {
     border-radius: 3px !important;
     height: 48px !important;
-  }
-
-  .custom-buy-it-now-btn .btn-icon svg {
-    width: 28px;
-    height: 28px;
   }
 {% endstyle %}
 
@@ -269,13 +294,13 @@
             disabled
           {% endif %}
         >
-          <span class="btn-icon">
-            {%- comment -%} Icon: mdi:lightning-bolt (Iconify) — express-checkout cue {%- endcomment -%}
-            <svg xmlns="http://www.w3.org/2000/svg" width="1.2em" height="1.2em" viewBox="0 0 24 24" aria-hidden="true">
-              <path fill="currentColor" d="M11 15H6l7-14v8h5l-7 14z" />
+          <span class="custom-buy-it-now-btn__spinner" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none">
+              <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3" opacity="0.25"></circle>
+              <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" stroke-width="3" stroke-linecap="round"></path>
             </svg>
           </span>
-          <span>BUY IT NOW</span>
+          <span class="custom-buy-it-now-btn__label">BUY IT NOW</span>
         </button>
       </div>
       <div class="original-payment-button-wrapper" style="display: none;">
@@ -309,6 +334,25 @@
       const customBtn = e.target.closest('.custom-buy-it-now-btn');
       if (customBtn) {
         e.preventDefault();
+        // Ignore repeat clicks while it's already disabled / processing.
+        if (customBtn.disabled || customBtn.classList.contains('is-loading')) return;
+
+        // Show the in-button spinner and lock the button. The page then navigates
+        // to checkout, so the loading state persists until the redirect.
+        customBtn.classList.add('is-loading');
+        customBtn.disabled = true;
+        customBtn.setAttribute('aria-busy', 'true');
+
+        // Safety net: if navigation never happens (blocked / error), release the
+        // button so the shopper isn't stuck with a dead loading state.
+        const releaseBuyNow = () => {
+          customBtn.classList.remove('is-loading');
+          customBtn.disabled = false;
+          customBtn.removeAttribute('aria-busy');
+        };
+        const buyNowFallback = window.setTimeout(releaseBuyNow, 8000);
+        window.addEventListener('pagehide', () => window.clearTimeout(buyNowFallback), { once: true });
+
         const wrapper = customBtn.closest('.product-buy-buttons__secondary');
         const dynamicButton = wrapper.querySelector('.shopify-payment-button__button');
         if (dynamicButton) {
@@ -325,6 +369,10 @@
             }
             returnInput.value = '/checkout';
             form.submit();
+          } else {
+            // Nothing to submit → no navigation will occur; release immediately.
+            window.clearTimeout(buyNowFallback);
+            releaseBuyNow();
           }
         }
       }

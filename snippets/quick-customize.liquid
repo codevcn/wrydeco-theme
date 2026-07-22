@@ -628,6 +628,11 @@
     background: var(--bg-overlay);
     backdrop-filter: blur(4px);
     cursor: pointer;
+    opacity: 0;
+    transition: opacity var(--timing-base) var(--ease-standard);
+  }
+  .sp-quick-guide.is-open .sp-quick-guide__backdrop {
+    opacity: 1;
   }
   .sp-quick-guide__dialog {
     position: relative;
@@ -641,6 +646,13 @@
     background: var(--color-milk);
     box-shadow: var(--shadow-modal);
     text-align: center;
+    opacity: 0;
+    transform: translateY(var(--sp-3)) scale(0.98);
+    transition: opacity var(--timing-base) var(--ease-standard), transform var(--timing-base) var(--ease-out);
+  }
+  .sp-quick-guide.is-open .sp-quick-guide__dialog {
+    opacity: 1;
+    transform: none;
   }
   .sp-quick-guide__close {
     position: absolute;
@@ -737,6 +749,11 @@
     background: var(--bg-overlay);
     backdrop-filter: blur(4px);
     cursor: pointer;
+    opacity: 0;
+    transition: opacity var(--timing-base) var(--ease-standard);
+  }
+  .sp-quick-size.is-open .sp-quick-size__overlay {
+    opacity: 1;
   }
   .sp-quick-size__dialog {
     position: relative;
@@ -750,6 +767,13 @@
     border-radius: var(--radius-lg);
     background: var(--surface-elevated);
     box-shadow: var(--shadow-modal);
+    opacity: 0;
+    transform: translateY(var(--sp-3)) scale(0.98);
+    transition: opacity var(--timing-base) var(--ease-standard), transform var(--timing-base) var(--ease-out);
+  }
+  .sp-quick-size.is-open .sp-quick-size__dialog {
+    opacity: 1;
+    transform: none;
   }
   .sp-quick-size__header {
     display: flex;
@@ -909,6 +933,14 @@
       width: 100%;
     }
   }
+  @media (prefers-reduced-motion: reduce) {
+    .sp-quick-guide__backdrop,
+    .sp-quick-guide__dialog,
+    .sp-quick-size__overlay,
+    .sp-quick-size__dialog {
+      transition-duration: 0s;
+    }
+  }
 {% endstylesheet %}
 
 {% javascript %}
@@ -937,6 +969,36 @@
     var sizePopup = null; // custom size request form
     var pendingGuideContinue = null; // runs when the guide's "Continue" is pressed
     var pendingColorCommit = null; // commits the "Custom" colour/finish selection once its reference image uploads
+
+    // Sub-dialog open/close animation: mirror the main dialog's `is-open` pattern
+    // (unhide → next frame add `is-open`; remove `is-open` → hide after the fade).
+    var SUBDIALOG_HIDE_MS = 240;
+
+    function showSubDialog(el, timerRef) {
+      if (!el) return;
+      if (timerRef.id) {
+        clearTimeout(timerRef.id);
+        timerRef.id = null;
+      }
+      el.hidden = false;
+      window.requestAnimationFrame(function () {
+        el.classList.add('is-open');
+      });
+    }
+
+    function hideSubDialog(el, timerRef) {
+      if (!el) return;
+      el.classList.remove('is-open');
+      if (timerRef.id) clearTimeout(timerRef.id);
+      timerRef.id = window.setTimeout(function () {
+        el.hidden = true;
+        timerRef.id = null;
+      }, SUBDIALOG_HIDE_MS);
+    }
+
+    // Small holders so the timer id is shared by reference across show/hide.
+    var guideTimer = { id: null };
+    var sizeTimer = { id: null };
     var customImage = { url: '', optionIndex: -1 }; // uploaded URL + which option it belongs to
 
     function toast(message, type) {
@@ -1087,7 +1149,7 @@
 
     // --- Custom colour upload: guide → device picker → upload ---
     function closeColorGuide() {
-      if (guide) guide.hidden = true;
+      hideSubDialog(guide, guideTimer);
       pendingGuideContinue = null;
       // Backing out of the guide abandons the pending "Custom" selection, so it
       // is never committed (no dangling selected pill without an image).
@@ -1103,7 +1165,7 @@
         return;
       }
       pendingGuideContinue = onContinue;
-      guide.hidden = false;
+      showSubDialog(guide, guideTimer);
       var btn = guide.querySelector('[data-sp-color-guide-continue]');
       if (btn) btn.focus();
     }
@@ -1174,12 +1236,12 @@
     function openSizePopup() {
       if (!sizePopup) return;
       clearSizeErrors();
-      sizePopup.hidden = false;
+      showSubDialog(sizePopup, sizeTimer);
       var ta = sizeEl('[data-sp-size-note]');
       if (ta) ta.focus();
     }
     function closeSizePopup() {
-      if (sizePopup) sizePopup.hidden = true;
+      hideSubDialog(sizePopup, sizeTimer);
     }
     function isValidContact(value) {
       var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -1597,7 +1659,7 @@
             // keep `pendingColorCommit` alive so a successful upload can commit
             // the "Custom" selection (closeColorGuide would clear it).
             var next = pendingGuideContinue;
-            guide.hidden = true;
+            hideSubDialog(guide, guideTimer);
             pendingGuideContinue = null;
             if (next) next();
           });
