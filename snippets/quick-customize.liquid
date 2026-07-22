@@ -79,6 +79,99 @@
   </div>
 </div>
 
+{%- comment -%}
+  Custom color upload: guidance popup shown before the device file picker, plus a
+  hidden file input. Mirrors the PDP custom-colour flow (guide → pick → upload).
+{%- endcomment -%}
+<div class="sp-quick-guide" data-sp-color-guide hidden>
+  <div class="sp-quick-guide__backdrop" data-sp-color-guide-close></div>
+  <div class="sp-quick-guide__dialog" role="dialog" aria-modal="true" aria-labelledby="SpColorGuideTitle">
+    <button type="button" class="sp-quick-guide__close" data-sp-color-guide-close aria-label="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+    <span class="sp-quick-guide__icon" aria-hidden="true">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+        <circle cx="8.5" cy="8.5" r="1.5"></circle>
+        <path d="m21 15-5-5L5 21"></path>
+      </svg>
+    </span>
+    <h2 class="sp-quick-guide__title" id="SpColorGuideTitle">Upload Your Custom Color</h2>
+    <p class="sp-quick-guide__text">
+      Choose Custom Color to have your piece hand-finished in your preferred shade. In the next step, upload one
+      clear, well-lit, unfiltered reference photo—such as a paint chip, fabric swatch, or wood sample—for the closest
+      possible color match.
+    </p>
+    <button type="button" class="sp-quick-guide__continue" data-sp-color-guide-continue>Continue</button>
+  </div>
+</div>
+
+<input
+  type="file"
+  class="sp-quick-file"
+  accept="image/jpeg,image/png,image/webp,image/gif"
+  aria-label="Upload a custom color reference image"
+  data-sp-color-file
+  hidden
+>
+
+{%- comment -%} Custom Size request form popup (note + contact → POST to the server). {%- endcomment -%}
+<div class="sp-quick-size" data-sp-size-popup hidden>
+  <div class="sp-quick-size__overlay" data-sp-size-close></div>
+  <div class="sp-quick-size__dialog" role="dialog" aria-modal="true" aria-labelledby="SpSizeTitle">
+    <div class="sp-quick-size__header">
+      <h2 class="sp-quick-size__title" id="SpSizeTitle">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M0 0h24v24H0z" fill="none" />
+          <path fill="currentColor" d="M22 7H2c-.55 0-1 .45-1 1v8c0 .55.45 1 1 1h20c.55 0 1-.45 1-1V8c0-.55-.45-1-1-1m-1 8H3V9h2v3h2V9h2v4h2V9h2v3h2V9h2v4h2V9h2z" />
+        </svg>
+        <span>Custom Size</span>
+      </h2>
+      <button type="button" class="sp-quick-size__close" data-sp-size-close aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+    <div class="sp-quick-size__body">
+      <p class="sp-quick-size__hint">
+        Tell us the dimensions and proportions you have in mind, and how to reach you. Our design team will follow up to craft your piece.
+      </p>
+      <div class="sp-quick-size__field">
+        <label class="sp-quick-size__label" for="SpSizeNote">Describe your desired size</label>
+        <textarea
+          id="SpSizeNote"
+          class="sp-quick-size__textarea"
+          data-sp-size-note
+          rows="4"
+          placeholder="e.g. 180 cm wide × 90 cm deep × 75 cm high, with a slightly thicker tabletop."
+        ></textarea>
+        <p class="sp-quick-size__error" data-sp-size-error="note" hidden></p>
+      </div>
+      <div class="sp-quick-size__field">
+        <label class="sp-quick-size__label" for="SpSizeContact">Email or phone number</label>
+        <input
+          id="SpSizeContact"
+          class="sp-quick-size__input"
+          data-sp-size-contact
+          type="text"
+          autocomplete="email"
+          placeholder="you@example.com or +1 555 000 1234"
+        >
+        <p class="sp-quick-size__error" data-sp-size-error="contact" hidden></p>
+      </div>
+    </div>
+    <div class="sp-quick-size__footer">
+      <button type="button" class="sp-quick-size__cancel" data-sp-size-close>Cancel</button>
+      <button type="button" class="sp-quick-size__submit" data-sp-size-submit>
+        <span data-sp-size-submit-label>Submit request</span>
+      </button>
+    </div>
+  </div>
+</div>
+
 {% stylesheet %}
   html.sp-quick-open {
     overflow: hidden;
@@ -295,7 +388,7 @@
     font-family: var(--font-body);
     font-size: var(--font-size-caption);
     font-weight: var(--font-weight-semibold);
-    letter-spacing: var(--eyebrow-tracking, 0.3em);
+    letter-spacing: 0.05rem;
     text-transform: uppercase;
   }
 
@@ -515,6 +608,307 @@
       transition-duration: 0s;
     }
   }
+
+  /* ---- Custom color upload guide (stacks above the quick dialog) ---- */
+  .sp-quick-guide {
+    position: fixed;
+    inset: 0;
+    z-index: calc(var(--z-modal, 1000) + 10);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--sp-5);
+  }
+  .sp-quick-guide[hidden] {
+    display: none;
+  }
+  .sp-quick-guide__backdrop {
+    position: absolute;
+    inset: 0;
+    background: var(--bg-overlay);
+    backdrop-filter: blur(4px);
+    cursor: pointer;
+  }
+  .sp-quick-guide__dialog {
+    position: relative;
+    z-index: 1;
+    width: min(100%, 440px);
+    max-height: calc(100dvh - var(--sp-8));
+    overflow-y: auto;
+    padding: var(--sp-7) var(--sp-6) var(--sp-6);
+    border: var(--border-width) solid var(--border-light);
+    border-radius: var(--radius-lg);
+    background: var(--color-milk);
+    box-shadow: var(--shadow-modal);
+    text-align: center;
+  }
+  .sp-quick-guide__close {
+    position: absolute;
+    top: var(--sp-2);
+    right: var(--sp-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--sp-7);
+    height: var(--sp-7);
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-full);
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: background-color var(--timing-short) var(--ease-standard), color var(--timing-short) var(--ease-standard);
+  }
+  .sp-quick-guide__close:hover {
+    background: var(--color-cream);
+    color: var(--text-primary);
+  }
+  .sp-quick-guide__close svg {
+    width: 18px;
+    height: 18px;
+  }
+  .sp-quick-guide__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--sp-8);
+    height: var(--sp-8);
+    margin-bottom: var(--sp-4);
+    border-radius: var(--radius-full);
+    background: var(--color-cream);
+    color: var(--color-earth-brown);
+  }
+  .sp-quick-guide__icon svg {
+    width: var(--sp-6);
+    height: var(--sp-6);
+  }
+  .sp-quick-guide__title {
+    margin: 0 0 var(--sp-3);
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-xl);
+    font-weight: var(--font-weight-regular);
+    color: var(--text-primary);
+  }
+  .sp-quick-guide__text {
+    margin: 0 0 var(--sp-5);
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-generous);
+    color: var(--text-secondary);
+  }
+  .sp-quick-guide__continue {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: var(--sp-7);
+    padding-inline: var(--sp-6);
+    border: 0;
+    border-radius: var(--radius-md);
+    background: var(--color-earth-brown);
+    color: var(--text-inverse);
+    font-family: var(--font-roboto);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background-color var(--timing-short) var(--ease-standard);
+  }
+  .sp-quick-guide__continue:hover {
+    background: var(--color-charcoal);
+  }
+
+  /* ---- Custom size request form (stacks above the quick dialog) ---- */
+  .sp-quick-size {
+    position: fixed;
+    inset: 0;
+    z-index: calc(var(--z-modal, 1000) + 10);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--sp-5);
+  }
+  .sp-quick-size[hidden] {
+    display: none;
+  }
+  .sp-quick-size__overlay {
+    position: absolute;
+    inset: 0;
+    background: var(--bg-overlay);
+    backdrop-filter: blur(4px);
+    cursor: pointer;
+  }
+  .sp-quick-size__dialog {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    width: min(100%, 460px);
+    max-height: calc(100dvh - var(--sp-8));
+    overflow: hidden;
+    border: var(--border-width) solid var(--border-light);
+    border-radius: var(--radius-lg);
+    background: var(--surface-elevated);
+    box-shadow: var(--shadow-modal);
+  }
+  .sp-quick-size__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--sp-4) var(--sp-5);
+    border-bottom: var(--border-width) solid var(--border-light);
+    background: var(--color-milk);
+  }
+  .sp-quick-size__title {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-xl);
+    font-weight: var(--font-weight-regular);
+    color: var(--text-primary);
+  }
+  .sp-quick-size__title svg {
+    width: var(--sp-5);
+    height: var(--sp-5);
+    color: var(--color-earth-brown);
+  }
+  .sp-quick-size__close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--sp-6);
+    height: var(--sp-6);
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-full);
+    background: transparent;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: background-color var(--timing-short) var(--ease-standard);
+  }
+  .sp-quick-size__close:hover {
+    background: var(--surface-tertiary);
+  }
+  .sp-quick-size__close svg {
+    width: 18px;
+    height: 18px;
+  }
+  .sp-quick-size__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-4);
+    padding: var(--sp-5);
+    overflow-y: auto;
+  }
+  .sp-quick-size__hint {
+    margin: 0;
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-relaxed);
+    color: var(--text-secondary);
+  }
+  .sp-quick-size__field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+  }
+  .sp-quick-size__label {
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-medium);
+    color: var(--text-primary);
+  }
+  .sp-quick-size__textarea,
+  .sp-quick-size__input {
+    width: 100%;
+    padding: var(--sp-3) var(--sp-4);
+    border: var(--border-width) solid var(--border-default);
+    border-radius: var(--radius-md);
+    background: var(--color-white-cream);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-md);
+    line-height: var(--line-height-relaxed);
+    transition: border-color var(--timing-short) var(--ease-standard);
+  }
+  .sp-quick-size__textarea {
+    min-height: 120px;
+    resize: vertical;
+  }
+  .sp-quick-size__textarea:focus,
+  .sp-quick-size__input:focus {
+    outline: none;
+    border-color: var(--color-earth-brown);
+  }
+  .sp-quick-size__textarea[aria-invalid='true'],
+  .sp-quick-size__input[aria-invalid='true'] {
+    border-color: var(--color-error);
+  }
+  .sp-quick-size__error {
+    margin: 0;
+    font-size: var(--font-size-caption);
+    line-height: var(--line-height-relaxed);
+    color: var(--color-error);
+  }
+  .sp-quick-size__error[hidden] {
+    display: none;
+  }
+  .sp-quick-size__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--sp-4) var(--sp-5);
+    border-top: var(--border-width) solid var(--border-light);
+    background: var(--color-milk);
+  }
+  .sp-quick-size__cancel {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-medium);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    cursor: pointer;
+  }
+  .sp-quick-size__submit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--sp-7);
+    padding-inline: var(--sp-6);
+    border: 0;
+    border-radius: var(--radius-md);
+    background: var(--color-earth-brown);
+    color: var(--text-inverse);
+    font-family: var(--font-roboto);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background-color var(--timing-short) var(--ease-standard);
+  }
+  .sp-quick-size__submit:hover:not(:disabled) {
+    background: var(--color-charcoal);
+  }
+  .sp-quick-size__submit:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .sp-quick-guide :focus-visible,
+  .sp-quick-size :focus-visible {
+    outline: 2px solid var(--color-sage);
+    outline-offset: 2px;
+  }
+  @media screen and (max-width: 40rem) {
+    .sp-quick-size__dialog {
+      width: 100%;
+    }
+  }
 {% endstylesheet %}
 
 {% javascript %}
@@ -531,6 +925,18 @@
     var moneyFormat = '${{amount}}';
     var toastPosition = 'bottom-left';
     var lastFocused = null; // element to restore focus to on close
+
+    // Custom "Custom" handling (mirrors the PDP variant picker).
+    var UPLOAD_ENDPOINT = 'https://vnote.io.vn/api/upload-image';
+    var REQUEST_ENDPOINT = 'https://vnote.io.vn/api/custom-size-requests';
+    var MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+
+    // Sub-dialogs rendered once alongside the main dialog; cached in wireModal().
+    var guide = null; // custom-colour upload guidance popup
+    var fileInput = null; // hidden device file input
+    var sizePopup = null; // custom size request form
+    var pendingGuideContinue = null; // runs when the guide's "Continue" is pressed
+    var customImage = { url: '', optionIndex: -1 }; // uploaded URL + which option it belongs to
 
     function toast(message, type) {
       if (window.showToast) window.showToast({ message: message, type: type, position: toastPosition });
@@ -605,11 +1011,13 @@
         });
     }
 
-    function addVariantToCart(variantId, onDone) {
+    function addVariantToCart(variantId, properties, onDone) {
+      var payload = { id: variantId, quantity: 1 };
+      if (properties && Object.keys(properties).length) payload.properties = properties;
       fetch(cartRoot + 'cart/add.js', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/javascript' },
-        body: JSON.stringify({ id: variantId, quantity: 1 }),
+        body: JSON.stringify(payload),
       })
         .then(function (res) {
           return res.json();
@@ -663,6 +1071,182 @@
       }
     }
 
+    // --- Option classification (mirrors the PDP variant picker) ---
+    function classifyOption(name) {
+      var n = String(name || '').toLowerCase();
+      var isSurface = n.indexOf('surface') > -1;
+      var isSize = n.indexOf('size') > -1;
+      var isColor = n.indexOf('color') > -1 || n.indexOf('finish') > -1;
+      return { isColorOrFinish: isColor && !isSurface, isSize: isSize };
+    }
+
+    function isCustomValue(val) {
+      return String(val == null ? '' : val).trim().toLowerCase() === 'custom';
+    }
+
+    // --- Custom colour upload: guide → device picker → upload ---
+    function closeColorGuide() {
+      if (guide) guide.hidden = true;
+      pendingGuideContinue = null;
+    }
+
+    function openColorGuide(optionIndex, onContinue) {
+      customImage.optionIndex = optionIndex;
+      // No popup in the DOM → open the file dialog directly (keeps the gesture).
+      if (!guide) {
+        if (onContinue) onContinue();
+        return;
+      }
+      pendingGuideContinue = onContinue;
+      guide.hidden = false;
+      var btn = guide.querySelector('[data-sp-color-guide-continue]');
+      if (btn) btn.focus();
+    }
+
+    function uploadColorFile(file) {
+      if (file.size > MAX_UPLOAD_BYTES) {
+        toast('Image exceeds 10MB limit.', 'error');
+        return;
+      }
+      toast('Uploading…', 'info');
+
+      var fd = new FormData();
+      fd.append('image', file);
+
+      // Do not set Content-Type: let the browser add the multipart boundary.
+      fetch(UPLOAD_ENDPOINT, { method: 'POST', body: fd })
+        .then(function (res) {
+          return res
+            .json()
+            .catch(function () { return {}; })
+            .then(function (data) { return { ok: res.ok, data: data }; });
+        })
+        .then(function (r) {
+          if (r.ok && r.data && r.data.image_url) {
+            customImage.url = r.data.image_url;
+            toast('Custom color uploaded.', 'success');
+          } else {
+            toast((r.data && r.data.detail) || 'Upload failed. Please try again.', 'error');
+          }
+        })
+        .catch(function () {
+          toast('Upload failed. Please try again.', 'error');
+        })
+        .finally(function () {
+          if (fileInput) fileInput.value = ''; // allow re-picking the same file
+        });
+    }
+
+    // --- Custom size request form ---
+    function sizeEl(sel) {
+      return sizePopup ? sizePopup.querySelector(sel) : null;
+    }
+    function fieldInput(field) {
+      return sizeEl(field === 'note' ? '[data-sp-size-note]' : '[data-sp-size-contact]');
+    }
+    function setSizeError(field, message) {
+      var input = fieldInput(field);
+      var el = sizeEl('[data-sp-size-error="' + field + '"]');
+      if (input) input.setAttribute('aria-invalid', 'true');
+      if (el) { el.textContent = message; el.hidden = false; }
+    }
+    function clearSizeError(field) {
+      var input = fieldInput(field);
+      var el = sizeEl('[data-sp-size-error="' + field + '"]');
+      if (input) input.removeAttribute('aria-invalid');
+      if (el) { el.textContent = ''; el.hidden = true; }
+    }
+    function clearSizeErrors() {
+      clearSizeError('note');
+      clearSizeError('contact');
+    }
+    function openSizePopup() {
+      if (!sizePopup) return;
+      clearSizeErrors();
+      sizePopup.hidden = false;
+      var ta = sizeEl('[data-sp-size-note]');
+      if (ta) ta.focus();
+    }
+    function closeSizePopup() {
+      if (sizePopup) sizePopup.hidden = true;
+    }
+    function isValidContact(value) {
+      var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (EMAIL_RE.test(value)) return true;
+      var digits = value.replace(/\D/g, '');
+      return digits.length >= 7 && digits.length <= 15 && /^[+()\d\s.-]+$/.test(value);
+    }
+    function submitSizeRequest() {
+      if (!sizePopup || !state || !state.product) return;
+
+      var ta = sizeEl('[data-sp-size-note]');
+      var contactEl = sizeEl('[data-sp-size-contact]');
+      var submitBtn = sizeEl('[data-sp-size-submit]');
+      var submitLabel = sizeEl('[data-sp-size-submit-label]');
+      var note = ta ? ta.value.trim() : '';
+      var contactValue = contactEl ? contactEl.value.trim() : '';
+
+      clearSizeErrors();
+      var firstInvalid = null;
+      if (!note) {
+        setSizeError('note', 'Please describe the size you want.');
+        firstInvalid = firstInvalid || ta;
+      } else if (note.length < 5) {
+        setSizeError('note', 'Please add a little more detail (at least 5 characters).');
+        firstInvalid = firstInvalid || ta;
+      }
+      if (!contactValue) {
+        setSizeError('contact', 'An email or phone number is required.');
+        firstInvalid = firstInvalid || contactEl;
+      } else if (!isValidContact(contactValue)) {
+        setSizeError('contact', 'Enter a valid email or phone number.');
+        firstInvalid = firstInvalid || contactEl;
+      }
+      if (firstInvalid) {
+        if (firstInvalid.focus) firstInvalid.focus();
+        return;
+      }
+
+      var fd = new FormData();
+      fd.append('product_id', String(state.product.id || ''));
+      fd.append('product_handle', state.product.handle || '');
+      fd.append('product_name', state.product.title || '');
+      fd.append('custom_size_description', note);
+      fd.append('customer_contact', contactValue);
+
+      if (submitBtn) submitBtn.disabled = true;
+      if (submitLabel) submitLabel.textContent = 'Sending…';
+
+      fetch(REQUEST_ENDPOINT, { method: 'POST', body: fd })
+        .then(function (response) {
+          if (response.ok) {
+            toast("Thank you — we've received your request and will contact you shortly.", 'success');
+            if (ta) ta.value = '';
+            if (contactEl) contactEl.value = '';
+            clearSizeErrors();
+            closeSizePopup();
+            return;
+          }
+          return response.json().catch(function () { return null; }).then(function (data) {
+            var mapped = false;
+            if (data && Array.isArray(data.errors)) {
+              data.errors.forEach(function (err) {
+                if (err.field === 'custom_size_description') { setSizeError('note', err.message); mapped = true; }
+                else if (err.field === 'customer_contact') { setSizeError('contact', err.message); mapped = true; }
+              });
+            }
+            if (!mapped) toast((data && data.message) || 'Something went wrong. Please try again.', 'error');
+          });
+        })
+        .catch(function () {
+          toast('Something went wrong. Please try again.', 'error');
+        })
+        .finally(function () {
+          if (submitBtn) submitBtn.disabled = false;
+          if (submitLabel) submitLabel.textContent = 'Submit request';
+        });
+    }
+
     function renderOptions() {
       els.options.innerHTML = '';
       var product = state.product;
@@ -682,6 +1266,8 @@
         var pills = document.createElement('div');
         pills.className = 'sp-quick__pills';
 
+        var cls = classifyOption(optName);
+
         var values = [];
         product.variants.forEach(function (v) {
           if (values.indexOf(v.options[oi]) === -1) values.push(v.options[oi]);
@@ -692,14 +1278,30 @@
           pill.type = 'button';
           pill.className = 'sp-quick__pill';
           pill.textContent = val;
+          var custom = isCustomValue(val);
           if (state.selected[oi] === val) pill.setAttribute('aria-pressed', 'true');
           pill.addEventListener('click', function () {
+            // Size "Custom": open the request form. It is a lead, not a purchase,
+            // so it never becomes the selected variant.
+            if (custom && cls.isSize) {
+              openSizePopup();
+              return;
+            }
+
+            // Normal selection (also used by Colour / Wood Finish "Custom").
             state.selected[oi] = val;
             Array.prototype.forEach.call(pills.children, function (c) {
               c.removeAttribute('aria-pressed');
             });
             pill.setAttribute('aria-pressed', 'true');
             updateSelection();
+
+            // Colour / Wood Finish "Custom": guide → device picker → upload.
+            if (custom && cls.isColorOrFinish) {
+              openColorGuide(oi, function () {
+                if (fileInput) fileInput.click();
+              });
+            }
           });
           pills.appendChild(pill);
         });
@@ -736,6 +1338,8 @@
     }
 
     function closeModal() {
+      closeColorGuide();
+      closeSizePopup();
       modal.classList.remove('is-open');
       modal.setAttribute('aria-hidden', 'true');
       document.documentElement.classList.remove('sp-quick-open');
@@ -761,6 +1365,12 @@
       }
       if (!initial) initial = product.variants[0];
       state = { product: product, selected: initial.options.slice(), variant: initial, optionNames: names };
+
+      // Fresh product → drop any custom-colour image / open sub-dialogs from a
+      // previous product.
+      customImage = { url: '', optionIndex: -1 };
+      closeColorGuide();
+      closeSizePopup();
 
       els.title.textContent = product.title;
 
@@ -853,10 +1463,15 @@
     function onKeydown(e) {
       if (!modal || modal.hidden) return;
       if (e.key === 'Escape') {
+        // Close an open sub-dialog first; only then the main dialog.
+        if (guide && !guide.hidden) { closeColorGuide(); return; }
+        if (sizePopup && !sizePopup.hidden) { closeSizePopup(); return; }
         closeModal();
         return;
       }
       if (e.key !== 'Tab') return;
+      // While a sub-dialog is open, let it own the tab order.
+      if ((guide && !guide.hidden) || (sizePopup && !sizePopup.hidden)) return;
 
       var focusable = getFocusable();
       if (!focusable.length) {
@@ -882,9 +1497,17 @@
 
     function onAdd() {
       if (!state || !state.variant || els.add.disabled || els.add.classList.contains('is-loading')) return;
+
+      // PDP parity: attach the uploaded custom-colour image as a line-item property
+      // while the option it belongs to is still set to "Custom".
+      var properties = {};
+      if (customImage.url && customImage.optionIndex > -1 && state.selected[customImage.optionIndex] === 'Custom') {
+        properties['added_url_image'] = customImage.url;
+      }
+
       els.add.classList.add('is-loading');
       els.addText.textContent = 'Adding…';
-      addVariantToCart(state.variant.id, function (ok) {
+      addVariantToCart(state.variant.id, properties, function (ok) {
         els.add.classList.remove('is-loading');
         if (ok) closeModal();
         else updateSelection();
@@ -927,6 +1550,57 @@
           el.addEventListener('click', closeModal);
         });
         els.add.addEventListener('click', onAdd);
+      }
+
+      // Cache the sub-dialogs (rendered once alongside the modal), de-duping any
+      // extras if the snippet was rendered more than once.
+      function firstDedup(sel) {
+        var nodes = document.querySelectorAll(sel);
+        for (var i = 1; i < nodes.length; i++) {
+          if (nodes[i].parentNode) nodes[i].parentNode.removeChild(nodes[i]);
+        }
+        return nodes[0] || null;
+      }
+      guide = firstDedup('[data-sp-color-guide]');
+      fileInput = firstDedup('[data-sp-color-file]');
+      sizePopup = firstDedup('[data-sp-size-popup]');
+
+      if (guide && guide.dataset.wired !== 'true') {
+        guide.dataset.wired = 'true';
+        guide.querySelectorAll('[data-sp-color-guide-close]').forEach(function (el) {
+          el.addEventListener('click', closeColorGuide);
+        });
+        var cont = guide.querySelector('[data-sp-color-guide-continue]');
+        if (cont) {
+          cont.addEventListener('click', function () {
+            // Capture before closing (close clears it); running it here keeps the
+            // user gesture so the browser allows the file dialog to open.
+            var next = pendingGuideContinue;
+            closeColorGuide();
+            if (next) next();
+          });
+        }
+      }
+
+      if (fileInput && fileInput.dataset.wired !== 'true') {
+        fileInput.dataset.wired = 'true';
+        fileInput.addEventListener('change', function () {
+          var f = fileInput.files && fileInput.files[0];
+          if (f) uploadColorFile(f);
+        });
+      }
+
+      if (sizePopup && sizePopup.dataset.wired !== 'true') {
+        sizePopup.dataset.wired = 'true';
+        sizePopup.querySelectorAll('[data-sp-size-close]').forEach(function (el) {
+          el.addEventListener('click', closeSizePopup);
+        });
+        var sub = sizePopup.querySelector('[data-sp-size-submit]');
+        if (sub) sub.addEventListener('click', submitSizeRequest);
+        var noteEl = sizePopup.querySelector('[data-sp-size-note]');
+        var contactEl = sizePopup.querySelector('[data-sp-size-contact]');
+        if (noteEl) noteEl.addEventListener('input', function () { clearSizeError('note'); });
+        if (contactEl) contactEl.addEventListener('input', function () { clearSizeError('contact'); });
       }
     }
 
