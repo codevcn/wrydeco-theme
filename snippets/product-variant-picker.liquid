@@ -187,6 +187,7 @@
       width: fit-content;
       padding-inline: 6px;
       aspect-ratio: unset;
+      height: fit-content;
     }
 
     /* ---- Custom color upload tile ---- */
@@ -245,6 +246,7 @@
       width: max-content;
       padding: var(--sp-3) var(--sp-5);
       text-align: center;
+      gap: var(--sp-2);
     }
     .variant-tile--size .variant-tile__label {
       font-family: var(--font-roboto);
@@ -461,11 +463,42 @@
                     disabled
                   >
                 </div>
+              {% elsif is_size %}
+                {% comment %}
+                  Size "Custom": opens a request popup where the shopper describes
+                  the size they want and leaves a contact. Submitting sends a Custom
+                  Size Request to the server (a lead for the production team) — it
+                  does not select a variant or add to cart, so no radio / line-item
+                  property is rendered here.
+                {% endcomment %}
+                <div
+                  class="variant-tile variant-tile--size variant-tile--custom-size"
+                  data-custom-size
+                  role="button"
+                  tabindex="0"
+                  aria-haspopup="dialog"
+                >
+                  <span class="variant-tile__media variant-tile__media--custom" aria-hidden="true">
+                    <svg
+                      class="variant-tile__custom-plus"
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="1em"
+                      height="1em"
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="M0 0h24v24H0z" fill="none" />
+                      <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z" />
+                    </svg>
+                  </span>
+
+                  <span class="variant-tile__label">{{ value }}</span>
+                </div>
+
               {% else %}
                 {% comment %}
-                  On size and surface the "Custom" value is a call-to-action that
-                  sends the shopper to the customization page rather than selecting
-                  a variant.
+                  On surface (and any other non-finish, non-size option) the
+                  "Custom" value is a call-to-action that sends the shopper to the
+                  customization page rather than selecting a variant.
                 {% endcomment %}
                 <a
                   class="variant-tile variant-tile--{% if is_color %}color{% else %}size{% endif %} variant-tile--custom-link"
@@ -760,6 +793,294 @@
     @media (prefers-reduced-motion: reduce) {
       .custom-color-guide,
       .custom-color-guide__dialog {
+        transition: none;
+      }
+    }
+  </style>
+
+  {% comment %}
+    Custom Size request popup. Opened from the size "Custom" tile; the shopper
+    describes the size they want and leaves a contact. Submitting POSTs a Custom
+    Size Request (multipart FormData) to the server — see initCustomSizeNote.
+    Product identity is read from the data-* attributes below.
+  {% endcomment %}
+  <div
+    class="custom-size-popup"
+    data-custom-size-popup
+    data-product-id="{{ product.id }}"
+    data-product-handle="{{ product.handle }}"
+    data-product-name="{{ product.title | escape }}"
+    hidden
+  >
+    <div class="custom-size-popup__overlay" data-custom-size-popup-close></div>
+    <div class="custom-size-popup__dialog" role="dialog" aria-modal="true" aria-labelledby="CustomSizePopupTitle">
+      <div class="custom-size-popup__header">
+        <h2 class="custom-size-popup__title" id="CustomSizePopupTitle">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M0 0h24v24H0z" fill="none" />
+            <path fill="currentColor" d="M22 7H2c-.55 0-1 .45-1 1v8c0 .55.45 1 1 1h20c.55 0 1-.45 1-1V8c0-.55-.45-1-1-1m-1 8H3V9h2v3h2V9h2v4h2V9h2v3h2V9h2v4h2V9h2z" />
+          </svg>
+          <span>Custom Size</span>
+        </h2>
+        <button type="button" class="custom-size-popup__close" data-custom-size-popup-close aria-label="Close">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="custom-size-popup__body">
+        <p class="custom-size-popup__hint">
+          Tell us the dimensions and proportions you have in mind, and how to reach you. Our design team will follow up to craft your piece.
+        </p>
+
+        <div class="custom-size-popup__field">
+          <label class="custom-size-popup__field-label" for="CustomSizePopupNote">Describe your desired size</label>
+          <textarea
+            id="CustomSizePopupNote"
+            class="custom-size-popup__textarea"
+            data-custom-size-note
+            rows="4"
+            placeholder="e.g. 180 cm wide × 90 cm deep × 75 cm high, with a slightly thicker tabletop."
+          ></textarea>
+          <p class="custom-size-popup__error" data-custom-size-error="note" hidden></p>
+        </div>
+
+        <div class="custom-size-popup__field">
+          <label class="custom-size-popup__field-label" for="CustomSizePopupContact">Email or phone number</label>
+          <input
+            id="CustomSizePopupContact"
+            class="custom-size-popup__input"
+            data-custom-size-contact
+            type="text"
+            autocomplete="email"
+            placeholder="you@example.com or +1 555 000 1234"
+          >
+          <p class="custom-size-popup__error" data-custom-size-error="contact" hidden></p>
+        </div>
+      </div>
+      <div class="custom-size-popup__footer">
+        <button type="button" class="custom-size-popup__cancel" data-custom-size-popup-close>Cancel</button>
+        <button type="button" class="custom-size-popup__save" data-custom-size-save>
+          <span data-custom-size-save-label>Submit request</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .custom-size-popup[hidden] {
+      display: flex !important;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+    .custom-size-popup {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--sp-5);
+      opacity: 1;
+      visibility: visible;
+      transition: opacity var(--timing-short) var(--ease-standard), visibility var(--timing-short) var(--ease-standard);
+    }
+    .custom-size-popup__overlay {
+      position: absolute;
+      inset: 0;
+      background: var(--bg-overlay);
+      backdrop-filter: blur(4px);
+      cursor: pointer;
+    }
+    .custom-size-popup__dialog {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      width: min(100%, 460px);
+      max-height: calc(100dvh - var(--sp-8));
+      overflow: hidden;
+      border: var(--border-width) solid var(--border-light);
+      border-radius: var(--radius-lg);
+      background: var(--surface-elevated);
+      box-shadow: var(--shadow-modal);
+      transform: translateY(0);
+      transition: transform var(--timing-short) var(--ease-standard);
+    }
+    .custom-size-popup[hidden] .custom-size-popup__dialog {
+      transform: translateY(10px);
+    }
+    .custom-size-popup__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--sp-4) var(--sp-5);
+      border-bottom: var(--border-width) solid var(--border-light);
+      background: var(--color-milk);
+    }
+    .custom-size-popup__title {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-2);
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: var(--font-size-body-xl);
+      font-weight: var(--font-weight-regular);
+      color: var(--text-primary);
+    }
+    .custom-size-popup__title svg {
+      width: var(--sp-5);
+      height: var(--sp-5);
+      color: var(--color-earth-brown);
+    }
+    .custom-size-popup__close {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: var(--sp-6);
+      height: var(--sp-6);
+      padding: 0;
+      border: 0;
+      border-radius: var(--radius-full);
+      background: transparent;
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: background-color var(--timing-short) var(--ease-standard);
+    }
+    .custom-size-popup__close:hover {
+      background: var(--surface-tertiary);
+    }
+    .custom-size-popup__close svg {
+      width: 18px;
+      height: 18px;
+    }
+    .custom-size-popup__body {
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-4);
+      padding: var(--sp-5);
+      overflow-y: auto;
+    }
+    .custom-size-popup__field {
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-2);
+    }
+    .custom-size-popup__field-label {
+      font-family: var(--font-body);
+      font-size: var(--font-size-body-sm);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+    }
+    .custom-size-popup__hint {
+      margin: 0;
+      font-size: var(--font-size-body-sm);
+      line-height: var(--line-height-relaxed);
+      color: var(--text-secondary);
+    }
+    .custom-size-popup__textarea,
+    .custom-size-popup__input {
+      width: 100%;
+      padding: var(--sp-3) var(--sp-4);
+      border: var(--border-width) solid var(--border-default);
+      border-radius: var(--radius-md);
+      background: var(--color-white-cream);
+      color: var(--text-primary);
+      font-family: var(--font-body);
+      font-size: var(--font-size-body-md);
+      line-height: var(--line-height-relaxed);
+      transition: border-color var(--timing-short) var(--ease-standard);
+    }
+    .custom-size-popup__textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+    .custom-size-popup__textarea:focus,
+    .custom-size-popup__input:focus {
+      outline: none;
+      border-color: var(--color-earth-brown);
+    }
+    .custom-size-popup__textarea[aria-invalid='true'],
+    .custom-size-popup__input[aria-invalid='true'] {
+      border-color: var(--color-error, var(--color-clay));
+    }
+    .custom-size-popup__error {
+      margin: 0;
+      font-size: var(--font-size-caption);
+      line-height: var(--line-height-relaxed);
+      color: var(--color-error, var(--color-clay));
+    }
+    .custom-size-popup__error[hidden] {
+      display: none;
+    }
+    .custom-size-popup__footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--sp-4) var(--sp-5);
+      border-top: var(--border-width) solid var(--border-light);
+      background: var(--color-milk);
+    }
+    .custom-size-popup__cancel {
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: var(--text-primary);
+      font-family: var(--font-body);
+      font-size: var(--font-size-body-sm);
+      font-weight: var(--font-weight-medium);
+      text-decoration: underline;
+      text-underline-offset: 4px;
+      cursor: pointer;
+    }
+    .custom-size-popup__save {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: var(--sp-7);
+      padding-inline: var(--sp-6);
+      border: 0;
+      border-radius: var(--radius-md);
+      background: var(--color-earth-brown);
+      color: var(--text-inverse);
+      font-family: var(--font-roboto);
+      font-size: var(--font-size-body-sm);
+      font-weight: var(--font-weight-semibold);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background-color var(--timing-short) var(--ease-standard);
+    }
+    .custom-size-popup__save:hover:not(:disabled) {
+      background: var(--color-charcoal);
+    }
+    .custom-size-popup__save:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .custom-size-popup__save:focus-visible,
+    .custom-size-popup__close:focus-visible,
+    .custom-size-popup__cancel:focus-visible {
+      outline: 2px solid var(--color-sage);
+      outline-offset: 2px;
+    }
+    @media screen and (max-width: 480px) {
+      .custom-size-popup__dialog {
+        width: 100%;
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .custom-size-popup,
+      .custom-size-popup__dialog {
         transition: none;
       }
     }
@@ -1390,12 +1711,183 @@
       );
     }
 
+    // --- 6. Size "Custom" request popup ---
+    // Clicking the size "Custom" tile opens a popup where the shopper describes
+    // the size they want and leaves a contact. Submitting POSTs a Custom Size
+    // Request (multipart FormData) to the server — a lead for the production team.
+    // It does not select a variant or add to cart.
+    function initCustomSizeNote() {
+      var REQUEST_ENDPOINT = 'https://vnote.io.vn/api/custom-size-requests';
+
+      var popup = document.querySelector('[data-custom-size-popup]');
+      var tiles = document.querySelectorAll('[data-custom-size]:not([data-custom-size-init])');
+      if (!popup || tiles.length === 0) return;
+
+      var textarea = popup.querySelector('[data-custom-size-note]');
+      var contact = popup.querySelector('[data-custom-size-contact]');
+      var saveBtn = popup.querySelector('[data-custom-size-save]');
+      var saveLabel = popup.querySelector('[data-custom-size-save-label]');
+      var defaultLabel = saveLabel ? saveLabel.textContent : 'Submit request';
+
+      function toast(message, type) {
+        if (window.showToast) {
+          window.showToast({ message: message, type: type, position: 'bottom-left', duration: 4000 });
+        }
+      }
+
+      // Per-field inline errors, keyed by the popup's field names.
+      var fieldEls = { note: textarea, contact: contact };
+      function setError(field, message) {
+        var input = fieldEls[field];
+        var el = popup.querySelector('[data-custom-size-error="' + field + '"]');
+        if (input) input.setAttribute('aria-invalid', 'true');
+        if (el) {
+          el.textContent = message;
+          el.hidden = false;
+        }
+      }
+      function clearError(field) {
+        var input = fieldEls[field];
+        var el = popup.querySelector('[data-custom-size-error="' + field + '"]');
+        if (input) input.removeAttribute('aria-invalid');
+        if (el) {
+          el.textContent = '';
+          el.hidden = true;
+        }
+      }
+      function clearAllErrors() {
+        clearError('note');
+        clearError('contact');
+      }
+
+      // Clear a field's error the moment the shopper starts fixing it.
+      if (textarea) textarea.addEventListener('input', function () { clearError('note'); });
+      if (contact) contact.addEventListener('input', function () { clearError('contact'); });
+
+      var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      function isValidContact(value) {
+        if (EMAIL_RE.test(value)) return true;
+        var digits = value.replace(/\D/g, '');
+        return digits.length >= 7 && digits.length <= 15 && /^[+()\d\s.-]+$/.test(value);
+      }
+
+      function validate() {
+        clearAllErrors();
+        var firstInvalid = null;
+        var note = textarea ? textarea.value.trim() : '';
+        var contactValue = contact ? contact.value.trim() : '';
+
+        if (!note) {
+          setError('note', 'Please describe the size you want.');
+          firstInvalid = firstInvalid || textarea;
+        } else if (note.length < 5) {
+          setError('note', 'Please add a little more detail (at least 5 characters).');
+          firstInvalid = firstInvalid || textarea;
+        }
+
+        if (!contactValue) {
+          setError('contact', 'An email or phone number is required.');
+          firstInvalid = firstInvalid || contact;
+        } else if (!isValidContact(contactValue)) {
+          setError('contact', 'Enter a valid email or phone number.');
+          firstInvalid = firstInvalid || contact;
+        }
+
+        if (firstInvalid && firstInvalid.focus) firstInvalid.focus();
+        return !firstInvalid;
+      }
+
+      function setLoading(loading) {
+        if (saveBtn) saveBtn.disabled = loading;
+        if (saveLabel) saveLabel.textContent = loading ? 'Sending…' : defaultLabel;
+      }
+
+      function closePopup() {
+        popup.hidden = true;
+        document.documentElement.style.overflow = '';
+      }
+
+      function openPopup() {
+        clearAllErrors();
+        popup.hidden = false;
+        document.documentElement.style.overflow = 'hidden';
+        if (textarea) textarea.focus();
+      }
+
+      popup.querySelectorAll('[data-custom-size-popup-close]').forEach(function (el) {
+        el.addEventListener('click', closePopup);
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && !popup.hidden) closePopup();
+      });
+
+      function submit() {
+        if (!validate()) return;
+
+        var formData = new FormData();
+        formData.append('product_id', popup.dataset.productId || '');
+        formData.append('product_handle', popup.dataset.productHandle || '');
+        formData.append('product_name', popup.dataset.productName || '');
+        formData.append('custom_size_description', textarea.value.trim());
+        formData.append('customer_contact', contact.value.trim());
+
+        setLoading(true);
+
+        // Do not set Content-Type: let the browser add the multipart boundary.
+        fetch(REQUEST_ENDPOINT, { method: 'POST', body: formData })
+          .then(function (response) {
+            if (response.ok) {
+              toast("Thank you — we've received your request and will contact you shortly.", 'success');
+              if (textarea) textarea.value = '';
+              if (contact) contact.value = '';
+              clearAllErrors();
+              closePopup();
+              return;
+            }
+            // Map the API's structured field errors back onto the inputs.
+            return response.json().catch(function () { return null; }).then(function (data) {
+              var mapped = false;
+              if (data && Array.isArray(data.errors)) {
+                data.errors.forEach(function (err) {
+                  if (err.field === 'custom_size_description') { setError('note', err.message); mapped = true; }
+                  else if (err.field === 'customer_contact') { setError('contact', err.message); mapped = true; }
+                });
+              }
+              if (!mapped) {
+                toast((data && data.message) || 'Something went wrong. Please try again.', 'error');
+              }
+            });
+          })
+          .catch(function () {
+            toast('Something went wrong. Please try again.', 'error');
+          })
+          .finally(function () {
+            setLoading(false);
+          });
+      }
+
+      if (saveBtn) saveBtn.addEventListener('click', submit);
+
+      tiles.forEach(function (tile) {
+        tile.dataset.customSizeInit = 'true';
+        tile.addEventListener('click', openPopup);
+        // Keyboard support for the role="button" tile.
+        tile.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            openPopup();
+          }
+        });
+      });
+    }
+
     function init() {
       initVariantDragScroll();
       initVariantSelect();
       initCustomColorUpload();
       initVariantMediaFallback();
       initSizeGuide();
+      initCustomSizeNote();
     }
 
     if (document.readyState === 'loading') {
