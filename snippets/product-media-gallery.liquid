@@ -228,22 +228,129 @@
     opacity: 1;
     pointer-events: auto;
   }
+  .product-lightbox__content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-4);
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+  }
+  .product-lightbox__media-list {
+    display: flex;
+    flex-direction: column;
+    align-self: center;
+    gap: var(--sp-2);
+    max-height: calc(100vh - (var(--sp-6) * 2));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    /* NOTE: no `scrollbar-width` here on purpose. In Chromium 121+ setting the
+       standardized `scrollbar-width` makes the browser ignore the legacy
+       `::-webkit-scrollbar` rules that the `custom-scrollbar` class relies on,
+       which would fall back to the default browser scrollbar. */
+    width: 100px;
+  }
+  .product-lightbox__thumbnail {
+    flex: 0 0 auto;
+    width: 100%;
+    aspect-ratio: 1/1;
+    padding: var(--sp-0);
+    overflow: hidden;
+    border: var(--border-width) solid var(--border-light);
+    border-radius: var(--radius-md);
+    background-color: var(--surface-elevated);
+    box-shadow: var(--shadow-elevation-1);
+    cursor: pointer;
+    opacity: 0.72;
+    transition: border-color var(--timing-short) var(--ease-standard), opacity var(--timing-short) var(--ease-standard),
+      transform var(--timing-short) var(--ease-standard);
+  }
+  .product-lightbox__thumbnail:hover,
+  .product-lightbox__thumbnail:focus-visible,
+  .product-lightbox__thumbnail.is-active {
+    border-color: var(--color-clay);
+    opacity: 1;
+  }
+  .product-lightbox__thumbnail:focus-visible {
+    outline: var(--border-width) solid var(--color-sage);
+    outline-offset: var(--sp-1);
+  }
+  .product-lightbox__thumbnail.is-active {
+    transform: scale(0.94);
+  }
+  .product-lightbox__thumbnail img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .product-lightbox__stage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: fit-content;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    aspect-ratio: 1/1;
+  }
   .product-lightbox__img {
-    max-width: calc(100vw - (var(--sp-6) * 2));
+    display: block;
+    max-width: 100%;
     max-height: calc(100vh - (var(--sp-6) * 2));
     width: auto;
     height: auto;
+    object-fit: contain;
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-elevation-4);
     opacity: 0;
     transform: translateY(var(--sp-3)) scale(0.98);
-    transition:
-      opacity var(--timing-base) var(--ease-standard),
-      transform var(--timing-base) var(--ease-standard);
+    transition: opacity var(--timing-base) var(--ease-standard), transform var(--timing-base) var(--ease-standard);
   }
   .product-lightbox.is-open .product-lightbox__img {
     opacity: 1;
     transform: translateY(var(--sp-0)) scale(1);
+  }
+  .product-lightbox__navigation {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-3);
+  }
+  .product-lightbox__nav-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--sp-7);
+    height: var(--sp-7);
+    padding: var(--sp-0);
+    border: var(--border-width) solid var(--border-light);
+    border-radius: var(--radius-full);
+    background-color: var(--color-earth-brown);
+    color: var(--color-cream);
+    box-shadow: var(--shadow-elevation-2);
+    cursor: pointer;
+    transition: background-color var(--timing-short) var(--ease-standard),
+      color var(--timing-short) var(--ease-standard), transform var(--timing-short) var(--ease-standard);
+  }
+  .product-lightbox__nav-button:hover,
+  .product-lightbox__nav-button:focus-visible {
+    background-color: var(--surface-elevated);
+    color: var(--color-earth-brown);
+  }
+  .product-lightbox__nav-button:focus-visible {
+    outline: var(--border-width) solid var(--color-sage);
+    outline-offset: var(--sp-1);
+  }
+  .product-lightbox__nav-button:active {
+    transform: scale(0.94);
+  }
+  .product-lightbox__nav-button svg {
+    width: var(--sp-5);
+    height: var(--sp-5);
   }
   .product-lightbox__close {
     position: absolute;
@@ -263,9 +370,7 @@
     box-shadow: var(--shadow-elevation-2);
     opacity: 0;
     transform: translateY(calc(var(--sp-3) * -1));
-    transition:
-      opacity var(--timing-short) var(--ease-standard),
-      transform var(--timing-short) var(--ease-standard);
+    transition: opacity var(--timing-short) var(--ease-standard), transform var(--timing-short) var(--ease-standard);
   }
   .product-lightbox.is-open .product-lightbox__close {
     opacity: 1;
@@ -287,18 +392,59 @@
 
   @media screen and (max-width: 720px) {
     .product-lightbox {
-      --product-lightbox-mobile-top-clear: calc(var(--sp-8) + var(--sp-2));
       align-items: center;
       padding: var(--sp-3);
     }
 
+    .product-lightbox__content {
+      flex-direction: column;
+      align-items: stretch;
+      width: 100%;
+      height: auto;
+      max-height: 100%;
+      gap: var(--sp-3);
+    }
+
+    .product-lightbox__media-list {
+      order: 2;
+      flex-direction: row;
+      align-self: stretch;
+      width: 100%;
+      max-height: none;
+      padding-block: var(--sp-1);
+      overflow-x: auto;
+      overflow-y: hidden;
+      overscroll-behavior-inline: contain;
+      scroll-snap-type: inline mandatory;
+    }
+
+    .product-lightbox__thumbnail {
+      flex-basis: var(--sp-8);
+      width: var(--sp-8);
+      height: var(--sp-8);
+      scroll-snap-align: start;
+    }
+
+    .product-lightbox__stage {
+      order: 1;
+      align-self: center;
+      width: min(100%, calc(100dvh - var(--sp-8) - var(--sp-7)));
+      height: auto;
+      aspect-ratio: 1 / 1;
+    }
+
     .product-lightbox__img {
-      max-width: calc(100vw - (var(--sp-3) * 2));
-      max-height: calc(100vh - (var(--sp-3) * 2));
+      width: 100%;
+      height: 100%;
+      max-height: 100%;
+    }
+
+    .product-lightbox__navigation {
+      display: none;
     }
 
     .product-lightbox__close {
-      top: max(var(--product-lightbox-mobile-top-clear), env(safe-area-inset-top));
+      top: max(var(--sp-3), env(safe-area-inset-top));
       right: max(var(--sp-3), env(safe-area-inset-right));
     }
   }
@@ -423,7 +569,14 @@
     </div>
   {% endif %}
 
-  <div class="product-lightbox" data-product-lightbox hidden>
+  <div
+    class="product-lightbox"
+    data-product-lightbox
+    role="dialog"
+    aria-modal="true"
+    aria-label="{{ product.title | escape }} image gallery"
+    hidden
+  >
     <button type="button" class="product-lightbox__close" data-lightbox-close aria-label="Close">
       <svg
         viewBox="0 0 24 24"
@@ -437,10 +590,64 @@
         <line x1="6" y1="6" x2="18" y2="18"></line>
       </svg>
     </button>
-    {% # The source is assigned at runtime from the active gallery image (already optimized via image_url) %}
-    {% # theme-check-disable ImgWidthAndHeight,RemoteAsset %}
-    <img class="product-lightbox__img" data-lightbox-img src="" alt="">
-    {% # theme-check-enable ImgWidthAndHeight,RemoteAsset %}
+    {%- assign lightbox_images = product.media | where: 'media_type', 'image' -%}
+    <div class="product-lightbox__content">
+      <div class="product-lightbox__media-list custom-scrollbar" role="group" aria-label="Product images">
+        {% for media in lightbox_images %}
+          {%- assign lightbox_alt = media.alt | default: product.title -%}
+          <button
+            type="button"
+            class="product-lightbox__thumbnail"
+            data-lightbox-thumbnail
+            data-lightbox-media-id="{{ media.id }}"
+            data-lightbox-src="{{ media | image_url: width: 2400 }}"
+            data-lightbox-alt="{{ lightbox_alt | escape }}"
+            data-lightbox-width="{{ media.width }}"
+            data-lightbox-height="{{ media.height }}"
+            aria-label="View {{ lightbox_alt | escape }}, image {{ forloop.index }} of {{ lightbox_images.size }}"
+            aria-pressed="false"
+          >
+            {{
+              media
+              | image_url: width: 160
+              | image_tag: loading: 'lazy', widths: '80, 120, 160', sizes: '64px', alt: ''
+            }}
+          </button>
+        {% endfor %}
+      </div>
+
+      <div class="product-lightbox__stage">
+        {% # The source is assigned at runtime from the active gallery image (already optimized via image_url) %}
+        {% # theme-check-disable ImgWidthAndHeight,RemoteAsset %}
+        <img class="product-lightbox__img" data-lightbox-img src="" alt="">
+        {% # theme-check-enable ImgWidthAndHeight,RemoteAsset %}
+      </div>
+
+      {% if lightbox_images.size > 1 %}
+        <div class="product-lightbox__navigation" role="group" aria-label="Image navigation">
+          <button
+            type="button"
+            class="product-lightbox__nav-button"
+            data-lightbox-previous
+            aria-label="View previous image"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m4.5 15.75l7.5-7.5l7.5 7.5"/>
+            </svg>
+          </button>
+          <button
+            type="button"
+            class="product-lightbox__nav-button"
+            data-lightbox-next
+            aria-label="View next image"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m19.5 8.25l-7.5 7.5l-7.5-7.5"/>
+            </svg>
+          </button>
+        </div>
+      {% endif %}
+    </div>
   </div>
 
   <div class="product-gallery__zoom-popup" data-zoom-popup></div>
@@ -458,17 +665,103 @@
 
         var lightboxImg = lightbox.querySelector('[data-lightbox-img]');
         var closeBtn = lightbox.querySelector('[data-lightbox-close]');
+        var lightboxThumbnails = Array.prototype.slice.call(lightbox.querySelectorAll('[data-lightbox-thumbnail]'));
+        var previousBtn = lightbox.querySelector('[data-lightbox-previous]');
+        var nextBtn = lightbox.querySelector('[data-lightbox-next]');
         if (!lightboxImg || !closeBtn) return;
 
         gallery.dataset.lightboxInit = 'true';
         var originalParent = lightbox.parentNode;
         var originalNextSibling = lightbox.nextSibling;
         var closeTransitionHandler;
+        var currentLightboxIndex = 0;
+        var lightboxOpener = null;
 
         function getActiveImage() {
           var activeItem = gallery.querySelector('.product-gallery__main-item.is-active');
           if (!activeItem) return null;
           return activeItem.querySelector('img.product-gallery__main-media');
+        }
+
+        function getActiveMediaId() {
+          var activeItem = gallery.querySelector('.product-gallery__main-item.is-active');
+          return activeItem ? activeItem.dataset.mainMediaId : '';
+        }
+
+        // Map a lightbox media id back to the gallery's main <img>, so the lightbox
+        // can reuse the exact frame the gallery already downloaded (a cache hit).
+        function getGalleryImageByMediaId(mediaId) {
+          if (!mediaId) return null;
+          var item = gallery.querySelector('.product-gallery__main-item[data-main-media-id="' + mediaId + '"]');
+          return item ? item.querySelector('img.product-gallery__main-media') : null;
+        }
+
+        // Preload every hi-res lightbox image once, at low priority, so after the
+        // first view each thumbnail switch upgrades to full quality instantly.
+        var hiResPreloaded = false;
+        function preloadLightboxHiRes() {
+          if (hiResPreloaded) return;
+          hiResPreloaded = true;
+          lightboxThumbnails.forEach(function (thumbnail) {
+            var src = thumbnail.dataset.lightboxSrc;
+            if (!src) return;
+            var img = new Image();
+            img.decoding = 'async';
+            try {
+              img.fetchPriority = 'low';
+            } catch (error) {
+              /* fetchPriority unsupported — ignore */
+            }
+            img.src = src;
+          });
+        }
+
+        function showLightboxImage(index) {
+          if (!lightboxThumbnails.length) return;
+
+          currentLightboxIndex = (index + lightboxThumbnails.length) % lightboxThumbnails.length;
+          var requestIndex = currentLightboxIndex;
+          var selectedThumbnail = lightboxThumbnails[currentLightboxIndex];
+          var imageWidth = selectedThumbnail.dataset.lightboxWidth;
+          var imageHeight = selectedThumbnail.dataset.lightboxHeight;
+          var hiResSrc = selectedThumbnail.dataset.lightboxSrc;
+
+          lightboxImg.alt = selectedThumbnail.dataset.lightboxAlt || '';
+          if (imageWidth) lightboxImg.width = Number(imageWidth);
+          if (imageHeight) lightboxImg.height = Number(imageHeight);
+
+          // 1) Show instantly by reusing the gallery's already-decoded frame for
+          //    this media (0 network). Fall back to the hi-res source directly if
+          //    the gallery image for this media hasn't been loaded yet.
+          var galleryImg = getGalleryImageByMediaId(selectedThumbnail.dataset.lightboxMediaId);
+          var instantSrc = galleryImg && galleryImg.complete && galleryImg.naturalWidth > 0 ? galleryImg.currentSrc : '';
+          var usedInstant = instantSrc && instantSrc !== hiResSrc;
+          lightboxImg.src = usedInstant ? instantSrc : hiResSrc;
+
+          // 2) Upgrade to the hi-res version in the background, then swap it in —
+          //    but only if the user hasn't moved on and the lightbox is still open.
+          if (usedInstant && hiResSrc) {
+            var upgrade = new Image();
+            upgrade.decoding = 'async';
+            var swapToHiRes = function () {
+              if (currentLightboxIndex === requestIndex && lightbox.dataset.open === 'true') {
+                lightboxImg.src = hiResSrc;
+              }
+            };
+            upgrade.onload = swapToHiRes;
+            upgrade.src = hiResSrc;
+            // Already cached (e.g. preloaded) → swap right away, no wait.
+            if (upgrade.complete && upgrade.naturalWidth > 0) swapToHiRes();
+          }
+
+          lightboxThumbnails.forEach(function (thumbnail, thumbnailIndex) {
+            var isActive = thumbnailIndex === currentLightboxIndex;
+            thumbnail.classList.toggle('is-active', isActive);
+            thumbnail.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+          });
+
+          var scrollBehavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+          selectedThumbnail.scrollIntoView({ block: 'nearest', behavior: scrollBehavior });
         }
 
         function openLightbox() {
@@ -478,20 +771,35 @@
             lightbox.removeEventListener('transitionend', closeTransitionHandler);
             closeTransitionHandler = null;
           }
-          lightboxImg.src = img.currentSrc || img.src;
-          lightboxImg.alt = img.alt || '';
+          lightboxOpener = document.activeElement;
+          var activeMediaId = getActiveMediaId();
+          var activeIndex = lightboxThumbnails.findIndex(function (thumbnail) {
+            return thumbnail.dataset.lightboxMediaId === activeMediaId;
+          });
+          showLightboxImage(activeIndex >= 0 ? activeIndex : 0);
           if (lightbox.parentNode !== document.body) {
             document.body.appendChild(lightbox);
           }
           lightbox.hidden = false;
           lightbox.dataset.open = 'true';
           document.body.classList.add('product-lightbox-is-open');
+          // Lock scrolling AND hide the viewport scrollbar. The viewport scrollbar
+          // is controlled by <html>, not <body>, so body overflow alone leaves the
+          // window scrollbar visible (esp. on classic/Windows scrollbars).
           document.body.style.overflow = 'hidden';
+          document.documentElement.style.overflow = 'hidden';
           window.requestAnimationFrame(function () {
             if (lightbox.dataset.open !== 'true') return;
             lightbox.classList.add('is-open');
             closeBtn.focus();
           });
+          // Warm the hi-res cache for the remaining images without competing with
+          // the image the user is currently looking at.
+          if (window.requestIdleCallback) {
+            window.requestIdleCallback(preloadLightboxHiRes, { timeout: 1500 });
+          } else {
+            setTimeout(preloadLightboxHiRes, 300);
+          }
         }
 
         function closeLightbox() {
@@ -500,6 +808,7 @@
           lightbox.classList.remove('is-open');
           document.body.classList.remove('product-lightbox-is-open');
           document.body.style.overflow = '';
+          document.documentElement.style.overflow = '';
 
           var finishClose = function (event) {
             if (event && event.target !== lightbox) return;
@@ -510,6 +819,9 @@
             lightboxImg.src = '';
             if (originalParent && lightbox.parentNode !== originalParent) {
               originalParent.insertBefore(lightbox, originalNextSibling);
+            }
+            if (lightboxOpener && typeof lightboxOpener.focus === 'function') {
+              lightboxOpener.focus();
             }
           };
 
@@ -536,11 +848,41 @@
         }
 
         closeBtn.addEventListener('click', closeLightbox);
+        lightboxThumbnails.forEach(function (thumbnail, index) {
+          thumbnail.addEventListener('click', function () {
+            showLightboxImage(index);
+          });
+        });
+        if (previousBtn) {
+          previousBtn.addEventListener('click', function () {
+            showLightboxImage(currentLightboxIndex - 1);
+          });
+        }
+        if (nextBtn) {
+          nextBtn.addEventListener('click', function () {
+            showLightboxImage(currentLightboxIndex + 1);
+          });
+        }
         lightbox.addEventListener('click', function (event) {
-          if (event.target === lightbox) closeLightbox();
+          if (
+            event.target === lightbox ||
+            event.target.classList.contains('product-lightbox__content') ||
+            event.target.classList.contains('product-lightbox__stage')
+          ) {
+            closeLightbox();
+          }
         });
         document.addEventListener('keydown', function (event) {
-          if (event.key === 'Escape' && !lightbox.hidden) closeLightbox();
+          if (lightbox.hidden || lightbox.dataset.open !== 'true') return;
+          if (event.key === 'Escape') closeLightbox();
+          if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            showLightboxImage(currentLightboxIndex - 1);
+          }
+          if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            showLightboxImage(currentLightboxIndex + 1);
+          }
         });
 
         var thumbnails = gallery.querySelector('.product-gallery__thumbnails');
@@ -740,7 +1082,8 @@
       var generatedCustomerId = createWishlistCustomerId();
       if (!generatedCustomerId) return '';
 
-      document.cookie = '__v__wl__c__=' + encodeURIComponent(generatedCustomerId) + '; path=/; max-age=31536000; samesite=strict';
+      document.cookie =
+        '__v__wl__c__=' + encodeURIComponent(generatedCustomerId) + '; path=/; max-age=31536000; samesite=strict';
       return generatedCustomerId;
     }
 

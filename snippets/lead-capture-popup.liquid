@@ -64,6 +64,17 @@
       </svg>
     </button>
 
+    <div class="lead-capture__media">
+      <img
+        class="lead-capture__media-image"
+        src="{{ 'lead-capture-popup-photo.webp' | file_url }}"
+        alt="Sculptural wood coffee table in a warmly lit WRYDECO interior"
+        width="1086"
+        height="1448"
+        loading="lazy"
+      >
+    </div>
+
     <div class="lead-capture__content">
       <div data-lead-capture-form-state>
         <div class="lead-capture__mark" aria-hidden="true">
@@ -383,18 +394,34 @@
 
   .lead-capture__dialog {
     position: relative;
-    width: min(42rem, calc(100vw - var(--sp-6)));
-    max-height: calc(100dvh - var(--sp-6));
-    overflow-y: auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    width: min(var(--layout-max-width), calc(100vw - (var(--sp-7) * 2)));
+    max-height: calc(100dvh - (var(--sp-7) * 2));
     border: var(--border-width) solid var(--color-clay);
+    overflow-x: hidden;
+    overflow-y: hidden;
     border-radius: var(--radius-xl);
-    outline: var(--border-width) solid var(--surface-elevated);
     outline-offset: calc(var(--sp-1) * -1);
     background: var(--color-bg);
     box-shadow: var(--shadow-modal);
     color: var(--color-text);
     transform: translateY(var(--sp-3)) scale(0.98);
     transition: transform var(--timing-base) var(--ease-out);
+  }
+
+  .lead-capture__media {
+    min-width: var(--sp-0);
+    max-height: calc(100dvh - (var(--sp-7) * 2));
+    overflow: hidden;
+    background: var(--color-bg-warm);
+  }
+
+  .lead-capture__media-image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
 
   .lead-capture.is-open .lead-capture__dialog {
@@ -431,7 +458,8 @@
     padding: var(--sp-0);
     border: var(--border-width) solid var(--color-clay);
     border-radius: var(--radius-full);
-    background: transparent;
+    background: var(--surface-elevated);
+    box-shadow: var(--shadow-elevation-1);
     color: var(--color-brown);
     cursor: pointer;
     transition: var(--transition-fast);
@@ -444,7 +472,9 @@
   .lead-capture__content {
     position: relative;
     z-index: 1;
-    padding: var(--sp-5) var(--sp-6) var(--sp-5);
+    align-self: center;
+    min-width: var(--sp-0);
+    padding: var(--sp-7) var(--sp-6);
     text-align: center;
   }
 
@@ -697,8 +727,14 @@
     }
 
     .lead-capture__dialog {
+      grid-template-columns: minmax(0, 1fr);
       width: min(100%, 36rem);
       max-height: calc(100dvh - var(--sp-5));
+    }
+
+    .lead-capture__media {
+      min-height: var(--sp-0);
+      height: calc(var(--sp-12) + var(--sp-9));
     }
 
     .lead-capture__content {
@@ -729,6 +765,10 @@
   }
 
   @media (max-width: 30rem) {
+    .lead-capture__media {
+      height: var(--sp-12);
+    }
+
     .lead-capture__content {
       padding: var(--sp-4) var(--sp-5) var(--sp-3);
     }

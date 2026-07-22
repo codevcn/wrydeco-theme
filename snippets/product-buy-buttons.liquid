@@ -20,7 +20,7 @@
   }
   .product-buy-buttons__primary [data-add-to-cart-text] {
     font-family: var(--font-roboto);
-    font-size: 1.1rem;
+    font-size: 1rem;
     transform: translateY(2px);
   }
   .quantity-wrapper {
@@ -130,10 +130,36 @@
   .product-buy-buttons__secondary {
     width: 100%;
   }
-  .custom-buy-it-now-btn {
-    display: none;
+  /* Buy Now: express-checkout action shown directly under Add to cart. Uses the
+     dark ebony/milk treatment plus the SAME lift-off shadow wrapper and hover/
+     active press as Add to cart (mirrors .add-to-cart-wrapper). The wrapper's
+     gradient + padding-bottom is the revealed drop shadow; the button lifts on
+     hover and presses down on active. Full width on every breakpoint. */
+  .custom-buy-it-now-wrapper {
     width: 100%;
-    margin-top: 12px;
+    border-radius: var(--radius-lg);
+    padding-bottom: 6px;
+    background-image: linear-gradient(
+      to top,
+      rgba(128, 128, 128, 0.9) 0%,
+      rgba(0, 0, 0, 0.5) 28%,
+      rgba(0, 0, 0, 0) 100%
+    );
+  }
+  .custom-buy-it-now-btn {
+    width: 100%;
+    background-color: var(--color-ebony);
+    color: var(--color-milk);
+    transition: transform 0.2s ease, background-color 0.2s ease;
+    font-size: 16px;
+    font-weight: 700;
+  }
+  .custom-buy-it-now-wrapper:hover .custom-buy-it-now-btn {
+    transform: translateY(-3px);
+    background-color: var(--color-charcoal);
+  }
+  .custom-buy-it-now-wrapper:active .custom-buy-it-now-btn {
+    transform: translateY(3px);
   }
   .shopify-payment-button__button {
     border-radius: 3px !important;
@@ -226,7 +252,21 @@
 
     <div class="product-buy-buttons__secondary">
       <div class="custom-buy-it-now-wrapper">
-        <button type="button" class="flat-btn custom-buy-it-now-btn">BUY IT NOW</button>
+        <button
+          type="button"
+          class="flat-btn custom-buy-it-now-btn"
+          {% if current_variant.available == false %}
+            disabled
+          {% endif %}
+        >
+          <span class="btn-icon">
+            {%- comment -%} Icon: mdi:lightning-bolt (Iconify) — express-checkout cue {%- endcomment -%}
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="currentColor" d="M11 15H6l7-14v8h5l-7 14z" />
+            </svg>
+          </span>
+          <span>BUY NOW</span>
+        </button>
       </div>
       <div class="original-payment-button-wrapper" style="display: none;">
         {{ form | payment_button }}
@@ -289,6 +329,23 @@
           e.target.value = '0';
         }
       }
+    });
+  }
+
+  // Keep Buy Now disabled in lockstep with Add to cart. The variant picker toggles
+  // the Add to cart button's `disabled` on variant change (sold out); mirror that
+  // onto Buy Now so it never checks out an unavailable variant.
+  if (!window.buyNowSyncInitialized) {
+    window.buyNowSyncInitialized = true;
+    document.querySelectorAll('form[data-type="add-to-cart-form"]').forEach((form) => {
+      const addBtn = form.querySelector('button[name="add"]');
+      const buyBtn = form.querySelector('.custom-buy-it-now-btn');
+      if (!addBtn || !buyBtn) return;
+      const sync = () => {
+        buyBtn.disabled = addBtn.hasAttribute('disabled');
+      };
+      sync();
+      new MutationObserver(sync).observe(addBtn, { attributes: true, attributeFilter: ['disabled'] });
     });
   }
 </script>
