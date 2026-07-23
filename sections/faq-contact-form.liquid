@@ -8,24 +8,53 @@
     <div class="faq-contact__intro">
       <p class="faq-contact__eyebrow">{{ section.settings.eyebrow | escape }}</p>
       <h2 id="FaqContactTitle-{{ section.id }}">{{ section.settings.heading | escape }}</h2>
+      <span class="faq-contact__accent" aria-hidden="true"></span>
       <p class="faq-contact__description">{{ section.settings.description | escape }}</p>
 
       <div class="faq-contact__details">
         <div class="faq-contact__detail">
-          <span>{{ section.settings.email_label | escape }}</span>
-          <a href="mailto:{{ section.settings.email_address | escape }}">
-            {{- section.settings.email_address | escape -}}
-          </a>
+          <span class="faq-contact__detail-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+                <path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/>
+                <rect width="20" height="16" x="2" y="4" rx="2"/>
+              </g>
+            </svg>
+          </span>
+          <div class="faq-contact__detail-copy">
+            <span>{{ section.settings.email_label | escape }}</span>
+            <a href="mailto:{{ section.settings.email_address | escape }}">
+              {{- section.settings.email_address | escape -}}
+            </a>
+          </div>
         </div>
         <div class="faq-contact__detail">
-          <span>{{ section.settings.response_label | escape }}</span>
-          <p>{{ section.settings.response_text | escape }}</p>
+          <span class="faq-contact__detail-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 6v6h4"/>
+              </g>
+            </svg>
+          </span>
+          <div class="faq-contact__detail-copy">
+            <span>{{ section.settings.response_label | escape }}</span>
+            <p>{{ section.settings.response_text | escape }}</p>
+          </div>
         </div>
       </div>
     </div>
 
     <div class="faq-contact__panel">
       <div class="faq-contact__cta">
+        <span class="faq-contact__wood-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+              <path d="M6 5.5a6 2.5 0 1 0 12 0 6 2.5 0 1 0-12 0"/>
+              <path d="M18 5.5v4.626a1.415 1.415 0 0 1 1.683 2.18l-.097.108L18 14v4c0 1.61-2.54 2.925-5.725 3H12c-3.314 0-6-1.343-6-3v-2l-1.586-1.586A1.414 1.414 0 0 1 6 12.127V5.5m4 7V14m4 2v1"/>
+            </g>
+          </svg>
+        </span>
         {% if section.settings.cta_heading != blank %}
           <h3 class="faq-contact__cta-heading">{{ section.settings.cta_heading | escape }}</h3>
         {% endif %}
@@ -37,7 +66,16 @@
           href="{{ section.settings.button_url | default: '/pages/contact' }}"
         >
           <span>{{ section.settings.button_label | escape }}</span>
-          <span aria-hidden="true">&rarr;</span>
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path
+              d="M5 12h14m-7-7 7 7-7 7"
+              fill="none"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+            />
+          </svg>
         </a>
       </div>
     </div>
@@ -46,30 +84,33 @@
 
 {% stylesheet %}
   .faq-contact {
-    border-block-start: var(--border-width) solid var(--border-default);
-    background: var(--bg-primary);
+    padding: var(--sp-7) var(--container-padding-x);
+    background: var(--color-white-cream);
     color: var(--text-primary);
     font-family: var(--font-body);
   }
 
   .faq-contact__inner {
     display: grid;
-    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+    grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
     align-items: stretch;
     gap: var(--sp-10);
-    inline-size: min(calc(100% - (var(--layout-padding-desktop) * 2)), var(--layout-showcase-max-width));
+    inline-size: min(100%, var(--layout-showcase-max-width));
     margin-inline: auto;
-    padding-block: var(--sp-8) var(--sp-8);
+    padding: var(--sp-6) var(--sp-8);
+    border: var(--border-width) solid var(--color-stone);
+    border-radius: var(--radius-xl);
+    background: color-mix(in srgb, var(--surface-elevated) 30%, transparent);
   }
 
   .faq-contact__intro {
     align-self: start;
-    max-inline-size: 44ch;
-    padding-block-start: var(--sp-5);
+    max-inline-size: 42ch;
+    padding-block-start: var(--sp-2);
   }
 
   .faq-contact__eyebrow {
-    margin: var(--sp-0) var(--sp-0) var(--sp-3);
+    margin: var(--sp-0) var(--sp-0) var(--sp-6);
     color: var(--color-earth-brown);
     font-size: var(--font-size-caption);
     font-weight: var(--font-weight-semibold);
@@ -82,7 +123,7 @@
     margin: var(--sp-0);
     color: var(--color-ebony);
     font-family: var(--font-display-light);
-    font-size: var(--font-size-display-lg);
+    font-size: var(--font-size-display-2xl);
     font-weight: var(--font-weight-light);
     letter-spacing: var(--letter-spacing-tight);
     line-height: var(--line-height-display);
@@ -91,26 +132,58 @@
 
   .faq-contact__description {
     max-inline-size: 38ch;
-    margin: var(--sp-5) var(--sp-0) var(--sp-0);
+    margin: var(--sp-0);
     color: var(--text-secondary);
-    font-size: var(--font-size-body-md);
+    font-size: var(--font-size-body-xl);
     line-height: var(--line-height-generous);
+  }
+
+  .faq-contact__accent {
+    display: block;
+    inline-size: var(--sp-7);
+    block-size: calc(var(--border-width) * 2);
+    margin-block: var(--sp-5);
+    background: var(--color-orange);
   }
 
   .faq-contact__details {
     display: grid;
     gap: var(--sp-5);
-    margin-block-start: var(--sp-8);
-    padding-block-start: var(--sp-5);
+    margin-block-start: var(--sp-7);
+    padding-block-start: var(--sp-6);
     border-block-start: var(--border-width) solid var(--border-default);
   }
 
   .faq-contact__detail {
     display: grid;
-    gap: var(--sp-2);
+    grid-template-columns: var(--sp-9) minmax(0, 1fr);
+    align-items: center;
+    gap: var(--sp-5);
   }
 
-  .faq-contact__detail > span {
+  .faq-contact__detail-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--sp-9);
+    block-size: var(--sp-9);
+    border-radius: var(--radius-full);
+    background: color-mix(in srgb, var(--color-orange) 14%, transparent);
+    color: var(--color-earth-brown);
+  }
+
+  .faq-contact__detail-icon svg {
+    inline-size: var(--sp-6);
+    block-size: var(--sp-6);
+  }
+
+  .faq-contact__detail-copy {
+    display: grid;
+    gap: var(--sp-2);
+    min-inline-size: var(--sp-0);
+  }
+
+  .faq-contact__detail-copy > span {
     color: var(--color-earth-brown);
     font-size: var(--font-size-caption);
     font-weight: var(--font-weight-semibold);
@@ -122,37 +195,74 @@
   .faq-contact__detail p {
     margin: var(--sp-0);
     color: var(--text-primary);
-    font-size: var(--font-size-body-sm);
+    font-size: var(--font-size-body-md);
     line-height: var(--line-height-generous);
   }
 
   .faq-contact__detail a {
     inline-size: fit-content;
     border-block-end: var(--border-width) solid var(--color-clay);
+    text-decoration: none;
   }
 
   .faq-contact__panel {
+    position: relative;
     display: flex;
-    padding: var(--sp-8) var(--sp-7);
-    border: var(--border-width) solid var(--border-default);
-    border-radius: var(--radius-lg);
-    background: color-mix(in srgb, var(--bg-tertiary) 54%, transparent);
+    min-block-size: calc(var(--sp-12) * 5);
+    overflow: hidden;
+    padding: var(--sp-8);
+    border: var(--border-width) solid var(--color-stone);
+    border-radius: var(--radius-xl);
+    background: color-mix(in srgb, var(--surface-elevated) 74%, transparent);
+    box-shadow: var(--shadow-card);
+  }
+
+  .faq-contact__panel::after {
+    position: absolute;
+    inset-inline-end: calc(var(--sp-8) * -1);
+    inset-block-end: calc(var(--sp-10) * -1);
+    inline-size: calc(var(--sp-12) * 5);
+    block-size: calc(var(--sp-12) * 2);
+    border-radius: var(--radius-full);
+    background: color-mix(in srgb, var(--color-orange) 8%, var(--color-white-cream));
+    content: '';
+    pointer-events: none;
+    transform: rotate(-10deg);
   }
 
   .faq-contact__cta {
+    position: relative;
+    z-index: 1;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
     justify-content: center;
-    gap: var(--sp-4);
+    gap: var(--sp-5);
     margin-block: auto;
+  }
+
+  .faq-contact__wood-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--sp-8);
+    block-size: var(--sp-8);
+    margin-block-end: var(--sp-5);
+    border-radius: var(--radius-full);
+    background: color-mix(in srgb, var(--color-orange) 12%, transparent);
+    color: var(--color-clay);
+  }
+
+  .faq-contact__wood-icon svg {
+    inline-size: var(--sp-7);
+    block-size: var(--sp-7);
   }
 
   .faq-contact__cta-heading {
     margin: var(--sp-0);
     color: var(--color-ebony);
     font-family: var(--font-display-light);
-    font-size: var(--font-size-display-md);
+    font-size: var(--font-size-display-lg);
     font-weight: var(--font-weight-light);
     line-height: var(--line-height-display);
     text-wrap: balance;
@@ -162,7 +272,7 @@
     max-inline-size: 42ch;
     margin: var(--sp-0);
     color: var(--text-secondary);
-    font-size: var(--font-size-body-md);
+    font-size: var(--font-size-body-lg);
     line-height: var(--line-height-generous);
   }
 
@@ -171,20 +281,26 @@
     align-items: center;
     justify-content: space-between;
     gap: var(--sp-6);
-    min-block-size: calc(var(--sp-8) + var(--sp-2));
-    min-inline-size: calc(var(--sp-12) * 2);
-    margin-block-start: var(--sp-3);
-    padding-inline: var(--sp-5);
+    inline-size: min(calc(var(--sp-12) * 3), 100%);
+    min-block-size: var(--sp-10);
+    margin-block-start: var(--sp-6);
+    padding-inline: var(--sp-6);
     border-radius: var(--radius-md);
-    background: var(--color-earth-brown);
+    background: linear-gradient(135deg, var(--color-earth-brown), var(--color-clay));
     color: var(--text-inverse);
-    font-size: var(--font-size-caption);
+    font-size: var(--font-size-body-md);
     font-weight: var(--font-weight-semibold);
     letter-spacing: var(--letter-spacing-wide);
     text-transform: uppercase;
     text-decoration: none;
     transition: background-color var(--timing-short) var(--ease-standard),
       transform var(--timing-short) var(--ease-standard);
+  }
+
+  .faq-contact__cta-button svg {
+    flex: 0 0 auto;
+    inline-size: var(--sp-5);
+    block-size: var(--sp-5);
   }
 
   .faq-contact__cta-button:hover {
@@ -202,14 +318,19 @@
   }
 
   @media screen and (max-width: 64rem) {
+    .faq-contact {
+      padding: var(--sp-6) var(--layout-padding-tablet);
+    }
+
     .faq-contact__inner {
       grid-template-columns: minmax(0, 0.72fr) minmax(0, 1.28fr);
       gap: var(--sp-7);
-      inline-size: min(calc(100% - (var(--layout-padding-tablet) * 2)), var(--layout-showcase-max-width));
-      padding-block: var(--sp-8) var(--sp-9);
+      inline-size: min(100%, var(--layout-showcase-max-width));
+      padding: var(--sp-6);
     }
 
     .faq-contact__panel {
+      min-block-size: calc(var(--sp-12) * 4);
       padding: var(--sp-6);
     }
 
@@ -219,11 +340,15 @@
   }
 
   @media screen and (max-width: 48rem) {
+    .faq-contact {
+      padding: var(--sp-5) var(--layout-padding-mobile);
+    }
+
     .faq-contact__inner {
       grid-template-columns: minmax(0, 1fr);
-      gap: var(--sp-7);
-      inline-size: min(calc(100% - (var(--layout-padding-mobile) * 2)), var(--layout-showcase-max-width));
-      padding-block: var(--sp-5) var(--sp-4);
+      gap: var(--sp-6);
+      inline-size: min(100%, var(--layout-showcase-max-width));
+      padding: var(--sp-5);
     }
 
     .faq-contact__intro {
@@ -241,18 +366,41 @@
     }
 
     .faq-contact__details {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: minmax(0, 1fr);
       margin-block-start: var(--sp-6);
     }
 
     .faq-contact__panel {
+      min-block-size: calc(var(--sp-12) * 3);
       padding: var(--sp-5);
+    }
+
+    .faq-contact__cta-heading {
+      font-size: var(--font-size-display-md);
+    }
+
+    .faq-contact__cta-text {
+      font-size: var(--font-size-body-sm);
+    }
+
+    .faq-contact__cta-button {
+      margin-block-start: var(--sp-4);
     }
   }
 
   @media screen and (max-width: 30rem) {
-    .faq-contact__details {
-      grid-template-columns: minmax(0, 1fr);
+    .faq-contact__inner {
+      padding: var(--sp-4);
+    }
+
+    .faq-contact__detail {
+      grid-template-columns: var(--sp-8) minmax(0, 1fr);
+      gap: var(--sp-4);
+    }
+
+    .faq-contact__detail-icon {
+      inline-size: var(--sp-8);
+      block-size: var(--sp-8);
     }
 
     .faq-contact__cta-button {
