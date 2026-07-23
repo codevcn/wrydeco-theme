@@ -452,6 +452,26 @@
     color: var(--text-inverse, #fff8f0);
   }
 
+  /* Once a reference image is uploaded, the "Custom" pill becomes a thumbnail of
+     it. Kept at the pill's own min-height so it stays a comfortable touch target. */
+  .sp-quick__pill--image {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--sp-7);
+    height: var(--sp-7);
+    padding: var(--sp-1);
+    overflow: hidden;
+  }
+
+  .sp-quick__pill--image img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: var(--radius-sm);
+    object-fit: cover;
+  }
+
   .sp-quick__price {
     display: flex;
     align-items: baseline;
@@ -1147,6 +1167,27 @@
       return String(val == null ? '' : val).trim().toLowerCase() === 'custom';
     }
 
+    // Turn a "Custom" colour/finish pill into a thumbnail of the uploaded
+    // reference image. The pill then doubles as a link: clicking it while it is
+    // the active choice opens the full image in a new tab.
+    function setPillImage(pill, url, optionName) {
+      if (!pill || !url) return;
+      pill.innerHTML = '';
+      pill.classList.add('sp-quick__pill--image');
+      var img = document.createElement('img');
+      img.src = url;
+      img.alt = '';
+      img.loading = 'lazy';
+      pill.appendChild(img);
+      var label = 'Your custom ' + String(optionName || 'color').toLowerCase() + ' reference image — open in a new tab';
+      pill.setAttribute('aria-label', label);
+      pill.setAttribute('title', label);
+    }
+
+    function openImageTab(url) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+
     // --- Custom colour upload: guide → device picker → upload ---
     function closeColorGuide() {
       hideSubDialog(guide, guideTimer);
@@ -1353,6 +1394,10 @@
           pill.textContent = val;
           var custom = isCustomValue(val);
           if (state.selected[oi] === val) pill.setAttribute('aria-pressed', 'true');
+          // An image uploaded earlier in this session survives a re-render.
+          if (custom && cls.isColorOrFinish && customImage.url && customImage.optionIndex === oi) {
+            setPillImage(pill, customImage.url, optName);
+          }
           function commitSelection() {
             state.selected[oi] = val;
             Array.prototype.forEach.call(pills.children, function (c) {
@@ -1375,9 +1420,21 @@
             // uploaded (guide → device picker → upload). Backing out of the
             // guide therefore leaves the previous choice untouched.
             if (custom && cls.isColorOrFinish) {
+              // Already uploaded: the pill now shows the reference image. Clicking
+              // it while it is the active choice opens that image in a new tab;
+              // clicking it after switching away simply re-selects it.
+              if (customImage.url && customImage.optionIndex === oi) {
+                if (state.selected[oi] === val) openImageTab(customImage.url);
+                else commitSelection();
+                return;
+              }
+
               openColorGuide(oi, function () {
                 if (fileInput) fileInput.click();
-              }, commitSelection);
+              }, function () {
+                setPillImage(pill, customImage.url, optName);
+                commitSelection();
+              });
               return;
             }
 

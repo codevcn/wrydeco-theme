@@ -1,0 +1,701 @@
+{% comment %}
+  Server-rendered order process and delivery timeline for product pages.
+{% endcomment %}
+
+<section
+  class="order-process"
+  aria-labelledby="OrderProcessHeading-{{ section.id }}"
+>
+  <div class="order-process__inner">
+    <header class="order-process__header">
+      <h2 class="order-process__heading" id="OrderProcessHeading-{{ section.id }}">
+        {{ section.settings.heading | escape }}
+      </h2>
+
+      <div class="order-process__ornament" aria-hidden="true">
+        <span class="order-process__ornament-line"></span>
+        <span class="order-process__leaves">
+          <span>{% render 'icon-order-process', icon: 'leaf' %}</span>
+          <span>{% render 'icon-order-process', icon: 'leaf' %}</span>
+          <span>{% render 'icon-order-process', icon: 'leaf' %}</span>
+        </span>
+        <span class="order-process__ornament-line"></span>
+      </div>
+
+      {% if section.settings.subtitle != blank %}
+        <p class="order-process__subtitle">{{ section.settings.subtitle | escape }}</p>
+      {% endif %}
+    </header>
+
+    <div class="order-process__layout">
+      <div class="order-process__process">
+        <button
+          class="order-process__mobile-toggle"
+          type="button"
+          aria-expanded="false"
+          aria-controls="OrderProcessSteps-{{ section.id }}"
+          data-order-process-toggle
+        >
+          <span>{{ section.settings.heading | escape }}</span>
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path
+              d="m6 9 6 6 6-6"
+              fill="none"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+            />
+          </svg>
+        </button>
+
+        <ol
+          class="order-process__steps order-process__panel"
+          id="OrderProcessSteps-{{ section.id }}"
+          role="list"
+          hidden
+        >
+          {%- assign step_number = 0 -%}
+          {% for block in section.blocks %}
+            {% if block.type == 'step' %}
+              {%- assign step_number = step_number | plus: 1 -%}
+              <li class="order-process__step" {{ block.shopify_attributes }}>
+                <span class="order-process__step-number" aria-hidden="true">{{ step_number }}</span>
+
+                <div class="order-process__step-card">
+                  <span class="order-process__step-icon" aria-hidden="true">
+                    {% render 'icon-order-process', icon: block.settings.icon %}
+                  </span>
+                  <div class="order-process__step-copy">
+                    <h3 class="order-process__step-title">{{ block.settings.title | escape }}</h3>
+                    {% if block.settings.description != blank %}
+                      <p class="order-process__step-description">{{ block.settings.description | escape }}</p>
+                    {% endif %}
+                  </div>
+                </div>
+              </li>
+            {% endif %}
+          {% endfor %}
+        </ol>
+      </div>
+
+      <aside class="order-process__lead" aria-labelledby="OrderProcessLeadHeading-{{ section.id }}">
+        <button
+          class="order-process__mobile-toggle"
+          type="button"
+          aria-expanded="false"
+          aria-controls="OrderProcessLead-{{ section.id }}"
+          data-order-process-toggle
+        >
+          <span>{{ section.settings.lead_time_heading | escape }}</span>
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path
+              d="m6 9 6 6 6-6"
+              fill="none"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+            />
+          </svg>
+        </button>
+
+        <h3 class="order-process__lead-heading" id="OrderProcessLeadHeading-{{ section.id }}">
+          {{ section.settings.lead_time_heading | escape }}
+        </h3>
+
+        <div class="order-process__lead-ornament" aria-hidden="true">
+          <span></span>
+          {% render 'icon-order-process', icon: 'leaf' %}
+          <span></span>
+        </div>
+
+        <div class="order-process__lead-list order-process__panel" id="OrderProcessLead-{{ section.id }}" hidden>
+          {% for block in section.blocks %}
+            {% if block.type == 'lead_time' %}
+              <div class="order-process__lead-item" {{ block.shopify_attributes }}>
+                <span class="order-process__lead-icon" aria-hidden="true">
+                  {% render 'icon-order-process', icon: block.settings.icon %}
+                </span>
+                <div class="order-process__lead-copy">
+                  <h4 class="order-process__lead-title">{{ block.settings.title | escape }}</h4>
+                  {% if block.settings.description != blank %}
+                    <p class="order-process__lead-description">{{ block.settings.description | escape }}</p>
+                  {% endif %}
+                </div>
+              </div>
+            {% endif %}
+          {% endfor %}
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+{% stylesheet %}
+  .order-process {
+    display: block;
+    padding: var(--sp-8) var(--container-padding-x) var(--sp-8);
+    background-color: var(--color-white-cream);
+    color: var(--text-primary);
+  }
+
+  .order-process__inner {
+    width: 100%;
+    max-width: var(--page-max-width);
+    margin-inline: auto;
+  }
+
+  .order-process__header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-block-end: var(--sp-3);
+    text-align: center;
+  }
+
+  .order-process__heading {
+    margin: var(--sp-0);
+    color: var(--color-earth-brown);
+    font-family: var(--font-display-light);
+    font-size: var(--font-size-display-lg);
+    font-weight: var(--font-weight-light);
+    line-height: var(--line-height-display);
+    letter-spacing: var(--letter-spacing-snug);
+  }
+
+  .order-process__ornament,
+  .order-process__lead-ornament {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-3);
+    color: var(--color-clay);
+  }
+
+  .order-process__ornament {
+    margin-block: var(--sp-2) var(--sp-1);
+  }
+
+  .order-process__ornament-line {
+    width: var(--sp-10);
+    height: var(--border-width);
+    background-color: var(--color-orange);
+  }
+
+  .order-process__leaves {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-0);
+  }
+
+  .order-process__leaves span {
+    display: inline-flex;
+    width: var(--sp-5);
+    height: var(--sp-5);
+  }
+
+  .order-process__leaves span:nth-child(1) {
+    transform: rotate(-24deg);
+  }
+
+  .order-process__leaves span:nth-child(2) {
+    transform: rotate(-2deg);
+  }
+
+  .order-process__leaves span:nth-child(3) {
+    transform: rotate(20deg);
+  }
+
+  .order-process__leaves svg,
+  .order-process__lead-ornament svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .order-process__subtitle {
+    margin: var(--sp-0);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-md);
+    line-height: var(--line-height-normal);
+  }
+
+  .order-process__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1.08fr);
+    align-items: stretch;
+    gap: var(--sp-3);
+  }
+
+  .order-process__steps {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-1);
+    margin: var(--sp-0);
+    padding: var(--sp-0);
+    list-style: none;
+  }
+
+  .order-process__steps::before {
+    content: '';
+    position: absolute;
+    inset-block: calc(var(--sp-7) / 2);
+    inset-inline-start: calc(var(--sp-7) / 2);
+    width: var(--border-width);
+    background-color: var(--color-linen);
+  }
+
+  .order-process__step {
+    position: relative;
+    display: grid;
+    grid-template-columns: var(--sp-7) minmax(0, 1fr);
+    align-items: center;
+    gap: var(--sp-3);
+    margin: var(--sp-0);
+  }
+
+  .order-process__step:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    inset-block-end: calc(var(--sp-1) * -1);
+    inset-inline-start: calc((var(--sp-7) - var(--sp-2)) / 2);
+    width: var(--sp-2);
+    height: var(--sp-2);
+    border-radius: var(--radius-full);
+    background-color: var(--color-bark);
+  }
+
+  .order-process__step-number {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--sp-7);
+    height: var(--sp-7);
+    border-radius: var(--radius-full);
+    background-color: var(--color-clay);
+    color: var(--text-inverse);
+    font-family: var(--font-display);
+    font-size: var(--font-size-body-xl);
+    line-height: var(--line-height-tight);
+  }
+
+  .order-process__step-card {
+    display: grid;
+    grid-template-columns: var(--sp-7) minmax(0, 1fr);
+    align-items: center;
+    gap: var(--sp-3);
+    min-height: var(--sp-7);
+    padding: var(--sp-1) var(--sp-3);
+    border: var(--border-width) solid var(--color-stone);
+    border-radius: var(--radius-xl);
+    background-color: color-mix(in srgb, var(--surface-elevated) 40%, transparent);
+  }
+
+  .order-process__step-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--sp-7);
+    height: var(--sp-7);
+    border-radius: var(--radius-xl);
+    background-color: color-mix(in srgb, var(--color-orange) 10%, transparent);
+    color: var(--color-earth-brown);
+  }
+
+  .order-process__step-icon svg {
+    width: var(--sp-5);
+    height: var(--sp-5);
+  }
+
+  .order-process__step-copy,
+  .order-process__lead-copy {
+    min-width: 0;
+  }
+
+  .order-process__step-title,
+  .order-process__lead-title {
+    margin: var(--sp-0) var(--sp-0) var(--sp-1);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-weight: var(--font-weight-bold);
+    line-height: var(--line-height-snug);
+  }
+
+  .order-process__step-title {
+    font-size: var(--font-size-body-lg);
+  }
+
+  .order-process__step-description,
+  .order-process__lead-description {
+    margin: var(--sp-0);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-relaxed);
+  }
+
+  .order-process__lead {
+    display: flex;
+    flex-direction: column;
+    padding: var(--sp-4);
+    border: var(--border-width) solid var(--color-stone);
+    border-radius: var(--radius-xl);
+    background-color: color-mix(in srgb, var(--surface-elevated) 34%, transparent);
+  }
+
+  .order-process__lead-heading {
+    margin: var(--sp-0);
+    color: var(--color-earth-brown);
+    font-family: var(--font-display-light);
+    font-size: var(--font-size-display-sm);
+    font-weight: var(--font-weight-light);
+    line-height: var(--line-height-tight);
+    text-align: center;
+  }
+
+  .order-process__lead-ornament {
+    margin-block: var(--sp-2) var(--sp-1);
+  }
+
+  .order-process__lead-ornament span {
+    width: var(--sp-10);
+    height: var(--border-width);
+    background-color: var(--color-stone);
+  }
+
+  .order-process__lead-ornament svg {
+    width: var(--sp-5);
+    height: var(--sp-5);
+  }
+
+  .order-process__lead-list {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+  }
+
+  .order-process__lead-item {
+    display: grid;
+    flex: 1 1 0;
+    grid-template-columns: var(--sp-7) minmax(0, 1fr);
+    align-items: center;
+    gap: var(--sp-4);
+    padding-block: var(--sp-2);
+  }
+
+  .order-process__lead-item + .order-process__lead-item {
+    border-top: var(--border-width) solid var(--color-stone);
+  }
+
+  .order-process__lead-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--sp-7);
+    height: var(--sp-7);
+    border-radius: var(--radius-full);
+    background-color: color-mix(in srgb, var(--color-orange) 12%, transparent);
+    color: var(--color-earth-brown);
+  }
+
+  .order-process__lead-icon svg {
+    width: var(--sp-6);
+    height: var(--sp-6);
+  }
+
+  .order-process__lead-title {
+    font-size: var(--font-size-body-lg);
+  }
+
+  .order-process__mobile-toggle {
+    display: none;
+  }
+
+  .order-process__panel[hidden] {
+    display: flex;
+  }
+
+  @media screen and (max-width: 900px) {
+    .order-process__heading {
+      font-size: var(--font-size-display-xl);
+    }
+
+    .order-process__layout {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .order-process__lead {
+      width: 100%;
+    }
+  }
+
+  @media screen and (max-width: 640px) {
+    .order-process {
+      padding: var(--sp-8) var(--layout-padding-mobile);
+    }
+
+    .order-process__header {
+      margin-block-end: var(--sp-5);
+    }
+
+    .order-process__heading {
+      font-size: var(--font-size-display-sm);
+    }
+
+    .order-process__ornament {
+      margin-block: var(--sp-2);
+    }
+
+    .order-process__ornament-line {
+      width: var(--sp-7);
+    }
+
+    .order-process__leaves span {
+      width: var(--sp-4);
+      height: var(--sp-4);
+    }
+
+    .order-process__subtitle {
+      font-size: var(--font-size-body-sm);
+    }
+
+    .order-process__process,
+    .order-process__lead {
+      min-width: 0;
+    }
+
+    .order-process__mobile-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--sp-3);
+      width: 100%;
+      min-height: var(--sp-7);
+      padding: var(--sp-2) var(--sp-3);
+      border: var(--border-width) solid var(--color-stone);
+      border-radius: var(--radius-xl);
+      background-color: #fbf5ec;
+      color: var(--color-earth-brown);
+      font-family: var(--font-display);
+      font-size: var(--font-size-body-lg);
+      line-height: var(--line-height-tight);
+      text-align: start;
+      cursor: pointer;
+    }
+
+    .order-process__mobile-toggle svg {
+      flex: 0 0 auto;
+      width: var(--sp-5);
+      height: var(--sp-5);
+      transition: var(--transition-fast);
+    }
+
+    .order-process__mobile-toggle[aria-expanded='false'] svg {
+      transform: rotate(-90deg);
+    }
+
+    .order-process__process .order-process__steps {
+      margin-block-start: var(--sp-3);
+    }
+
+    .order-process__panel[hidden] {
+      display: none;
+    }
+
+    .order-process__step {
+      gap: var(--sp-3);
+    }
+
+    .order-process__step-card {
+      grid-template-columns: var(--sp-8) minmax(0, 1fr);
+      gap: var(--sp-3);
+      padding: var(--sp-2);
+    }
+
+    .order-process__step-icon {
+      width: var(--sp-8);
+      height: var(--sp-8);
+    }
+
+    .order-process__step-icon svg {
+      width: var(--sp-6);
+      height: var(--sp-6);
+    }
+
+    .order-process__step-title,
+    .order-process__lead-title {
+      font-size: var(--font-size-body-md);
+    }
+
+    .order-process__step-description,
+    .order-process__lead-description {
+      font-size: var(--font-size-caption);
+    }
+
+    .order-process__lead {
+      padding: var(--sp-4);
+    }
+
+    .order-process__lead-heading {
+      display: none;
+    }
+
+    .order-process__lead-ornament {
+      display: none;
+    }
+
+    .order-process__lead-list {
+      margin-block-start: var(--sp-2);
+    }
+
+    .order-process__lead-item {
+      grid-template-columns: var(--sp-8) minmax(0, 1fr);
+      gap: var(--sp-4);
+    }
+
+    .order-process__lead-icon {
+      width: var(--sp-8);
+      height: var(--sp-8);
+    }
+
+    .order-process__lead-icon svg {
+      width: var(--sp-6);
+      height: var(--sp-6);
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  (() => {
+    const initializeOrderProcess = (root = document) => {
+      root.querySelectorAll('.order-process').forEach((section) => {
+        section.querySelectorAll('[data-order-process-toggle]').forEach((toggle) => {
+          if (toggle.dataset.orderProcessReady === 'true') return;
+
+          const panelId = toggle.getAttribute('aria-controls');
+          const panel = panelId ? document.getElementById(panelId) : null;
+          if (!panel) return;
+
+          toggle.dataset.orderProcessReady = 'true';
+          toggle.addEventListener('click', () => {
+            const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+            toggle.setAttribute('aria-expanded', String(!isExpanded));
+            panel.hidden = isExpanded;
+          });
+        });
+      });
+    };
+
+    initializeOrderProcess();
+    document.addEventListener('shopify:section:load', (event) => initializeOrderProcess(event.target));
+  })();
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "Order Process & Delivery",
+  "max_blocks": 12,
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Order Process & Delivery"
+    },
+    {
+      "type": "text",
+      "id": "subtitle",
+      "label": "Subtitle",
+      "default": "Made to order with customer approval at each key stage"
+    },
+    {
+      "type": "text",
+      "id": "lead_time_heading",
+      "label": "Lead time heading",
+      "default": "Lead Time"
+    },
+    {
+      "type": "text",
+      "id": "footer_text",
+      "label": "Footer text",
+      "default": "Thank you for choosing handmade with heart."
+    }
+  ],
+  "blocks": [
+    {
+      "type": "step",
+      "name": "Process step",
+      "settings": [
+        {
+          "type": "select",
+          "id": "icon",
+          "label": "Icon",
+          "options": [
+            { "value": "clipboard-check", "label": "Clipboard" },
+            { "value": "clock-24", "label": "24-hour clock" },
+            { "value": "ruler", "label": "Ruler" },
+            { "value": "camera", "label": "Camera" },
+            { "value": "brush", "label": "Brush" },
+            { "value": "camera-check", "label": "Camera with check" },
+            { "value": "package", "label": "Package" },
+            { "value": "truck", "label": "Delivery truck" }
+          ],
+          "default": "clipboard-check"
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "label": "Title",
+          "default": "Process step"
+        },
+        {
+          "type": "textarea",
+          "id": "description",
+          "label": "Description",
+          "default": "Describe what happens during this stage."
+        }
+      ]
+    },
+    {
+      "type": "lead_time",
+      "name": "Lead time",
+      "settings": [
+        {
+          "type": "select",
+          "id": "icon",
+          "label": "Icon",
+          "options": [
+            { "value": "clock", "label": "Clock" },
+            { "value": "clock-24", "label": "24-hour clock" },
+            { "value": "calendar", "label": "Calendar" },
+            { "value": "brush", "label": "Brush" },
+            { "value": "truck", "label": "Delivery truck" }
+          ],
+          "default": "clock"
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "label": "Title",
+          "default": "Lead time"
+        },
+        {
+          "type": "textarea",
+          "id": "description",
+          "label": "Description",
+          "default": "Describe the timing for this stage."
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Order Process & Delivery"
+    }
+  ]
+}
+{% endschema %}

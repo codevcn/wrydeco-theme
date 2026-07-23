@@ -15,6 +15,7 @@
   assign author_name = blank
   assign author_bio = blank
   assign author_image_url = blank
+  assign author_exp_years = blank
   assign has_author_info = false
 
   if product != blank
@@ -25,6 +26,16 @@
     assign author_name = author.author_name.value
     assign author_bio = author.author_bio.value
     assign author_image_url = author.author_image_url.value
+
+    # Years of experience come from the author metaobject. `append: ''` coerces a
+    # numeric field to a string so it can be inspected; merchants sometimes type
+    # the "+" themselves, so only add it when it isn't already there.
+    assign author_exp_years = author.exp_years.value | append: '' | strip
+    if author_exp_years != blank
+      unless author_exp_years contains '+'
+        assign author_exp_years = author_exp_years | append: '+'
+      endunless
+    endif
 
     if author_name != blank or author_bio != blank or author_image_url != blank
       assign has_author_info = true
@@ -129,15 +140,19 @@
               {% endfor %}
             </ul>
 
-            <div class="product-artist__recognition-summary">
-              <div class="product-artist__summary-cell">
-                <span class="product-artist__summary-value">20+</span>
-                {% if section.settings.recognition_heading != blank %}
-                  <span class="product-artist__summary-label">
-                    {{ section.settings.recognition_heading | escape }}
-                  </span>
-                {% endif %}
-              </div>
+            <div
+              class="product-artist__recognition-summary{% if author_exp_years == blank %} product-artist__recognition-summary--single{% endif %}"
+            >
+              {% if author_exp_years != blank %}
+                <div class="product-artist__summary-cell">
+                  <span class="product-artist__summary-value">{{ author_exp_years | escape }}</span>
+                  {% if section.settings.recognition_heading != blank %}
+                    <span class="product-artist__summary-label">
+                      {{ section.settings.recognition_heading | escape }}
+                    </span>
+                  {% endif %}
+                </div>
+              {% endif %}
 
               <div class="product-artist__summary-cell product-artist__summary-cell--maker">
                 {% if author_name != blank %}
@@ -392,6 +407,11 @@
     border-radius: var(--radius-lg);
   }
 
+  /* No experience value on the author → the maker cell spans the full width. */
+  .product-artist__recognition-summary--single {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .product-artist__summary-cell {
     display: flex;
     flex-direction: column;
@@ -494,9 +514,9 @@
 
     .product-artist__media {
       height: auto;
-      max-height: calc(var(--sp-8) * 4);
+      max-height: calc(var(--sp-10) * 4);
       margin-right: 0;
-      aspect-ratio: 16 / 10;
+      aspect-ratio: 1 / 1;
     }
 
     .product-artist__profile {
