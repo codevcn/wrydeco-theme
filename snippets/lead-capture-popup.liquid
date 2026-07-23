@@ -2,9 +2,27 @@
   Renders the homepage lead capture popup and submits natively to Shopify's
   customer newsletter endpoint so the response state is rendered by Liquid.
 
+  Voucher copy for both states — the form popup (title, description, CTA label)
+  and the success popup (title, message, CTA label) — comes from the first entry
+  of the `voucher_welcome_customer` metaobject so merchants can edit the offer
+  without touching the theme. Hardcoded fallbacks keep the popup usable if the
+  entry is removed or left blank.
+
   @example
   {% render 'lead-capture-popup' %}
 {% enddoc %}
+
+{% liquid
+  assign voucher = metaobjects.voucher_welcome_customer.values | first
+  assign voucher_title = voucher.voucher_title.value | default: 'Begin Journey with a Welcome Gift'
+  assign voucher_description_fallback = 'Begin your Wrydeco story with a welcome gift for your first purchase.'
+  assign voucher_description = voucher.voucher_short_description.value | default: voucher_description_fallback
+  assign voucher_cta_text = voucher.voucher_cta_text.value | default: 'Receive your gift'
+  assign voucher_success_title = voucher.voucher_success_title.value | default: 'Congratulations!'
+  assign voucher_success_text_fallback = 'Your welcome gift is now on its way to your inbox.'
+  assign voucher_success_text = voucher.voucher_success_text.value | default: voucher_success_text_fallback
+  assign voucher_success_cta_text = voucher.voucher_success_cta_text.value | default: 'Explore the Wrydeco collection'
+%}
 
 <button
   type="button"
@@ -92,12 +110,19 @@
           <span></span>
         </div>
 
-        <h2 id="LeadCaptureTitle" class="lead-capture__title">Begin Journey with $100 Gift</h2>
+        <h2 id="LeadCaptureTitle" class="lead-capture__title">{{ voucher_title | escape }}</h2>
         <p id="LeadCaptureDescription" class="lead-capture__description">
-          Begin your Wrydeco story with a $100 gift for your first purchase.
+          {{- voucher_description | escape -}}
         </p>
 
-        {% form 'customer', class: 'lead-capture__form', id: 'LeadCaptureForm', novalidate: 'novalidate' %}
+        {% comment %}
+          Native constraint validation stays enabled on purpose: Shopify's spam
+          protection can submit this form programmatically, which bypasses the
+          submit listener below. Without it an empty field would reload the page.
+          The `invalid` listener replaces the browser bubble with our own styled
+          message.
+        {% endcomment %}
+        {% form 'customer', class: 'lead-capture__form', id: 'LeadCaptureForm' %}
           <input type="hidden" name="contact[tags]" value="newsletter">
           {% if form.posted_successfully? %}
             <span data-lead-capture-response-success hidden></span>
@@ -127,7 +152,7 @@
           </div>
           <p id="LeadCaptureError" class="lead-capture__error" data-lead-capture-error role="alert" hidden></p>
           <button class="lead-capture__submit" type="submit" data-lead-capture-submit>
-            <span data-lead-capture-submit-label>RECEIVE $100 GIFT</span>
+            <span data-lead-capture-submit-label>{{ voucher_cta_text | escape }}</span>
             <span class="lead-capture__spinner" aria-hidden="true"></span>
           </button>
         {% endform %}
@@ -162,8 +187,12 @@
           <p>You're in</p>
           <span></span>
         </div>
-        <h2 id="LeadCaptureSuccessTitle" class="lead-capture__title lead-capture__title--success">Congratulations!</h2>
-        <p id="LeadCaptureSuccessDescription" class="lead-capture__description">$100 gift now in your email.</p>
+        <h2 id="LeadCaptureSuccessTitle" class="lead-capture__title lead-capture__title--success">
+          {{- voucher_success_title | escape -}}
+        </h2>
+        <p id="LeadCaptureSuccessDescription" class="lead-capture__description">
+          {{- voucher_success_text | escape -}}
+        </p>
 
         <div class="lead-capture__divider" aria-hidden="true">
           <span></span>
@@ -176,7 +205,7 @@
           <span></span>
         </div>
         <span class="lead-capture__shop" data-lead-capture-shop data-lead-capture-close>
-          Exploring Wrydeco home right now!
+          {{- voucher_success_cta_text | escape -}}
         </span>
       </div>
     </div>
@@ -766,7 +795,7 @@
 
   @media (max-width: 30rem) {
     .lead-capture__media {
-      height: var(--sp-12);
+      height: 180px;
     }
 
     .lead-capture__content {
@@ -807,6 +836,23 @@
     .lead-capture__input {
       font-size: var(--font-size-body-sm);
     }
+
+    .lead-capture-reminder {
+      bottom: 80px;
+      left: -20px;
+      width: calc(var(--lead-capture-reminder-width) - 10px);
+      height: calc(var(--lead-capture-reminder-height) - 10px);
+    }
+
+    .lead-capture-reminder__open {
+      height: auto;
+      width: auto;
+    }
+
+    .lead-capture-reminder__close {
+      right: 5px;
+      top: -5px;
+    }
   }
 {% endstylesheet %}
 
@@ -822,6 +868,7 @@
     var emailInput = root.querySelector('input[type="email"]');
     var submitButton = root.querySelector('[data-lead-capture-submit]');
     var submitLabel = root.querySelector('[data-lead-capture-submit-label]');
+    var submitLabelText = submitLabel ? submitLabel.textContent.trim() : '';
     var errorMessage = root.querySelector('[data-lead-capture-error]');
     var formState = root.querySelector('[data-lead-capture-form-state]');
     var successState = root.querySelector('[data-lead-capture-success]');
@@ -911,7 +958,7 @@
         submitLabel.textContent = 'Joining...';
       } else {
         submitButton.removeAttribute('aria-busy');
-        submitLabel.textContent = 'Join our list';
+        submitLabel.textContent = submitLabelText;
       }
     }
 
@@ -999,17 +1046,47 @@
       if (emailInput.validity.valid) setError('');
     });
 
+    function hasValidEmail() {
+      emailInput.value = emailInput.value.trim();
+      return Boolean(emailInput.value) && emailInput.validity.valid;
+    }
+
+    function rejectSubmission() {
+      setLoading(false);
+      setError('Enter a valid email address.');
+      emailInput.focus();
+    }
+
+    // The browser blocks an empty or malformed email before any submit handler
+    // runs, so replace its default bubble with the styled message instead.
+    emailInput.addEventListener('invalid', function (event) {
+      event.preventDefault();
+      rejectSubmission();
+    });
+
+    // Captured before the bubble phase so Shopify's spam protection never sees
+    // the click and cannot submit the form programmatically on an empty field.
+    submitButton.addEventListener(
+      'click',
+      function (event) {
+        if (isSubmitting || !hasValidEmail()) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          if (!isSubmitting) rejectSubmission();
+        }
+      },
+      true
+    );
+
     form.addEventListener('submit', function (event) {
       if (isSubmitting) {
         event.preventDefault();
         return;
       }
 
-      emailInput.value = emailInput.value.trim();
-      if (!emailInput.value || !emailInput.validity.valid) {
+      if (!hasValidEmail()) {
         event.preventDefault();
-        setError('Enter a valid email address.');
-        emailInput.focus();
+        rejectSubmission();
         return;
       }
 
