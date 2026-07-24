@@ -1,4 +1,5 @@
 import os
+import re
 import time
 import uuid
 from datetime import datetime
@@ -44,6 +45,12 @@ def get_products(first=30, after=None, before=None, last=None, filter_query=None
             title
             descriptionHtml
             createdAt
+            productType
+            priceRangeV2 {
+              minVariantPrice {
+                amount
+              }
+            }
             options {
               name
             }
@@ -53,6 +60,9 @@ def get_products(first=30, after=None, before=None, last=None, filter_query=None
                   title
                 }
               }
+            }
+            amazon_link: metafield(namespace: "custom", key: "amazon_link") {
+              value
             }
             media(first: 50) {
               edges {
@@ -99,10 +109,10 @@ def get_products(first=30, after=None, before=None, last=None, filter_query=None
         return {"products": {"edges": [], "pageInfo": {}}, "productsCount": {"count": 0}}
     return data["data"]
 
-def get_products_by_metafield_amazon_link(keyword, reverse=True):
+def get_products_by_metafield_amazon_link(keyword, sort_by="created_desc"):
     query = """
     query getProducts($after: String) {
-      products(first: 250, after: $after) {
+      products(first: 25, after: $after) {
         pageInfo {
           hasNextPage
           endCursor
@@ -114,6 +124,12 @@ def get_products_by_metafield_amazon_link(keyword, reverse=True):
             title
             descriptionHtml
             createdAt
+            productType
+            priceRangeV2 {
+              minVariantPrice {
+                amount
+              }
+            }
             options {
               name
             }
@@ -178,7 +194,16 @@ def get_products_by_metafield_amazon_link(keyword, reverse=True):
         has_next = page_info.get("hasNextPage", False)
         cursor = page_info.get("endCursor")
         
-    all_matched_edges.sort(key=lambda edge: edge["node"].get("createdAt", ""), reverse=reverse)
+    def get_sort_key(edge):
+        if sort_by in ["price_asc", "price_desc"]:
+            price_data = edge["node"].get("priceRangeV2")
+            if price_data and price_data.get("minVariantPrice"):
+                return float(price_data["minVariantPrice"].get("amount", 0))
+            return 0.0
+        return edge["node"].get("createdAt", "")
+        
+    reverse_sort = sort_by in ["created_desc", "price_desc"]
+    all_matched_edges.sort(key=get_sort_key, reverse=reverse_sort)
         
     return {
         "products": {
@@ -188,10 +213,10 @@ def get_products_by_metafield_amazon_link(keyword, reverse=True):
         "productsCount": {"count": len(all_matched_edges)}
     }
 
-def get_products_by_metafield_rich_description(keyword, reverse=True):
+def get_products_by_metafield_rich_description(keyword, sort_by="created_desc"):
     query = """
     query getProducts($after: String) {
-      products(first: 250, after: $after) {
+      products(first: 25, after: $after) {
         pageInfo {
           hasNextPage
           endCursor
@@ -203,6 +228,12 @@ def get_products_by_metafield_rich_description(keyword, reverse=True):
             title
             descriptionHtml
             createdAt
+            productType
+            priceRangeV2 {
+              minVariantPrice {
+                amount
+              }
+            }
             options {
               name
             }
@@ -214,6 +245,9 @@ def get_products_by_metafield_rich_description(keyword, reverse=True):
               }
             }
             metafield(namespace: "custom", key: "rich_description") {
+              value
+            }
+            amazon_link: metafield(namespace: "custom", key: "amazon_link") {
               value
             }
             media(first: 50) {
@@ -267,7 +301,16 @@ def get_products_by_metafield_rich_description(keyword, reverse=True):
         has_next = page_info.get("hasNextPage", False)
         cursor = page_info.get("endCursor")
         
-    all_matched_edges.sort(key=lambda edge: edge["node"].get("createdAt", ""), reverse=reverse)
+    def get_sort_key(edge):
+        if sort_by in ["price_asc", "price_desc"]:
+            price_data = edge["node"].get("priceRangeV2")
+            if price_data and price_data.get("minVariantPrice"):
+                return float(price_data["minVariantPrice"].get("amount", 0))
+            return 0.0
+        return edge["node"].get("createdAt", "")
+        
+    reverse_sort = sort_by in ["created_desc", "price_desc"]
+    all_matched_edges.sort(key=get_sort_key, reverse=reverse_sort)
         
     return {
         "products": {
@@ -277,10 +320,10 @@ def get_products_by_metafield_rich_description(keyword, reverse=True):
         "productsCount": {"count": len(all_matched_edges)}
     }
 
-def get_products_by_description(keyword, reverse=True):
+def get_products_by_description(keyword, sort_by="created_desc"):
     query = """
     query getProducts($after: String) {
-      products(first: 250, after: $after) {
+      products(first: 25, after: $after) {
         pageInfo {
           hasNextPage
           endCursor
@@ -292,6 +335,12 @@ def get_products_by_description(keyword, reverse=True):
             title
             descriptionHtml
             createdAt
+            productType
+            priceRangeV2 {
+              minVariantPrice {
+                amount
+              }
+            }
             options {
               name
             }
@@ -301,6 +350,9 @@ def get_products_by_description(keyword, reverse=True):
                   title
                 }
               }
+            }
+            amazon_link: metafield(namespace: "custom", key: "amazon_link") {
+              value
             }
             media(first: 50) {
               edges {
@@ -353,7 +405,161 @@ def get_products_by_description(keyword, reverse=True):
         has_next = page_info.get("hasNextPage", False)
         cursor = page_info.get("endCursor")
         
-    all_matched_edges.sort(key=lambda edge: edge["node"].get("createdAt", ""), reverse=reverse)
+    def get_sort_key(edge):
+        if sort_by in ["price_asc", "price_desc"]:
+            price_data = edge["node"].get("priceRangeV2")
+            if price_data and price_data.get("minVariantPrice"):
+                return float(price_data["minVariantPrice"].get("amount", 0))
+            return 0.0
+        return edge["node"].get("createdAt", "")
+        
+    reverse_sort = sort_by in ["created_desc", "price_desc"]
+    all_matched_edges.sort(key=get_sort_key, reverse=reverse_sort)
+        
+    return {
+        "products": {
+            "edges": all_matched_edges,
+            "pageInfo": {"hasNextPage": False, "hasPreviousPage": False}
+        },
+        "productsCount": {"count": len(all_matched_edges)}
+    }
+
+def get_products_by_collection(handle, sort_by="created_desc"):
+    query = """
+    query getCollectionProducts($handle: String!, $after: String) {
+      collectionByHandle(handle: $handle) {
+        productsCount { count }
+        products(first: 25, after: $after) {
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+          edges {
+            node {
+              id
+              handle
+              title
+              descriptionHtml
+              createdAt
+              productType
+              priceRangeV2 {
+                minVariantPrice {
+                  amount
+                }
+              }
+              options {
+                name
+              }
+              collections(first: 20) {
+                edges {
+                  node {
+                    title
+                  }
+                }
+              }
+              amazon_link: metafield(namespace: "custom", key: "amazon_link") {
+                value
+              }
+              media(first: 50) {
+                edges {
+                  node {
+                    ... on MediaImage {
+                      id
+                      image {
+                        url
+                      }
+                    }
+                    ... on Video {
+                      id
+                      preview {
+                        image {
+                          url
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    """
+    all_matched_edges = []
+    has_next = True
+    cursor = None
+    
+    while has_next:
+        variables = {"handle": handle}
+        if cursor:
+            variables["after"] = cursor
+            
+        res = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=HEADERS)
+        res.raise_for_status()
+        data = res.json()
+        if "errors" in data:
+            print("GraphQL Errors:", data["errors"])
+            break
+            
+        collection_data = data.get("data", {}).get("collectionByHandle")
+        if not collection_data:
+            break
+            
+        products_data = collection_data.get("products", {})
+        edges = products_data.get("edges", [])
+        if not edges:
+            break
+        all_matched_edges.extend(edges)
+                
+        page_info = products_data.get("pageInfo", {})
+        has_next = page_info.get("hasNextPage", False)
+        cursor = page_info.get("endCursor")
+        
+    def get_sort_key(edge):
+        if sort_by in ["price_asc", "price_desc"]:
+            price_data = edge["node"].get("priceRangeV2")
+            if price_data and price_data.get("minVariantPrice"):
+                return float(price_data["minVariantPrice"].get("amount", 0))
+            return 0.0
+        return edge["node"].get("createdAt", "")
+        
+    reverse_sort = sort_by in ["created_desc", "price_desc"]
+    all_matched_edges.sort(key=get_sort_key, reverse=reverse_sort)
+        
+    return {
+        "products": {
+            "edges": all_matched_edges,
+            "pageInfo": {"hasNextPage": False, "hasPreviousPage": False}
+        },
+        "productsCount": {"count": len(all_matched_edges)}
+    }
+
+def get_all_products_sorted_by_price(filter_query, sort_by):
+    all_matched_edges = []
+    has_next = True
+    cursor = None
+    
+    while has_next:
+        data = get_products(first=25, after=cursor, filter_query=filter_query, sort_key="CREATED_AT", reverse=True)
+        products_data = data.get("products", {})
+        edges = products_data.get("edges", [])
+        if not edges:
+            break
+        all_matched_edges.extend(edges)
+        
+        page_info = products_data.get("pageInfo", {})
+        has_next = page_info.get("hasNextPage", False)
+        cursor = page_info.get("endCursor")
+
+    def get_sort_key(edge):
+        price_data = edge["node"].get("priceRangeV2")
+        if price_data and price_data.get("minVariantPrice"):
+            return float(price_data["minVariantPrice"].get("amount", 0))
+        return 0.0
+        
+    reverse_sort = sort_by == "price_desc"
+    all_matched_edges.sort(key=get_sort_key, reverse=reverse_sort)
         
     return {
         "products": {
@@ -369,14 +575,26 @@ async def read_root(request: Request, after: str = None, before: str = None, fil
         filter_query = None
         data = None
         
-        reverse = True if sort_by == "created_desc" else False
-        
+        reverse = True
+        sort_key_graphql = "CREATED_AT"
+        if sort_by == "price_asc":
+            sort_key_graphql = "PRICE"
+            reverse = False
+        elif sort_by == "price_desc":
+            sort_key_graphql = "PRICE"
+            reverse = True
+        elif sort_by == "created_asc":
+            sort_key_graphql = "CREATED_AT"
+            reverse = False
+            
         if filter_value and filter_type == "metafield_amazon_link":
-            data = get_products_by_metafield_amazon_link(filter_value, reverse=reverse)
+            data = get_products_by_metafield_amazon_link(filter_value, sort_by=sort_by)
         elif filter_value and filter_type == "metafield_rich_description":
-            data = get_products_by_metafield_rich_description(filter_value, reverse=reverse)
+            data = get_products_by_metafield_rich_description(filter_value, sort_by=sort_by)
         elif filter_value and filter_type == "description":
-            data = get_products_by_description(filter_value, reverse=reverse)
+            data = get_products_by_description(filter_value, sort_by=sort_by)
+        elif filter_value and filter_type == "collection":
+            data = get_products_by_collection(filter_value, sort_by=sort_by)
         else:
             if filter_value:
                 if filter_type == "tag":
@@ -387,8 +605,13 @@ async def read_root(request: Request, after: str = None, before: str = None, fil
                     filter_query = f"id:{filter_value}"
                 elif filter_type == "handle":
                     filter_query = f"handle:{filter_value}"
+                elif filter_type == "product_type":
+                    filter_query = f"product_type:'{filter_value}'"
                     
-            data = get_products(first=30, after=after, before=before, filter_query=filter_query, sort_key="CREATED_AT", reverse=reverse)
+            if sort_by in ["price_asc", "price_desc"]:
+                data = get_all_products_sorted_by_price(filter_query, sort_by)
+            else:
+                data = get_products(first=30, after=after, before=before, filter_query=filter_query, sort_key=sort_key_graphql, reverse=reverse)
             
         products_data = data.get("products", {})
         total_count = data.get("productsCount", {}).get("count", 0)
@@ -406,15 +629,45 @@ async def read_root(request: Request, after: str = None, before: str = None, fil
             options = [opt["name"] for opt in node.get("options", [])]
             collections = [col_edge["node"]["title"] for col_edge in node.get("collections", {}).get("edges", [])]
             
+            price = 0
+            price_data = node.get("priceRangeV2")
+            if price_data and price_data.get("minVariantPrice"):
+                price = float(price_data["minVariantPrice"].get("amount", 0))
+                
+            asin = ""
+            amz_link_node = node.get("amazon_link")
+            if not amz_link_node and filter_type == "metafield_amazon_link":
+                amz_link_node = node.get("metafield")
+                
+            if amz_link_node and amz_link_node.get("value"):
+                match = re.search(r'(?:/dp/|/gp/product/)([a-zA-Z0-9]+)', amz_link_node.get("value"))
+                if match:
+                    asin = match.group(1)
+                
+            created_at_raw = node.get("createdAt", "")
+            created_at_fmt = created_at_raw
+            if created_at_raw:
+                try:
+                    # Parse format like 2026-07-24T09:16:24Z
+                    dt = datetime.strptime(created_at_raw, "%Y-%m-%dT%H:%M:%SZ")
+                    created_at_fmt = dt.strftime("%d/%m/%Y %H:%M")
+                except ValueError:
+                    pass
+                except Exception as e:
+                    print(f"Error parsing date {created_at_raw}: {e}")
+                
             products.append({
                 "id": node["id"].split("/")[-1],
                 "handle": node["handle"],
                 "title": node["title"],
+                "productType": node.get("productType", ""),
+                "price": price,
                 "description": node.get("descriptionHtml", ""),
-                "createdAt": node.get("createdAt", ""),
+                "createdAt": created_at_fmt,
                 "options": options,
                 "collections": collections,
-                "media": media_urls
+                "media": media_urls,
+                "asin": asin
             })
             
         page_info = products_data.get("pageInfo", {})
