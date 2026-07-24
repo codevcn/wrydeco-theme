@@ -22,13 +22,13 @@ HEADERS = {
     "Content-Type": "application/json"
 }
 
-def get_products(first=30, after=None, before=None, last=None, filter_query=None):
+def get_products(first=30, after=None, before=None, last=None, filter_query=None, sort_key="CREATED_AT", reverse=True):
     query = """
-    query getProducts($first: Int, $last: Int, $after: String, $before: String, $query: String) {
+    query getProducts($first: Int, $last: Int, $after: String, $before: String, $query: String, $sortKey: ProductSortKeys, $reverse: Boolean) {
       productsCount(query: $query) {
         count
       }
-      products(first: $first, last: $last, after: $after, before: $before, query: $query) {
+      products(first: $first, last: $last, after: $after, before: $before, query: $query, sortKey: $sortKey, reverse: $reverse) {
         pageInfo {
           hasNextPage
           endCursor
@@ -42,6 +42,7 @@ def get_products(first=30, after=None, before=None, last=None, filter_query=None
             handle
             title
             descriptionHtml
+            createdAt
             options {
               name
             }
@@ -80,11 +81,11 @@ def get_products(first=30, after=None, before=None, last=None, filter_query=None
     
     variables = {}
     if after:
-        variables = {"first": first, "after": after}
+        variables = {"first": first, "after": after, "sortKey": sort_key, "reverse": reverse}
     elif before:
-        variables = {"last": first, "before": before}
+        variables = {"last": first, "before": before, "sortKey": sort_key, "reverse": reverse}
     else:
-        variables = {"first": first}
+        variables = {"first": first, "sortKey": sort_key, "reverse": reverse}
 
     if filter_query:
         variables["query"] = filter_query
@@ -97,7 +98,7 @@ def get_products(first=30, after=None, before=None, last=None, filter_query=None
         return {"products": {"edges": [], "pageInfo": {}}, "productsCount": {"count": 0}}
     return data["data"]
 
-def get_products_by_metafield_amazon_link(keyword):
+def get_products_by_metafield_amazon_link(keyword, reverse=True):
     query = """
     query getProducts($after: String) {
       products(first: 250, after: $after) {
@@ -111,6 +112,7 @@ def get_products_by_metafield_amazon_link(keyword):
             handle
             title
             descriptionHtml
+            createdAt
             options {
               name
             }
@@ -175,6 +177,94 @@ def get_products_by_metafield_amazon_link(keyword):
         has_next = page_info.get("hasNextPage", False)
         cursor = page_info.get("endCursor")
         
+    all_matched_edges.sort(key=lambda edge: edge["node"].get("createdAt", ""), reverse=reverse)
+        
+    return {
+        "products": {
+            "edges": all_matched_edges,
+            "pageInfo": {"hasNextPage": False, "hasPreviousPage": False}
+        },
+        "productsCount": {"count": len(all_matched_edges)}
+    }
+
+def get_products_by_description(keyword, reverse=True):
+    query = """
+    query getProducts($after: String) {
+      products(first: 250, after: $after) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        edges {
+          node {
+            id
+            handle
+            title
+            descriptionHtml
+            createdAt
+            options {
+              name
+            }
+            collections(first: 20) {
+              edges {
+                node {
+                  title
+                }
+              }
+            }
+            media(first: 50) {
+              edges {
+                node {
+                  ... on MediaImage {
+                    id
+                    image {
+                      url
+                    }
+                  }
+                  ... on Video {
+                    id
+                    preview {
+                      image {
+                        url
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    """
+    all_matched_edges = []
+    has_next = True
+    cursor = None
+    
+    while has_next:
+        variables = {}
+        if cursor:
+            variables["after"] = cursor
+            
+        res = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=HEADERS)
+        res.raise_for_status()
+        data = res.json()
+        if "errors" in data:
+            print("GraphQL Errors:", data["errors"])
+            break
+            
+        products_data = data["data"]["products"]
+        for edge in products_data["edges"]:
+            desc = edge["node"].get("descriptionHtml")
+            if desc and keyword.lower() in desc.lower():
+                all_matched_edges.append(edge)
+                
+        page_info = products_data.get("pageInfo", {})
+        has_next = page_info.get("hasNextPage", False)
+        cursor = page_info.get("endCursor")
+        
+    all_matched_edges.sort(key=lambda edge: edge["node"].get("createdAt", ""), reverse=reverse)
+        
     return {
         "products": {
             "edges": all_matched_edges,
@@ -184,13 +274,17 @@ def get_products_by_metafield_amazon_link(keyword):
     }
 
 @app.get("/", response_class=HTMLResponse)
-async def read_root(request: Request, after: str = None, before: str = None, filter_type: str = "tag", filter_value: str = None):
+async def read_root(request: Request, after: str = None, before: str = None, filter_type: str = "tag", filter_value: str = None, sort_by: str = "created_desc"):
     try:
         filter_query = None
         data = None
         
+        reverse = True if sort_by == "created_desc" else False
+        
         if filter_value and filter_type == "metafield_amazon_link":
-            data = get_products_by_metafield_amazon_link(filter_value)
+            data = get_products_by_metafield_amazon_link(filter_value, reverse=reverse)
+        elif filter_value and filter_type == "description":
+            data = get_products_by_description(filter_value, reverse=reverse)
         else:
             if filter_value:
                 if filter_type == "tag":
@@ -202,7 +296,7 @@ async def read_root(request: Request, after: str = None, before: str = None, fil
                 elif filter_type == "handle":
                     filter_query = f"handle:{filter_value}"
                     
-            data = get_products(first=30, after=after, before=before, filter_query=filter_query)
+            data = get_products(first=30, after=after, before=before, filter_query=filter_query, sort_key="CREATED_AT", reverse=reverse)
             
         products_data = data.get("products", {})
         total_count = data.get("productsCount", {}).get("count", 0)
@@ -225,6 +319,7 @@ async def read_root(request: Request, after: str = None, before: str = None, fil
                 "handle": node["handle"],
                 "title": node["title"],
                 "description": node.get("descriptionHtml", ""),
+                "createdAt": node.get("createdAt", ""),
                 "options": options,
                 "collections": collections,
                 "media": media_urls
@@ -239,6 +334,7 @@ async def read_root(request: Request, after: str = None, before: str = None, fil
             "page_info": page_info,
             "filter_type": filter_type,
             "filter_value": filter_value or "",
+            "sort_by": sort_by,
             "error": None
         })
     except Exception as e:
@@ -249,6 +345,7 @@ async def read_root(request: Request, after: str = None, before: str = None, fil
             "page_info": {},
             "filter_type": filter_type,
             "filter_value": filter_value or "",
+            "sort_by": sort_by,
             "error": str(e)
         })
 

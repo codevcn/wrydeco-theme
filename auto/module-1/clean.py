@@ -17,7 +17,6 @@ KEEP_CONTENT = [
 	"handled_products.json",
 	"product.md",
 	"product.template.md",
-	"prompt.txt",
 	"run.cmd",
 	"run.py",
 	"script.js",
@@ -27,7 +26,8 @@ KEEP_CONTENT = [
     "prepare_config.cmd",
     "prepare_config.py",
     "config.prepare.json",
-    "toast.cmd"
+    "toast.cmd",
+    "collections.md"
 ]
 
 

@@ -6,7 +6,7 @@ new Shopify CDN URL.
 
 Expected project layout:
 
-    .env
+    .media.env
     config.json
     assets/logo.png
     process_product_images_with_logo.py
@@ -33,12 +33,15 @@ Minimal config.json example:
       }
     }
 
-Required .env value:
+Required .media.env values:
 
     STORE_ADMIN_ACCESS_TOKEN=shpat_...
+    SHOPIFY_STORE_DOMAIN=your-store.myshopify.com
 
-The store domain can also be supplied through SHOPIFY_STORE_DOMAIN,
-STORE_DOMAIN, or SHOP_DOMAIN in .env.
+All credentials are read only from .media.env located next to this script.
+The store domain may use the key SHOPIFY_STORE_DOMAIN, STORE_DOMAIN, or
+SHOP_DOMAIN. Optional keys: SHOPIFY_API_VERSION,
+SHOPIFY_FILE_READY_TIMEOUT_SECONDS.
 
 Dependencies:
 
@@ -76,6 +79,8 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 
 LOGGER = logging.getLogger("product-image-logo-uploader")
 SCRIPT_DIR = Path(__file__).resolve().parent
+# Toàn bộ credentials chỉ được đọc từ file này, nằm cùng thư mục với script.
+MEDIA_ENV_PATH = SCRIPT_DIR / ".media.env"
 DEFAULT_API_VERSION = "2026-07"
 DEFAULT_POSITION = "bottom-right"
 DEFAULT_MARGIN = 24
@@ -325,15 +330,6 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
-        "--env-file",
-        type=Path,
-        default=SCRIPT_DIR / ".env",
-        help=(
-            ".env path. By default, .env in the same folder as this script "
-            "is used."
-        ),
-    )
-    parser.add_argument(
         "--force",
         action="store_true",
         help="Process URLs that already point to the Shopify CDN.",
@@ -388,7 +384,7 @@ def create_backup(path: Path) -> Path:
 def load_env_file(path: Path) -> dict[str, str]:
     """Load a small, standard KEY=VALUE .env file without another dependency."""
     if not path.exists():
-        raise AppError(f".env file not found: {path}")
+        raise AppError(f"Env file not found: {path}")
 
     values: dict[str, str] = {}
     for line_number, raw_line in enumerate(
@@ -419,15 +415,6 @@ def first_nonempty(*values: Any) -> str | None:
         if isinstance(value, str) and value.strip():
             return value.strip()
     return None
-
-
-def nested_get(data: Mapping[str, Any], *keys: str) -> Any:
-    current: Any = data
-    for key in keys:
-        if not isinstance(current, Mapping):
-            return None
-        current = current.get(key)
-    return current
 
 
 def normalize_store_domain(value: str) -> str:
@@ -546,42 +533,32 @@ def load_settings(
         raise AppError("logo_add.position must be a string or an {x, y} object.")
     margin_x, margin_y = parse_margin(logo_config.get("margin"))
 
+    # Toàn bộ credentials chỉ lấy từ .media.env; không fallback sang biến môi
+    # trường của tiến trình hay các field trong config.json.
     env_values = load_env_file(env_path)
-    access_token = first_nonempty(
-        os.environ.get("STORE_ADMIN_ACCESS_TOKEN"),
-        env_values.get("STORE_ADMIN_ACCESS_TOKEN"),
-    )
+    access_token = first_nonempty(env_values.get("STORE_ADMIN_ACCESS_TOKEN"))
     if not access_token:
         raise AppError(
-            "STORE_ADMIN_ACCESS_TOKEN is missing from the environment/.env file."
+            "STORE_ADMIN_ACCESS_TOKEN is missing from "
+            f"{env_path.name}."
         )
 
     store_domain = first_nonempty(
-        os.environ.get("SHOPIFY_STORE_DOMAIN"),
-        os.environ.get("STORE_DOMAIN"),
-        os.environ.get("SHOP_DOMAIN"),
         env_values.get("SHOPIFY_STORE_DOMAIN"),
         env_values.get("STORE_DOMAIN"),
         env_values.get("SHOP_DOMAIN"),
-        nested_get(config, "shopify", "store_domain"),
-        nested_get(config, "store", "domain"),
-        config.get("store_domain"),
     )
     if not store_domain:
         raise AppError(
             "A Shopify store domain is required. Add SHOPIFY_STORE_DOMAIN="
-            "your-store.myshopify.com to .env, or set shopify.store_domain "
-            "in configs/config.json."
+            f"your-store.myshopify.com to {env_path.name}."
         )
 
     api_version = first_nonempty(
-        os.environ.get("SHOPIFY_API_VERSION"),
         env_values.get("SHOPIFY_API_VERSION"),
-        nested_get(config, "shopify", "api_version"),
         DEFAULT_API_VERSION,
     )
     ready_timeout_raw = first_nonempty(
-        os.environ.get("SHOPIFY_FILE_READY_TIMEOUT_SECONDS"),
         env_values.get("SHOPIFY_FILE_READY_TIMEOUT_SECONDS"),
     )
     ready_timeout = (
@@ -995,7 +972,7 @@ def main() -> int:
 
     try:
         config_path = args.config.resolve()
-        env_path = args.env_file.resolve()
+        env_path = MEDIA_ENV_PATH.resolve()
         logo_settings, shopify_settings = load_settings(config_path, env_path)
 
         with Image.open(logo_settings.path) as logo_file:

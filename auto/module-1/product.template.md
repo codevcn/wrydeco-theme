@@ -1,6 +1,8 @@
 # Task cập nhật sản phẩm đang có sẵn trong store
 
-> Dùng `../admin/access-token.md` để truy cập vào store, sau đó cập nhật sản phẩm có ID là `{{product_id}}` theo các yêu cầu bên dưới.
+> Dùng `../admin/access-token.md` để truy cập vào store, sau đó bạn hãy cập nhật sản phẩm có ID là `{{product_id}}` theo các yêu cầu bên dưới.
+> Lưu ý: Bạn phải tự làm công việc cập nhật sản phẩm chứ ko phải để cho tôi làm.
+> QUAN TRỌNG: Trong quá trình cập nhật, nếu có bất kỳ lỗi nào xảy ra thì dừng toàn bộ quá trình cập nhật và báo lỗi cho tôi biết.
 
 ### 1. Viết lại Product Title chuẩn SEO
 
@@ -355,3 +357,7 @@ Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết
 ### 12. Cập nhật tags
 
 - Cập nhật tags cho sản phẩm là `{{product_tags}}`.
+
+### 13. Cập nhật handle của sản phẩm
+
+- Handle của sản phẩm sẽ được suy ra từ `{{product_title}}`, handle của sản phẩm phải được viết dưới dạng kebab-case.
