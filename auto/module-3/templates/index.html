@@ -55,11 +55,17 @@
     
     <main class="p-4 sm:p-8">
     <div class="mx-auto">
-        <div class="flex items-center gap-4 mb-8">
-            <h1 class="text-3xl font-bold text-gray-800 tracking-tight">Danh sách Sản phẩm</h1>
-            <div class="bg-indigo-100 text-indigo-700 text-sm font-bold px-3 py-1 rounded-full shadow-sm flex items-center justify-center min-w-[2.5rem]" title="Tổng số lượng sản phẩm">
-                {{ total_count }}
+        <div class="flex items-center justify-between mb-8">
+            <div class="flex items-center gap-4">
+                <h1 class="text-3xl font-bold text-gray-800 tracking-tight">Danh sách Sản phẩm</h1>
+                <div class="bg-indigo-100 text-indigo-700 text-sm font-bold px-3 py-1 rounded-full shadow-sm flex items-center justify-center min-w-[2.5rem]" title="Tổng số lượng sản phẩm">
+                    {{ total_count }}
+                </div>
             </div>
+            <button onclick="window.location.reload()" class="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-4 py-2 rounded-lg transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-300">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                Tải lại trang
+            </button>
         </div>
 
         <!-- Filter Area -->
@@ -74,6 +80,7 @@
                         <option value="handle" {% if filter_type == 'handle' %}selected{% endif %}>Handle</option>
                         <option value="description" {% if filter_type == 'description' %}selected{% endif %}>Mô tả (Description)</option>
                         <option value="metafield_amazon_link" {% if filter_type == 'metafield_amazon_link' %}selected{% endif %}>Metafield amazon_link</option>
+                        <option value="metafield_rich_description" {% if filter_type == 'metafield_rich_description' %}selected{% endif %}>Metafield rich_description</option>
                     </select>
                 </div>
                 
@@ -89,10 +96,13 @@
                     </select>
                 </div>
                 
-                <div class="w-full sm:w-auto">
+                <div class="flex items-center gap-2 w-full sm:w-auto">
                     <button type="submit" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-sm px-5 py-2.5 text-center transition-colors shadow-sm focus:ring-4 focus:ring-indigo-300">
                         Lọc
                     </button>
+                    <a href="/" class="w-full sm:w-auto bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg text-sm px-5 py-2.5 text-center transition-colors shadow-sm focus:ring-4 focus:ring-red-300 whitespace-nowrap">
+                        Xóa lọc
+                    </a>
                 </div>
             </form>
         </div>
@@ -119,6 +129,7 @@
                 <table class="min-w-full divide-y divide-gray-100">
                     <thead class="bg-gray-50/50">
                         <tr>
+                            <th scope="col" class="px-6 py-4 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">STT</th>
                             <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">ID</th>
                             <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Hình ảnh</th>
                             <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Sản phẩm</th>
@@ -130,6 +141,9 @@
                     <tbody class="bg-white divide-y divide-gray-200">
                         {% for product in products %}
                         <tr class="hover:bg-gray-50/80 transition-colors duration-150 ease-in-out border-b border-gray-200 last:border-b-0">
+                            <td class="px-6 py-5 whitespace-nowrap text-sm text-gray-900 font-bold text-center">
+                                {{ loop.index }}
+                            </td>
                             <td class="px-6 py-5 whitespace-nowrap text-sm text-gray-400 font-medium">
                                 {{ product.id }}
                             </td>
@@ -144,7 +158,7 @@
                                 {% endif %}
                             </td>
                             <td class="px-6 py-5 text-sm">
-                                <a href="/products/{{ product.handle }}" class="block hover:bg-gray-50 -m-2 p-2 rounded-lg transition-colors group">
+                                <a href="/products/{{ product.handle }}" target="_blank" rel="noopener noreferrer" title="Mở trong tab mới" class="block hover:bg-gray-50 -m-2 p-2 rounded-lg transition-colors group">
                                     <div class="font-semibold text-gray-900 group-hover:text-indigo-600 text-base leading-tight transition-colors">{{ product.title }}</div>
                                     <div class="text-gray-500 text-xs mt-1.5 flex items-center gap-1">
                                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>

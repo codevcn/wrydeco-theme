@@ -1,13 +1,15 @@
 # Task cập nhật sản phẩm đang có sẵn trong store
 
-> Dùng `../admin/access-token.md` để truy cập vào store, sau đó cập nhật sản phẩm có ID là `8346217087033` theo các yêu cầu bên dưới.
+> Dùng `../admin/access-token.md` để truy cập vào store, sau đó bạn hãy cập nhật sản phẩm có ID là `8355824894009` theo các yêu cầu bên dưới.
+> Lưu ý: Bạn phải tự làm công việc cập nhật sản phẩm chứ ko phải để cho tôi làm.
+> QUAN TRỌNG: Trong quá trình cập nhật, nếu có bất kỳ lỗi nào xảy ra thì dừng toàn bộ quá trình cập nhật và báo lỗi cho tôi biết.
 
 ### 1. Viết lại Product Title chuẩn SEO
 
 Product Title gốc:
 
 ```text
-Handcrafted Wooden Floor Sculpture with Twisted Open Cutout Design, Tall Rustic Wood Art Decor for Living Room, Entryway & Boho Home (Option 1)
+Handmade Tree Branch Bookshelf - Solid Wood Bookcase, Unique Tree Shelf Wall Decor for Bedroom, Living Room & Office, Rustic Natural Floating Geometric Book Shelves Display Stand
 ```
 
 - Viết lại product title gốc trên thành product title mới.
@@ -21,19 +23,15 @@ Handcrafted Wooden Floor Sculpture with Twisted Open Cutout Design, Tall Rustic 
 Mô tả sản phẩm gốc:
 
 ```text
-🪵 Handcrafted wooden floor sculpture – A tall sculptural wood decor piece featuring a flowing twisted silhouette and organic open cutouts, designed to bring warmth, movement, and artistic character to your home.
+🌿 UNIQUE TREE BRANCH DESIGN: Meticulously handcrafted from premium solid wood, this artistic bookcase mimics natural branches, bringing a captivating rustic charm to any bedroom or living room.
 
-🌿 Natural wood grain statement piece – The rich wood tone, visible grain pattern, smooth curves, and polished finish create an earthy handmade look that feels elegant, rustic, and unique in any room.
+📐 SPACE-SAVING STORAGE: Features a clever geometric tree shelf structure that maximizes vertical space, perfectly holding books, magazines, or crystals while keeping your room clutter-free.
 
-🏡 Perfect for living room & entryway styling – Use it as a floor sculpture, corner accent, entryway decor, hallway statement piece, bedroom accent, office decor, or artistic display for nature-inspired interiors.
+💪 SOLID WOOD STABILITY: Built from heavy-duty, durable natural wood to ensure maximum structural integrity. This reliable tree bookshelf safely supports your heavy novels and decor pieces.
 
-✨ Sculptural open cutout design – The curved vertical form and carved openings create visual depth and shadow, making this piece stand out as functional-style art without needing added lighting.
+🛠️ EFFORTLESS WALL MOUNT: Comes complete with all necessary mounting hardware and easy-to-follow instructions for a secure, flush-to-wall installation on any standard drywall or stud.
 
-🎁 Beautiful home upgrade or gift – A thoughtful choice for housewarming gifts, weddings, new homes, apartment makeovers, living room refreshes, or anyone who loves handcrafted-style wooden decor.
-
-🧡 Warm rustic, boho & organic modern style – Pairs beautifully with farmhouse, bohemian, rustic modern, Mediterranean, vintage, lodge, cabin, natural, and organic modern home decor.
-
-📦 Carefully packed for delivery – Each wooden sculpture is prepared with protective packing to help safeguard the curved body, smooth finish, base, and carved cutout details during shipping.
+🎁 PERFECT RUSTIC DECOR: An extraordinary housewarming or holiday gift, this handmade tree bookcase adds an organic, eye-catching focal point to offices, nurseries, and modern homes.
 ```
 
 Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết lại mô tả sản phẩm gốc trên.
@@ -314,10 +312,10 @@ Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết
 - rich_description:
 
 ```html
-<div class="description-root"></div>
+<div class="description-root"><img alt="tree branch float shelf" src="https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif" class="a-spacing-base a-lazy-loaded" data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/7b87c9e2-c1b4-4746-8c12-fdec6120448f.__CR0,0,1594,986_PT0_SX970_V1___.png"> <img alt="tree branch float shelf" src="https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif" class="a-spacing-base a-lazy-loaded" data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/569502a6-0f81-425b-953c-e1bf5dd7f554.__CR0,0,1594,986_PT0_SX970_V1___.png"> <img alt="tree branch float shelf" src="https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif" class="a-spacing-base a-lazy-loaded" data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/36afd6c9-1a8f-4ed2-824e-5641559cb8db.__CR0,0,1594,986_PT0_SX970_V1___.png"> <img alt="tree branch float shelf" src="https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif" class="a-spacing-base a-lazy-loaded" data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/90138399-aaf0-4b28-86ce-4942721c6cf5.__CR0,0,1594,986_PT0_SX970_V1___.png"> <img alt="tree branch float shelf" src="https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif" class="a-spacing-base a-lazy-loaded" data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/2b4e64ee-0b8b-4d6c-b2c1-1d88a0224af9.__CR0,0,1594,986_PT0_SX970_V1___.png"> <img alt="tree branch float shelf" src="https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif" class="a-spacing-base a-lazy-loaded" data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/68e13c26-d0ce-4102-ad6e-44323c481227.__CR0,0,1594,986_PT0_SX970_V1___.png"> <img alt="tree branch float shelf" src="https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif" class="a-spacing-base a-lazy-loaded" data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/0269ad89-dbce-4777-84bf-b02222aaa3c4.__CR0,0,1594,986_PT0_SX970_V1___.png"></div>
 ```
 
-- amazon_link: "https://www.amazon.com/dp/B0H8311RPS?th=1"
+- amazon_link: "https://www.amazon.com/dp/B0H3PGG85X"
 - author_info: "gid://shopify/Metaobject/194643296313"
 - product_material: "wood"
 - seo_product_title:
@@ -358,7 +356,7 @@ Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết
 
 ### 10. Cập nhật product type
 
-- Cập nhật product type cho sản phẩm là `wooden-floor-sculpture`.
+- Cập nhật product type cho sản phẩm là `bookshelf-rustic`.
 
 ### 11. Cập nhật vendor
 
@@ -367,3 +365,7 @@ Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết
 ### 12. Cập nhật tags
 
 - Cập nhật tags cho sản phẩm là `source_amazon`.
+
+### 13. Cập nhật handle của sản phẩm
+
+- Handle của sản phẩm sẽ được suy ra từ `Handmade Tree Branch Bookshelf - Solid Wood Bookcase, Unique Tree Shelf Wall Decor for Bedroom, Living Room & Office, Rustic Natural Floating Geometric Book Shelves Display Stand`, handle của sản phẩm phải được viết dưới dạng kebab-case.

@@ -9,7 +9,10 @@ const IGNORE_TYPES = [
   "Note to seller (Optional)",
   "Other requirements",
   "Review Photo Before Final Finish",
-  "Additional Note for Seller"
+  "Additional Note for Seller",
+  "Custom Tier Size Confirmation",
+  "Driftwood may differ from photos. We'll message the best raw piece. Check messages?",
+  "Select Package",
 ];
 
 function showCopyJsonButton(json) {

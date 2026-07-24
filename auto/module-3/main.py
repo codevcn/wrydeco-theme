@@ -1,6 +1,7 @@
 import os
 import time
 import uuid
+from datetime import datetime
 from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -187,6 +188,95 @@ def get_products_by_metafield_amazon_link(keyword, reverse=True):
         "productsCount": {"count": len(all_matched_edges)}
     }
 
+def get_products_by_metafield_rich_description(keyword, reverse=True):
+    query = """
+    query getProducts($after: String) {
+      products(first: 250, after: $after) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        edges {
+          node {
+            id
+            handle
+            title
+            descriptionHtml
+            createdAt
+            options {
+              name
+            }
+            collections(first: 20) {
+              edges {
+                node {
+                  title
+                }
+              }
+            }
+            metafield(namespace: "custom", key: "rich_description") {
+              value
+            }
+            media(first: 50) {
+              edges {
+                node {
+                  ... on MediaImage {
+                    id
+                    image {
+                      url
+                    }
+                  }
+                  ... on Video {
+                    id
+                    preview {
+                      image {
+                        url
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    """
+    all_matched_edges = []
+    has_next = True
+    cursor = None
+    
+    while has_next:
+        variables = {}
+        if cursor:
+            variables["after"] = cursor
+            
+        res = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=HEADERS)
+        res.raise_for_status()
+        data = res.json()
+        if "errors" in data:
+            print("GraphQL Errors:", data["errors"])
+            break
+            
+        products_data = data["data"]["products"]
+        for edge in products_data["edges"]:
+            mf = edge["node"].get("metafield")
+            if mf and mf.get("value") and keyword.lower() in mf["value"].lower():
+                all_matched_edges.append(edge)
+                
+        page_info = products_data.get("pageInfo", {})
+        has_next = page_info.get("hasNextPage", False)
+        cursor = page_info.get("endCursor")
+        
+    all_matched_edges.sort(key=lambda edge: edge["node"].get("createdAt", ""), reverse=reverse)
+        
+    return {
+        "products": {
+            "edges": all_matched_edges,
+            "pageInfo": {"hasNextPage": False, "hasPreviousPage": False}
+        },
+        "productsCount": {"count": len(all_matched_edges)}
+    }
+
 def get_products_by_description(keyword, reverse=True):
     query = """
     query getProducts($after: String) {
@@ -283,6 +373,8 @@ async def read_root(request: Request, after: str = None, before: str = None, fil
         
         if filter_value and filter_type == "metafield_amazon_link":
             data = get_products_by_metafield_amazon_link(filter_value, reverse=reverse)
+        elif filter_value and filter_type == "metafield_rich_description":
+            data = get_products_by_metafield_rich_description(filter_value, reverse=reverse)
         elif filter_value and filter_type == "description":
             data = get_products_by_description(filter_value, reverse=reverse)
         else:
@@ -356,6 +448,7 @@ def get_product_by_handle(handle: str):
         id
         title
         handle
+        createdAt
         productType
         tags
         category {
@@ -447,10 +540,20 @@ async def read_product(request: Request, product_handle: str):
         for mf_edge in product_data.get("metafields", {}).get("edges", []):
             metafields.append(mf_edge["node"])
             
+        created_at_raw = product_data.get("createdAt", "")
+        created_at_fmt = created_at_raw
+        if created_at_raw:
+            try:
+                dt = datetime.fromisoformat(created_at_raw.replace("Z", "+00:00"))
+                created_at_fmt = dt.strftime("%d/%m/%Y %H:%M")
+            except Exception:
+                pass
+                
         product = {
             "id": product_data["id"].split("/")[-1],
             "title": product_data["title"],
             "handle": product_data["handle"],
+            "created_at": created_at_fmt,
             "product_type": product_data.get("productType", ""),
             "category": product_data.get("category", {}).get("name", "") if product_data.get("category") else None,
             "tags": product_data.get("tags", []),
