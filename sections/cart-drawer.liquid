@@ -283,12 +283,16 @@
         </div>
 
         <form action="{{ routes.cart_url }}" method="post" class="cart-drawer__checkout-form">
-          <button type="submit" name="checkout" class="cart-drawer__checkout">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
+          <button type="submit" name="checkout" class="cart-drawer__checkout" data-cart-checkout>
+            <svg viewBox="0 0 24 24" aria-hidden="true" class="cart-drawer__checkout-icon">
               <rect x="6" y="10" width="12" height="10" rx="1"></rect>
               <path d="M9 10V7a3 3 0 0 1 6 0v3"></path>
             </svg>
-            Checkout Securely
+            <span class="cart-drawer__checkout-spinner" aria-hidden="true"></span>
+            <span class="cart-drawer__checkout-label">Checkout Securely</span>
+            <span class="cart-drawer__checkout-label cart-drawer__checkout-label--loading">
+              Redirecting to checkout
+            </span>
           </button>
         </form>
       </footer>
@@ -1479,6 +1483,39 @@
     stroke-width: calc(var(--border-width) * 1.5);
   }
 
+  /* Checkout is a full page navigation, so the button stays in a busy state
+     from submit until the checkout page takes over (or the shopper comes back
+     through the bfcache, where the JS resets it). */
+  .cart-drawer__checkout-spinner,
+  .cart-drawer__checkout-label--loading {
+    display: none;
+  }
+
+  .cart-drawer__checkout[aria-busy='true'] {
+    cursor: progress;
+    pointer-events: none;
+  }
+
+  .cart-drawer__checkout[aria-busy='true'] .cart-drawer__checkout-icon,
+  .cart-drawer__checkout[aria-busy='true'] .cart-drawer__checkout-label:not(.cart-drawer__checkout-label--loading) {
+    display: none;
+  }
+
+  .cart-drawer__checkout[aria-busy='true'] .cart-drawer__checkout-label--loading {
+    display: inline;
+  }
+
+  .cart-drawer__checkout[aria-busy='true'] .cart-drawer__checkout-spinner {
+    display: block;
+    flex: none;
+    inline-size: var(--sp-5);
+    block-size: var(--sp-5);
+    border: var(--border-width) solid color-mix(in srgb, var(--text-inverse) 35%, transparent);
+    border-block-start-color: var(--text-inverse);
+    border-radius: var(--radius-full);
+    animation: cart-drawer-spin var(--timing-extra-long) linear infinite;
+  }
+
   /* Lift on hover / press down on active — the button rides on top of the
      form's gradient base, revealing / hiding the drop shadow (same feel as
      the PDP Buy It Now button). */
@@ -2299,6 +2336,23 @@
       }
     };
 
+    // Checkout leaves the storefront entirely, so the button keeps its busy state
+    // until the browser paints the checkout page. `disabled` is deliberately not
+    // used — it would drop the submit button's name from the posted form data —
+    // so a flag plus `pointer-events: none` guards against a double submit.
+    let checkoutSubmitting = false;
+    const setCheckoutBusy = (button, busy) => {
+      if (!button) return;
+      checkoutSubmitting = busy;
+      button.setAttribute('aria-busy', busy ? 'true' : 'false');
+    };
+    const resetCheckoutButtons = () => {
+      checkoutSubmitting = false;
+      document.querySelectorAll('[data-cart-checkout]').forEach((button) => {
+        button.setAttribute('aria-busy', 'false');
+      });
+    };
+
     document.addEventListener('submit', (event) => {
       const discountForm = event.target.closest('[data-cart-discount-form]');
       if (discountForm) {
@@ -2310,6 +2364,12 @@
       // Carry any entered discount code through to checkout so it applies there.
       const checkoutForm = event.target.closest('.cart-drawer__checkout-form');
       if (checkoutForm) {
+        if (checkoutSubmitting) {
+          event.preventDefault();
+          return;
+        }
+        setCheckoutBusy(checkoutForm.querySelector('[data-cart-checkout]'), true);
+
         const pending = getCheckoutDiscount();
         if (pending) {
           event.preventDefault();
@@ -2317,6 +2377,12 @@
           window.location.href = `${root}checkout?discount=${encodeURIComponent(pending)}`;
         }
       }
+    });
+
+    // Coming back from checkout via the back button restores the page from the
+    // bfcache with the DOM untouched, so clear the spinner explicitly.
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) resetCheckoutButtons();
     });
 
     document.addEventListener('click', (event) => {
