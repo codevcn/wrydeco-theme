@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Tạo sản phẩm</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo -->
+                <div class="flex-shrink-0">
+                    <a href="/" class="flex items-center gap-2 text-indigo-600 font-bold text-xl hover:text-indigo-700 transition-colors">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                        <span>LocalAdmin</span>
+                    </a>
+                </div>
+                <!-- Nav Links -->
+                <nav class="flex items-center gap-6">
+                    <a href="/" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Sản phẩm</a>
+                    <a href="/collections" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Collections</a>
+                    <a href="/create" class="text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 pb-0.5">Tạo sản phẩm</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-3xl mx-auto p-4 sm:p-8">
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-800 tracking-tight">Tạo sản phẩm hàng loạt</h1>
+            <p class="text-gray-500 mt-2">Điền thông tin bên dưới để tạo nhiều sản phẩm với cùng Tên và Mô tả.</p>
+        </div>
+
+        {% if error %}
+        <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-r-md shadow-sm">
+            <p class="text-sm text-red-700 font-medium">Lỗi! {{ error }}</p>
+        </div>
+        {% endif %}
+
+        {% if success_message %}
+        <div class="bg-green-50 border-l-4 border-green-500 p-4 mb-6 rounded-r-md shadow-sm">
+            <p class="text-sm text-green-700 font-medium">{{ success_message }}</p>
+        </div>
+        {% endif %}
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sm:p-8">
+            <form action="/create" method="POST" class="space-y-6">
+                <div>
+                    <label for="title" class="block text-sm font-medium text-gray-700 mb-1">Tên sản phẩm *</label>
+                    <input type="text" id="title" name="title" required class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5 outline-none transition-colors">
+                </div>
+
+                <div>
+                    <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Mô tả sản phẩm</label>
+                    <textarea id="description" name="description" rows="5" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5 outline-none transition-colors"></textarea>
+                </div>
+
+                <div>
+                    <label for="quantity" class="block text-sm font-medium text-gray-700 mb-1">Số lượng cần tạo *</label>
+                    <input type="number" id="quantity" name="quantity" min="1" max="50" value="1" required class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5 outline-none transition-colors">
+                    <p class="mt-1 text-xs text-gray-500">Giới hạn tối đa 50 sản phẩm mỗi lần thao tác.</p>
+                </div>
+
+                <div class="pt-4">
+                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg text-sm px-5 py-3 text-center transition-colors shadow-sm focus:ring-4 focus:ring-indigo-300">
+                        Tạo sản phẩm
+                    </button>
+                </div>
+            </form>
+        </div>
+    </main>
+</body>
+</html>

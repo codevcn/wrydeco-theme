@@ -1,5 +1,7 @@
 import os
-from fastapi import FastAPI, Request
+import time
+import uuid
+from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from dotenv import load_dotenv
@@ -20,13 +22,13 @@ HEADERS = {
     "Content-Type": "application/json"
 }
 
-def get_products(first=30, after=None, before=None, last=None):
+def get_products(first=30, after=None, before=None, last=None, filter_query=None):
     query = """
-    query getProducts($first: Int, $last: Int, $after: String, $before: String) {
-      productsCount {
+    query getProducts($first: Int, $last: Int, $after: String, $before: String, $query: String) {
+      productsCount(query: $query) {
         count
       }
-      products(first: $first, last: $last, after: $after, before: $before) {
+      products(first: $first, last: $last, after: $after, before: $before, query: $query) {
         pageInfo {
           hasNextPage
           endCursor
@@ -40,6 +42,16 @@ def get_products(first=30, after=None, before=None, last=None):
             handle
             title
             descriptionHtml
+            options {
+              name
+            }
+            collections(first: 20) {
+              edges {
+                node {
+                  title
+                }
+              }
+            }
             media(first: 50) {
               edges {
                 node {
@@ -74,6 +86,9 @@ def get_products(first=30, after=None, before=None, last=None):
     else:
         variables = {"first": first}
 
+    if filter_query:
+        variables["query"] = filter_query
+
     response = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=HEADERS)
     response.raise_for_status()
     data = response.json()
@@ -82,10 +97,113 @@ def get_products(first=30, after=None, before=None, last=None):
         return {"products": {"edges": [], "pageInfo": {}}, "productsCount": {"count": 0}}
     return data["data"]
 
+def get_products_by_metafield_amazon_link(keyword):
+    query = """
+    query getProducts($after: String) {
+      products(first: 250, after: $after) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        edges {
+          node {
+            id
+            handle
+            title
+            descriptionHtml
+            options {
+              name
+            }
+            collections(first: 20) {
+              edges {
+                node {
+                  title
+                }
+              }
+            }
+            metafield(namespace: "custom", key: "amazon_link") {
+              value
+            }
+            media(first: 50) {
+              edges {
+                node {
+                  ... on MediaImage {
+                    id
+                    image {
+                      url
+                    }
+                  }
+                  ... on Video {
+                    id
+                    preview {
+                      image {
+                        url
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    """
+    all_matched_edges = []
+    has_next = True
+    cursor = None
+    
+    while has_next:
+        variables = {}
+        if cursor:
+            variables["after"] = cursor
+            
+        res = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=HEADERS)
+        res.raise_for_status()
+        data = res.json()
+        if "errors" in data:
+            print("GraphQL Errors:", data["errors"])
+            break
+            
+        products_data = data["data"]["products"]
+        for edge in products_data["edges"]:
+            mf = edge["node"].get("metafield")
+            if mf and mf.get("value") and keyword.lower() in mf["value"].lower():
+                all_matched_edges.append(edge)
+                
+        page_info = products_data.get("pageInfo", {})
+        has_next = page_info.get("hasNextPage", False)
+        cursor = page_info.get("endCursor")
+        
+    return {
+        "products": {
+            "edges": all_matched_edges,
+            "pageInfo": {"hasNextPage": False, "hasPreviousPage": False}
+        },
+        "productsCount": {"count": len(all_matched_edges)}
+    }
+
 @app.get("/", response_class=HTMLResponse)
-async def read_root(request: Request, after: str = None, before: str = None):
+async def read_root(request: Request, after: str = None, before: str = None, filter_type: str = "tag", filter_value: str = None):
     try:
-        data = get_products(first=30, after=after, before=before)
+        filter_query = None
+        data = None
+        
+        if filter_value and filter_type == "metafield_amazon_link":
+            data = get_products_by_metafield_amazon_link(filter_value)
+        else:
+            if filter_value:
+                if filter_type == "tag":
+                    filter_query = f"tag:{filter_value}"
+                elif filter_type == "title":
+                    filter_query = f"title:*{filter_value}*"
+                elif filter_type == "id":
+                    filter_query = f"id:{filter_value}"
+                elif filter_type == "handle":
+                    filter_query = f"handle:{filter_value}"
+                    
+            data = get_products(first=30, after=after, before=before, filter_query=filter_query)
+            
         products_data = data.get("products", {})
         total_count = data.get("productsCount", {}).get("count", 0)
         
@@ -99,12 +217,16 @@ async def read_root(request: Request, after: str = None, before: str = None):
                     media_urls.append(media_node["image"]["url"])
                 elif "preview" in media_node and media_node["preview"] and media_node["preview"]["image"]:
                     media_urls.append(media_node["preview"]["image"]["url"])
-                    
+            options = [opt["name"] for opt in node.get("options", [])]
+            collections = [col_edge["node"]["title"] for col_edge in node.get("collections", {}).get("edges", [])]
+            
             products.append({
                 "id": node["id"].split("/")[-1],
                 "handle": node["handle"],
                 "title": node["title"],
                 "description": node.get("descriptionHtml", ""),
+                "options": options,
+                "collections": collections,
                 "media": media_urls
             })
             
@@ -115,6 +237,8 @@ async def read_root(request: Request, after: str = None, before: str = None):
             "products": products,
             "total_count": total_count,
             "page_info": page_info,
+            "filter_type": filter_type,
+            "filter_value": filter_value or "",
             "error": None
         })
     except Exception as e:
@@ -123,6 +247,8 @@ async def read_root(request: Request, after: str = None, before: str = None):
             "products": [],
             "total_count": 0,
             "page_info": {},
+            "filter_type": filter_type,
+            "filter_value": filter_value or "",
             "error": str(e)
         })
 
@@ -350,4 +476,78 @@ async def read_collections(request: Request,
             "sort_by": sort_by,
             "filter_mode": filter_mode,
             "error": str(e)
+        })
+
+@app.get("/create", response_class=HTMLResponse)
+async def create_product_form(request: Request):
+    return templates.TemplateResponse("create_product.html", {
+        "request": request,
+        "error": None,
+        "success_message": None
+    })
+
+@app.post("/create", response_class=HTMLResponse)
+async def create_product_submit(
+    request: Request,
+    title: str = Form(...),
+    description: str = Form(""),
+    quantity: int = Form(1)
+):
+    try:
+        if quantity < 1 or quantity > 50:
+            raise ValueError("Số lượng phải từ 1 đến 50.")
+            
+        success_count = 0
+        timestamp = int(time.time())
+        
+        for i in range(quantity):
+            random_uuid = str(uuid.uuid4())
+            handle = f"placeholder-handle-{timestamp}-{random_uuid}"
+            
+            mutation = """
+            mutation productCreate($input: ProductInput!) {
+              productCreate(input: $input) {
+                product {
+                  id
+                }
+                userErrors {
+                  field
+                  message
+                }
+              }
+            }
+            """
+            
+            variables = {
+                "input": {
+                    "title": title,
+                    "handle": handle,
+                    "descriptionHtml": description
+                }
+            }
+            
+            response = requests.post(GRAPHQL_URL, json={"query": mutation, "variables": variables}, headers=HEADERS)
+            response.raise_for_status()
+            data = response.json()
+            
+            if "errors" in data:
+                raise Exception(f"GraphQL Error: {data['errors']}")
+                
+            user_errors = data.get("data", {}).get("productCreate", {}).get("userErrors", [])
+            if user_errors:
+                raise Exception(f"Shopify Error: {user_errors[0]['message']}")
+                
+            success_count += 1
+            
+        return templates.TemplateResponse("create_product.html", {
+            "request": request,
+            "error": None,
+            "success_message": f"Đã tạo thành công {success_count} sản phẩm!"
+        })
+        
+    except Exception as e:
+        return templates.TemplateResponse("create_product.html", {
+            "request": request,
+            "error": str(e),
+            "success_message": None
         })

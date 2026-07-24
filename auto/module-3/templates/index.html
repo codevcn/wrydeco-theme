@@ -34,7 +34,7 @@
 <body class="bg-gray-50 text-gray-900 min-h-screen">
     <!-- Header -->
     <header class="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
-        <div class="max-w-7xl mx-auto px-4 sm:px-8">
+        <div class="mx-auto px-4 sm:px-8">
             <div class="flex items-center justify-between h-16">
                 <!-- Logo -->
                 <div class="flex-shrink-0">
@@ -47,18 +47,45 @@
                 <nav class="flex items-center gap-6">
                     <a href="/" class="text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 pb-0.5">Sản phẩm</a>
                     <a href="/collections" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Collections</a>
+                    <a href="/create" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Tạo sản phẩm</a>
                 </nav>
             </div>
         </div>
     </header>
     
     <main class="p-4 sm:p-8">
-    <div class="max-w-7xl mx-auto">
+    <div class="mx-auto">
         <div class="flex items-center gap-4 mb-8">
             <h1 class="text-3xl font-bold text-gray-800 tracking-tight">Danh sách Sản phẩm</h1>
             <div class="bg-indigo-100 text-indigo-700 text-sm font-bold px-3 py-1 rounded-full shadow-sm flex items-center justify-center min-w-[2.5rem]" title="Tổng số lượng sản phẩm">
                 {{ total_count }}
             </div>
+        </div>
+
+        <!-- Filter Area -->
+        <div class="mb-8 bg-white p-4 rounded-xl shadow-[0_2px_10px_-4px_rgba(0,0,0,0.1)] border border-gray-100 flex flex-col sm:flex-row gap-4 items-center justify-between">
+            <form id="filter-form" action="/" method="GET" class="w-full flex flex-col sm:flex-row gap-4 items-center">
+                <div class="flex items-center gap-3 w-full sm:w-auto">
+                    <label class="text-sm font-semibold text-gray-700 whitespace-nowrap">Lọc theo:</label>
+                    <select name="filter_type" class="bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 outline-none transition-colors cursor-pointer hover:border-gray-300">
+                        <option value="tag" {% if filter_type == 'tag' %}selected{% endif %}>Tag</option>
+                        <option value="title" {% if filter_type == 'title' %}selected{% endif %}>Tên sản phẩm</option>
+                        <option value="id" {% if filter_type == 'id' %}selected{% endif %}>ID</option>
+                        <option value="handle" {% if filter_type == 'handle' %}selected{% endif %}>Handle</option>
+                        <option value="metafield_amazon_link" {% if filter_type == 'metafield_amazon_link' %}selected{% endif %}>Metafield amazon_link</option>
+                    </select>
+                </div>
+                
+                <div class="flex-grow w-full sm:w-auto">
+                    <input type="text" name="filter_value" value="{{ filter_value }}" placeholder="Nhập từ khóa (nhấn Enter để lọc)..." class="bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5 outline-none transition-colors hover:border-gray-300">
+                </div>
+                
+                <div class="w-full sm:w-auto">
+                    <button type="submit" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-sm px-5 py-2.5 text-center transition-colors shadow-sm focus:ring-4 focus:ring-indigo-300">
+                        Lọc
+                    </button>
+                </div>
+            </form>
         </div>
         
         {% if error %}
@@ -86,6 +113,8 @@
                             <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">ID</th>
                             <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Hình ảnh</th>
                             <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Sản phẩm</th>
+                            <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Tùy chọn (Options)</th>
+                            <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Collections</th>
                             <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Media</th>
                         </tr>
                     </thead>
@@ -115,6 +144,32 @@
                                 </a>
                             </td>
                             <td class="px-6 py-5 text-sm">
+                                {% if product.options|length > 0 %}
+                                    <div class="flex flex-wrap gap-1">
+                                        {% for option in product.options %}
+                                            {% if option|lower != 'title' %}
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200">
+                                                    {{ option }}
+                                                </span>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-5 text-sm">
+                                {% if product.collections|length > 0 %}
+                                    <div class="flex flex-wrap gap-1">
+                                        {% for collection in product.collections %}
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                                                {{ collection }}
+                                            </span>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <span class="text-xs text-gray-400 italic">Không có</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-5 text-sm">
                                 <div class="flex flex-wrap gap-2.5">
                                     {% for media_url in product.media %}
                                     <div class="relative group cursor-pointer" onclick="openLightbox('{{ media_url }}')">
@@ -134,7 +189,7 @@
         <div class="flex flex-col sm:flex-row justify-between items-center mt-8 gap-4">
             <div>
                 {% if page_info.hasPreviousPage %}
-                <a href="/?before={{ page_info.startCursor }}" class="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-gray-700 font-medium text-sm rounded-lg border border-gray-200 shadow-sm hover:bg-gray-50 hover:text-indigo-600 transition-all duration-200">
+                <a href="/?before={{ page_info.startCursor }}&filter_type={{ filter_type }}&filter_value={{ filter_value }}" class="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-gray-700 font-medium text-sm rounded-lg border border-gray-200 shadow-sm hover:bg-gray-50 hover:text-indigo-600 transition-all duration-200">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                     Trang trước
                 </a>
@@ -147,7 +202,7 @@
             </div>
             <div>
                 {% if page_info.hasNextPage %}
-                <a href="/?after={{ page_info.endCursor }}" class="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white font-medium text-sm rounded-lg shadow-sm hover:bg-indigo-700 hover:shadow transition-all duration-200">
+                <a href="/?after={{ page_info.endCursor }}&filter_type={{ filter_type }}&filter_value={{ filter_value }}" class="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white font-medium text-sm rounded-lg shadow-sm hover:bg-indigo-700 hover:shadow transition-all duration-200">
                     Trang sau
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                 </a>
