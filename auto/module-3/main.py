@@ -424,6 +424,126 @@ def get_products_by_description(keyword, sort_by="created_desc"):
         "productsCount": {"count": len(all_matched_edges)}
     }
 
+def get_products_by_variant_option(keyword, sort_by="created_desc", exclude=False):
+    query = """
+    query getProducts($after: String) {
+      products(first: 25, after: $after) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        edges {
+          node {
+            id
+            handle
+            title
+            descriptionHtml
+            createdAt
+            productType
+            priceRangeV2 {
+              minVariantPrice {
+                amount
+              }
+            }
+            options {
+              name
+              values
+            }
+            collections(first: 20) {
+              edges {
+                node {
+                  title
+                }
+              }
+            }
+            amazon_link: metafield(namespace: "custom", key: "amazon_link") {
+              value
+            }
+            media(first: 50) {
+              edges {
+                node {
+                  ... on MediaImage {
+                    id
+                    image {
+                      url
+                    }
+                  }
+                  ... on Video {
+                    id
+                    preview {
+                      image {
+                        url
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    """
+    all_matched_edges = []
+    has_next = True
+    cursor = None
+    
+    while has_next:
+        variables = {}
+        if cursor:
+            variables["after"] = cursor
+            
+        res = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=HEADERS)
+        res.raise_for_status()
+        data = res.json()
+        if "errors" in data:
+            print("GraphQL Errors:", data["errors"])
+            break
+            
+        products_data = data["data"]["products"]
+        for edge in products_data["edges"]:
+            options = edge["node"].get("options", [])
+            matched = False
+            for opt in options:
+                if keyword.lower() in opt.get("name", "").lower():
+                    matched = True
+                    break
+                for val in opt.get("values", []):
+                    if keyword.lower() in str(val).lower():
+                        matched = True
+                        break
+                if matched:
+                    break
+            if exclude:
+                if not matched:
+                    all_matched_edges.append(edge)
+            else:
+                if matched:
+                    all_matched_edges.append(edge)
+                
+        page_info = products_data.get("pageInfo", {})
+        has_next = page_info.get("hasNextPage", False)
+        cursor = page_info.get("endCursor")
+        
+    def get_sort_key(edge):
+        if sort_by in ["price_asc", "price_desc"]:
+            price_data = edge["node"].get("priceRangeV2")
+            if price_data and price_data.get("minVariantPrice"):
+                return float(price_data["minVariantPrice"].get("amount", 0))
+            return 0.0
+        return edge["node"].get("createdAt", "")
+        
+    reverse_sort = sort_by in ["created_desc", "price_desc"]
+    all_matched_edges.sort(key=get_sort_key, reverse=reverse_sort)
+        
+    return {
+        "products": {
+            "edges": all_matched_edges,
+            "pageInfo": {"hasNextPage": False, "hasPreviousPage": False}
+        },
+        "productsCount": {"count": len(all_matched_edges)}
+    }
+
 def get_products_by_collection(handle, sort_by="created_desc"):
     query = """
     query getCollectionProducts($handle: String!, $after: String) {
@@ -593,6 +713,10 @@ async def read_root(request: Request, after: str = None, before: str = None, fil
             data = get_products_by_metafield_rich_description(filter_value, sort_by=sort_by)
         elif filter_value and filter_type == "description":
             data = get_products_by_description(filter_value, sort_by=sort_by)
+        elif filter_value and filter_type == "variant_option":
+            data = get_products_by_variant_option(filter_value, sort_by=sort_by, exclude=False)
+        elif filter_value and filter_type == "not_variant_option":
+            data = get_products_by_variant_option(filter_value, sort_by=sort_by, exclude=True)
         elif filter_value and filter_type == "collection":
             data = get_products_by_collection(filter_value, sort_by=sort_by)
         else:
@@ -712,6 +836,10 @@ def get_product_by_handle(handle: str):
           title
           description
         }
+        options {
+          name
+          values
+        }
         media(first: 50) {
           edges {
             node {
@@ -812,6 +940,7 @@ async def read_product(request: Request, product_handle: str):
             "tags": product_data.get("tags", []),
             "description": product_data.get("descriptionHtml", ""),
             "seo": product_data.get("seo", {}),
+            "options": product_data.get("options", []),
             "media": media_urls,
             "prices": sorted_prices,
             "metafields": metafields

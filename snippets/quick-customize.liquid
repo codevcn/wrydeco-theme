@@ -15,6 +15,7 @@
 
   @param {string} [eyebrow] - Small label above the title. Default "Quick customize".
   @param {string} [add_label] - Add-to-cart button label. Default "Add to cart".
+  @param {string} [buy_label] - Buy-now button label. Default "Buy it now".
   @param {string} [details_label] - "View details" link label. Default "View details".
   @param {string} [toast_position] - Toast position for feedback. Default "bottom-left".
 
@@ -48,8 +49,11 @@
     </div>
 
     <div class="sp-quick__media" data-quick-media hidden>
-      <div class="sp-quick__media-main">
+      <div class="sp-quick__media-main" data-quick-media-main>
         <img data-quick-image src="" alt="" width="800" height="800" loading="lazy">
+        <span class="sp-quick__media-spinner" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><g stroke="currentColor"><circle cx="12" cy="12" r="9.5" fill="none" stroke-linecap="round" stroke-width="3"><animate attributeName="stroke-dasharray" calcMode="spline" dur="1.5s" keySplines="0.42,0,0.58,1;0.42,0,0.58,1;0.42,0,0.58,1" keyTimes="0;0.475;0.95;1" repeatCount="indefinite" values="0 150;42 150;42 150;42 150"/><animate attributeName="stroke-dashoffset" calcMode="spline" dur="1.5s" keySplines="0.42,0,0.58,1;0.42,0,0.58,1;0.42,0,0.58,1" keyTimes="0;0.475;0.95;1" repeatCount="indefinite" values="0;-16;-59;-59"/></circle><animateTransform attributeName="transform" dur="2s" repeatCount="indefinite" type="rotate" values="0 12 12;360 12 12"/></g></svg>
+        </span>
       </div>
       <div class="sp-quick__thumbs" data-quick-thumbs hidden></div>
     </div>
@@ -71,6 +75,24 @@
             <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 16 16"><path fill="currentColor" d="M.5 1a.5.5 0 0 0 0 1h1.11l.401 1.607l1.498 7.985A.5.5 0 0 0 4 12h1a2 2 0 1 0 0 4a2 2 0 0 0 0-4h7a2 2 0 1 0 0 4a2 2 0 0 0 0-4h1a.5.5 0 0 0 .491-.408l1.5-8A.5.5 0 0 0 14.5 3H2.89l-.405-1.621A.5.5 0 0 0 2 1zM6 14a1 1 0 1 1-2 0a1 1 0 0 1 2 0m7 0a1 1 0 1 1-2 0a1 1 0 0 1 2 0M9 5.5V7h1.5a.5.5 0 0 1 0 1H9v1.5a.5.5 0 0 1-1 0V8H6.5a.5.5 0 0 1 0-1H8V5.5a.5.5 0 0 1 1 0"/></svg>
           </span>
           <span data-quick-add-text>{{ add_label | default: 'Add to cart' | escape }}</span>
+        </button>
+      </div>
+
+      {%- comment -%}
+        Buy now: adds the selected variant (with any custom-colour property) and
+        goes straight to checkout. The PDP's dynamic checkout button can't be used
+        here — `payment_button` needs a `{% form 'product' %}` bound to a known
+        product, while this dialog resolves its product at runtime.
+      {%- endcomment -%}
+      <div class="sp-quick__buy-base">
+        <button type="button" class="sp-quick__buy" data-quick-buy>
+          <span class="sp-quick__buy-spinner" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none">
+              <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3" opacity="0.25"></circle>
+              <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" stroke-width="3" stroke-linecap="round"></path>
+            </svg>
+          </span>
+          <span data-quick-buy-text>{{ buy_label | default: 'Buy it now' | escape }}</span>
         </button>
       </div>
 
@@ -318,6 +340,32 @@
     width: 100%;
     height: 100%;
     object-fit: contain;
+    transition: opacity var(--timing-short) var(--ease-standard);
+  }
+
+  /* Product data can be ready well before the stage image is: keep the stage
+     blank with a spinner until the image itself has actually loaded. */
+  .sp-quick__media-spinner {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-earth-brown, #4a2c18);
+    pointer-events: none;
+  }
+
+  .sp-quick__media-spinner svg {
+    width: var(--sp-8);
+    height: var(--sp-8);
+  }
+
+  .sp-quick__media-main.is-image-loading img {
+    opacity: 0;
+  }
+
+  .sp-quick__media-main.is-image-loading .sp-quick__media-spinner {
+    display: flex;
   }
 
   .sp-quick__thumbs {
@@ -564,6 +612,90 @@
   .sp-quick__add.is-loading {
     opacity: 0.6;
     cursor: not-allowed;
+  }
+
+  /* Buy now sits directly under Add to cart and reuses the same pushable base,
+     in the PDP's ebony/red express-checkout treatment (product-buy-buttons). */
+  .sp-quick__buy-base {
+    width: 100%;
+    margin-top: var(--sp-3);
+    padding-bottom: 6px;
+    border-radius: 8px;
+    background-image: linear-gradient(
+      to top,
+      rgba(128, 128, 128, 0.9) 0%,
+      rgba(0, 0, 0, 0.5) 28%,
+      rgba(0, 0, 0, 0) 100%
+    );
+  }
+
+  .sp-quick__buy {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    height: 48px;
+    border: none;
+    border-radius: 4px;
+    background-color: #ff3939;
+    color: var(--color-cream, #fff8f0);
+    font-family: var(--font-body, inherit);
+    font-size: 1rem;
+    font-weight: 900;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    box-sizing: content-box;
+  }
+
+  .sp-quick__buy-base:hover .sp-quick__buy {
+    transform: translateY(-3px);
+  }
+
+  .sp-quick__buy-base:active .sp-quick__buy {
+    transform: translateY(3px);
+  }
+
+  .sp-quick__buy:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  /* Processing: the page is about to navigate to checkout, so keep the button at
+     full colour (not the faded disabled look) and show the spinner instead. */
+  .sp-quick__buy-spinner {
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .sp-quick__buy-spinner svg {
+    width: 20px;
+    height: 20px;
+    animation: sp-quick-buy-spin 0.7s linear infinite;
+  }
+
+  .sp-quick__buy.is-loading .sp-quick__buy-spinner {
+    display: inline-flex;
+  }
+
+  .sp-quick__buy.is-loading:disabled {
+    opacity: 1;
+    cursor: progress;
+  }
+
+  @keyframes sp-quick-buy-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sp-quick__buy-spinner svg {
+      animation: none;
+    }
   }
 
   .sp-quick__details {
@@ -974,6 +1106,7 @@
     var els = null; // cached child references of `modal`
     var state = null; // { product, selected: [], variant, optionNames: [] }
     var addLabel = 'Add to cart';
+    var buyLabel = 'Buy it now';
     var moneyFormat = '${{amount}}';
     var toastPosition = 'bottom-left';
     var lastFocused = null; // element to restore focus to on close
@@ -1069,6 +1202,32 @@
       return format.replace(/\{\{\s*\w+\s*\}\}/, value).replace(/<[^>]*>/g, '');
     }
 
+    var imageToken = 0; // guards against out-of-order stage-image loads
+
+    // Swap the stage image, showing a spinner until it has actually loaded.
+    // Product JSON usually arrives long before the image bytes do.
+    function setStageImage(src) {
+      var main = els.mediaMain;
+      if (!main) {
+        els.image.src = src;
+        return;
+      }
+
+      var token = ++imageToken;
+      main.classList.add('is-image-loading');
+
+      function done() {
+        if (token !== imageToken) return; // a newer image superseded this one
+        main.classList.remove('is-image-loading');
+      }
+
+      els.image.onload = done;
+      els.image.onerror = done;
+      els.image.src = src;
+      // A cached image can already be complete here; `load` may never fire.
+      if (els.image.complete && els.image.naturalWidth) done();
+    }
+
     // Ask the Shopify CDN for a right-sized image without breaking existing params.
     function sizeImg(url, w) {
       if (!url) return url;
@@ -1094,7 +1253,9 @@
         });
     }
 
-    function addVariantToCart(variantId, properties, onDone) {
+    // `silent` skips the success toast and the cart-drawer event — used by Buy
+    // now, which navigates to checkout and must not pop the drawer on the way out.
+    function addVariantToCart(variantId, properties, onDone, silent) {
       var payload = { id: variantId, quantity: 1 };
       if (properties && Object.keys(properties).length) payload.properties = properties;
       fetch(cartRoot + 'cart/add.js', {
@@ -1107,14 +1268,26 @@
         })
         .then(function (data) {
           if (data.status) throw new Error(data.description || 'Could not add to cart');
-          toast('Item added to your cart.', 'success');
-          document.dispatchEvent(new CustomEvent('cart:updated', { detail: { open: true } }));
+          if (!silent) {
+            toast('Item added to your cart.', 'success');
+            document.dispatchEvent(new CustomEvent('cart:updated', { detail: { open: true } }));
+          }
           if (onDone) onDone(true);
         })
         .catch(function (err) {
           toast(err.message, 'error');
           if (onDone) onDone(false);
         });
+    }
+
+    // Line-item properties for the current selection. PDP parity: the uploaded
+    // custom-colour image rides along while its option is still set to "Custom".
+    function selectedProperties() {
+      var properties = {};
+      if (customImage.url && customImage.optionIndex > -1 && state.selected[customImage.optionIndex] === 'Custom') {
+        properties['added_url_image'] = customImage.url;
+      }
+      return properties;
     }
 
     // --- Variant resolution + live price ---
@@ -1152,6 +1325,15 @@
         els.add.disabled = true;
         els.addText.textContent = 'Unavailable';
       }
+      syncBuyButton();
+    }
+
+    // Buy now follows Add to cart exactly: it must never check out a variant the
+    // shopper can't add. Never re-enable while a checkout redirect is in flight.
+    function syncBuyButton() {
+      if (!els.buy) return;
+      if (els.buy.classList.contains('is-loading')) return;
+      els.buy.disabled = els.add.disabled;
     }
 
     // --- Option classification (mirrors the PDP variant picker) ---
@@ -1505,8 +1687,13 @@
       state = { product: product, selected: initial.options.slice(), variant: initial, optionNames: names };
 
       // Fresh product → drop any custom-colour image / open sub-dialogs from a
-      // previous product.
+      // previous product, and clear a Buy now spinner left over from a failed run.
       customImage = { url: '', optionIndex: -1 };
+      if (els.buy) {
+        els.buy.classList.remove('is-loading');
+        els.buy.removeAttribute('aria-busy');
+        if (els.buyText) els.buyText.textContent = buyLabel;
+      }
       closeColorGuide();
       closeSizePopup();
 
@@ -1519,9 +1706,9 @@
       });
       els.thumbs.innerHTML = '';
       if (gallery.length) {
-        els.image.src = gallery[0];
         els.image.alt = product.title;
         els.media.hidden = false;
+        setStageImage(gallery[0]);
       } else {
         els.media.hidden = true;
       }
@@ -1539,7 +1726,7 @@
           timg.loading = 'lazy';
           thumb.appendChild(timg);
           thumb.addEventListener('click', function () {
-            els.image.src = src;
+            setStageImage(src);
             Array.prototype.forEach.call(els.thumbs.children, function (c) {
               c.removeAttribute('aria-current');
             });
@@ -1636,20 +1823,50 @@
     function onAdd() {
       if (!state || !state.variant || els.add.disabled || els.add.classList.contains('is-loading')) return;
 
-      // PDP parity: attach the uploaded custom-colour image as a line-item property
-      // while the option it belongs to is still set to "Custom".
-      var properties = {};
-      if (customImage.url && customImage.optionIndex > -1 && state.selected[customImage.optionIndex] === 'Custom') {
-        properties['added_url_image'] = customImage.url;
-      }
-
       els.add.classList.add('is-loading');
       els.addText.textContent = 'Adding…';
-      addVariantToCart(state.variant.id, properties, function (ok) {
+      addVariantToCart(state.variant.id, selectedProperties(), function (ok) {
         els.add.classList.remove('is-loading');
         if (ok) closeModal();
         else updateSelection();
       });
+    }
+
+    // Buy now: add the selected variant, then go straight to checkout. The
+    // loading state persists through the redirect; a fallback timer releases the
+    // button if navigation never happens (blocked / offline), mirroring the PDP.
+    function onBuy() {
+      if (!els.buy) return;
+      if (!state || !state.variant || els.buy.disabled || els.buy.classList.contains('is-loading')) return;
+
+      els.buy.classList.add('is-loading');
+      els.buy.disabled = true;
+      els.buy.setAttribute('aria-busy', 'true');
+      if (els.buyText) els.buyText.textContent = 'Processing…';
+
+      function release() {
+        els.buy.classList.remove('is-loading');
+        els.buy.removeAttribute('aria-busy');
+        if (els.buyText) els.buyText.textContent = buyLabel;
+        updateSelection();
+      }
+
+      var fallback = window.setTimeout(release, 8000);
+      window.addEventListener('pagehide', function () { window.clearTimeout(fallback); }, { once: true });
+
+      addVariantToCart(
+        state.variant.id,
+        selectedProperties(),
+        function (ok) {
+          if (!ok) {
+            window.clearTimeout(fallback);
+            release();
+            return;
+          }
+          window.location.href = cartRoot + 'checkout';
+        },
+        true
+      );
     }
 
     // Cache the active dialog + its children. De-dupes if rendered more than once.
@@ -1667,6 +1884,7 @@
       els = {
         title: modal.querySelector('[data-quick-title]'),
         media: modal.querySelector('[data-quick-media]'),
+        mediaMain: modal.querySelector('[data-quick-media-main]'),
         image: modal.querySelector('[data-quick-image]'),
         thumbs: modal.querySelector('[data-quick-thumbs]'),
         options: modal.querySelector('[data-quick-options]'),
@@ -1674,6 +1892,8 @@
         compare: modal.querySelector('[data-quick-compare]'),
         add: modal.querySelector('[data-quick-add]'),
         addText: modal.querySelector('[data-quick-add-text]'),
+        buy: modal.querySelector('[data-quick-buy]'),
+        buyText: modal.querySelector('[data-quick-buy-text]'),
         details: modal.querySelector('[data-quick-details]'),
         loading: modal.querySelector('[data-quick-loading]'),
         body: modal.querySelector('[data-quick-body]'),
@@ -1684,10 +1904,12 @@
       if (modal.dataset.wired !== 'true') {
         modal.dataset.wired = 'true';
         addLabel = els.addText.textContent.trim();
+        if (els.buyText) buyLabel = els.buyText.textContent.trim();
         modal.querySelectorAll('[data-quick-close]').forEach(function (el) {
           el.addEventListener('click', closeModal);
         });
         els.add.addEventListener('click', onAdd);
+        if (els.buy) els.buy.addEventListener('click', onBuy);
       }
 
       // Cache the sub-dialogs (rendered once alongside the modal), de-duping any

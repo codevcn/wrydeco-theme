@@ -47,23 +47,56 @@
           data-variant-id="{{ product.variants.first.id }}"
         >
           <div class="signature-pieces__media">
-            <a class="signature-pieces__image-link" href="{{ product.url }}" aria-label="{{ display_title | escape }}">
+            <a
+              class="signature-pieces__image-link"
+              href="{{ product.url }}"
+              aria-label="{{ display_title | escape }}"
+              data-sp-hover-gallery
+            >
               {%- if product.featured_media != blank -%}
                 {%- assign featured_media_alt = product.featured_media.alt | default: display_title -%}
                 {{
                   product.featured_media.preview_image
                   | image_url: width: 900
                   | image_tag:
-                    class: 'signature-pieces__image',
+                    class: 'signature-pieces__image is-active',
                     loading: 'lazy',
                     widths: '360, 540, 720, 900',
                     sizes: '(min-width: 80rem) 23vw, (min-width: 48rem) 46vw, 88vw',
                     alt: featured_media_alt
                 }}
+                {%- comment -%}
+                  Extra frames cycled while the pointer is over the card (PLP parity).
+                  Capped at 4 so a media-heavy product doesn't bloat the homepage.
+                {%- endcomment -%}
+                {%- assign hover_count = 0 -%}
+                {%- for media in product.media -%}
+                  {%- if media.media_type != 'image' -%}
+                    {%- continue -%}
+                  {%- endif -%}
+                  {%- if media.id == product.featured_media.id -%}
+                    {%- continue -%}
+                  {%- endif -%}
+                  {%- assign hover_media_alt = media.alt | default: display_title -%}
+                  {{
+                    media.preview_image
+                    | image_url: width: 900
+                    | image_tag:
+                      class: 'signature-pieces__image',
+                      loading: 'lazy',
+                      widths: '360, 540, 720, 900',
+                      sizes: '(min-width: 80rem) 23vw, (min-width: 48rem) 46vw, 88vw',
+                      alt: hover_media_alt
+                  }}
+                  {%- assign hover_count = hover_count | plus: 1 -%}
+                  {%- if hover_count >= 4 -%}
+                    {%- break -%}
+                  {%- endif -%}
+                {%- endfor -%}
               {%- else -%}
                 {%- assign fallback_asset = 'sli-' | append: forloop.index | append: '.webp' -%}
                 <img
-                  class="signature-pieces__image"
+                  class="signature-pieces__image is-active"
                   src="{{ fallback_asset | file_url }}"
                   alt="{{ display_title | escape }}"
                   width="900"
@@ -73,10 +106,19 @@
               {%- endif -%}
             </a>
 
+            {%- comment -%}
+              Every card carries a badge: "Best Seller" for the curated collection,
+              otherwise the "Most Loved" fallback.
+            {%- endcomment -%}
             {%- if is_best_seller -%}
               <span class="signature-pieces__badge">
                 <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="m12 17.275l-4.15 2.5q-.275.175-.575.15t-.525-.2t-.35-.437t-.05-.588l1.1-4.725L3.775 10.8q-.25-.225-.312-.513t.037-.562t.3-.45t.55-.225l4.85-.425l1.875-4.45q.125-.3.388-.45t.537-.15t.537.15t.388.45l1.875 4.45l4.85.425q.35.05.55.225t.3.45t.038.563t-.313.512l-3.675 3.175l1.1 4.725q.075.325-.05.588t-.35.437t-.525.2t-.575-.15z"/></svg>
                 {{ section.settings.best_seller_badge | escape }}
+              </span>
+            {%- else -%}
+              <span class="signature-pieces__badge signature-pieces__badge--loved">
+                <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M11.288 20.2q-.363-.125-.638-.4l-1.725-1.575q-2.65-2.425-4.787-4.812T2 8.15Q2 5.8 3.575 4.225T7.5 2.65q1.325 0 2.5.562t2 1.538q.825-.975 2-1.537t2.5-.563q2.35 0 3.925 1.575T22 8.15q0 2.875-2.125 5.275T15.05 18.25l-1.7 1.55q-.275.275-.637.4t-.713.125t-.712-.125"/></svg>
+                {{ section.settings.most_loved_badge | escape }}
               </span>
             {%- endif -%}
 
@@ -138,6 +180,7 @@
         </article>
       {%- else -%}
         {%- for i in (1..4) -%}
+          {%- assign card_badge_loved = false -%}
           {%- case i -%}
             {%- when 1 -%}
               {%- assign card_title = 'Walnut Lounge Chair' -%}
@@ -153,7 +196,8 @@
               {%- assign card_title = 'Sculpted Console Table' -%}
               {%- assign card_artist = 'Alex Nguyen' -%}
               {%- assign card_price = '$3,250' -%}
-              {%- assign card_badge = blank -%}
+              {%- assign card_badge = section.settings.most_loved_badge -%}
+              {%- assign card_badge_loved = true -%}
             {%- else -%}
               {%- assign card_title = 'Treeform Bookshelf' -%}
               {%- assign card_artist = 'Dien Luc' -%}
@@ -165,7 +209,7 @@
             <div class="signature-pieces__media">
               <span class="signature-pieces__image-link">
                 <img
-                  class="signature-pieces__image"
+                  class="signature-pieces__image is-active"
                   src="{{ 'sli-' | append: i | append: '.webp' | file_url }}"
                   alt="{{ card_title | escape }}"
                   width="900"
@@ -175,12 +219,17 @@
               </span>
 
               {%- if card_badge != blank -%}
-                <span class="signature-pieces__badge">
-                  <svg aria-hidden="true" viewBox="0 0 16 16">
-                    <path d="m8 1.7 1.7 3.5 3.9.6-2.8 2.7.7 3.9L8 10.6l-3.5 1.8.7-3.9-2.8-2.7 3.9-.6L8 1.7Z"/>
-                  </svg>
-                  {{ card_badge | escape }}
-                </span>
+                {%- if card_badge_loved -%}
+                  <span class="signature-pieces__badge signature-pieces__badge--loved">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M11.288 20.2q-.363-.125-.638-.4l-1.725-1.575q-2.65-2.425-4.787-4.812T2 8.15Q2 5.8 3.575 4.225T7.5 2.65q1.325 0 2.5.562t2 1.538q.825-.975 2-1.537t2.5-.563q2.35 0 3.925 1.575T22 8.15q0 2.875-2.125 5.275T15.05 18.25l-1.7 1.55q-.275.275-.637.4t-.713.125t-.712-.125"/></svg>
+                    {{ card_badge | escape }}
+                  </span>
+                {%- else -%}
+                  <span class="signature-pieces__badge">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="m12 17.275l-4.15 2.5q-.275.175-.575.15t-.525-.2t-.35-.437t-.05-.588l1.1-4.725L3.775 10.8q-.25-.225-.312-.513t.037-.562t.3-.45t.55-.225l4.85-.425l1.875-4.45q.125-.3.388-.45t.537-.15t.537.15t.388.45l1.875 4.45l4.85.425q.35.05.55.225t.3.45t.038.563t-.313.512l-3.675 3.175l1.1 4.725q.075.325-.05.588t-.35.437t-.525.2t-.575-.15z"/></svg>
+                    {{ card_badge | escape }}
+                  </span>
+                {%- endif -%}
               {%- endif -%}
 
               <span class="signature-pieces__quick signature-pieces__wishlist" aria-hidden="true">
@@ -227,6 +276,7 @@
   {% render 'quick-customize',
     eyebrow: section.settings.quick_eyebrow,
     add_label: section.settings.quick_add_label,
+    buy_label: section.settings.quick_buy_label,
     details_label: section.settings.details_label
   %}
 </section>
@@ -303,16 +353,36 @@
 
   .signature-pieces__image-link {
     display: block;
+    position: relative;
+    /* Must form its own stacking context: without it the stacked frames' z-index
+       would compete with — and cover — the badge and wishlist overlays. */
+    z-index: 0;
     width: 100%;
     height: 100%;
   }
 
+  /* The card stacks every image frame; only `is-active` (and the outgoing
+     `is-prev`) is visible, so hovering cross-fades through the gallery. */
   .signature-pieces__image {
     display: block;
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 700ms var(--ease-standard);
+    opacity: 0;
+    z-index: 0;
+    transition: transform 700ms var(--ease-standard), opacity var(--timing-base) var(--ease-standard);
+  }
+
+  .signature-pieces__image.is-prev {
+    opacity: 1;
+    z-index: 1;
+  }
+
+  .signature-pieces__image.is-active {
+    opacity: 1;
+    z-index: 2;
   }
 
   .signature-pieces__badge {
@@ -322,8 +392,8 @@
     z-index: 1;
     display: inline-flex;
     align-items: center;
-    gap: 7px;
-    min-height: 26px;
+    gap: 5px;
+    min-height: 24px;
     padding: 0 8px;
     border: 1px solid rgba(74, 44, 24, 0.1);
     border-radius: 999px;
@@ -342,6 +412,12 @@
     height: 15px;
     fill: currentColor;
     flex: 0 0 auto;
+  }
+
+  /* Fallback badge shown on every card that isn't a best seller. Same pill, with
+     a warm clay heart so the two badges stay distinguishable at a glance. */
+  .signature-pieces__badge--loved svg {
+    color: var(--color-clay, #8a5d37);
   }
 
   .signature-pieces__quick {
@@ -684,17 +760,65 @@
       requestWishlistRender();
     }
 
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', function () {
-        initWishlist(document);
+    // Hover gallery: cycle through the card's images while the pointer is over
+    // it, cross-fading each frame. Mirrors the collection (PLP) product card.
+    function initHoverGallery(root) {
+      var scope = root && root.querySelectorAll ? root : document;
+      scope.querySelectorAll('[data-sp-hover-gallery]').forEach(function (gallery) {
+        if (gallery.dataset.initHover === 'true') return;
+        gallery.dataset.initHover = 'true';
+
+        var images = gallery.querySelectorAll('.signature-pieces__image');
+        if (images.length <= 1) return;
+
+        var intervalId = null;
+        var currentIndex = 0;
+
+        function showImage(index) {
+          images.forEach(function (img) {
+            img.classList.remove('is-prev');
+            if (img.classList.contains('is-active')) {
+              img.classList.remove('is-active');
+              img.classList.add('is-prev');
+            }
+          });
+          images[index].classList.add('is-active');
+        }
+
+        gallery.addEventListener('mouseenter', function () {
+          currentIndex = 1;
+          showImage(currentIndex);
+
+          intervalId = setInterval(function () {
+            currentIndex = (currentIndex + 1) % images.length;
+            showImage(currentIndex);
+          }, 2000);
+        });
+
+        gallery.addEventListener('mouseleave', function () {
+          clearInterval(intervalId);
+          currentIndex = 0;
+          showImage(0);
+        });
       });
-    } else {
-      initWishlist(document);
     }
 
-    // Theme editor: re-wire the wishlist hooks when the section is (re)rendered.
+    function init(root) {
+      initWishlist(root);
+      initHoverGallery(root);
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function () {
+        init(document);
+      });
+    } else {
+      init(document);
+    }
+
+    // Theme editor: re-wire the card hooks when the section is (re)rendered.
     document.addEventListener('shopify:section:load', function (e) {
-      initWishlist(e.target);
+      init(e.target);
     });
   })();
 {% endjavascript %}
@@ -760,6 +884,13 @@
     },
     {
       "type": "text",
+      "id": "most_loved_badge",
+      "label": "Most loved badge",
+      "info": "Shown on cards that aren't best sellers.",
+      "default": "Most Loved"
+    },
+    {
+      "type": "text",
       "id": "made_to_order_badge",
       "label": "Made to order badge",
       "default": "Made to Order"
@@ -781,6 +912,12 @@
       "id": "quick_add_label",
       "label": "Quick popup add-to-cart label",
       "default": "Add to cart"
+    },
+    {
+      "type": "text",
+      "id": "quick_buy_label",
+      "label": "Quick popup buy-now label",
+      "default": "Buy it now"
     },
     {
       "type": "text",
