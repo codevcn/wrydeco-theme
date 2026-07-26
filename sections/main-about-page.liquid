@@ -21,7 +21,7 @@
     </div>
   </section>
 
-  <section class="about-new-story" aria-labelledby="about-new-story-title-{{ section.id }}">
+  <section class="about-new-story" aria-labelledby="about-new-story-title-{{ section.id }}" data-about-reveal>
     <div class="about-new-story__inner">
       <div class="about-new-story__content">
         <header class="about-new-story__header">
@@ -65,7 +65,7 @@
     </div>
   </section>
 
-  <section class="about-new-purpose" aria-labelledby="about-new-purpose-title-{{ section.id }}">
+  <section class="about-new-purpose" aria-labelledby="about-new-purpose-title-{{ section.id }}" data-about-reveal>
     <div class="about-new-purpose__inner">
       <div class="about-new-purpose__media">
         <img
@@ -154,6 +154,22 @@
     font-family: var(--font-body);
   }
 
+  .about-reveal-enabled [data-about-reveal] {
+    transition:
+      opacity var(--timing-extra-long) var(--ease-out),
+      transform var(--timing-extra-long) var(--ease-out);
+  }
+
+  .about-reveal-enabled [data-about-reveal]:not(.is-revealed) {
+    opacity: 0.4;
+    transform: translateY(var(--sp-7));
+  }
+
+  .about-reveal-enabled [data-about-reveal].is-revealed {
+    opacity: 1;
+    transform: none;
+  }
+
   .about-new__eyebrow {
     margin: var(--sp-0) var(--sp-0) var(--sp-3);
     color: var(--color-earth-brown);
@@ -184,10 +200,10 @@
     background:
       linear-gradient(
         to bottom,
-        color-mix(in srgb, var(--color-ebony) 18%, transparent),
-        color-mix(in srgb, var(--color-ebony) 34%, transparent)
+        color-mix(in srgb, var(--color-ebony) 40%, transparent),
+        color-mix(in srgb, var(--color-ebony) 6%, transparent)
       ),
-      color-mix(in srgb, var(--color-ebony) 20%, transparent);
+      color-mix(in srgb, var(--color-ebony) 10%, transparent);
     content: '';
   }
 
@@ -215,6 +231,36 @@
     text-align: center;
   }
 
+  .about-new-hero__copy > * {
+    opacity: 0;
+    transform: translateY(var(--sp-5));
+    animation: about-new-hero-copy-reveal var(--timing-extra-long) var(--ease-out) forwards;
+  }
+
+  .about-new-hero__copy > :nth-child(2) {
+    animation-delay: var(--timing-micro);
+  }
+
+  .about-new-hero__copy > :nth-child(3) {
+    animation-delay: var(--timing-base);
+  }
+
+  .about-new-hero__copy > :nth-child(4) {
+    animation-delay: var(--timing-long);
+  }
+
+  @keyframes about-new-hero-copy-reveal {
+    from {
+      opacity: 0;
+      transform: translateY(var(--sp-5));
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(var(--sp-0));
+    }
+  }
+
   .about-new-hero h1,
   .about-new-story h2,
   .about-new-purpose h2 {
@@ -228,7 +274,7 @@
     color: var(--text-inverse);
     font-size: clamp(
       var(--font-size-display-2xl),
-      calc(var(--font-size-display-2xl) + 2.5vw),
+      calc(var(--font-size-display-2xl) + 1vw),
       calc(var(--font-size-display-2xl) * 1.6)
     );
     letter-spacing: var(--letter-spacing-snug);
@@ -242,9 +288,9 @@
 
   .about-new-hero .about-new__eyebrow {
     margin-block-end: var(--sp-5);
-    color: var(--color-linen);
+    color: var(--color-cream);
     font-size: var(--font-size-body-md);
-    font-weight: var(--font-weight-regular);
+    font-weight: var(--font-weight-bold);
     letter-spacing: calc(var(--letter-spacing-wide) * 8);
     text-shadow: var(--blog-hero-text-shadow);
   }
@@ -253,7 +299,7 @@
     margin: var(--sp-2) var(--sp-0) var(--sp-0);
     color: var(--text-inverse);
     font-family: var(--font-display-light);
-    font-size: clamp(var(--font-size-display-sm), 3vw, var(--font-size-display-lg));
+    font-size: clamp(var(--font-size-display-sm), 2.5vw, var(--font-size-display-lg));
     font-weight: var(--font-weight-light);
     letter-spacing: var(--letter-spacing-snug);
     line-height: var(--line-height-tight);
@@ -571,9 +617,9 @@
         linear-gradient(
           to bottom,
           color-mix(in srgb, var(--color-ebony) 26%, transparent),
-          color-mix(in srgb, var(--color-ebony) 48%, transparent)
+          color-mix(in srgb, var(--color-ebony) 10%, transparent)
         ),
-        color-mix(in srgb, var(--color-ebony) 28%, transparent);
+        color-mix(in srgb, var(--color-ebony) 8%, transparent);
     }
 
     .about-new-hero__media img {
@@ -710,7 +756,90 @@
       aspect-ratio: 4 / 5;
     }
   }
+
+  @media (prefers-reduced-motion: reduce) {
+    .about-new-hero__copy > * {
+      opacity: 1;
+      transform: none;
+      animation: none;
+    }
+
+    .about-reveal-enabled [data-about-reveal] {
+      opacity: 1;
+      transform: none;
+      transition: none;
+    }
+  }
 {% endstylesheet %}
+
+{% javascript %}
+  (() => {
+    const revealSelector = '[data-about-reveal]';
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let revealObserver = null;
+
+    const revealAll = (scope = document) => {
+      scope.querySelectorAll(revealSelector).forEach((element) => element.classList.add('is-revealed'));
+    };
+
+    const initializeRevealEffects = (scope = document) => {
+      const sections = Array.from(scope.querySelectorAll(revealSelector)).filter(
+        (element) => element.dataset.aboutRevealReady !== 'true'
+      );
+      if (sections.length === 0) return;
+
+      if (prefersReducedMotion.matches || !('IntersectionObserver' in window)) {
+        sections.forEach((section) => {
+          section.dataset.aboutRevealReady = 'true';
+          section.classList.add('is-revealed');
+        });
+        return;
+      }
+
+      document.documentElement.classList.add('about-reveal-enabled');
+
+      if (!revealObserver) {
+        revealObserver = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (!entry.isIntersecting) return;
+              entry.target.classList.add('is-revealed');
+              revealObserver.unobserve(entry.target);
+            });
+          },
+          {
+            rootMargin: '0% 0% -10% 0%',
+            threshold: 0.12,
+          }
+        );
+      }
+
+      sections.forEach((section) => {
+        section.dataset.aboutRevealReady = 'true';
+        revealObserver.observe(section);
+      });
+    };
+
+    const initializeAllRevealEffects = () => {
+      initializeRevealEffects(document);
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initializeAllRevealEffects);
+    } else {
+      initializeAllRevealEffects();
+    }
+
+    document.addEventListener('shopify:section:load', (event) => initializeRevealEffects(event.target));
+    prefersReducedMotion.addEventListener('change', (event) => {
+      if (!event.matches) return;
+      document.documentElement.classList.remove('about-reveal-enabled');
+      revealAll();
+      revealObserver?.disconnect();
+      revealObserver = null;
+    });
+  })();
+{% endjavascript %}
 
 {% schema %}
 {

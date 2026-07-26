@@ -1,10 +1,10 @@
 {%- liquid
-  assign consultation_url = section.settings.consultation_url | default: pages['customization'].url | default: routes.root_url
-  assign contact_url = section.settings.contact_url | default: pages['contact'].url | default: routes.root_url
+  assign consultation_url = section.settings.consultation_url | default: pages.customization.url | default: routes.root_url
+  assign contact_url = section.settings.contact_url | default: pages.contact.url | default: routes.root_url
 -%}
 
 <section class="about-heritage" aria-labelledby="about-heritage-heading-{{ section.id }}">
-  <div class="about-mission">
+  <div class="about-mission" data-about-reveal>
     <div class="about-mission__media" aria-hidden="true">
       <img src="{{ 'about-us-M-4.png' | file_url }}" width="1672" height="941" alt="" loading="lazy">
     </div>
@@ -22,26 +22,26 @@
         </header>
 
         <div class="about-mission__values">
-        {%- for block in section.blocks -%}
-          {%- if block.type == 'mission_value' -%}
-            <article class="about-mission-value" {{ block.shopify_attributes }}>
-              <span class="about-mission-value__icon" aria-hidden="true">
-                {% render 'about-craft-icon', icon: block.settings.icon %}
-              </span>
-              <div class="about-mission-value__copy">
-                <h3>{{ block.settings.heading | escape }}</h3>
-                <p>{{ block.settings.text | escape }}</p>
-              </div>
-            </article>
-          {%- endif -%}
-        {%- endfor -%}
+          {%- for block in section.blocks -%}
+            {%- if block.type == 'mission_value' -%}
+              <article class="about-mission-value" {{ block.shopify_attributes }}>
+                <span class="about-mission-value__icon" aria-hidden="true">
+                  {% render 'about-craft-icon', icon: block.settings.icon %}
+                </span>
+                <div class="about-mission-value__copy">
+                  <h3>{{ block.settings.heading | escape }}</h3>
+                  <p>{{ block.settings.text | escape }}</p>
+                </div>
+              </article>
+            {%- endif -%}
+          {%- endfor -%}
         </div>
       </div>
     </div>
   </div>
 
   <div class="about-heritage__inner">
-    <section class="about-design" aria-labelledby="about-design-heading-{{ section.id }}">
+    <section class="about-design" aria-labelledby="about-design-heading-{{ section.id }}" data-about-reveal>
       <div class="about-design__gallery">
         <div class="about-design__image about-design__image--one">
           <img
@@ -99,7 +99,7 @@
     </section>
   </div>
 
-  <section class="about-craft-story" aria-labelledby="about-craft-story-heading-{{ section.id }}">
+  <section class="about-craft-story" aria-labelledby="about-craft-story-heading-{{ section.id }}" data-about-reveal>
     <div class="about-craft-story__media">
       <img
         src="{{ 'about-us-M-6.png' | file_url }}"
@@ -152,7 +152,33 @@
     </div>
   </section>
 
-  <section class="about-heritage__cta" aria-labelledby="about-heritage-cta-heading-{{ section.id }}">
+  {% render 'about-makers-carousel',
+    section_id: section.id,
+    eyebrow: section.settings.makers_eyebrow,
+    heading: section.settings.makers_heading,
+    intro: section.settings.makers_intro
+  %}
+
+  {% render 'about-spaces-gallery',
+    section_id: section.id,
+    eyebrow: section.settings.spaces_eyebrow,
+    heading: section.settings.spaces_heading,
+    intro: section.settings.spaces_intro,
+    image_one_label: section.settings.spaces_image_one_label,
+    image_one_alt: section.settings.spaces_image_one_alt,
+    image_two_label: section.settings.spaces_image_two_label,
+    image_two_alt: section.settings.spaces_image_two_alt,
+    image_three_label: section.settings.spaces_image_three_label,
+    image_three_alt: section.settings.spaces_image_three_alt,
+    image_four_label: section.settings.spaces_image_four_label,
+    image_four_alt: section.settings.spaces_image_four_alt
+  %}
+
+  <section
+    class="about-heritage__cta"
+    aria-labelledby="about-heritage-cta-heading-{{ section.id }}"
+    data-about-reveal
+  >
     <div class="about-heritage__cta-media" aria-hidden="true">
       <img src="{{ 'faq--faq-img.png' | file_url }}" width="1792" height="1024" alt="" loading="lazy">
     </div>
@@ -160,9 +186,17 @@
       <h2 id="about-heritage-cta-heading-{{ section.id }}">{{ section.settings.cta_heading | escape }}</h2>
       <p>{{ section.settings.cta_text | escape }}</p>
       <div class="about-heritage__actions">
-        <a class="about-heritage__button about-heritage__button--primary" href="{{ consultation_url }}#custom-inquiry__story-telling">
+        <a
+          class="about-heritage__button about-heritage__button--primary"
+          href="{{ consultation_url }}#custom-inquiry__story-telling"
+        >
           {{ section.settings.consultation_button_label | escape }}
-          <span aria-hidden="true">&rarr;</span>
+          <span aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="1.5em" height="1.5em" viewBox="0 0 1024 1024">
+              <path d="M0 0h1024v1024H0z" fill="none" />
+              <path fill="currentColor" d="M754.8 480H160a32 32 0 1 0 0 64h594.8L521.3 777.3a32 32 0 0 0 45.4 45.4l288-288a32 32 0 0 0 0-45.4l-288-288a32 32 0 1 0-45.4 45.4z" />
+            </svg>
+          </span>
         </a>
         <a class="about-heritage__button about-heritage__button--secondary" href="{{ contact_url }}">
           {{ section.settings.contact_button_label | escape }}
@@ -196,15 +230,18 @@
   .about-mission__media::after {
     position: absolute;
     inset: var(--sp-0);
-    background:
-      linear-gradient(
+    background: linear-gradient(
         to right,
         color-mix(in srgb, var(--color-ebony) 94%, transparent),
         color-mix(in srgb, var(--color-ebony) 82%, transparent) 34%,
         color-mix(in srgb, var(--color-ebony) 22%, transparent) 72%,
         transparent
       ),
-      linear-gradient(to bottom, color-mix(in srgb, var(--color-ebony) 10%, transparent), color-mix(in srgb, var(--color-ebony) 30%, transparent));
+      linear-gradient(
+        to bottom,
+        color-mix(in srgb, var(--color-ebony) 10%, transparent),
+        color-mix(in srgb, var(--color-ebony) 30%, transparent)
+      );
     content: '';
   }
 
@@ -666,10 +703,8 @@
     letter-spacing: var(--letter-spacing-wide);
     text-decoration: none;
     text-transform: uppercase;
-    transition:
-      background-color var(--timing-short) var(--ease-standard),
-      color var(--timing-short) var(--ease-standard),
-      transform var(--timing-short) var(--ease-standard);
+    transition: background-color var(--timing-short) var(--ease-standard),
+      color var(--timing-short) var(--ease-standard), transform var(--timing-short) var(--ease-standard);
   }
 
   .about-heritage__button--primary {
@@ -683,7 +718,7 @@
   }
 
   .about-heritage__button:hover {
-    background: var(--color-charcoal);
+    background: var(--color-earth-brown);
     color: var(--text-inverse);
   }
 
@@ -708,8 +743,7 @@
 
   @media screen and (max-width: 64rem) {
     .about-mission__media::after {
-      background:
-        linear-gradient(
+      background: linear-gradient(
           to right,
           color-mix(in srgb, var(--color-ebony) 96%, transparent),
           color-mix(in srgb, var(--color-ebony) 59%, transparent) 58%,
@@ -759,8 +793,7 @@
     }
 
     .about-mission__media::after {
-      background:
-        linear-gradient(
+      background: linear-gradient(
           to bottom,
           color-mix(in srgb, var(--color-ebony) 88%, transparent),
           color-mix(in srgb, var(--color-ebony) 76%, transparent)
@@ -909,7 +942,12 @@
     { "type": "header", "content": "Our mission" },
     { "type": "text", "id": "mission_eyebrow", "label": "Eyebrow", "default": "Our mission" },
     { "type": "text", "id": "mission_heading_first_line", "label": "Heading first line", "default": "To Create Less," },
-    { "type": "text", "id": "mission_heading_second_line", "label": "Heading second line", "default": "but Make It Matter More." },
+    {
+      "type": "text",
+      "id": "mission_heading_second_line",
+      "label": "Heading second line",
+      "default": "but Make It Matter More."
+    },
     {
       "type": "richtext",
       "id": "mission_intro",
@@ -919,8 +957,18 @@
     { "type": "header", "content": "Design philosophy" },
     { "type": "text", "id": "design_eyebrow", "label": "Eyebrow", "default": "Our design philosophy" },
     { "type": "text", "id": "design_heading_first_line", "label": "Heading first line", "default": "We Do Not" },
-    { "type": "text", "id": "design_heading_second_line", "label": "Heading second line", "default": "Design Over the Wood." },
-    { "type": "text", "id": "design_heading_third_line", "label": "Heading third line", "default": "We Design with It." },
+    {
+      "type": "text",
+      "id": "design_heading_second_line",
+      "label": "Heading second line",
+      "default": "Design Over the Wood."
+    },
+    {
+      "type": "text",
+      "id": "design_heading_third_line",
+      "label": "Heading third line",
+      "default": "We Design with It."
+    },
     {
       "type": "richtext",
       "id": "design_text",
@@ -928,17 +976,52 @@
       "default": "<p>We start with the soul of the material—its grain, strength, and story—allowing each piece to take shape naturally. Our role is to respect, refine, and reveal its purpose.</p>"
     },
     { "type": "text", "id": "design_principle_one", "label": "First principle", "default": "Material leads the form" },
-    { "type": "text", "id": "design_principle_two", "label": "Second principle", "default": "Function remains essential" },
-    { "type": "text", "id": "design_principle_three", "label": "Third principle", "default": "Character is never standardized" },
-    { "type": "text", "id": "design_image_one_alt", "label": "First image alt text", "default": "Close view of expressive natural wood grain and a live edge" },
-    { "type": "text", "id": "design_image_two_alt", "label": "Second image alt text", "default": "Sculptural handcrafted wood furniture with flowing organic curves" },
-    { "type": "text", "id": "design_image_three_alt", "label": "Third image alt text", "default": "Furniture design sketchbook with material sample and pencil" },
-    { "type": "text", "id": "design_image_four_alt", "label": "Fourth image alt text", "default": "Finished natural wood coffee table in a warm interior" },
+    {
+      "type": "text",
+      "id": "design_principle_two",
+      "label": "Second principle",
+      "default": "Function remains essential"
+    },
+    {
+      "type": "text",
+      "id": "design_principle_three",
+      "label": "Third principle",
+      "default": "Character is never standardized"
+    },
+    {
+      "type": "text",
+      "id": "design_image_one_alt",
+      "label": "First image alt text",
+      "default": "Close view of expressive natural wood grain and a live edge"
+    },
+    {
+      "type": "text",
+      "id": "design_image_two_alt",
+      "label": "Second image alt text",
+      "default": "Sculptural handcrafted wood furniture with flowing organic curves"
+    },
+    {
+      "type": "text",
+      "id": "design_image_three_alt",
+      "label": "Third image alt text",
+      "default": "Furniture design sketchbook with material sample and pencil"
+    },
+    {
+      "type": "text",
+      "id": "design_image_four_alt",
+      "label": "Fourth image alt text",
+      "default": "Finished natural wood coffee table in a warm interior"
+    },
     { "type": "header", "content": "Vietnamese craftsmanship" },
     { "type": "text", "id": "craft_section_label", "label": "Section label", "default": "Our Craftsmanship" },
     { "type": "text", "id": "craft_eyebrow", "label": "Eyebrow", "default": "Crafted in Vietnam" },
     { "type": "text", "id": "craft_heading_first_line", "label": "Heading first line", "default": "Shaped by Skill." },
-    { "type": "text", "id": "craft_heading_second_line", "label": "Heading second line", "default": "Refined through Patience." },
+    {
+      "type": "text",
+      "id": "craft_heading_second_line",
+      "label": "Heading second line",
+      "default": "Refined through Patience."
+    },
     {
       "type": "richtext",
       "id": "craft_text",
@@ -949,11 +1032,77 @@
     { "type": "text", "id": "craft_feature_two", "label": "Second quality", "default": "Balanced Proportion" },
     { "type": "text", "id": "craft_feature_three", "label": "Third quality", "default": "Hand-Finished Surfaces" },
     { "type": "text", "id": "craft_feature_four", "label": "Fourth quality", "default": "Natural Character" },
-    { "type": "text", "id": "craft_image_alt", "label": "Image alt text", "default": "Vietnamese artisans hand-finishing a sculptural solid wood table in the WRYDECO workshop" },
+    {
+      "type": "text",
+      "id": "craft_image_alt",
+      "label": "Image alt text",
+      "default": "Vietnamese artisans hand-finishing a sculptural solid wood table in the WRYDECO workshop"
+    },
+    { "type": "header", "content": "Meet the makers" },
+    { "type": "text", "id": "makers_eyebrow", "label": "Eyebrow", "default": "The People Behind the Work" },
+    { "type": "text", "id": "makers_heading", "label": "Heading", "default": "Meet the People Behind WRYDECO" },
+    {
+      "type": "text",
+      "id": "makers_intro",
+      "label": "Introduction",
+      "default": "Crafted by hands. Shaped by experience. United by purpose."
+    },
+    { "type": "header", "content": "Made for your space" },
+    { "type": "text", "id": "spaces_eyebrow", "label": "Eyebrow", "default": "Made for Your Space" },
+    { "type": "text", "id": "spaces_heading", "label": "Heading", "default": "Made to Belong in Your Space." },
+    {
+      "type": "textarea",
+      "id": "spaces_intro",
+      "label": "Introduction",
+      "default": "Clients can work with us on dimensions, wood type, finish tone, placement, and custom details tailored to the space."
+    },
+    { "type": "text", "id": "spaces_image_one_label", "label": "First image label", "default": "Creative Studio" },
+    {
+      "type": "text",
+      "id": "spaces_image_one_alt",
+      "label": "First image alt text",
+      "default": "Custom natural wood worktable in a warm creative studio"
+    },
+    { "type": "text", "id": "spaces_image_two_label", "label": "Second image label", "default": "Home Office / Study" },
+    {
+      "type": "text",
+      "id": "spaces_image_two_alt",
+      "label": "Second image alt text",
+      "default": "Sculptural natural wood desk in a refined home office"
+    },
+    { "type": "text", "id": "spaces_image_three_label", "label": "Third image label", "default": "Serene Bedroom" },
+    {
+      "type": "text",
+      "id": "spaces_image_three_alt",
+      "label": "Third image alt text",
+      "default": "Handcrafted natural wood bed and furniture in a serene bedroom"
+    },
+    {
+      "type": "text",
+      "id": "spaces_image_four_label",
+      "label": "Fourth image label",
+      "default": "Restaurant / Dining Space"
+    },
+    {
+      "type": "text",
+      "id": "spaces_image_four_alt",
+      "label": "Fourth image alt text",
+      "default": "Bespoke natural wood furniture in an intimate restaurant dining space"
+    },
     { "type": "header", "content": "Closing call to action" },
     { "type": "text", "id": "cta_heading", "label": "Heading", "default": "Let’s Create Something Timeless" },
-    { "type": "text", "id": "cta_text", "label": "Text", "default": "Have a question or a project in mind? We’d love to hear from you." },
-    { "type": "text", "id": "consultation_button_label", "label": "Consultation button", "default": "Book a private consultation" },
+    {
+      "type": "text",
+      "id": "cta_text",
+      "label": "Text",
+      "default": "Have a question or a project in mind? We’d love to hear from you."
+    },
+    {
+      "type": "text",
+      "id": "consultation_button_label",
+      "label": "Consultation button",
+      "default": "Book a private consultation"
+    },
     { "type": "url", "id": "consultation_url", "label": "Consultation page" },
     { "type": "text", "id": "contact_button_label", "label": "Contact button", "default": "Get in touch" },
     { "type": "url", "id": "contact_url", "label": "Contact page" }
@@ -975,7 +1124,12 @@
           "default": "leaf"
         },
         { "type": "text", "id": "heading", "label": "Heading", "default": "Respect the Material" },
-        { "type": "textarea", "id": "text", "label": "Text", "default": "Preserving the grain, form, and natural character of solid wood." }
+        {
+          "type": "textarea",
+          "id": "text",
+          "label": "Text",
+          "default": "Preserving the grain, form, and natural character of solid wood."
+        }
       ]
     }
   ],

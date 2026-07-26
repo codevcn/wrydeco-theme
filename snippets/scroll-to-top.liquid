@@ -12,6 +12,8 @@
     justify-content: center;
     cursor: pointer;
     opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
     transform: translateY(15px);
     transition: opacity 0.4s ease, visibility 0.4s ease, transform 0.4s ease, background-color 0.3s ease,
       color 0.3s ease, border-color 0.3s ease;
@@ -23,6 +25,7 @@
   .scroll-to-top.is-visible {
     opacity: 1;
     visibility: visible;
+    pointer-events: auto;
     transform: translateY(0);
   }
 
@@ -44,7 +47,7 @@
   }
 {% endstylesheet %}
 
-<button type="button" class="scroll-to-top" id="scrollToTopBtn" aria-label="Scroll to top">
+<button type="button" class="scroll-to-top" id="scrollToTopBtn" aria-label="Scroll to top" aria-hidden="true" tabindex="-1">
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width="16"
@@ -65,8 +68,12 @@
     window.addEventListener('scroll', () => {
       if (window.scrollY > 300) {
         btn.classList.add('is-visible');
+        btn.removeAttribute('aria-hidden');
+        btn.removeAttribute('tabindex');
       } else {
         btn.classList.remove('is-visible');
+        btn.setAttribute('aria-hidden', 'true');
+        btn.setAttribute('tabindex', '-1');
       }
     });
 

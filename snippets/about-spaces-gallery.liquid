@@ -1,0 +1,491 @@
+{% doc %}
+  Renders the About Us "Made for Your Space" gallery and animated lightbox.
+
+  @param {string} section_id - Unique section identifier
+  @param {string} eyebrow - Section eyebrow
+  @param {string} heading - Section heading
+  @param {string} intro - Section introduction
+  @param {string} image_one_label - First gallery image label
+  @param {string} image_one_alt - First gallery image alt text
+  @param {string} image_two_label - Second gallery image label
+  @param {string} image_two_alt - Second gallery image alt text
+  @param {string} image_three_label - Third gallery image label
+  @param {string} image_three_alt - Third gallery image alt text
+  @param {string} image_four_label - Fourth gallery image label
+  @param {string} image_four_alt - Fourth gallery image alt text
+
+  @example
+  {% render 'about-spaces-gallery', section_id: section.id, eyebrow: 'Made for Your Space', heading: 'Made to Belong in Your Space.' %}
+{% enddoc %}
+
+{%- liquid
+  assign space_image_names = 'about-us-M-8--1.png,about-us-M-8--2.png,about-us-M-8--3.png,about-us-M-8--4.png' | split: ','
+  assign space_image_labels = image_one_label | append: '|' | append: image_two_label | append: '|' | append: image_three_label | append: '|' | append: image_four_label | split: '|'
+  assign space_image_alts = image_one_alt | append: '|' | append: image_two_alt | append: '|' | append: image_three_alt | append: '|' | append: image_four_alt | split: '|'
+-%}
+
+<section
+  class="about-spaces"
+  aria-labelledby="about-spaces-heading-{{ section_id }}"
+  data-about-spaces
+  data-about-reveal
+>
+  <header class="about-spaces__header">
+    <p class="about-spaces__eyebrow">{{ eyebrow | escape }}</p>
+    <span class="about-spaces__rule" aria-hidden="true"></span>
+    <h2 id="about-spaces-heading-{{ section_id }}">{{ heading | escape }}</h2>
+    <p class="about-spaces__intro">{{ intro | escape }}</p>
+  </header>
+
+  <div class="about-spaces__gallery">
+    {%- for space_image_name in space_image_names -%}
+      {%- assign space_image_url = space_image_name | file_url -%}
+      <button
+        class="about-spaces__card"
+        type="button"
+        data-about-space-trigger
+        data-image-src="{{ space_image_url }}"
+        data-image-alt="{{ space_image_alts[forloop.index0] | escape }}"
+        data-image-label="{{ space_image_labels[forloop.index0] | escape }}"
+        aria-haspopup="dialog"
+        aria-label="View {{ space_image_labels[forloop.index0] | escape }} image"
+      >
+        <img
+          src="{{ space_image_url }}"
+          alt="{{ space_image_alts[forloop.index0] | escape }}"
+          width="1600"
+          height="900"
+          loading="lazy"
+          draggable="false"
+        >
+        <span class="about-spaces__card-label">{{ space_image_labels[forloop.index0] | escape }}</span>
+      </button>
+    {%- endfor -%}
+  </div>
+
+  <div
+    class="about-spaces-lightbox"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Space gallery image"
+    data-about-spaces-lightbox
+    hidden
+  >
+    <div class="about-spaces-lightbox__backdrop" data-about-spaces-close></div>
+    <figure class="about-spaces-lightbox__figure">
+      <button
+        class="about-spaces-lightbox__close"
+        type="button"
+        aria-label="Close image viewer"
+        data-about-spaces-close
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 6L6 18M6 6l12 12"/>
+        </svg>
+      </button>
+      <img class="about-spaces-lightbox__image" alt="" width="1600" height="900" data-about-spaces-image>
+      <figcaption class="about-spaces-lightbox__caption" data-about-spaces-caption></figcaption>
+    </figure>
+  </div>
+</section>
+
+{% stylesheet %}
+  .about-spaces {
+    padding-block: var(--sp-7) var(--sp-8);
+    background: var(--color-cream);
+    color: var(--color-ebony);
+    font-family: var(--font-body);
+  }
+
+  .about-spaces__header {
+    inline-size: min(calc(100% - (var(--layout-padding-desktop) * 2)), var(--layout-max-width));
+    margin-inline: auto;
+  }
+
+  .about-spaces__gallery {
+    margin-inline: auto;
+  }
+
+  .about-spaces__header {
+    text-align: center;
+  }
+
+  .about-spaces__eyebrow {
+    margin: var(--sp-0);
+    color: var(--color-earth-brown);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: calc(var(--letter-spacing-wide) * 5);
+    line-height: var(--line-height-normal);
+    text-transform: uppercase;
+  }
+
+  .about-spaces__rule {
+    display: block;
+    inline-size: var(--sp-7);
+    block-size: var(--border-width);
+    margin: var(--sp-4) auto;
+    background: color-mix(in srgb, var(--color-earth-brown) 52%, transparent);
+  }
+
+  .about-spaces h2 {
+    margin: var(--sp-0);
+    color: var(--color-ebony);
+    font-family: var(--font-display-light);
+    font-size: var(--font-size-display-xl);
+    font-weight: var(--font-weight-light);
+    letter-spacing: var(--letter-spacing-snug);
+    line-height: var(--line-height-tight);
+    text-wrap: balance;
+  }
+
+  .about-spaces__intro {
+    max-inline-size: calc(var(--sp-12) * 5);
+    margin: var(--sp-4) auto var(--sp-0);
+    color: var(--color-charcoal);
+    font-size: var(--font-size-body-lg);
+    line-height: var(--line-height-relaxed);
+    text-wrap: balance;
+  }
+
+  .about-spaces__gallery {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--sp-1);
+    margin-block-start: var(--sp-6);
+  }
+
+  .about-spaces__card {
+    position: relative;
+    display: block;
+    overflow: hidden;
+    aspect-ratio: 16 / 9;
+    padding: var(--sp-0);
+    border: var(--sp-0);
+    border-radius: var(--radius-sm);
+    background: var(--color-stone);
+    color: var(--text-inverse);
+    cursor: zoom-in;
+  }
+
+  .about-spaces__card::after {
+    position: absolute;
+    inset: var(--sp-0);
+    background: linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--color-ebony) 42%, transparent),
+      transparent 42%
+    );
+    content: '';
+    pointer-events: none;
+    transition: background-color var(--timing-base) var(--ease-standard);
+  }
+
+  .about-spaces__card img {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+    -webkit-user-drag: none;
+    user-select: none;
+    transition: transform var(--timing-long) var(--ease-standard);
+  }
+
+  .about-spaces__card:hover img,
+  .about-spaces__card:focus-visible img {
+    transform: scale(1.03);
+  }
+
+  .about-spaces__card:focus-visible {
+    outline: calc(var(--border-width) * 2) solid var(--color-sage);
+    outline-offset: calc(var(--border-width) * 2);
+  }
+
+  .about-spaces__card-label {
+    position: absolute;
+    z-index: 1;
+    inset-block-start: var(--sp-5);
+    inset-inline-start: var(--sp-5);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: calc(var(--letter-spacing-wide) * 3);
+    line-height: var(--line-height-normal);
+    text-align: start;
+    text-transform: uppercase;
+  }
+
+  .about-spaces-lightbox {
+    position: fixed;
+    z-index: 50;
+    inset: var(--sp-0);
+    display: grid;
+    place-items: center;
+    padding: var(--sp-7);
+    visibility: hidden;
+    opacity: 0;
+    transition:
+      opacity var(--timing-long) var(--ease-standard),
+      visibility var(--timing-long) var(--ease-standard);
+  }
+
+  .about-spaces-lightbox[hidden] {
+    display: none;
+  }
+
+  .about-spaces-lightbox.is-open {
+    visibility: visible;
+    opacity: 1;
+  }
+
+  .about-spaces-lightbox__backdrop {
+    position: absolute;
+    inset: var(--sp-0);
+    background: color-mix(in srgb, var(--color-ebony) 90%, transparent);
+    backdrop-filter: blur(var(--sp-1));
+  }
+
+  .about-spaces-lightbox__figure {
+    position: relative;
+    z-index: 1;
+    max-inline-size: var(--layout-showcase-max-width);
+    max-block-size: calc(100vh - (var(--sp-7) * 2));
+    margin: var(--sp-0);
+    overflow: hidden;
+    border-radius: var(--radius-md);
+    background: var(--color-ebony);
+    box-shadow: var(--shadow-modal);
+    opacity: 0;
+    transform: translateY(var(--sp-4)) scale(0.96);
+    transition:
+      transform var(--timing-long) var(--ease-out),
+      opacity var(--timing-long) var(--ease-out);
+  }
+
+  .about-spaces-lightbox.is-open .about-spaces-lightbox__figure {
+    opacity: 1;
+    transform: translateY(var(--sp-0)) scale(1);
+  }
+
+  .about-spaces-lightbox__image {
+    display: block;
+    max-inline-size: 100%;
+    max-block-size: calc(100vh - (var(--sp-7) * 2));
+    inline-size: auto;
+    block-size: auto;
+    object-fit: contain;
+  }
+
+  .about-spaces-lightbox__caption {
+    position: absolute;
+    inset-inline: var(--sp-0);
+    inset-block-end: var(--sp-0);
+    padding: var(--sp-6) var(--sp-5) var(--sp-4);
+    background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--color-ebony) 88%, transparent));
+    color: var(--text-inverse);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: calc(var(--letter-spacing-wide) * 3);
+    line-height: var(--line-height-normal);
+    text-transform: uppercase;
+  }
+
+  .about-spaces-lightbox__close {
+    position: absolute;
+    z-index: 2;
+    inset-block-start: var(--sp-4);
+    inset-inline-end: var(--sp-4);
+    display: grid;
+    place-items: center;
+    inline-size: var(--sp-7);
+    block-size: var(--sp-7);
+    padding: var(--sp-0);
+    border: var(--border-width) solid color-mix(in srgb, var(--color-cream) 35%, transparent);
+    border-radius: var(--radius-full);
+    background: color-mix(in srgb, var(--color-ebony) 55%, transparent);
+    color: var(--text-inverse);
+    cursor: pointer;
+    transition: var(--transition-fast);
+  }
+
+  .about-spaces-lightbox__close:hover,
+  .about-spaces-lightbox__close:focus-visible {
+    border-color: var(--color-cream);
+    background: color-mix(in srgb, var(--color-ebony) 82%, transparent);
+  }
+
+  .about-spaces-lightbox__close:focus-visible {
+    outline: calc(var(--border-width) * 2) solid var(--color-cream);
+    outline-offset: calc(var(--border-width) * 2);
+  }
+
+  .about-spaces-lightbox__close svg {
+    inline-size: var(--sp-5);
+    block-size: var(--sp-5);
+  }
+
+  .about-spaces-lightbox-is-open {
+    overflow: hidden;
+  }
+
+  @media screen and (max-width: 64rem) {
+    .about-spaces {
+      padding-block: var(--sp-8);
+    }
+
+    .about-spaces h2 {
+      font-size: var(--font-size-display-lg);
+    }
+
+    .about-spaces-lightbox {
+      padding: var(--sp-6);
+    }
+  }
+
+  @media screen and (max-width: 48rem) {
+    .about-spaces {
+      padding-block: var(--sp-7);
+    }
+
+    .about-spaces__header,
+    .about-spaces__gallery {
+      inline-size: calc(100% - (var(--layout-padding-mobile) * 2));
+    }
+
+    .about-spaces__eyebrow {
+      letter-spacing: calc(var(--letter-spacing-wide) * 3);
+    }
+
+    .about-spaces h2 {
+      font-size: var(--font-size-display-md);
+    }
+
+    .about-spaces__intro {
+      margin-block-start: var(--sp-3);
+      font-size: var(--font-size-body-sm);
+    }
+
+    .about-spaces__gallery {
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--sp-3);
+      margin-block-start: var(--sp-5);
+    }
+
+    .about-spaces__card {
+      aspect-ratio: 4 / 3;
+    }
+
+    .about-spaces__card-label {
+      inset-block-start: var(--sp-4);
+      inset-inline-start: var(--sp-4);
+    }
+
+    .about-spaces-lightbox {
+      padding: var(--layout-padding-mobile);
+    }
+
+    .about-spaces-lightbox__figure,
+    .about-spaces-lightbox__image {
+      max-block-size: calc(100vh - (var(--layout-padding-mobile) * 2));
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .about-spaces__card img,
+    .about-spaces-lightbox,
+    .about-spaces-lightbox__figure {
+      transition-duration: var(--timing-micro);
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  (() => {
+    const initializeGallery = (root) => {
+      if (root.dataset.aboutSpacesReady === 'true') return;
+      root.dataset.aboutSpacesReady = 'true';
+
+      const triggers = Array.from(root.querySelectorAll('[data-about-space-trigger]'));
+      const lightbox = root.querySelector('[data-about-spaces-lightbox]');
+      const lightboxImage = root.querySelector('[data-about-spaces-image]');
+      const lightboxCaption = root.querySelector('[data-about-spaces-caption]');
+      const closeButtons = Array.from(root.querySelectorAll('[data-about-spaces-close]'));
+      if (!lightbox || !lightboxImage || !lightboxCaption || triggers.length === 0) return;
+
+      let activeTrigger = null;
+      let closeTimer = null;
+
+      const closeLightbox = () => {
+        if (lightbox.hidden) return;
+        lightbox.classList.remove('is-open');
+        document.documentElement.classList.remove('about-spaces-lightbox-is-open');
+        window.clearTimeout(closeTimer);
+
+        const finishClose = () => {
+          lightbox.hidden = true;
+          lightboxImage.src = '';
+          activeTrigger?.focus();
+          activeTrigger = null;
+        };
+
+        const handleTransitionEnd = (event) => {
+          if (event.target !== lightbox || event.propertyName !== 'opacity') return;
+          lightbox.removeEventListener('transitionend', handleTransitionEnd);
+          finishClose();
+        };
+
+        lightbox.addEventListener('transitionend', handleTransitionEnd);
+        closeTimer = window.setTimeout(() => {
+          lightbox.removeEventListener('transitionend', handleTransitionEnd);
+          finishClose();
+        }, 500);
+      };
+
+      const openLightbox = (trigger) => {
+        window.clearTimeout(closeTimer);
+        activeTrigger = trigger;
+        lightboxImage.src = trigger.dataset.imageSrc || '';
+        lightboxImage.alt = trigger.dataset.imageAlt || '';
+        lightboxCaption.textContent = trigger.dataset.imageLabel || '';
+        lightbox.hidden = false;
+        document.documentElement.classList.add('about-spaces-lightbox-is-open');
+        window.requestAnimationFrame(() => {
+          lightbox.classList.add('is-open');
+          lightbox.querySelector('.about-spaces-lightbox__close')?.focus();
+        });
+      };
+
+      triggers.forEach((trigger) => {
+        trigger.addEventListener('click', () => openLightbox(trigger));
+        trigger.addEventListener('dragstart', (event) => event.preventDefault());
+      });
+
+      closeButtons.forEach((button) => button.addEventListener('click', closeLightbox));
+
+      lightbox.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          closeLightbox();
+          return;
+        }
+
+        if (event.key !== 'Tab') return;
+        const closeButton = lightbox.querySelector('.about-spaces-lightbox__close');
+        if (!closeButton) return;
+        event.preventDefault();
+        closeButton.focus();
+      });
+    };
+
+    const initializeAllGalleries = (scope = document) => {
+      scope.querySelectorAll('[data-about-spaces]').forEach(initializeGallery);
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => initializeAllGalleries());
+    } else {
+      initializeAllGalleries();
+    }
+
+    document.addEventListener('shopify:section:load', (event) => initializeAllGalleries(event.target));
+  })();
+{% endjavascript %}

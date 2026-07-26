@@ -1,0 +1,683 @@
+{% doc %}
+  Renders the About Us makers carousel from Product Author metaobjects.
+
+  @param {string} section_id - Unique section identifier
+  @param {string} eyebrow - Section eyebrow
+  @param {string} heading - Section heading
+  @param {string} intro - Section introduction
+
+  @example
+  {% render 'about-makers-carousel', section_id: section.id, eyebrow: 'The people behind the work', heading: 'Meet the People Behind WRYDECO', intro: 'Crafted by hands.' %}
+{% enddoc %}
+
+{%- liquid
+  assign makers_authors = metaobjects.product_author.values
+  assign maker_count = makers_authors.size
+  assign maker_center_index = 2
+  if maker_count < 3
+    assign maker_center_index = maker_count | minus: 1 | divided_by: 2
+  endif
+-%}
+
+<section
+  class="about-makers"
+  aria-labelledby="about-makers-heading-{{ section_id }}"
+  data-about-makers
+  data-initial-index="{{ maker_center_index }}"
+  data-about-reveal
+>
+  <header class="about-makers__header">
+    <p class="about-makers__eyebrow">{{ eyebrow | escape }}</p>
+    <h2 id="about-makers-heading-{{ section_id }}">{{ heading | escape }}</h2>
+    <p class="about-makers__intro">{{ intro | escape }}</p>
+  </header>
+
+  {%- if maker_count > 0 -%}
+    <div class="about-makers__viewport">
+      <div class="about-makers__track" data-about-makers-track>
+        {%- for author in makers_authors -%}
+          {%- liquid
+            assign maker_name = author.author_name.value | default: 'WRYDECO Maker'
+            assign maker_image = author.author_image_url.value
+            assign maker_slogan = author.author_slogan.value
+            assign maker_link = author.system.url
+            assign maker_role = author.role.value | default: 'Master Craftsperson'
+            assign display_features = author.display_features.value
+            assign maker_index = forloop.index0
+            assign maker_distance = maker_index | minus: maker_center_index | abs | at_most: 2
+          -%}
+          <article
+            class="about-makers-card about-makers-card--distance-{{ maker_distance }}{% if maker_distance == 0 %} is-centered{% endif %}"
+            data-about-maker-card
+            data-card-index="{{ maker_index }}"
+          >
+            <div class="about-makers-card__media">
+              {%- if maker_link != blank -%}
+                <a
+                  class="about-makers-card__image-link"
+                  href="{{ maker_link }}"
+                  aria-label="View {{ maker_name | escape }}'s profile"
+                >
+              {%- endif -%}
+              {%- if maker_image != blank -%}
+                <img
+                  src="{{ maker_image | escape }}"
+                  alt="{{ maker_name | escape }}"
+                  width="600"
+                  height="750"
+                  loading="lazy"
+                  draggable="false"
+                >
+              {%- else -%}
+                {{ 'image' | placeholder_svg_tag: 'about-makers-card__placeholder' }}
+              {%- endif -%}
+              {%- if maker_link != blank -%}
+                </a>
+              {%- endif -%}
+            </div>
+
+            <div class="about-makers-card__content">
+              <p class="about-makers-card__role">{{ maker_role | escape }}</p>
+              <h3>{{ maker_name | escape }}</h3>
+
+              {%- if maker_slogan != blank -%}
+                <p class="about-makers-card__slogan">{{ maker_slogan | escape }}</p>
+              {%- endif -%}
+
+              {%- if display_features.features != blank -%}
+                <ul class="about-makers-card__features" aria-label="{{ maker_name | escape }} specialties">
+                  {%- for feature in display_features.features limit: 3 -%}
+                    <li>{{ feature.value | escape }} {{ feature.label | escape }}</li>
+                  {%- endfor -%}
+                </ul>
+              {%- elsif display_features != blank -%}
+                <ul
+                  class="about-makers-card__features"
+                  aria-label="{{ maker_name | escape }} specialties"
+                  data-about-maker-raw-features="{{ display_features | escape }}"
+                ></ul>
+              {%- endif -%}
+            </div>
+          </article>
+        {%- endfor -%}
+      </div>
+    </div>
+
+    <div class="about-makers__dots" aria-label="Choose a maker">
+      {%- for author in makers_authors -%}
+        <button
+          class="about-makers__dot{% if forloop.index0 == maker_center_index %} is-active{% endif %}"
+          type="button"
+          aria-label="Show maker {{ forloop.index }}"
+          aria-pressed="{% if forloop.index0 == maker_center_index %}true{% else %}false{% endif %}"
+          data-about-maker-dot
+          data-card-index="{{ forloop.index0 }}"
+        >
+          <span aria-hidden="true"></span>
+        </button>
+      {%- endfor -%}
+    </div>
+  {%- else -%}
+    <p class="about-makers__empty">Maker profiles are coming soon.</p>
+  {%- endif -%}
+</section>
+
+{% stylesheet %}
+  .about-makers {
+    --about-makers-card-width: calc((var(--sp-12) * 2) + var(--sp-8));
+    overflow: hidden;
+    padding-block: var(--sp-9) var(--sp-5);
+    background:
+      radial-gradient(circle at top right, color-mix(in srgb, var(--color-linen) 12%, transparent), transparent 32%),
+      radial-gradient(circle at bottom left, color-mix(in srgb, var(--color-linen) 14%, transparent), transparent 28%),
+      var(--color-cream);
+    color: var(--color-ebony);
+    font-family: var(--font-body);
+  }
+
+  .about-makers__header {
+    inline-size: min(calc(100% - (var(--layout-padding-desktop) * 2)), var(--layout-max-width));
+    margin-inline: auto;
+    text-align: center;
+  }
+
+  .about-makers__eyebrow {
+    margin: var(--sp-0) var(--sp-0) var(--sp-4);
+    color: var(--color-earth-brown);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: calc(var(--letter-spacing-wide) * 5);
+    line-height: var(--line-height-normal);
+    text-transform: uppercase;
+  }
+
+  .about-makers h2 {
+    margin: var(--sp-0);
+    color: var(--color-ebony);
+    font-family: var(--font-display-light);
+    font-size: var(--font-size-display-xl);
+    font-weight: var(--font-weight-light);
+    letter-spacing: var(--letter-spacing-snug);
+    line-height: var(--line-height-tight);
+    text-wrap: balance;
+  }
+
+  .about-makers__intro {
+    margin: var(--sp-4) var(--sp-0) var(--sp-0);
+    color: var(--color-bark);
+    font-size: var(--font-size-body-lg);
+    line-height: var(--line-height-relaxed);
+  }
+
+  .about-makers__viewport {
+    margin-block-start: var(--sp-5);
+  }
+
+  .about-makers__track {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--sp-5);
+    overflow-x: auto;
+    padding: var(--sp-4) calc(50% - (var(--about-makers-card-width) / 2)) var(--sp-6);
+    scroll-behavior: smooth;
+    scroll-padding-inline: calc(50% - (var(--about-makers-card-width) / 2));
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    cursor: grab;
+  }
+
+  .about-makers__track::-webkit-scrollbar {
+    display: none;
+  }
+
+  .about-makers__track.is-dragging,
+  .about-makers__track.is-rebasing {
+    cursor: grabbing;
+    scroll-behavior: auto;
+    scroll-snap-type: none;
+  }
+
+  .about-makers__track.is-dragging .about-makers-card {
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .about-makers-card {
+    position: relative;
+    z-index: 1;
+    flex: 0 0 var(--about-makers-card-width);
+    overflow: hidden;
+    border: var(--border-width) solid color-mix(in srgb, var(--color-bark) 18%, transparent);
+    border-radius: var(--radius-lg);
+    background: var(--color-cream);
+    box-shadow: var(--shadow-card);
+    scroll-snap-align: center;
+    transform: scale(0.76);
+    transform-origin: center bottom;
+    transition:
+      transform var(--timing-long) var(--ease-standard),
+      opacity var(--timing-long) var(--ease-standard),
+      box-shadow var(--timing-long) var(--ease-standard);
+  }
+
+  .about-makers-card--distance-1 {
+    z-index: 2;
+    transform: scale(0.88);
+  }
+
+  .about-makers-card--distance-0 {
+    z-index: 3;
+    box-shadow: var(--shadow-card-hover);
+    transform: scale(1);
+  }
+
+  .about-makers-card__media {
+    overflow: hidden;
+    aspect-ratio: 3 / 3.5;
+    background: var(--color-stone);
+  }
+
+  .about-makers-card__image-link {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    -webkit-user-drag: none;
+    user-select: none;
+  }
+
+  .about-makers-card__media img,
+  .about-makers-card__placeholder {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+    filter: grayscale(1);
+    -webkit-user-drag: none;
+    user-select: none;
+    transition: transform var(--timing-long) var(--ease-standard);
+  }
+
+  .about-makers-card__image-link:hover img,
+  .about-makers-card__image-link:focus-visible img {
+    transform: scale(1.03);
+  }
+
+  .about-makers-card__image-link:focus-visible {
+    outline: calc(var(--border-width) * 2) solid var(--color-sage);
+    outline-offset: calc(var(--border-width) * -2);
+  }
+
+  .about-makers-card__content {
+    display: flex;
+    flex-direction: column;
+    min-block-size: calc(var(--sp-12) + var(--sp-7));
+    padding: var(--sp-4);
+  }
+
+  .about-makers-card__role {
+    margin: var(--sp-0) var(--sp-0) var(--sp-2);
+    color: var(--color-earth-brown);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: calc(var(--letter-spacing-wide) * 2);
+    line-height: var(--line-height-normal);
+    text-transform: uppercase;
+  }
+
+  .about-makers-card h3 {
+    margin: var(--sp-0);
+    color: var(--color-ebony);
+    font-family: var(--font-display-light);
+    font-size: var(--font-size-body-4xl);
+    font-weight: var(--font-weight-light);
+    letter-spacing: var(--letter-spacing-snug);
+    line-height: var(--line-height-tight);
+  }
+
+  .about-makers-card__slogan {
+    display: -webkit-box;
+    overflow: hidden;
+    margin: var(--sp-3) var(--sp-0) var(--sp-4);
+    color: var(--color-charcoal);
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-relaxed);
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+
+  .about-makers-card__features {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-2);
+    margin: auto var(--sp-0) var(--sp-0);
+    padding: var(--sp-0);
+    list-style: none;
+  }
+
+  .about-makers-card__features li {
+    padding: var(--sp-2) var(--sp-3);
+    border: var(--border-width) solid color-mix(in srgb, var(--color-bark) 22%, transparent);
+    border-radius: var(--radius-sm);
+    color: var(--color-earth-brown);
+    font-size: var(--font-size-caption);
+    line-height: var(--line-height-normal);
+    text-transform: uppercase;
+  }
+
+  .about-makers__dots {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-1);
+    margin-block-start: calc(var(--sp-4) * -1);
+  }
+
+  .about-makers__dot {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--sp-8);
+    block-size: var(--sp-8);
+    padding: var(--sp-0);
+    border: var(--sp-0);
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .about-makers__dot span {
+    inline-size: var(--sp-2);
+    block-size: var(--sp-2);
+    border-radius: var(--radius-full);
+    background: var(--color-linen);
+    transition:
+      inline-size var(--timing-short) var(--ease-standard),
+      background-color var(--timing-short) var(--ease-standard);
+  }
+
+  .about-makers__dot.is-active span {
+    inline-size: var(--sp-8);
+    background: var(--color-earth-brown);
+  }
+
+  .about-makers__dot:focus-visible {
+    outline: calc(var(--border-width) * 2) solid var(--color-sage);
+    outline-offset: calc(var(--border-width) * -2);
+  }
+
+  .about-makers__empty {
+    margin: var(--sp-7) var(--layout-padding-desktop) var(--sp-0);
+    color: var(--color-bark);
+    text-align: center;
+  }
+
+  @media screen and (max-width: 75rem) {
+    .about-makers {
+      --about-makers-card-width: calc((var(--sp-12) * 2) + var(--sp-5));
+    }
+
+    .about-makers h2 {
+      font-size: var(--font-size-display-xl);
+    }
+  }
+
+  @media screen and (max-width: 64rem) {
+    .about-makers {
+      --about-makers-card-width: calc((var(--sp-12) * 2) + var(--sp-4));
+      padding-block: var(--sp-8);
+    }
+
+    .about-makers__track {
+      gap: var(--sp-4);
+    }
+  }
+
+  @media screen and (max-width: 48rem) {
+    .about-makers {
+      --about-makers-card-width: calc(100vw - (var(--layout-padding-mobile) * 4));
+      padding-block: var(--sp-7);
+    }
+
+    .about-makers__header {
+      inline-size: calc(100% - (var(--layout-padding-mobile) * 2));
+    }
+
+    .about-makers__eyebrow {
+      margin-block-end: var(--sp-3);
+      letter-spacing: calc(var(--letter-spacing-wide) * 3);
+    }
+
+    .about-makers h2 {
+      font-size: var(--font-size-display-md);
+    }
+
+    .about-makers__intro {
+      margin-block-start: var(--sp-3);
+      font-size: var(--font-size-body-sm);
+    }
+
+    .about-makers__viewport {
+      margin-block-start: var(--sp-4);
+    }
+
+    .about-makers__track {
+      gap: var(--sp-3);
+      padding-block-end: var(--sp-7);
+    }
+
+    .about-makers-card--distance-1 {
+      transform: scale(0.9);
+    }
+
+    .about-makers-card--distance-2 {
+      transform: scale(0.82);
+    }
+
+    .about-makers-card__content {
+      min-block-size: calc(var(--sp-12) + var(--sp-6));
+      padding: var(--sp-4);
+    }
+
+    .about-makers-card__media {
+      aspect-ratio: 4 / 5;
+    }
+
+    .about-makers-card h3 {
+      font-size: var(--font-size-body-3xl);
+    }
+
+    .about-makers-card__features li {
+      padding: var(--sp-1) var(--sp-2);
+    }
+
+    .about-makers__dots {
+      margin-block-start: calc(var(--sp-5) * -1);
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  (() => {
+    const setRawFeatures = (root) => {
+      root.querySelectorAll('[data-about-maker-raw-features]').forEach((list) => {
+        try {
+          const data = JSON.parse(list.dataset.aboutMakerRawFeatures || '');
+          const features = Array.isArray(data) ? data : data.features;
+          if (!Array.isArray(features)) return;
+
+          features.slice(0, 3).forEach((feature) => {
+            const item = document.createElement('li');
+            item.textContent = [feature.value, feature.label].filter(Boolean).join(' ');
+            list.appendChild(item);
+          });
+        } catch (error) {
+          console.error('Error parsing maker display features:', error);
+        }
+      });
+    };
+
+    const initializeCarousel = (root) => {
+      if (root.dataset.aboutMakersReady === 'true') return;
+      root.dataset.aboutMakersReady = 'true';
+
+      const track = root.querySelector('[data-about-makers-track]');
+      const originalCards = Array.from(root.querySelectorAll('[data-about-maker-card]'));
+      const dots = Array.from(root.querySelectorAll('[data-about-maker-dot]'));
+      if (!track || originalCards.length === 0) return;
+
+      setRawFeatures(root);
+
+      const cloneCard = (card) => {
+        const clone = card.cloneNode(true);
+        clone.dataset.aboutMakerClone = 'true';
+        clone.setAttribute('aria-hidden', 'true');
+        clone.querySelectorAll('a, button').forEach((element) => {
+          element.tabIndex = -1;
+        });
+        return clone;
+      };
+
+      const leadingCards = document.createDocumentFragment();
+      const trailingCards = document.createDocumentFragment();
+      originalCards.forEach((card) => {
+        leadingCards.appendChild(cloneCard(card));
+        trailingCards.appendChild(cloneCard(card));
+      });
+      track.prepend(leadingCards);
+      track.append(trailingCards);
+
+      const cards = Array.from(track.querySelectorAll('[data-about-maker-card]'));
+      const originalStartIndex = originalCards.length;
+      let activeIndex = Math.min(Number(root.dataset.initialIndex || 0), originalCards.length - 1);
+      let frameRequest = null;
+      let isPointerDown = false;
+      let isDragging = false;
+      let pointerStart = 0;
+      let scrollStart = 0;
+      let rebaseTimer = null;
+
+      const getCardLeft = (card) => card.offsetLeft - ((track.clientWidth - card.offsetWidth) / 2);
+
+      const centerOriginalCard = (index, behavior = 'auto') => {
+        const card = cards[originalStartIndex + index];
+        if (!card) return;
+        track.scrollTo({ left: getCardLeft(card), behavior });
+      };
+
+      const centerNearestCard = (index, behavior = 'smooth') => {
+        const matchingCards = cards.filter((card) => Number(card.dataset.cardIndex) === index);
+        if (matchingCards.length === 0) return;
+
+        const nearestCard = matchingCards.reduce((nearest, card) => {
+          const nearestDistance = Math.abs(getCardLeft(nearest) - track.scrollLeft);
+          const cardDistance = Math.abs(getCardLeft(card) - track.scrollLeft);
+          return cardDistance < nearestDistance ? card : nearest;
+        });
+        track.scrollTo({ left: getCardLeft(nearestCard), behavior });
+      };
+
+      const getClosestCardIndex = () => {
+        const trackCenter = track.getBoundingClientRect().left + (track.clientWidth / 2);
+        let closestIndex = 0;
+        let closestDistance = Infinity;
+
+        cards.forEach((card, index) => {
+          const rect = card.getBoundingClientRect();
+          const distance = Math.abs((rect.left + (rect.width / 2)) - trackCenter);
+          if (distance < closestDistance) {
+            closestDistance = distance;
+            closestIndex = index;
+          }
+        });
+        return closestIndex;
+      };
+
+      const updateState = () => {
+        const closestIndex = getClosestCardIndex();
+
+        activeIndex = Number(cards[closestIndex].dataset.cardIndex);
+        cards.forEach((card, index) => {
+          const distance = Math.min(Math.abs(index - closestIndex), 2);
+          card.classList.toggle('is-centered', distance === 0);
+          card.classList.remove(
+            'about-makers-card--distance-0',
+            'about-makers-card--distance-1',
+            'about-makers-card--distance-2'
+          );
+          card.classList.add(`about-makers-card--distance-${distance}`);
+        });
+
+        dots.forEach((dot, index) => {
+          const isActive = index === activeIndex;
+          dot.classList.toggle('is-active', isActive);
+          dot.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        });
+        frameRequest = null;
+      };
+
+      const rebaseIfNeeded = () => {
+        if (isPointerDown || isDragging) return;
+
+        const closestIndex = getClosestCardIndex();
+        const setWidth = cards[originalStartIndex].offsetLeft - cards[0].offsetLeft;
+        let rebasedLeft = null;
+
+        if (closestIndex < originalStartIndex) {
+          rebasedLeft = track.scrollLeft + setWidth;
+        } else if (closestIndex >= originalStartIndex * 2) {
+          rebasedLeft = track.scrollLeft - setWidth;
+        }
+
+        if (rebasedLeft === null) return;
+        track.classList.add('is-rebasing');
+        track.scrollTo({ left: rebasedLeft, behavior: 'auto' });
+        window.requestAnimationFrame(() => {
+          track.classList.remove('is-rebasing');
+          requestStateUpdate();
+        });
+      };
+
+      const requestStateUpdate = () => {
+        if (frameRequest !== null) return;
+        frameRequest = window.requestAnimationFrame(updateState);
+      };
+
+      dots.forEach((dot, index) => {
+        dot.addEventListener('click', () => centerNearestCard(index));
+      });
+
+      track.addEventListener(
+        'scroll',
+        () => {
+          requestStateUpdate();
+          window.clearTimeout(rebaseTimer);
+          rebaseTimer = window.setTimeout(rebaseIfNeeded, 140);
+        },
+        { passive: true }
+      );
+
+      track.addEventListener('dragstart', (event) => {
+        event.preventDefault();
+      });
+
+      track.addEventListener('mousedown', (event) => {
+        isPointerDown = true;
+        isDragging = false;
+        pointerStart = event.pageX;
+        scrollStart = track.scrollLeft;
+      });
+
+      track.addEventListener('mousemove', (event) => {
+        if (!isPointerDown) return;
+        const distance = event.pageX - pointerStart;
+        if (!isDragging && Math.abs(distance) > 5) {
+          isDragging = true;
+          track.classList.add('is-dragging');
+        }
+        if (!isDragging) return;
+        event.preventDefault();
+        track.scrollLeft = scrollStart - distance;
+      });
+
+      const endDrag = () => {
+        if (!isPointerDown) return;
+        isPointerDown = false;
+        track.classList.remove('is-dragging');
+        requestStateUpdate();
+        window.clearTimeout(rebaseTimer);
+        rebaseTimer = window.setTimeout(rebaseIfNeeded, 140);
+        window.setTimeout(() => {
+          isDragging = false;
+        }, 0);
+      };
+
+      track.addEventListener('mouseup', endDrag);
+      track.addEventListener('mouseleave', endDrag);
+      track.addEventListener('click', (event) => {
+        if (isDragging) event.preventDefault();
+      });
+
+      const handleResize = () => {
+        centerNearestCard(activeIndex, 'auto');
+        window.clearTimeout(rebaseTimer);
+        rebaseTimer = window.setTimeout(rebaseIfNeeded, 140);
+      };
+      window.addEventListener('resize', handleResize);
+      window.requestAnimationFrame(() => {
+        centerOriginalCard(activeIndex);
+        updateState();
+      });
+    };
+
+    const initializeAll = (scope = document) => {
+      scope.querySelectorAll('[data-about-makers]').forEach(initializeCarousel);
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => initializeAll());
+    } else {
+      initializeAll();
+    }
+
+    document.addEventListener('shopify:section:load', (event) => initializeAll(event.target));
+  })();
+{% endjavascript %}
