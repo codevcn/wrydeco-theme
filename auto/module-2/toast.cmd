@@ -1,1 +1,1 @@
-powershell.exe -NoProfile -Command "New-BurntToastNotification -Text 'Codex completed', 'Product updated successfully.'"
+mod toast "Codex completed", "Product updated successfully."

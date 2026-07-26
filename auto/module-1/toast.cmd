@@ -1,1 +1,1 @@
-powershell.exe -NoProfile -Command "New-BurntToastNotification -Text 'Antigravity completed', 'Product updated successfully.'"
+mod toast "Antigravity completed", "Product updated successfully."
