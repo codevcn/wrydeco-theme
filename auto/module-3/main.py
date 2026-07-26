@@ -46,6 +46,9 @@ def get_products(first=30, after=None, before=None, last=None, filter_query=None
             descriptionHtml
             createdAt
             productType
+            category {
+              name
+            }
             priceRangeV2 {
               minVariantPrice {
                 amount
@@ -125,6 +128,9 @@ def get_products_by_metafield_amazon_link(keyword, sort_by="created_desc"):
             descriptionHtml
             createdAt
             productType
+            category {
+              name
+            }
             priceRangeV2 {
               minVariantPrice {
                 amount
@@ -229,6 +235,9 @@ def get_products_by_metafield_rich_description(keyword, sort_by="created_desc"):
             descriptionHtml
             createdAt
             productType
+            category {
+              name
+            }
             priceRangeV2 {
               minVariantPrice {
                 amount
@@ -336,6 +345,9 @@ def get_products_by_description(keyword, sort_by="created_desc"):
             descriptionHtml
             createdAt
             productType
+            category {
+              name
+            }
             priceRangeV2 {
               minVariantPrice {
                 amount
@@ -424,6 +436,113 @@ def get_products_by_description(keyword, sort_by="created_desc"):
         "productsCount": {"count": len(all_matched_edges)}
     }
 
+def get_products_by_category(keyword, sort_by="created_desc"):
+    query = """
+    query getProducts($after: String) {
+      products(first: 25, after: $after) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        edges {
+          node {
+            id
+            handle
+            title
+            descriptionHtml
+            createdAt
+            productType
+            category {
+              name
+            }
+            priceRangeV2 {
+              minVariantPrice {
+                amount
+              }
+            }
+            options {
+              name
+            }
+            collections(first: 20) {
+              edges {
+                node {
+                  title
+                }
+              }
+            }
+            amazon_link: metafield(namespace: "custom", key: "amazon_link") {
+              value
+            }
+            media(first: 50) {
+              edges {
+                node {
+                  ... on MediaImage {
+                    id
+                    image {
+                      url
+                    }
+                  }
+                  ... on Video {
+                    id
+                    preview {
+                      image {
+                        url
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    """
+    all_matched_edges = []
+    has_next = True
+    cursor = None
+    
+    while has_next:
+        variables = {}
+        if cursor:
+            variables["after"] = cursor
+            
+        res = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=HEADERS)
+        res.raise_for_status()
+        data = res.json()
+        if "errors" in data:
+            print("GraphQL Errors:", data["errors"])
+            break
+            
+        products_data = data["data"]["products"]
+        for edge in products_data["edges"]:
+            cat_node = edge["node"].get("category")
+            if cat_node and cat_node.get("name") and keyword.lower() in cat_node["name"].lower():
+                all_matched_edges.append(edge)
+                
+        page_info = products_data.get("pageInfo", {})
+        has_next = page_info.get("hasNextPage", False)
+        cursor = page_info.get("endCursor")
+        
+    def get_sort_key(edge):
+        if sort_by in ["price_asc", "price_desc"]:
+            price_data = edge["node"].get("priceRangeV2")
+            if price_data and price_data.get("minVariantPrice"):
+                return float(price_data["minVariantPrice"].get("amount", 0))
+            return 0.0
+        return edge["node"].get("createdAt", "")
+        
+    reverse_sort = sort_by in ["created_desc", "price_desc"]
+    all_matched_edges.sort(key=get_sort_key, reverse=reverse_sort)
+        
+    return {
+        "products": {
+            "edges": all_matched_edges,
+            "pageInfo": {"hasNextPage": False, "hasPreviousPage": False}
+        },
+        "productsCount": {"count": len(all_matched_edges)}
+    }
+
 def get_products_by_variant_option(keyword, sort_by="created_desc", exclude=False):
     query = """
     query getProducts($after: String) {
@@ -440,6 +559,9 @@ def get_products_by_variant_option(keyword, sort_by="created_desc", exclude=Fals
             descriptionHtml
             createdAt
             productType
+            category {
+              name
+            }
             priceRangeV2 {
               minVariantPrice {
                 amount
@@ -562,6 +684,9 @@ def get_products_by_collection(handle, sort_by="created_desc"):
               descriptionHtml
               createdAt
               productType
+              category {
+                name
+              }
               priceRangeV2 {
                 minVariantPrice {
                   amount
@@ -713,6 +838,8 @@ async def read_root(request: Request, after: str = None, before: str = None, fil
             data = get_products_by_metafield_rich_description(filter_value, sort_by=sort_by)
         elif filter_value and filter_type == "description":
             data = get_products_by_description(filter_value, sort_by=sort_by)
+        elif filter_value and filter_type == "category":
+            data = get_products_by_category(filter_value, sort_by=sort_by)
         elif filter_value and filter_type == "variant_option":
             data = get_products_by_variant_option(filter_value, sort_by=sort_by, exclude=False)
         elif filter_value and filter_type == "not_variant_option":
@@ -780,11 +907,13 @@ async def read_root(request: Request, after: str = None, before: str = None, fil
                 except Exception as e:
                     print(f"Error parsing date {created_at_raw}: {e}")
                 
+            category_name = node.get("category", {}).get("name", "") if node.get("category") else ""
             products.append({
                 "id": node["id"].split("/")[-1],
                 "handle": node["handle"],
                 "title": node["title"],
                 "productType": node.get("productType", ""),
+                "category": category_name,
                 "price": price,
                 "description": node.get("descriptionHtml", ""),
                 "createdAt": created_at_fmt,

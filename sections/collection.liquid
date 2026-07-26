@@ -1,8 +1,8 @@
 {% comment %}
   Collection listing page.
 
-  Top toolbar (Filter + Material/Room/Price facets, Sort by, item count) and a
-  3-column product grid. The Filter button opens an (empty) drawer from the left.
+  Top toolbar (Price facet on the left, Sort by + item count on the right) and a
+  4-column product grid.
 
   https://shopify.dev/docs/storefronts/themes/architecture/templates/collection
 {% endcomment %}
@@ -30,26 +30,50 @@
           {%- capture col_caret -%}
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
         {%- endcapture -%}
+          {%- comment -%} Shared checkbox affordance for list-style facets. {%- endcomment -%}
           {%- capture col_check -%}
           <span class="col-checkbox"><svg viewBox="0 0 14 14" fill="none" class="col-checkbox__icon"><path d="M3 7.5L6 10.5L11 3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
         {%- endcapture -%}
 
           {%- liquid
-            assign avail_filter = null
             assign price_filter = null
+            assign category_filter = null
             for f in collection.filters
               if f.type == 'price_range'
                 assign price_filter = f
-              elsif f.param_name == 'filter.v.availability'
-                assign avail_filter = f
+              else
+                # The product category (Shopify Standard Product Taxonomy) facet —
+                # NOT `filter.p.product_type`, which is the merchant's free-text
+                # product type. Matched on the param name containing "category" so
+                # it survives either spelling Shopify uses for the taxonomy param.
+                if f.param_name contains 'category'
+                  assign category_filter = f
+                endif
               endif
             endfor
+
+            # A collection scoped to one category (or a store where only one
+            # category is represented) would render a dead control, so only show
+            # the facet when there is something to choose between.
+            assign show_category_filter = false
+            if category_filter != blank
+              if category_filter.values.size > 1
+                assign show_category_filter = true
+              endif
+            endif
           -%}
 
-          {%- comment -%} Availability — native storefront filter (multi-select) {%- endcomment -%}
-          {%- if avail_filter != blank -%}
+          {%- comment -%}
+            Category — the Shopify Standard Product Taxonomy category assigned to
+            each product in the admin. Values arrive display-ready (e.g. "Coffee
+            Tables"), so they are rendered as-is.
+
+            Products with no category assigned are absent from every value here, so
+            they can only be reached with the facet cleared. See doc/collections.md.
+          {%- endcomment -%}
+          {%- if show_category_filter -%}
             <div
-              class="col-dropdown col-dropdown--left col-toolbar__facet{% if avail_filter.active_values.size > 0 %} has-active{% endif %}"
+              class="col-dropdown col-dropdown--left col-toolbar__facet{% if category_filter.active_values.size > 0 %} has-active{% endif %}"
               data-dropdown
             >
               <button
@@ -59,31 +83,53 @@
                 aria-expanded="false"
                 aria-haspopup="true"
               >
-                <span>{{ avail_filter.label | escape }}</span>
+                <span>{{ section.settings.category_filter_label | default: category_filter.label | escape }}</span>
+                {%- comment -%}
+                  Active indicator: how many categories are currently ticked. Paired
+                  with the `has-active` state on the wrapper (colour + weight), so
+                  the facet reads as "in use" at a glance.
+                {%- endcomment -%}
+                {%- if category_filter.active_values.size > 0 -%}
+                  <span class="col-dropdown__badge">
+                    {{- category_filter.active_values.size -}}
+                    <span class="visually-hidden"> selected</span>
+                  </span>
+                {%- endif -%}
                 {{ col_caret }}
               </button>
               <div class="col-dropdown__menu">
-                {%- for value in avail_filter.values -%}
-                  <a
-                    href="{% if value.active %}{{ value.url_to_remove }}{% else %}{{ value.url_to_add }}{% endif %}"
-                    class="col-dropdown__option{% if value.active %} is-active{% endif %}"
-                  >
-                    <input
-                      type="checkbox"
-                      class="visually-hidden"
-                      {% if value.active %}
-                        checked
-                      {% endif %}
-                      tabindex="-1"
-                      aria-hidden="true"
+                <div class="col-dropdown__list custom-scrollbar">
+                  {%- for value in category_filter.values -%}
+                    {%- comment -%}
+                      Skip categories no product in the current result set has,
+                      unless the customer selected them (so they can untick).
+                    {%- endcomment -%}
+                    {%- if value.count == 0 -%}
+                      {%- unless value.active -%}
+                        {%- continue -%}
+                      {%- endunless -%}
+                    {%- endif -%}
+                    <a
+                      href="{% if value.active %}{{ value.url_to_remove }}{% else %}{{ value.url_to_add }}{% endif %}"
+                      class="col-dropdown__option{% if value.active %} is-active{% endif %}"
                     >
-                    {{ col_check }}
-                    <span class="col-dropdown__option-label">{{ value.label | escape }}</span>
-                    <span class="col-dropdown__option-count">({{ value.count }})</span>
-                  </a>
-                {%- endfor -%}
-                {%- if avail_filter.active_values.size > 0 -%}
-                  <a href="{{ avail_filter.url_to_remove }}" class="col-dropdown__clear">Clear</a>
+                      <input
+                        type="checkbox"
+                        class="visually-hidden"
+                        {% if value.active %}
+                          checked
+                        {% endif %}
+                        tabindex="-1"
+                        aria-hidden="true"
+                      >
+                      {{ col_check }}
+                      <span class="col-dropdown__option-label">{{ value.label | escape }}</span>
+                      <span class="col-dropdown__option-count">({{ value.count }})</span>
+                    </a>
+                  {%- endfor -%}
+                </div>
+                {%- if category_filter.active_values.size > 0 -%}
+                  <a href="{{ category_filter.url_to_remove }}" class="col-dropdown__clear">Clear</a>
                 {%- endif -%}
               </div>
             </div>
@@ -95,6 +141,43 @@
             {%- if price_filter.min_value.value != null or price_filter.max_value.value != null -%}
               {%- assign price_active = true -%}
             {%- endif -%}
+            {%- comment -%}
+              Active indicator: a range has no meaningful "count", so the applied
+              bounds are printed on the trigger instead — the same pattern the
+              "Sort by" control already uses for its current value.
+            {%- endcomment -%}
+            {%- liquid
+              assign price_summary = ''
+              if price_active
+                assign price_min_set = false
+                assign price_max_set = false
+                if price_filter.min_value.value != null
+                  assign price_min_set = true
+                endif
+                if price_filter.max_value.value != null
+                  assign price_max_set = true
+                endif
+                if price_min_set
+                  if price_max_set
+                    capture price_summary
+                      echo price_filter.min_value.value | money_without_trailing_zeros
+                      echo ' – '
+                      echo price_filter.max_value.value | money_without_trailing_zeros
+                    endcapture
+                  else
+                    capture price_summary
+                      echo 'From '
+                      echo price_filter.min_value.value | money_without_trailing_zeros
+                    endcapture
+                  endif
+                else
+                  capture price_summary
+                    echo 'Up to '
+                    echo price_filter.max_value.value | money_without_trailing_zeros
+                  endcapture
+                endif
+              endif
+            -%}
             <div
               class="col-dropdown col-dropdown--left col-toolbar__facet{% if price_active %} has-active{% endif %}"
               data-dropdown
@@ -107,6 +190,9 @@
                 aria-haspopup="true"
               >
                 <span>{{ price_filter.label | escape }}</span>
+                {%- if price_active -%}
+                  <span class="col-dropdown__value">{{ price_summary | strip }}</span>
+                {%- endif -%}
                 {{ col_caret }}
               </button>
               <div class="col-dropdown__menu">
@@ -205,7 +291,7 @@
               class="col-dropdown__option{% if sort_by == 'best-selling' %} is-active{% endif %}"
               data-sort-value="best-selling"
             >
-              <span class="col-dropdown__option-label">Best Selling</span>
+              <span class="col-dropdown__option-label">Best Sellers</span>
             </button>
             <button
               type="button"
@@ -688,6 +774,34 @@
     color: var(--color-earth-brown);
     font-weight: var(--font-weight-bold);
   }
+  /* Count of ticked values, for list facets (e.g. Category) */
+  .col-dropdown__badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 var(--sp-1);
+    border-radius: var(--radius-full);
+    background-color: var(--color-earth-brown);
+    color: var(--color-milk);
+    font-family: var(--font-roboto);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-bold);
+    line-height: 1;
+    letter-spacing: 0;
+  }
+  /* Applied value, for facets where a count says nothing (e.g. the price range) */
+  .col-dropdown__value {
+    color: var(--color-earth-brown);
+    font-weight: var(--font-weight-bold);
+    white-space: nowrap;
+  }
+  /* The facet's own name stays quiet so the applied value reads as the signal. */
+  .col-dropdown.has-active > .col-dropdown__trigger:has(.col-dropdown__value) > span:first-child {
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-secondary);
+  }
   .col-dropdown__menu {
     position: absolute;
     top: 100%;
@@ -749,12 +863,21 @@
   .col-dropdown__option-count {
     color: var(--text-secondary);
   }
+  /* Scrollable value list — the Category facet on /collections/all holds more
+     options than fit on screen. */
+  .col-dropdown__list {
+    display: flex;
+    flex-direction: column;
+    max-height: 320px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
 
   /* Custom Checkbox */
   .col-checkbox {
     width: 20px;
     height: 20px;
-    border: 1px solid var(--border-light);
+    border: 1px solid var(--color-ebony);
     border-radius: var(--radius-md);
     display: flex;
     align-items: center;
@@ -764,7 +887,6 @@
     transition: all var(--timing-fast) var(--ease-standard);
     flex: 0 0 auto;
     pointer-events: none;
-    border-color: var(--color-ebony);
   }
   .col-checkbox__icon {
     width: 12px;
@@ -1473,6 +1595,14 @@
       padding: 0 var(--sp-4);
       height: 48px;
     }
+    /* Keep facet/sort options tappable (44px minimum) and the value list inside
+       the viewport on short mobile screens. */
+    .col-dropdown__option {
+      min-height: 44px;
+    }
+    .col-dropdown__list {
+      max-height: 50vh;
+    }
     .col-toolbar__right {
       justify-content: space-between;
       border-top: 1px solid var(--border-light);
@@ -1764,6 +1894,14 @@
 {
   "name": "t:general.collection",
   "settings": [
+    { "type": "header", "content": "Filters" },
+    {
+      "type": "text",
+      "id": "category_filter_label",
+      "label": "Category filter label",
+      "info": "Shown on the product category facet. Leave empty to use the filter name from Search & Discovery.",
+      "default": "Category"
+    },
     { "type": "header", "content": "Product card badges" },
     {
       "type": "text",

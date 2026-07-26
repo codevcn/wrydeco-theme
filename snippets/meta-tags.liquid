@@ -6,7 +6,19 @@
 <link rel="icon" type="image/svg+xml" href="{{ 'favicon.svg' | asset_url }}">
 <link rel="shortcut icon" href="{{ 'favicon.ico' | asset_url }}">
 <link rel="apple-touch-icon" sizes="180x180" href="{{ 'apple-touch-icon.png' | asset_url }}">
-<link rel="manifest" href="{{ 'manifest.json.liquid' | asset_url }}">
+{%- comment -%}
+  Reference the manifest WITHOUT the `.liquid` suffix: Shopify only renders a
+  `.liquid` asset when it is requested by its rendered name. Linking to
+  `manifest.json.liquid` serves the raw template, so the manifest shipped
+  `{{ shop.name }}` as literal text and was invalid JSON.
+
+  theme-check flags this as MissingAsset because the file on disk is named
+  `manifest.json.liquid` — that is the lint reading filenames literally, not a
+  broken reference, so the rule is disabled for this line only.
+{%- endcomment -%}
+{% # theme-check-disable MissingAsset %}
+<link rel="manifest" href="{{ 'manifest.json' | asset_url }}">
+{% # theme-check-enable MissingAsset %}
 {%- liquid
   assign og_title = page_title | default: shop.name
   assign og_url = canonical_url | default: request.origin
@@ -90,16 +102,57 @@
   content="{{ og_description | escape }}"
 >
 
+{%- comment -%}
+  Compare the brand case-insensitively: Liquid's `contains` is case-sensitive, so
+  an SEO title written as "… | WRYDECO" did not match a shop name of "Wrydeco"
+  and the brand was appended a second time ("… | WRYDECO &ndash; Wrydeco").
+{%- endcomment -%}
+{%- liquid
+  assign page_title_compare = page_title | downcase
+  assign shop_name_compare = shop.name | downcase
+-%}
 <title>
   {{ page_title }}
   {%- if current_tags %} &ndash; tagged "{{ current_tags | join: ', ' }}"{% endif -%}
   {%- if current_page != 1 %} &ndash; Page {{ current_page }}{% endif -%}
-  {%- unless page_title contains shop.name %} &ndash; {{ shop.name }}{% endunless -%}
+  {%- unless page_title_compare contains shop_name_compare %} &ndash; {{ shop.name }}{% endunless -%}
 </title>
 
 <link
   rel="canonical"
   href="{{ canonical_url }}"
+>
+
+{%- comment -%}
+  Index control. Shopify emits no robots meta of its own for these routes, so
+  this is the single source of truth for the directive.
+
+  `noindex, follow` (not `noindex, nofollow`) everywhere: the pages should stay
+  out of the index but their links must still pass crawl signals.
+
+  Internal search is the important one — /search?q=… returns 200 with a
+  self-canonical URL and is not blocked in robots.txt, so every query would
+  otherwise become its own thin, indexable page.
+{%- endcomment -%}
+{%- liquid
+  assign robots_directive = 'index, follow'
+
+  case request.page_type
+    when 'search', 'cart', 'gift_card', 'password', 'captcha'
+      assign robots_directive = 'noindex, follow'
+    when 'customers/account', 'customers/activate_account', 'customers/addresses', 'customers/login', 'customers/order', 'customers/register', 'customers/reset_password'
+      assign robots_directive = 'noindex, follow'
+  endcase
+
+  # App proxy pages (/apps/track-order, /apps/page/wishlist) render through this
+  # layout with a 200 status and are personalised or thin, so keep them out too.
+  if request.path contains '/apps/'
+    assign robots_directive = 'noindex, follow'
+  endif
+-%}
+<meta
+  name="robots"
+  content="{{ robots_directive }}"
 >
 
 {% if page_description %}
