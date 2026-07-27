@@ -49,6 +49,18 @@ def merge_csv_in_folder(folder_path, output_file, warehouse_dir):
     fieldnames = []
     total_files_read = 0
 
+    if os.path.exists(output_file):
+        try:
+            with open(output_file, "r", encoding="utf-8-sig") as f:
+                reader = csv.DictReader(f)
+                if reader.fieldnames:
+                    fieldnames = reader.fieldnames
+                rows = list(reader)
+                all_rows.extend(rows)
+                print(f"  [0] 📄 Đã giữ lại dữ liệu từ: {os.path.basename(output_file)} -> {len(rows)} dòng")
+        except Exception as e:
+            print(f"  ❌ Lỗi khi đọc dữ liệu cũ từ {os.path.basename(output_file)}: {e}")
+
     for idx, file_path in enumerate(sorted(csv_files), 1):
         try:
             with open(file_path, "r", encoding="utf-8-sig") as f:

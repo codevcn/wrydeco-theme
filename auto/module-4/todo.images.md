@@ -19,7 +19,7 @@
   - Chỉ tạo reviews trong file CSV trong folder "output", ko tạo reviews trong file bên ngoài folder "output".
 - Bước 7: Sau khi viết reviews trong file CSV xong, lặp lại các bước trên cho các sản phẩm còn lại.
 
-4. Sau khi viết xong reviews thì thêm thông tin sản phẩm và thông tin tạo review vào cuối file `./handled.json` (ko xóa nội dung hiện có).
+4. Sau khi viết xong reviews thì thêm thông tin sản phẩm và thông tin tạo review vào cuối file `./handled.images.json` (ko xóa nội dung hiện có).
 5. Chạy file `./clean.cmd` để xóa các file tạm thời và các file không cần thiết.
 6. Chạy file `./merge_csv.cmd` để gộp tất cả các file CSV reviews của các sản phẩm vào 1 file CSV duy nhất.
 7. Viết báo cáo kết quả tạo reviews cho các sản phẩm vào file `./report.md`.

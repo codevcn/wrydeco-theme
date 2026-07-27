@@ -12,8 +12,10 @@ KEEP_CONTENT = [
     "clean.py",
 	"config.json",
 	"handled.json",
+	"handled.images.json",
 	"human-reviews.md",
 	"report.md",
+	"report.images.md",
 	"reviews-rule.txt",
 	"template.csv",
 	"product.md",
@@ -35,6 +37,8 @@ KEEP_CONTENT = [
     "write_ratings_by_star.images.cmd",
     "write_ratings_by_star.images.py",
     "logo.png",
+    ".env",
+    ".media.env",
 ]
 
 

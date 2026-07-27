@@ -566,7 +566,42 @@
   }
   .main-product__rating .jdgm-prev-badge {
     display: inline-flex !important;
-    gap: 8px;
+    align-items: center;
+    gap: var(--sp-2);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-normal);
+  }
+  .main-product__rating .jdgm-prev-badge__stars {
+    display: inline-flex;
+    align-items: center;
+    line-height: var(--line-height-normal);
+  }
+  .main-product__rating .jdgm-prev-badge__stars::after {
+    content: var(--jdgm-average-rating, attr(data-score));
+    display: inline-flex;
+    align-items: center;
+    margin-inline-start: var(--sp-2);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--line-height-normal);
+    color: var(--text-primary);
+  }
+  .main-product__rating .jdgm-prev-badge__text {
+    display: inline-flex;
+    align-items: center;
+    font: inherit;
+    line-height: var(--line-height-normal);
+  }
+  .main-product__rating .jdgm-prev-badge__text::before {
+    content: '(';
+  }
+  .main-product__rating .jdgm-prev-badge__text::after {
+    content: ')';
+  }
+  .main-product__rating
+    .jdgm-prev-badge[data-number-of-reviews='0']
+    .jdgm-prev-badge__stars::after {
+    display: none;
   }
 
   .free-shipping-included-wrapper .free-shipping-included {
@@ -652,9 +687,31 @@
         injects the badge elsewhere and leaves the preview placeholder empty). The Judge.me script
         re-hydrates this .jdgm-preview-badge with live data on load.
       {%- endcomment -%}
+      {%- liquid
+        assign judgeme_badge = product.metafields.judgeme.badge | default: ''
+        assign judgeme_average_rating = 0
+        assign judgeme_score_parts = judgeme_badge | split: "data-score='"
+
+        if judgeme_score_parts.size > 1
+          assign judgeme_average_rating = judgeme_score_parts | last | split: "'" | first | plus: 0
+        else
+          assign judgeme_score_parts = judgeme_badge | split: 'data-score="'
+          if judgeme_score_parts.size > 1
+            assign judgeme_average_rating = judgeme_score_parts | last | split: '"' | first | plus: 0
+          endif
+        endif
+
+        assign judgeme_average_rating = judgeme_average_rating | round: 1
+      -%}
       <div class="main-product__rating">
-        <div class="jdgm-widget jdgm-preview-badge" data-id="{{ product.id }}">
-          {{ product.metafields.judgeme.badge }}
+        <div
+          class="jdgm-widget jdgm-preview-badge"
+          data-id="{{ product.id }}"
+          {% if judgeme_average_rating > 0 %}
+            style="--jdgm-average-rating: '{{ judgeme_average_rating }}';"
+          {% endif %}
+        >
+          {{ judgeme_badge }}
         </div>
       </div>
 

@@ -2,6 +2,7 @@ import os
 
 main_files = [
     ".env",
+    ".media.env",
     "main.py",
     "requirements.txt",
     "dev.cmd",
