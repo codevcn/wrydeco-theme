@@ -1,13 +1,26 @@
 <div class="trust-statistics-host">
-  <section class="trust-statistics" aria-label="WRYDECO at a glance">
+  <section class="trust-statistics" aria-labelledby="trust-statistics-title-{{ section.id }}">
+    <div class="trust-statistics__header">
+      <span class="trust-statistics__rule" aria-hidden="true"></span>
+      <h2 class="trust-statistics__title" id="trust-statistics-title-{{ section.id }}">Our record so far</h2>
+      <span class="trust-statistics__rule" aria-hidden="true"></span>
+    </div>
+
     <ul class="trust-statistics__list" role="list">
       {%- for stat_index in (1..5) -%}
         {%- liquid
           assign value_setting = 'stat_' | append: stat_index | append: '_value'
           assign label_setting = 'stat_' | append: stat_index | append: '_label'
+          assign stat_value = section.settings[value_setting]
         -%}
-        <li class="trust-statistics__item{% if forloop.first %} trust-statistics__item--featured{% endif %}">
-          <strong class="trust-statistics__value">{{ section.settings[value_setting] | escape }}</strong>
+        <li class="trust-statistics__item{% if forloop.last %} trust-statistics__item--artisan{% endif %}">
+          <strong class="trust-statistics__value">
+            {%- if stat_value contains '+' -%}
+              {{- stat_value | remove: '+' | escape -}}<sup>+</sup>
+            {%- else -%}
+              {{- stat_value | escape -}}
+            {%- endif -%}
+          </strong>
           <span class="trust-statistics__label">{{ section.settings[label_setting] | escape }}</span>
         </li>
       {%- endfor -%}
@@ -17,91 +30,163 @@
 
 {% stylesheet %}
   .trust-statistics-host {
-    padding: var(--sp-3);
-    background: var(--surface-elevated);
+    position: relative;
+    z-index: 1;
+    padding-block: var(--sp-5) var(--sp-5);
+    background: var(--color-bg);
+    overflow: hidden;
   }
 
   .trust-statistics {
-    border: 0;
-    background: transparent;
+    inline-size: calc(100% - (var(--sp-9) * 2));
+    max-inline-size: var(--page-max-width);
+    margin-inline: auto;
+  }
+
+  .trust-statistics__header {
+    display: grid;
+    grid-template-columns: minmax(var(--sp-0), 1fr) auto minmax(var(--sp-0), 1fr);
+    align-items: center;
+    gap: var(--sp-4-bigger);
+    transform: translateY(calc((var(--sp-2) - (var(--border-width) * 2)) * -1));
+  }
+
+  .trust-statistics__rule {
+    block-size: var(--border-width);
+    background: var(--color-border);
+  }
+
+  .trust-statistics__title {
+    color: var(--color-clay);
+    font-family: var(--font-body);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--eyebrow-tracking);
+    line-height: var(--line-height-normal);
+    text-align: center;
+    text-transform: uppercase;
   }
 
   .trust-statistics__list {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: var(--sp-2);
-    inline-size: min(100%, var(--layout-showcase-max-width));
-    min-block-size: var(--sp-10);
-    margin: var(--sp-0) auto;
-    padding: var(--sp-3);
-    border-radius: 8px;
-    background: var(--color-cream);
+    min-block-size: 92px;
+    margin: var(--sp-0);
+    padding: var(--sp-0);
+    border-block-end: var(--border-width) solid var(--color-border);
     list-style: none;
   }
 
   .trust-statistics__item {
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     min-inline-size: var(--sp-0);
+    margin: var(--sp-0);
     text-align: center;
   }
 
   .trust-statistics__value {
+    position: relative;
+    z-index: 1;
     color: var(--color-clay);
     font-family: var(--font-roboto);
-    font-size: var(--font-size-body-5xl);
-    font-weight: var(--font-weight-bold);
+    font-size: 42px;
+    font-weight: var(--font-weight-semibold);
     letter-spacing: var(--letter-spacing-normal);
-    line-height: var(--line-height-tight);
+    line-height: var(--line-height-display);
+    transform: translateY(calc(var(--sp-2) * -1));
   }
 
-  .trust-statistics__item--featured .trust-statistics__value {
-    color: var(--color-clay);
+  .trust-statistics__value sup {
+    position: relative;
+    inset-block-start: calc(var(--sp-1) * -1);
+    font-size: var(--font-size-body-2xl);
+    line-height: var(--line-height-tight);
+    vertical-align: top;
   }
 
   .trust-statistics__label {
-    margin-block-start: var(--sp-2);
-    color: var(--text-primary);
-    font-family: var(--font-roboto);
-    font-size: var(--font-size-body-sm);
-    font-weight: var(--font-weight-regular);
-    letter-spacing: var(--letter-spacing-normal);
+    inset-block-end: calc(var(--sp-6) - var(--sp-1));
+    color: var(--text-secondary);
+    font-family: var(--font-body);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--eyebrow-tracking);
     line-height: var(--line-height-normal);
     overflow-wrap: anywhere;
+    text-transform: uppercase;
   }
 
-  @media screen and (max-width: 61.8125rem) {
-    .trust-statistics__list {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: var(--sp-4) var(--sp-4);
-    }
-
-    .trust-statistics__item:last-child:nth-child(odd) {
-      grid-column: 1 / -1;
-    }
+  .trust-statistics__item--artisan::before {
+    position: absolute;
+    z-index: 0;
+    inline-size: calc(var(--sp-12) * 2);
+    aspect-ratio: 1;
+    border-radius: var(--radius-full);
+    background: repeating-radial-gradient(
+      circle,
+      transparent var(--sp-0) calc(var(--sp-4) - var(--border-width)),
+      var(--color-border) calc(var(--sp-4) - var(--border-width)) var(--sp-4)
+    );
+    content: "";
   }
 
   @media screen and (max-width: 40rem) {
     .trust-statistics-host {
-      padding: var(--sp-3);
+      padding-block: var(--sp-5) var(--sp-4);
+    }
+
+    .trust-statistics {
+      inline-size: calc(100% - ((var(--sp-5) - (var(--border-width) * 2)) * 2));
+    }
+
+    .trust-statistics__header {
+      gap: var(--sp-3);
+      transform: translateY(calc(var(--sp-2) * -1));
+    }
+
+    .trust-statistics__title {
+      font-size: calc(var(--font-size-caption) - var(--border-width));
+      line-height: var(--line-height-tight);
     }
 
     .trust-statistics__list {
-      display: flex;
-      flex-direction: column;
-      gap: var(--sp-2);
-      padding: var(--sp-3) var(--sp-3) var(--sp-2);
+      display: block;
+      min-block-size: var(--sp-0);
     }
+
     .trust-statistics__item {
-      display: flex;
       flex-direction: row;
-      align-items: center;
-      gap: var(--sp-4);
+      justify-content: flex-start;
+      min-block-size: var(--sp-7);
+      border-block-end: var(--border-width) solid var(--color-border);
+      text-align: start;
     }
+
+    .trust-statistics__item:last-child {
+      border-block-end: var(--sp-0);
+    }
+
+    .trust-statistics__value {
+      flex: 0 0 calc(var(--sp-12));
+      font-size: var(--font-size-display-md);
+      text-align: center;
+      transform: translateY(2px);
+    }
+
     .trust-statistics__label {
-      margin-block-start: 0;
+      position: relative;
+      inset-block-end: auto;
+      margin-block-start: var(--sp-0);
+      font-size: calc(var(--font-size-caption) - (var(--border-width) * 2));
+    }
+
+    .trust-statistics__item--artisan::before {
+      inset-inline-start: var(--sp-0);
+      inline-size: calc(var(--sp-12) + var(--sp-5));
     }
   }
 {% endstylesheet %}
@@ -121,7 +206,7 @@
       "type": "text",
       "id": "stat_1_label",
       "label": "Statistic 1 label",
-      "default": "Handcrafted Products"
+      "default": "Handcrafted Pieces"
     },
     {
       "type": "text",
@@ -133,7 +218,7 @@
       "type": "text",
       "id": "stat_2_label",
       "label": "Statistic 2 label",
-      "default": "Verified Customer Reviews"
+      "default": "Verified Client Reviews"
     },
     {
       "type": "text",
@@ -169,7 +254,7 @@
       "type": "text",
       "id": "stat_5_label",
       "label": "Statistic 5 label",
-      "default": "Years of Artisans"
+      "default": "Years of Artisan Craft"
     }
   ],
   "presets": [{ "name": "Trust statistics" }]

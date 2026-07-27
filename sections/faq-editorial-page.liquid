@@ -108,6 +108,19 @@
             <p>{{ section.settings.empty_text | escape }}</p>
           </div>
         {%- endif -%}
+
+        {%- comment -%}
+          This block is a shortlist, not the full FAQ, so send anyone with a
+          question it does not answer to the dedicated page.
+        {%- endcomment -%}
+        {%- if displayed_questions > 0 -%}
+          {%- if section.settings.all_questions_url != blank -%}
+            <a class="faq-editorial__all-link" href="{{ section.settings.all_questions_url }}">
+              <span>{{ section.settings.all_questions_label | default: 'See all questions' | escape }}</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m14 18l-1.4-1.45L16.15 13H4v-2h12.15L12.6 7.45L14 6l6 6z"/></svg>
+            </a>
+          {%- endif -%}
+        {%- endif -%}
       </section>
     </div>
   </div>
@@ -340,6 +353,32 @@
     block-size: 1px;
     margin-block: var(--sp-4);
     background: var(--color-clay);
+  }
+
+  /* Link out to the full FAQ page — the homepage list is a shortlist. */
+  .faq-editorial__all-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    margin-block-start: var(--sp-5);
+    padding-block: var(--sp-3);
+    color: var(--color-earth-brown);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--letter-spacing-wide);
+    text-transform: uppercase;
+    text-decoration: none;
+    border-block-end: 1px solid currentColor;
+    align-self: flex-start;
+    transition: gap var(--timing-short) var(--ease-standard);
+  }
+  .faq-editorial__all-link:hover {
+    gap: var(--sp-3);
+  }
+  .faq-editorial__all-link svg {
+    inline-size: 1.1em;
+    block-size: 1.1em;
+    flex: 0 0 auto;
   }
 
   .faq-editorial-consultation__button {
@@ -1197,8 +1236,9 @@
       "type": "range",
       "id": "max_questions",
       "label": "Questions to show",
+      "info": "Total across every category, not per category. Three category blocks holding three questions each need 9 to show them all.",
       "min": 3,
-      "max": 12,
+      "max": 24,
       "step": 1,
       "default": 8
     },
@@ -1217,6 +1257,18 @@
       "id": "consultation_text",
       "label": "Text",
       "default": "Our design advisors help you choose a piece, refine proportions, and make it feel at home in your space."
+    },
+    {
+      "type": "text",
+      "id": "all_questions_label",
+      "label": "See all questions label",
+      "default": "See all questions"
+    },
+    {
+      "type": "url",
+      "id": "all_questions_url",
+      "label": "Full FAQ page",
+      "info": "Shown under the question list so visitors can reach the questions this shortlist leaves out."
     },
     {
       "type": "text",
