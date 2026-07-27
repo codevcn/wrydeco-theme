@@ -8,6 +8,7 @@ from pathlib import Path
 KEEP_CONTENT = [
     "assets/",
     ".env",
+    ".media.env",
 	"clean.cmd",
     "clean.py",
 	"config.json",
@@ -27,7 +28,8 @@ KEEP_CONTENT = [
     "prepare_config.py",
     "config.prepare.json",
     "toast.cmd",
-    "collections.md"
+    "collections.md",
+    "replace_amazon_rich_images.py"
 ]
 
 

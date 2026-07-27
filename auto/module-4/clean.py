@@ -20,14 +20,12 @@ KEEP_CONTENT = [
 	"todo.md",
 	"write_ratings_by_star.cmd",
 	"write_ratings_by_star.py",
-	"8355804545081-reviews.csv",
-	"8355804676153-reviews.csv",
-	"template-8355804676153-reviews.csv",
-	"template-8355804545081-reviews.csv",
 	"merge_csv.py",
 	"merge_csv.cmd",
 	"warehouse/",
     "note.txt",
+    "access-token.md",
+    "todo.images.md",
 ]
 
 
