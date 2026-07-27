@@ -26,6 +26,15 @@ KEEP_CONTENT = [
     "note.txt",
     "access-token.md",
     "todo.images.md",
+    "media/",
+    "upload_images.py",
+    "upload_images.cmd",
+    "upload.images.py",
+    "upload.images.cmd",
+    "config.images.json",
+    "write_ratings_by_star.images.cmd",
+    "write_ratings_by_star.images.py",
+    "logo.png",
 ]
 
 

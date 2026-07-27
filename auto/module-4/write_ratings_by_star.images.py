@@ -11,8 +11,8 @@ class ReviewSummary(TypedDict):
     reviews_3_star: int
 
 
-MIN_REVIEWS: int = 30
-MAX_REVIEWS: int = 50
+MIN_REVIEWS: int = 14
+MAX_REVIEWS: int = 19
 
 
 # Xác suất chọn rating trung bình cho sản phẩm (phân bổ đa dạng từ 4.60 đến 4.80).
@@ -25,32 +25,32 @@ TARGET_RATING_WEIGHTS: dict[float, int] = {
 }
 
 
-# Tỷ lệ số sao tương ứng với từng rating trung bình (tối đa hóa lượng 4 sao ở từng mức điểm).
+# Tỷ lệ số sao tương ứng với từng rating trung bình (chỉ tạo 4 sao và 5 sao, không có review dưới 4 sao).
 IDEAL_STAR_RATIOS: dict[float, dict[int, float]] = {
     4.80: {
-        3: 0.01,
-        4: 0.18,
-        5: 0.81,
+        3: 0.0,
+        4: 0.20,
+        5: 0.80,
     },
     4.75: {
-        3: 0.01,
-        4: 0.23,
-        5: 0.76,
+        3: 0.0,
+        4: 0.25,
+        5: 0.75,
     },
     4.70: {
-        3: 0.02,
-        4: 0.26,
-        5: 0.72,
+        3: 0.0,
+        4: 0.30,
+        5: 0.70,
     },
     4.65: {
-        3: 0.02,
-        4: 0.31,
-        5: 0.67,
+        3: 0.0,
+        4: 0.35,
+        5: 0.65,
     },
     4.60: {
-        3: 0.02,
-        4: 0.36,
-        5: 0.62,
+        3: 0.0,
+        4: 0.40,
+        5: 0.60,
     },
 }
 
@@ -65,9 +65,9 @@ def generate_review_summary(
 
     Quy tắc:
     - Tổng review từ min_reviews đến max_reviews.
-    - Không có review 1 hoặc 2 sao.
+    - Không có review dưới 4 sao (không có 1, 2 hoặc 3 sao).
     - Rating mục tiêu được chọn theo TARGET_RATING_WEIGHTS.
-    - Số lượng review 3, 4 và 5 sao được tính sao cho rating thực tế
+    - Số lượng review 4 và 5 sao được tính sao cho rating thực tế
       gần rating mục tiêu nhất.
     """
 
@@ -99,9 +99,8 @@ def generate_review_summary(
         float,
     ] | None = None
 
-    # Thử tất cả tổ hợp số review 3, 4 và 5 sao.
-    # Tổng review tối đa chỉ là 90 nên chi phí tính toán rất nhỏ.
-    for reviews_3_star in range(total_reviews + 1):
+    # Thử tất cả tổ hợp số review 4 và 5 sao (không có review dưới 4 sao, tức là 3 sao = 0).
+    for reviews_3_star in range(1):
         for reviews_4_star in range(
             total_reviews - reviews_3_star + 1
         ):
