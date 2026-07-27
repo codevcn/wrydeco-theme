@@ -24,6 +24,10 @@ KEEP_CONTENT = [
 	"8355804676153-reviews.csv",
 	"template-8355804676153-reviews.csv",
 	"template-8355804545081-reviews.csv",
+	"merge_csv.py",
+	"merge_csv.cmd",
+	"warehouse/",
+    "note.txt",
 ]
 
 

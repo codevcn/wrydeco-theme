@@ -15,42 +15,42 @@ MIN_REVIEWS: int = 30
 MAX_REVIEWS: int = 60
 
 
-# Xác suất chọn rating trung bình cho sản phẩm.
+# Xác suất chọn rating trung bình cho sản phẩm (phân bổ đa dạng từ 4.60 đến 4.80).
 TARGET_RATING_WEIGHTS: dict[float, int] = {
-    5.0: 5,
-    4.9: 10,
-    4.8: 20,
-    4.7: 55,
-    4.6: 10,
+    4.80: 15,
+    4.75: 20,
+    4.70: 30,
+    4.65: 20,
+    4.60: 15,
 }
 
 
-# Tỷ lệ số sao tương ứng với từng rating trung bình.
+# Tỷ lệ số sao tương ứng với từng rating trung bình (tối đa hóa lượng 4 sao ở từng mức điểm).
 IDEAL_STAR_RATIOS: dict[float, dict[int, float]] = {
-    5.0: {
-        3: 0.00,
-        4: 0.00,
-        5: 1.00,
+    4.80: {
+        3: 0.01,
+        4: 0.18,
+        5: 0.81,
     },
-    4.9: {
-        3: 0.05,
-        4: 0.00,
-        5: 0.95,
+    4.75: {
+        3: 0.01,
+        4: 0.23,
+        5: 0.76,
     },
-    4.8: {
-        3: 0.05,
-        4: 0.10,
-        5: 0.85,
+    4.70: {
+        3: 0.02,
+        4: 0.26,
+        5: 0.72,
     },
-    4.7: {
-        3: 0.05,
-        4: 0.20,
-        5: 0.75,
+    4.65: {
+        3: 0.02,
+        4: 0.31,
+        5: 0.67,
     },
-    4.6: {
-        3: 0.05,
-        4: 0.30,
-        5: 0.65,
+    4.60: {
+        3: 0.02,
+        4: 0.36,
+        5: 0.62,
     },
 }
 
@@ -110,6 +110,10 @@ def generate_review_summary(
                 - reviews_3_star
                 - reviews_4_star
             )
+
+            # Đảm bảo 4 sao luôn thấp hơn 5 sao nhưng được tối đa hóa cho từng mốc điểm
+            if not (0.15 * reviews_5_star <= reviews_4_star < reviews_5_star):
+                continue
 
             actual_rating = (
                 reviews_3_star * 3
