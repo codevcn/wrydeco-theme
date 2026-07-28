@@ -10,6 +10,7 @@ main_files = [
     "get_access_token.cmd",
     "clean.py",
     "clean.cmd",
+    "logo.png",
 ]
 
 def clean():

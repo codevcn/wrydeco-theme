@@ -46,6 +46,8 @@ def get_products(first=30, after=None, before=None, last=None, filter_query=None
             descriptionHtml
             createdAt
             productType
+            totalInventory
+            tracksInventory
             category {
               name
             }
@@ -814,8 +816,128 @@ def get_all_products_sorted_by_price(filter_query, sort_by):
         "productsCount": {"count": len(all_matched_edges)}
     }
 
+def get_products_by_special_filter(special_filter, sort_by="created_desc"):
+    query = """
+    query getProducts($after: String) {
+      products(first: 50, after: $after) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        edges {
+          node {
+            id
+            handle
+            title
+            descriptionHtml
+            createdAt
+            productType
+            totalInventory
+            tracksInventory
+            category {
+              name
+            }
+            priceRangeV2 {
+              minVariantPrice {
+                amount
+              }
+            }
+            options {
+              name
+            }
+            collections(first: 20) {
+              edges {
+                node {
+                  title
+                }
+              }
+            }
+            amazon_link: metafield(namespace: "custom", key: "amazon_link") {
+              value
+            }
+            media(first: 50) {
+              edges {
+                node {
+                  ... on MediaImage {
+                    id
+                    image {
+                      url
+                    }
+                  }
+                  ... on Video {
+                    id
+                    preview {
+                      image {
+                        url
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    """
+    all_matched_edges = []
+    has_next = True
+    cursor = None
+    
+    while has_next:
+        variables = {}
+        if cursor:
+            variables["after"] = cursor
+            
+        res = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=HEADERS)
+        res.raise_for_status()
+        data = res.json()
+        if "errors" in data:
+            print("GraphQL Errors:", data["errors"])
+            break
+            
+        products_data = data["data"]["products"]
+        for edge in products_data["edges"]:
+            node = edge["node"]
+            tracks_inventory = node.get("tracksInventory", False)
+            total_inventory = node.get("totalInventory", 0) or 0
+            
+            matched = False
+            if special_filter == "out_of_stock":
+                matched = tracks_inventory and total_inventory <= 0
+            elif special_filter == "in_stock":
+                matched = tracks_inventory and total_inventory > 0
+            elif special_filter == "not_tracked":
+                matched = not tracks_inventory
+                
+            if matched:
+                all_matched_edges.append(edge)
+                
+        page_info = products_data.get("pageInfo", {})
+        has_next = page_info.get("hasNextPage", False)
+        cursor = page_info.get("endCursor")
+        
+    def get_sort_key(edge):
+        if sort_by in ["price_asc", "price_desc"]:
+            price_data = edge["node"].get("priceRangeV2")
+            if price_data and price_data.get("minVariantPrice"):
+                return float(price_data["minVariantPrice"].get("amount", 0))
+            return 0.0
+        return edge["node"].get("createdAt", "")
+        
+    reverse_sort = sort_by in ["created_desc", "price_desc"]
+    all_matched_edges.sort(key=get_sort_key, reverse=reverse_sort)
+        
+    return {
+        "products": {
+            "edges": all_matched_edges,
+            "pageInfo": {"hasNextPage": False, "hasPreviousPage": False}
+        },
+        "productsCount": {"count": len(all_matched_edges)}
+    }
+
 @app.get("/", response_class=HTMLResponse)
-async def read_root(request: Request, after: str = None, before: str = None, filter_type: str = "tag", filter_value: str = None, sort_by: str = "created_desc"):
+async def read_root(request: Request, after: str = None, before: str = None, filter_type: str = "tag", filter_value: str = None, sort_by: str = "created_desc", special_filter: str = ""):
     try:
         filter_query = None
         data = None
@@ -832,7 +954,9 @@ async def read_root(request: Request, after: str = None, before: str = None, fil
             sort_key_graphql = "CREATED_AT"
             reverse = False
             
-        if filter_value and filter_type == "metafield_amazon_link":
+        if special_filter and special_filter in ["out_of_stock", "in_stock", "not_tracked"]:
+            data = get_products_by_special_filter(special_filter, sort_by=sort_by)
+        elif filter_value and filter_type == "metafield_amazon_link":
             data = get_products_by_metafield_amazon_link(filter_value, sort_by=sort_by)
         elif filter_value and filter_type == "metafield_rich_description":
             data = get_products_by_metafield_rich_description(filter_value, sort_by=sort_by)
@@ -933,6 +1057,7 @@ async def read_root(request: Request, after: str = None, before: str = None, fil
             "filter_type": filter_type,
             "filter_value": filter_value or "",
             "sort_by": sort_by,
+            "special_filter": special_filter,
             "error": None
         })
     except Exception as e:
@@ -944,6 +1069,7 @@ async def read_root(request: Request, after: str = None, before: str = None, fil
             "filter_type": filter_type,
             "filter_value": filter_value or "",
             "sort_by": sort_by,
+            "special_filter": special_filter,
             "error": str(e)
         })
 
@@ -1426,6 +1552,98 @@ async def edit_variants_submit(request: Request):
                 continue
 
             success, msg = add_variant_options_to_product(prod_id, option_pairs)
+            if success:
+                success_count += 1
+                details.append({"identifier": ident, "status": "OK", "message": msg})
+            else:
+                details.append({"identifier": ident, "status": "FAIL", "message": msg})
+
+        msg_summary = f"Đã thực thi xong: Thành công {success_count}/{len(identifiers)} sản phẩm."
+        if is_ajax_request(request):
+            import json
+            res_data = {
+                "success": success_count > 0,
+                "message": msg_summary,
+                "details": details
+            }
+            return HTMLResponse(content=json.dumps(res_data, ensure_ascii=False), media_type="application/json")
+            
+        return templates.TemplateResponse("edit_variants.html", {
+            "request": request,
+            "error": None if success_count > 0 else msg_summary,
+            "success_message": msg_summary if success_count > 0 else None
+        })
+    except Exception as e:
+        if is_ajax_request(request):
+            import json
+            return HTMLResponse(content=json.dumps({"success": False, "message": str(e)}, ensure_ascii=False), media_type="application/json")
+        return templates.TemplateResponse("edit_variants.html", {"request": request, "error": str(e), "success_message": None})
+
+def add_tags_to_product(product_id: str, tags: list):
+    mutation = """
+    mutation tagsAdd($id: ID!, $tags: [String!]!) {
+      tagsAdd(id: $id, tags: $tags) {
+        node {
+          id
+        }
+        userErrors {
+          field
+          message
+        }
+      }
+    }
+    """
+    variables = {
+        "id": product_id,
+        "tags": tags
+    }
+    res = requests.post(GRAPHQL_URL, json={"query": mutation, "variables": variables}, headers=HEADERS)
+    res.raise_for_status()
+    data = res.json()
+    if "errors" in data:
+        return False, f"GraphQL Error: {data['errors'][0]['message']}"
+    user_errs = data.get("data", {}).get("tagsAdd", {}).get("userErrors", [])
+    if user_errs:
+        return False, f"Lỗi từ Shopify: {user_errs[0]['message']}"
+    return True, f"Đã thêm tags thành công"
+
+@app.post("/add-tags")
+async def add_tags_submit(request: Request):
+    try:
+        form = await request.form()
+        identifiers_raw = form.get("identifiers", "")
+        id_types = form.getlist("id_type")
+        tags_raw = form.get("tags", "")
+
+        raw_list = re.split(r'[\r\n,]+', identifiers_raw)
+        identifiers = [i.strip() for i in raw_list if i.strip()]
+        
+        tags = [t.strip() for t in tags_raw.split(",") if t.strip()]
+
+        if not identifiers:
+            msg = "Danh sách sản phẩm trống"
+            if is_ajax_request(request):
+                import json
+                return HTMLResponse(content=json.dumps({"success": False, "message": msg}, ensure_ascii=False), media_type="application/json")
+            return templates.TemplateResponse("edit_variants.html", {"request": request, "error": msg, "success_message": None})
+            
+        if not tags:
+            msg = "Danh sách tags trống"
+            if is_ajax_request(request):
+                import json
+                return HTMLResponse(content=json.dumps({"success": False, "message": msg}, ensure_ascii=False), media_type="application/json")
+            return templates.TemplateResponse("edit_variants.html", {"request": request, "error": msg, "success_message": None})
+
+        success_count = 0
+        details = []
+
+        for ident in identifiers:
+            prod_id = resolve_product_id(ident, id_types)
+            if not prod_id:
+                details.append({"identifier": ident, "status": "FAIL", "message": "Không tìm thấy định danh hoặc handle hợp lệ"})
+                continue
+
+            success, msg = add_tags_to_product(prod_id, tags)
             if success:
                 success_count += 1
                 details.append({"identifier": ident, "status": "OK", "message": msg})
