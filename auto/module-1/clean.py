@@ -12,7 +12,6 @@ KEEP_CONTENT = [
 	"clean.cmd",
     "clean.py",
 	"config.json",
-	"get_product.py",
 	"handle_images.cmd",
 	"handle_images.py",
 	"handled_products.json",
@@ -29,7 +28,10 @@ KEEP_CONTENT = [
     "config.prepare.json",
     "toast.cmd",
     "collections.md",
-    "replace_amazon_rich_images.py"
+    "replace_amazon_rich_images.py",
+    "tmp.txt",
+    "todo.update-product.md",
+    "update-product.json"
 ]
 
 

@@ -1262,3 +1262,193 @@ async def create_product_submit(
             "error": str(e),
             "success_message": None
         })
+
+def resolve_product_id(identifier: str, id_types: list) -> str:
+    ident = identifier.strip()
+    if not ident:
+        return None
+    if ident.startswith("gid://shopify/Product/"):
+        return ident
+    if "id" in id_types and "handle" not in id_types:
+        return f"gid://shopify/Product/{ident}"
+    if "handle" in id_types and "id" not in id_types:
+        prod = get_product_by_handle(ident)
+        return prod["id"] if prod else None
+    if ident.isdigit():
+        return f"gid://shopify/Product/{ident}"
+    prod = get_product_by_handle(ident)
+    if prod:
+        return prod["id"]
+    return f"gid://shopify/Product/{ident}"
+
+def get_product_options_by_id(product_id: str):
+    query = """
+    query getProductOptions($id: ID!) {
+      product(id: $id) {
+        id
+        title
+        options {
+          id
+          name
+          values
+        }
+      }
+    }
+    """
+    res = requests.post(GRAPHQL_URL, json={"query": query, "variables": {"id": product_id}}, headers=HEADERS)
+    res.raise_for_status()
+    data = res.json()
+    if "errors" in data or not data.get("data", {}).get("product"):
+        return None
+    return data["data"]["product"]
+
+def add_variant_options_to_product(product_id: str, option_pairs: list):
+    product = get_product_options_by_id(product_id)
+    if not product:
+        return False, "Không tìm thấy sản phẩm trên Shopify"
+    existing_opts = product.get("options", [])
+    for opt_name, opt_values in option_pairs:
+        existing_opt = next((o for o in existing_opts if o["name"].lower() == opt_name.lower()), None)
+        if existing_opt is None:
+            mutation = """
+            mutation productOptionsCreate($productId: ID!, $options: [OptionCreateInput!]!) {
+              productOptionsCreate(productId: $productId, options: $options, variantStrategy: CREATE) {
+                product {
+                  id
+                  options { id name values }
+                }
+                userErrors { field message }
+              }
+            }
+            """
+            variables = {
+                "productId": product_id,
+                "options": [{"name": opt_name, "values": [{"name": v} for v in opt_values]}]
+            }
+            res = requests.post(GRAPHQL_URL, json={"query": mutation, "variables": variables}, headers=HEADERS)
+            res.raise_for_status()
+            data = res.json()
+            if "errors" in data:
+                return False, f"GraphQL Error: {data['errors'][0]['message']}"
+            user_errs = data.get("data", {}).get("productOptionsCreate", {}).get("userErrors", [])
+            if user_errs:
+                return False, f"Lỗi từ Shopify: {user_errs[0]['message']}"
+            if data.get("data", {}).get("productOptionsCreate", {}).get("product"):
+                existing_opts = data["data"]["productOptionsCreate"]["product"].get("options", [])
+        else:
+            existing_vals = set(existing_opt.get("values", []))
+            new_vals = [v for v in opt_values if v not in existing_vals]
+            if new_vals:
+                mutation = """
+                mutation productOptionUpdate($productId: ID!, $option: OptionUpdateInput!, $optionValuesToAdd: [OptionValueCreateInput!]!) {
+                  productOptionUpdate(productId: $productId, option: $option, optionValuesToAdd: $optionValuesToAdd, variantStrategy: MANAGE) {
+                    product {
+                      id
+                      options { id name values }
+                    }
+                    userErrors { field message }
+                  }
+                }
+                """
+                variables = {
+                    "productId": product_id,
+                    "option": {"id": existing_opt["id"], "name": existing_opt["name"]},
+                    "optionValuesToAdd": [{"name": v} for v in new_vals]
+                }
+                res = requests.post(GRAPHQL_URL, json={"query": mutation, "variables": variables}, headers=HEADERS)
+                res.raise_for_status()
+                data = res.json()
+                if "errors" in data:
+                    return False, f"GraphQL Error: {data['errors'][0]['message']}"
+                user_errs = data.get("data", {}).get("productOptionUpdate", {}).get("userErrors", [])
+                if user_errs:
+                    return False, f"Lỗi từ Shopify: {user_errs[0]['message']}"
+                if data.get("data", {}).get("productOptionUpdate", {}).get("product"):
+                    existing_opts = data["data"]["productOptionUpdate"]["product"].get("options", [])
+    return True, f"Đã thêm/cập nhật thành công {len(option_pairs)} variant options cho '{product.get('title', product_id)}'"
+
+def is_ajax_request(request: Request) -> bool:
+    accept = request.headers.get("accept", "").lower()
+    x_req = request.headers.get("x-requested-with", "").lower()
+    sec_dest = request.headers.get("sec-fetch-dest", "").lower()
+    return "application/json" in accept or x_req == "xmlhttprequest" or sec_dest == "empty"
+
+@app.get("/edit-variants", response_class=HTMLResponse)
+async def edit_variants_form(request: Request):
+    return templates.TemplateResponse("edit_variants.html", {
+        "request": request,
+        "error": None,
+        "success_message": None
+    })
+
+@app.post("/edit-variants")
+async def edit_variants_submit(request: Request):
+    try:
+        form = await request.form()
+        identifiers_raw = form.get("identifiers", "")
+        id_types = form.getlist("id_type")
+        option_names = form.getlist("option_names[]")
+        option_values = form.getlist("option_values[]")
+
+        raw_list = re.split(r'[\r\n,]+', identifiers_raw)
+        identifiers = [i.strip() for i in raw_list if i.strip()]
+        if not identifiers:
+            msg = "Danh sách sản phẩm trống hoặc không hợp lệ"
+            if is_ajax_request(request):
+                import json
+                return HTMLResponse(content=json.dumps({"success": False, "message": msg}, ensure_ascii=False), media_type="application/json")
+            return templates.TemplateResponse("edit_variants.html", {"request": request, "error": msg, "success_message": None})
+
+        option_pairs = []
+        for name, vals_str in zip(option_names, option_values):
+            name_clean = name.strip()
+            if not name_clean:
+                continue
+            vals_clean = [v.strip() for v in vals_str.split(",") if v.strip()]
+            if not vals_clean:
+                continue
+            option_pairs.append((name_clean, vals_clean))
+
+        if not option_pairs:
+            msg = "Danh sách option hoặc giá trị trống"
+            if is_ajax_request(request):
+                import json
+                return HTMLResponse(content=json.dumps({"success": False, "message": msg}, ensure_ascii=False), media_type="application/json")
+            return templates.TemplateResponse("edit_variants.html", {"request": request, "error": msg, "success_message": None})
+
+        success_count = 0
+        details = []
+
+        for ident in identifiers:
+            prod_id = resolve_product_id(ident, id_types)
+            if not prod_id:
+                details.append({"identifier": ident, "status": "FAIL", "message": "Không tìm thấy định danh hoặc handle hợp lệ"})
+                continue
+
+            success, msg = add_variant_options_to_product(prod_id, option_pairs)
+            if success:
+                success_count += 1
+                details.append({"identifier": ident, "status": "OK", "message": msg})
+            else:
+                details.append({"identifier": ident, "status": "FAIL", "message": msg})
+
+        msg_summary = f"Đã thực thi xong: Thành công {success_count}/{len(identifiers)} sản phẩm."
+        if is_ajax_request(request):
+            import json
+            res_data = {
+                "success": success_count > 0,
+                "message": msg_summary,
+                "details": details
+            }
+            return HTMLResponse(content=json.dumps(res_data, ensure_ascii=False), media_type="application/json")
+            
+        return templates.TemplateResponse("edit_variants.html", {
+            "request": request,
+            "error": None if success_count > 0 else msg_summary,
+            "success_message": msg_summary if success_count > 0 else None
+        })
+    except Exception as e:
+        if is_ajax_request(request):
+            import json
+            return HTMLResponse(content=json.dumps({"success": False, "message": str(e)}, ensure_ascii=False), media_type="application/json")
+        return templates.TemplateResponse("edit_variants.html", {"request": request, "error": str(e), "success_message": None})

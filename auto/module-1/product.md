@@ -1,6 +1,6 @@
 # Task cập nhật sản phẩm đang có sẵn trong store
 
-> Dùng `../admin/access-token.md` để truy cập vào store, sau đó bạn hãy cập nhật sản phẩm có ID là `8355824894009` theo các yêu cầu bên dưới.
+> Dùng `../admin/access-token.md` để truy cập vào store, sau đó bạn hãy cập nhật sản phẩm có ID là `8358165708857` theo các yêu cầu bên dưới.
 > Lưu ý: Bạn phải tự làm công việc cập nhật sản phẩm chứ ko phải để cho tôi làm.
 > QUAN TRỌNG: Trong quá trình cập nhật, nếu có bất kỳ lỗi nào xảy ra thì dừng toàn bộ quá trình cập nhật và báo lỗi cho tôi biết.
 
@@ -9,7 +9,7 @@
 Product Title gốc:
 
 ```text
-Handmade Tree Branch Bookshelf - Solid Wood Bookcase, Unique Tree Shelf Wall Decor for Bedroom, Living Room & Office, Rustic Natural Floating Geometric Book Shelves Display Stand
+Handcrafted Tree Branch Bookshelf - 3.75ft x 3.75ft Wall Mounted Natural Wood Floating Shelves, Decorative Rustic Tree Branch Wall Shelf for Living Room, Bedroom & Home Decor, 5-Tier Storage
 ```
 
 - Viết lại product title gốc trên thành product title mới.
@@ -23,15 +23,15 @@ Handmade Tree Branch Bookshelf - Solid Wood Bookcase, Unique Tree Shelf Wall Dec
 Mô tả sản phẩm gốc:
 
 ```text
-🌿 UNIQUE TREE BRANCH DESIGN: Meticulously handcrafted from premium solid wood, this artistic bookcase mimics natural branches, bringing a captivating rustic charm to any bedroom or living room.
+ARTISTIC TREE BRANCH SHELVES DESIGN: Transform your bare walls into a living art piece. This unique tree branch wall shelf features a whimsical, nature-inspired silhouette with 4 functional tiers, perfectly blending practical storage with organic botanical aesthetics.
 
-📐 SPACE-SAVING STORAGE: Features a clever geometric tree shelf structure that maximizes vertical space, perfectly holding books, magazines, or crystals while keeping your room clutter-free.
+HANDCRAFTED BY VIETNAMESE ARTISANS: Each piece is meticulously crafted by skilled Vietnamese artisans using premium natural wood. Featuring organic live edges and authentic wood grain textures, no two pieces are exactly alike, giving you a truly custom masterpiece.
 
-💪 SOLID WOOD STABILITY: Built from heavy-duty, durable natural wood to ensure maximum structural integrity. This reliable tree bookshelf safely supports your heavy novels and decor pieces.
+PERFECT SPECIFICATIONS FOR HOME DECOR: Measuring approximately 45" W x 45" H x 6-7" D, this tree branch bookshelf provides ample space for books, small indoor plants, crystals, and collectibles without overwhelming your room layout.
 
-🛠️ EFFORTLESS WALL MOUNT: Comes complete with all necessary mounting hardware and easy-to-follow instructions for a secure, flush-to-wall installation on any standard drywall or stud.
+STURDY WALL-MOUNTED FLOATING SYSTEM: Engineered for stability and safety, this heavy-duty wall-mounted unit creates a seamless floating appearance. All essential assembly tools and hardware are included for a straightforward installation experience.
 
-🎁 PERFECT RUSTIC DECOR: An extraordinary housewarming or holiday gift, this handmade tree bookcase adds an organic, eye-catching focal point to offices, nurseries, and modern homes.
+VERSATILE RUSTIC WALL STORAGE: The warm natural wood finish seamlessly complements rustic, bohemian, cottagecore, or modern farmhouse interiors. Ideal for elevating your living room, study, bedroom, or cozy reading nook.
 ```
 
 Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết lại mô tả sản phẩm gốc trên.
@@ -312,11 +312,11 @@ Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết
 - rich_description:
 
 ```html
-<div class="description-root"><img alt="tree branch float shelf" src="https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif" class="a-spacing-base a-lazy-loaded" data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/7b87c9e2-c1b4-4746-8c12-fdec6120448f.__CR0,0,1594,986_PT0_SX970_V1___.png"> <img alt="tree branch float shelf" src="https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif" class="a-spacing-base a-lazy-loaded" data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/569502a6-0f81-425b-953c-e1bf5dd7f554.__CR0,0,1594,986_PT0_SX970_V1___.png"> <img alt="tree branch float shelf" src="https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif" class="a-spacing-base a-lazy-loaded" data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/36afd6c9-1a8f-4ed2-824e-5641559cb8db.__CR0,0,1594,986_PT0_SX970_V1___.png"> <img alt="tree branch float shelf" src="https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif" class="a-spacing-base a-lazy-loaded" data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/90138399-aaf0-4b28-86ce-4942721c6cf5.__CR0,0,1594,986_PT0_SX970_V1___.png"> <img alt="tree branch float shelf" src="https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif" class="a-spacing-base a-lazy-loaded" data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/2b4e64ee-0b8b-4d6c-b2c1-1d88a0224af9.__CR0,0,1594,986_PT0_SX970_V1___.png"> <img alt="tree branch float shelf" src="https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif" class="a-spacing-base a-lazy-loaded" data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/68e13c26-d0ce-4102-ad6e-44323c481227.__CR0,0,1594,986_PT0_SX970_V1___.png"> <img alt="tree branch float shelf" src="https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif" class="a-spacing-base a-lazy-loaded" data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/0269ad89-dbce-4777-84bf-b02222aaa3c4.__CR0,0,1594,986_PT0_SX970_V1___.png"></div>
+<div class="description-root"><img alt="i2" src="https://cdn.shopify.com/s/files/1/0805/4410/4505/files/Handcrafted-Tree-Branch-Bookshelf---3.75ft-x-3.75ft-Wall-Mounted-Natural-Wood-Floating-Shelves-Decorative-Rustic-Tree-Branch-Wall-Shelf-for-Living-Room-Bedroom-Home-Decor-5-Tier-Stora.gif?v=1785231306" class="a-lazy-loaded" data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/0d0db3ad-e9f6-4aef-9c2b-37d681aa305c.__CR0,26,2172,672_PT0_SX970_V1___.png"> <img alt="1" src="https://cdn.shopify.com/s/files/1/0805/4410/4505/files/Handcrafted-Tree-Branch-Bookshelf---3.75ft-x-3.75ft-Wall-Mounted-Natural-Wood-Floating-Shelves-Decorative-Rustic-Tree-Branch-Wall-Shelf-for-Living-Room-Bedroom-Home-Decor-5-Tier-Stora.gif?v=1785231306" class="a-lazy-loaded" data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/2ee6a587-e945-491f-beea-371943b23211.__CR0,26,2172,672_PT0_SX970_V1___.png"> <img alt="2" src="https://cdn.shopify.com/s/files/1/0805/4410/4505/files/Handcrafted-Tree-Branch-Bookshelf---3.75ft-x-3.75ft-Wall-Mounted-Natural-Wood-Floating-Shelves-Decorative-Rustic-Tree-Branch-Wall-Shelf-for-Living-Room-Bedroom-Home-Decor-5-Tier-Stora.gif?v=1785231306" class="a-lazy-loaded" data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/d447546a-7f98-48cd-b82e-f8a4185e290a.__CR0,26,2172,672_PT0_SX970_V1___.png"> <img alt="5" src="https://cdn.shopify.com/s/files/1/0805/4410/4505/files/Handcrafted-Tree-Branch-Bookshelf---3.75ft-x-3.75ft-Wall-Mounted-Natural-Wood-Floating-Shelves-Decorative-Rustic-Tree-Branch-Wall-Shelf-for-Living-Room-Bedroom-Home-Decor-5-Tier-Stora.gif?v=1785231306" class="a-lazy-loaded" data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/e80b5470-d36f-4d79-8ad9-efbeca923ce5.__CR0,26,2172,672_PT0_SX970_V1___.png"> <img alt="6" src="https://cdn.shopify.com/s/files/1/0805/4410/4505/files/Handcrafted-Tree-Branch-Bookshelf---3.75ft-x-3.75ft-Wall-Mounted-Natural-Wood-Floating-Shelves-Decorative-Rustic-Tree-Branch-Wall-Shelf-for-Living-Room-Bedroom-Home-Decor-5-Tier-Stora.gif?v=1785231306" class="a-lazy-loaded" data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/a2aef06f-0d7a-480c-a45d-bdfd226e244c.__CR364,98,1212,375_PT0_SX970_V1___.png"></div>
 ```
 
-- amazon_link: "https://www.amazon.com/dp/B0H3PGG85X"
-- author_info: "gid://shopify/Metaobject/194643296313"
+- amazon_link: "https://www.amazon.com/dp/B0H39DW7DX?th=1"
+- author_info: "gid://shopify/Metaobject/195647275065"
 - product_material: "wood"
 - seo_product_title:
   - Viết từ product title gốc thành dạng **long-tail keyword**.
@@ -368,4 +368,4 @@ Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết
 
 ### 13. Cập nhật handle của sản phẩm
 
-- Handle của sản phẩm sẽ được suy ra từ `Handmade Tree Branch Bookshelf - Solid Wood Bookcase, Unique Tree Shelf Wall Decor for Bedroom, Living Room & Office, Rustic Natural Floating Geometric Book Shelves Display Stand`, handle của sản phẩm phải được viết dưới dạng kebab-case.
+- Handle của sản phẩm sẽ được suy ra từ `Handcrafted Tree Branch Bookshelf - 3.75ft x 3.75ft Wall Mounted Natural Wood Floating Shelves, Decorative Rustic Tree Branch Wall Shelf for Living Room, Bedroom & Home Decor, 5-Tier Storage`, handle của sản phẩm phải được viết dưới dạng kebab-case.

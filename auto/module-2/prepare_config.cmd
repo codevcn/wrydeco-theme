@@ -1,2 +1,0 @@
-python replace_amazon_rich_images.py
-python prepare_config.py

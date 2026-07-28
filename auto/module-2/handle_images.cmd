@@ -1,1 +1,0 @@
-python handle_images.py

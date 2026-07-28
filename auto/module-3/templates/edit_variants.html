@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Sửa Đặc Biệt</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+    <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo -->
+                <div class="flex-shrink-0">
+                    <a href="/" class="flex items-center gap-2 text-indigo-600 font-bold text-xl hover:text-indigo-700 transition-colors">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                        <span>LocalAdmin</span>
+                    </a>
+                </div>
+                <!-- Nav Links -->
+                <nav class="flex items-center gap-6">
+                    <a href="/" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Sản phẩm</a>
+                    <a href="/collections" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Collections</a>
+                    <a href="/create" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Tạo sản phẩm</a>
+                    <a href="/edit-variants" class="text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 pb-0.5">Sửa Đặc Biệt</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto p-4 sm:p-8">
+        <div class="mb-6">
+            <h1 class="text-3xl font-bold text-gray-800 tracking-tight">Chỉnh sửa sản phẩm đặc biệt</h1>
+            <p class="text-gray-500 mt-1 text-sm">Thêm và mở rộng thuộc tính variant cho nhiều sản phẩm cùng lúc qua Shopify Admin GraphQL.</p>
+        </div>
+
+        <!-- Tabs Group -->
+        <div class="border-b border-gray-200 mb-8">
+            <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+                <a href="#variant-editor" class="border-indigo-600 text-indigo-600 group inline-flex items-center gap-2 py-3 px-1 border-b-2 font-bold text-sm">
+                    <iconify-icon icon="mdi:layers-triple-outline" class="text-lg"></iconify-icon>
+                    <span>Chỉnh sửa Variant</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Results / Messages -->
+        <div id="alert-box" class="hidden mb-6 rounded-xl p-4 shadow-sm border"></div>
+
+        {% if error %}
+        <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-r-md shadow-sm">
+            <p class="text-sm text-red-700 font-medium">Lỗi! {{ error }}</p>
+        </div>
+        {% endif %}
+
+        {% if success_message %}
+        <div class="bg-green-50 border-l-4 border-green-500 p-4 mb-6 rounded-r-md shadow-sm">
+            <p class="text-sm text-green-700 font-medium">{{ success_message }}</p>
+        </div>
+        {% endif %}
+
+        <!-- Main Form -->
+        <form id="variant-form" action="/edit-variants" method="POST" class="space-y-8">
+            <!-- Section 1: Identifiers -->
+            <div class="bg-white p-6 rounded-2xl shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07)] border border-gray-100">
+                <div class="mb-4">
+                    <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                        <span class="bg-indigo-100 text-indigo-700 w-6 h-6 rounded-full inline-flex items-center justify-center text-xs font-bold">1</span>
+                        Xác định sản phẩm mục tiêu
+                    </h2>
+                    <p class="text-xs text-gray-500 mt-1">Nhập danh sách định danh của các sản phẩm muốn thêm variant options (mỗi dòng 1 giá trị hoặc cách nhau bởi dấu phẩy).</p>
+                </div>
+
+                <div class="space-y-3">
+                    <textarea 
+                        name="identifiers" 
+                        rows="5" 
+                        placeholder="Ví dụ:&#10;8355489677369&#10;twisted-open-cutout-wooden-floor-sculpture-2" 
+                        class="w-full p-3.5 bg-gray-50/70 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm outline-none transition-all resize-y"
+                        required></textarea>
+                    
+                    <div class="flex items-center gap-6 pt-1">
+                        <span class="text-xs font-semibold text-gray-600">Loại định danh:</span>
+                        <label class="inline-flex items-center gap-2 cursor-pointer text-sm font-medium text-gray-700 hover:text-indigo-600 transition-colors">
+                            <input type="checkbox" name="id_type" value="id" checked class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer">
+                            <span>Product ID</span>
+                        </label>
+                        <label class="inline-flex items-center gap-2 cursor-pointer text-sm font-medium text-gray-700 hover:text-indigo-600 transition-colors">
+                            <input type="checkbox" name="id_type" value="handle" class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer">
+                            <span>Product Handle</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 2: Variant Options -->
+            <div class="bg-white p-6 rounded-2xl shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07)] border border-gray-100">
+                <div class="mb-6">
+                    <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                        <span class="bg-indigo-100 text-indigo-700 w-6 h-6 rounded-full inline-flex items-center justify-center text-xs font-bold">2</span>
+                        Danh sách Variant Options
+                    </h2>
+                    <p class="text-xs text-gray-500 mt-1">Các option dưới đây sẽ được áp dụng cho toàn bộ danh sách sản phẩm ở trên.</p>
+                </div>
+
+                <!-- Container -->
+                <div id="options-container" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <!-- Default Option: Wood Finish -->
+                    <div class="option-card bg-gray-50/80 border border-gray-200 rounded-xl p-4 relative group hover:border-gray-300 transition-all">
+                        <button type="button" onclick="removeOptionCard(this)" class="absolute top-3 right-3 text-gray-400 hover:text-red-500 transition-colors p-1" title="Xóa option này">
+                            <iconify-icon icon="mdi:trash-can-outline" class="text-lg"></iconify-icon>
+                        </button>
+                        
+                        <div class="space-y-3 pr-6">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Tên Option</label>
+                                <input type="text" name="option_names[]" value="Wood Finish" placeholder="VD: Size, Wood Finish..." class="w-full bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm font-semibold text-gray-800 focus:ring-2 focus:ring-indigo-500 outline-none" required>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Các giá trị (cách nhau bởi dấu phẩy)</label>
+                                <input type="text" name="option_values[]" value="Natural, Light Oak, Walnut, Dark Walnut, Custom" placeholder="VD: Natural, Light Oak, Walnut..." class="w-full bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none" required>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Add Button Box -->
+                <button type="button" onclick="addOptionCard()" class="w-full py-4 border-2 border-dashed border-gray-300 hover:border-indigo-500 rounded-xl flex items-center justify-center gap-2 text-gray-500 hover:text-indigo-600 bg-gray-50/40 hover:bg-indigo-50/30 transition-all cursor-pointer group">
+                    <iconify-icon icon="mdi:plus-circle" class="text-2xl group-hover:scale-110 transition-transform"></iconify-icon>
+                    <span class="font-bold text-sm">Thêm mới 1 variant option</span>
+                </button>
+            </div>
+
+            <!-- Submit Section -->
+            <div class="flex items-center justify-end gap-4 pt-2">
+                <button type="submit" id="submit-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer focus:ring-4 focus:ring-indigo-200">
+                    <iconify-icon icon="mdi:content-save-check-outline" class="text-xl"></iconify-icon>
+                    <span>Thêm Variant Options</span>
+                </button>
+            </div>
+        </form>
+    </main>
+
+    <!-- Template cho card Option mới -->
+    <template id="option-card-template">
+        <div class="option-card bg-gray-50/80 border border-gray-200 rounded-xl p-4 relative group hover:border-gray-300 transition-all animate-fadeIn">
+            <button type="button" onclick="removeOptionCard(this)" class="absolute top-3 right-3 text-gray-400 hover:text-red-500 transition-colors p-1" title="Xóa option này">
+                <iconify-icon icon="mdi:trash-can-outline" class="text-lg"></iconify-icon>
+            </button>
+            
+            <div class="space-y-3 pr-6">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Tên Option</label>
+                    <input type="text" name="option_names[]" value="" placeholder="VD: Size, Material, Color..." class="w-full bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm font-semibold text-gray-800 focus:ring-2 focus:ring-indigo-500 outline-none" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Các giá trị (cách nhau bởi dấu phẩy)</label>
+                    <input type="text" name="option_values[]" value="" placeholder="VD: S, M, L, XL hoặc Red, Blue..." class="w-full bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none" required>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <script>
+        function addOptionCard() {
+            const container = document.getElementById('options-container');
+            const template = document.getElementById('option-card-template');
+            const clone = template.content.cloneNode(true);
+            container.appendChild(clone);
+            // Focus vào input đầu tiên của card mới tạo
+            const newCard = container.lastElementChild;
+            const firstInput = newCard.querySelector('input[name="option_names[]"]');
+            if (firstInput) firstInput.focus();
+        }
+
+        function removeOptionCard(btn) {
+            const container = document.getElementById('options-container');
+            if (container.querySelectorAll('.option-card').length <= 1) {
+                alert('Bạn cần giữ tối thiểu 1 Variant Option!');
+                return;
+            }
+            btn.closest('.option-card').remove();
+        }
+
+        // Xử lý gửi form bằng AJAX để có trải nghiệm mượt mà không reload
+        document.getElementById('variant-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const form = e.target;
+            const submitBtn = document.getElementById('submit-btn');
+            const alertBox = document.getElementById('alert-box');
+            
+            // Validate sơ bộ
+            const identifiers = form.querySelector('textarea[name="identifiers"]').value.trim();
+            if (!identifiers) {
+                alert('Vui lòng nhập danh sách Product ID hoặc Product Handle!');
+                return;
+            }
+
+            const optionNames = Array.from(form.querySelectorAll('input[name="option_names[]"]')).map(i => i.value.trim());
+            const optionValues = Array.from(form.querySelectorAll('input[name="option_values[]"]')).map(i => i.value.trim());
+
+            if (optionNames.some(n => !n) || optionValues.some(v => !v)) {
+                alert('Vui lòng điền đầy đủ Tên Option và Các giá trị!');
+                return;
+            }
+
+            // Hiển thị trạng thái loading
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<iconify-icon icon="mdi:loading" class="text-xl animate-spin"></iconify-icon> <span>Đang thực thi...</span>`;
+            alertBox.className = 'mb-6 rounded-xl p-4 shadow-sm border bg-blue-50 border-blue-200 text-blue-700 font-medium flex items-center gap-3';
+            alertBox.innerHTML = `<iconify-icon icon="mdi:loading" class="text-xl animate-spin"></iconify-icon> <span>Đang xử lý thêm variant options vào các sản phẩm trên Shopify...</span>`;
+            alertBox.classList.remove('hidden');
+
+            try {
+                const formData = new FormData(form);
+                const response = await fetch('/edit-variants', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alertBox.className = 'mb-6 rounded-xl p-4 shadow-sm border bg-green-50 border-green-200 text-green-800';
+                    let html = `<div class="flex items-start gap-3"><iconify-icon icon="mdi:check-circle" class="text-2xl text-green-600 mt-0.5 flex-shrink-0"></iconify-icon><div>`;
+                    html += `<p class="font-bold text-base">${data.message}</p>`;
+                    if (data.details && data.details.length > 0) {
+                        html += `<ul class="mt-2 space-y-1 text-xs font-mono bg-white/70 p-3 rounded-lg border border-green-100 max-h-48 overflow-y-auto">`;
+                        data.details.forEach(detail => {
+                            const badgeColor = detail.status === 'OK' ? 'text-green-700' : 'text-red-600';
+                            html += `<li class="flex items-center justify-between py-0.5 border-b border-gray-100 last:border-0"><span class="truncate pr-2">${detail.identifier}</span><span class="font-bold ${badgeColor}">${detail.status}: ${detail.message}</span></li>`;
+                        });
+                        html += `</ul>`;
+                    }
+                    html += `</div></div>`;
+                    alertBox.innerHTML = html;
+                } else {
+                    alertBox.className = 'mb-6 rounded-xl p-4 shadow-sm border bg-red-50 border-red-200 text-red-700 flex items-center gap-3';
+                    alertBox.innerHTML = `<iconify-icon icon="mdi:alert-circle" class="text-2xl text-red-600 flex-shrink-0"></iconify-icon> <div><p class="font-bold">Đã xảy ra lỗi!</p><p class="text-sm mt-0.5">${data.message}</p></div>`;
+                }
+            } catch (err) {
+                alertBox.className = 'mb-6 rounded-xl p-4 shadow-sm border bg-red-50 border-red-200 text-red-700 flex items-center gap-3';
+                alertBox.innerHTML = `<iconify-icon icon="mdi:alert-circle" class="text-2xl text-red-600 flex-shrink-0"></iconify-icon> <div><p class="font-bold">Lỗi kết nối máy chủ!</p><p class="text-sm mt-0.5">${err.message}</p></div>`;
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `<iconify-icon icon="mdi:content-save-check-outline" class="text-xl"></iconify-icon> <span>Thêm Variant Options</span>`;
+                alertBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+    </script>
+</body>
+</html>
