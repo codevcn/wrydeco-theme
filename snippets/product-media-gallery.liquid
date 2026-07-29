@@ -78,6 +78,31 @@
     inline-size: var(--sp-5);
     block-size: var(--sp-5);
   }
+  .product-gallery__wishlist-loading {
+    display: none;
+    inline-size: var(--sp-5);
+    block-size: var(--sp-5);
+    border: calc(var(--border-width) * 2) solid currentColor;
+    border-inline-start-color: transparent;
+    border-radius: var(--radius-full);
+    animation: product-gallery-wishlist-spin var(--timing-extra-long) linear infinite;
+  }
+  .product-gallery__wishlist[aria-busy='true'] .product-gallery__wishlist-icon {
+    display: none;
+  }
+  .product-gallery__wishlist[aria-busy='true'] .product-gallery__wishlist-loading {
+    display: block;
+  }
+  @keyframes product-gallery-wishlist-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .product-gallery__wishlist-loading {
+      animation: none;
+    }
+  }
   .product-gallery__main-item {
     display: none;
     width: fit-content;
@@ -139,6 +164,17 @@
     -webkit-user-drag: none;
   }
 
+  @media screen and (max-width: 1320px) {
+    .product-gallery__main {
+      width: 100%;
+      height: auto;
+    }
+
+    .product-gallery__main-item.is-active {
+      width: 100%;
+    }
+  }
+
   @media screen and (max-width: 720px) {
     .product-gallery {
       margin-block-end: var(--sp-3);
@@ -179,7 +215,7 @@
     }
   }
 
-  @media (hover: hover) and (pointer: fine) and (min-width: 990px) {
+  @media (hover: hover) and (pointer: fine) and (min-width: 921px) {
     .product-gallery__zoom-popup {
       position: fixed;
       top: var(--product-gallery-zoom-top, calc(var(--sp-12) + var(--sp-3)));
@@ -464,6 +500,7 @@
       aria-pressed="false"
     >
       <span class="product-gallery__wishlist-icon" data-product-wishlist-icon aria-hidden="true"></span>
+      <span class="product-gallery__wishlist-loading" aria-hidden="true"></span>
     </button>
     <div class="product-gallery__zoom-lens" data-zoom-lens aria-hidden="true"></div>
     {% assign featured_media = current_variant.featured_media | default: product.featured_media %}
@@ -932,7 +969,7 @@
     }
 
     function initGalleryZoom() {
-      if (!window.matchMedia('(hover: hover) and (pointer: fine) and (min-width: 990px)').matches) return;
+      var zoomMediaQuery = window.matchMedia('(hover: hover) and (pointer: fine) and (min-width: 921px)');
 
       document.querySelectorAll('[data-product-gallery]').forEach(function (gallery) {
         if (gallery.dataset.zoomInit === 'true') return;
@@ -971,7 +1008,16 @@
           }
         }
 
+        function deactivateZoom() {
+          zoomPopup.classList.remove('is-active');
+          zoomPopup.style.backgroundImage = 'none';
+          restoreZoomPopup();
+          if (lens) lens.classList.remove('is-active');
+        }
+
         mainContainer.addEventListener('mouseenter', function () {
+          if (!zoomMediaQuery.matches) return;
+
           var activeItem = gallery.querySelector('.product-gallery__main-item.is-active');
           if (!activeItem) return;
           var img = activeItem.querySelector('img.product-gallery__main-media');
@@ -987,6 +1033,10 @@
         });
 
         mainContainer.addEventListener('mousemove', function (e) {
+          if (!zoomMediaQuery.matches) {
+            deactivateZoom();
+            return;
+          }
           if (!zoomPopup.classList.contains('is-active')) return;
 
           var rect = mainContainer.getBoundingClientRect();
@@ -1018,10 +1068,11 @@
         });
 
         mainContainer.addEventListener('mouseleave', function () {
-          zoomPopup.classList.remove('is-active');
-          zoomPopup.style.backgroundImage = 'none';
-          restoreZoomPopup();
-          if (lens) lens.classList.remove('is-active');
+          deactivateZoom();
+        });
+
+        zoomMediaQuery.addEventListener('change', function (event) {
+          if (!event.matches) deactivateZoom();
         });
       });
     }
@@ -1087,10 +1138,8 @@
       return generatedCustomerId;
     }
 
-    // Locally mirror which variants this browser has added, so the heart shows
-    // the correct state on load and when switching variants. This reflects adds
-    // made in THIS browser only; it does not track removals or other devices —
-    // the authoritative check is still the API response when the shopper clicks.
+    // Locally mirror wishlist item ids by variant, so the heart shows the known
+    // state on load and the API item can be removed on the next click.
     var WISHLIST_ADDED_STORAGE_PREFIX = 'wrydeco_wishlist_added_';
 
     function wishlistStorageKey(customerId) {
@@ -1110,18 +1159,84 @@
 
     function isVariantAdded(variantId) {
       if (!variantId) return false;
-      return readAddedVariants(resolveWishlistCustomerId())[String(variantId)] === true;
+      return Boolean(readAddedVariants(resolveWishlistCustomerId())[String(variantId)]);
     }
 
-    function rememberAddedVariant(customerId, variantId) {
+    function rememberAddedVariant(customerId, variantId, wishlistItemId) {
       if (!variantId) return;
       try {
         var map = readAddedVariants(customerId);
-        map[String(variantId)] = true;
+        map[String(variantId)] = wishlistItemId || true;
         window.localStorage.setItem(wishlistStorageKey(customerId), JSON.stringify(map));
       } catch (error) {
         // Non-fatal: the button still works without the local mirror.
       }
+    }
+
+    function forgetAddedVariant(customerId, variantId) {
+      if (!variantId) return;
+      try {
+        var map = readAddedVariants(customerId);
+        delete map[String(variantId)];
+
+        if (Object.keys(map).length) {
+          window.localStorage.setItem(wishlistStorageKey(customerId), JSON.stringify(map));
+        } else {
+          window.localStorage.removeItem(wishlistStorageKey(customerId));
+        }
+      } catch (error) {
+        // Non-fatal: the remote wishlist is still authoritative.
+      }
+    }
+
+    function getStoredWishlistItemId(customerId, variantId) {
+      var storedValue = readAddedVariants(customerId)[String(variantId)];
+      return storedValue === true ? '' : storedValue || '';
+    }
+
+    function getWishlistItemVariantId(item) {
+      if (!item) return '';
+      if (item.variantId) return item.variantId;
+      return item.variant && item.variant.id ? item.variant.id : '';
+    }
+
+    function findWishlistItem(apiHost, shopId, customerId, variantId) {
+      var query =
+        '?sid=' + encodeURIComponent(String(shopId)) + '&cid=' + encodeURIComponent(String(customerId));
+
+      return window
+        .fetch(apiHost + '/bundle/api/v2/sf/ws' + query, {
+          method: 'GET',
+          headers: { Accept: 'application/json' },
+          cache: 'no-store',
+        })
+        .then(function (response) {
+          if (!response.ok) throw new Error('Wishlist lookup failed');
+          return response.json();
+        })
+        .then(function (items) {
+          if (!Array.isArray(items)) return null;
+
+          return (
+            items.find(function (item) {
+              return String(getWishlistItemVariantId(item)) === String(variantId);
+            }) || null
+          );
+        });
+    }
+
+    function removeWishlistItem(apiHost, shopId, customerId, wishlistItemId) {
+      var path = [shopId, customerId, wishlistItemId]
+        .map(function (value) {
+          return encodeURIComponent(String(value));
+        })
+        .join('/');
+
+      return window.fetch(apiHost + '/bundle/api/v2/sf/ws/' + path, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+      });
     }
 
     function applyWishlistButtonState(button, added) {
@@ -1162,9 +1277,11 @@
       return button.dataset.wishlistVariantId;
     }
 
-    function updateWishlistHeaderCount() {
+    function updateWishlistHeaderCount(change) {
       var counter = document.querySelector('#vitals-wishlist-header .Vtl-WishlistHeader__HeartCounter');
       if (!counter) {
+        if (change < 1) return;
+
         var iconWrapper = document.querySelector('#vitals-wishlist-header .Vtl-WishlistHeader__IconWrapper');
         if (!iconWrapper) return;
 
@@ -1174,7 +1291,14 @@
       }
 
       var count = Number.parseInt(counter.textContent, 10);
-      counter.textContent = String(Number.isNaN(count) ? 1 : count + 1);
+      var nextCount = Math.max(0, (Number.isNaN(count) ? 0 : count) + change);
+
+      if (nextCount === 0) {
+        counter.remove();
+        return;
+      }
+
+      counter.textContent = String(nextCount);
     }
 
     function showWishlistToast(message, type) {
@@ -1218,17 +1342,39 @@
           var shopId = wishlistData.shopInfo && wishlistData.shopInfo.id;
           var variantId = getWishlistVariantId(button);
           var customerId = getWishlistCustomerId();
+          var isRemoving = button.getAttribute('aria-pressed') === 'true';
 
           if (!apiHost || !shopId || !customerId || !variantId) {
-            showWishlistToast('We could not add this piece to your wishlist. Please try again.', 'error');
+            showWishlistToast('We could not update your wishlist. Please try again.', 'error');
             return;
           }
 
+          var idleAriaLabel = button.getAttribute('aria-label');
+          var loadingAriaLabel = isRemoving ? 'Removing from wishlist' : 'Adding to wishlist';
           button.disabled = true;
           button.setAttribute('aria-busy', 'true');
+          button.setAttribute('aria-label', loadingAriaLabel);
 
-          window
-            .fetch(apiHost + '/bundle/api/v2/sf/ws', {
+          var request;
+
+          if (isRemoving) {
+            var storedWishlistItemId = getStoredWishlistItemId(customerId, variantId);
+            var wishlistItemRequest = storedWishlistItemId
+              ? Promise.resolve({ id: storedWishlistItemId })
+              : findWishlistItem(apiHost, shopId, customerId, variantId);
+
+            request = wishlistItemRequest.then(function (wishlistItem) {
+              if (!wishlistItem || !wishlistItem.id) return null;
+
+              return removeWishlistItem(apiHost, shopId, customerId, wishlistItem.id).then(function (response) {
+                if (!response.ok && response.status !== 404) {
+                  throw new Error('Wishlist remove failed');
+                }
+                return response;
+              });
+            });
+          } else {
+            request = window.fetch(apiHost + '/bundle/api/v2/sf/ws', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -1237,8 +1383,19 @@
                 productId: Number(button.dataset.wishlistProductId),
                 variantId: Number(variantId),
               }),
-            })
+            });
+          }
+
+          request
             .then(function (response) {
+              if (isRemoving) {
+                forgetAddedVariant(customerId, variantId);
+                applyWishlistButtonState(button, false);
+                updateWishlistHeaderCount(-1);
+                showWishlistToast('Removed from your wishlist.', 'success');
+                return;
+              }
+
               if (response.status === 409) {
                 rememberAddedVariant(customerId, variantId);
                 applyWishlistButtonState(button, true);
@@ -1247,17 +1404,32 @@
               }
               if (!response.ok) throw new Error('Wishlist request failed');
 
-              rememberAddedVariant(customerId, variantId);
-              applyWishlistButtonState(button, true);
-              updateWishlistHeaderCount();
-              showWishlistToast('Added to your wishlist.', 'success');
+              return response
+                .json()
+                .catch(function () {
+                  return null;
+                })
+                .then(function (wishlistItem) {
+                  rememberAddedVariant(customerId, variantId, wishlistItem && wishlistItem.id);
+                  applyWishlistButtonState(button, true);
+                  updateWishlistHeaderCount(1);
+                  showWishlistToast('Added to your wishlist.', 'success');
+                });
             })
             .catch(function () {
-              showWishlistToast('We could not add this piece to your wishlist. Please try again.', 'error');
+              showWishlistToast(
+                isRemoving
+                  ? 'We could not remove this piece from your wishlist. Please try again.'
+                  : 'We could not add this piece to your wishlist. Please try again.',
+                'error'
+              );
             })
             .finally(function () {
               button.disabled = false;
               button.removeAttribute('aria-busy');
+              if (button.getAttribute('aria-label') === loadingAriaLabel) {
+                button.setAttribute('aria-label', idleAriaLabel);
+              }
             });
         });
       });
