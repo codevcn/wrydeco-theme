@@ -936,6 +936,139 @@ def get_products_by_special_filter(special_filter, sort_by="created_desc"):
         "productsCount": {"count": len(all_matched_edges)}
     }
 
+def get_products_by_review_status(has_reviews: bool, sort_by="created_desc"):
+    import json
+    query = """
+    query getProducts($after: String) {
+      products(first: 50, after: $after) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        edges {
+          node {
+            id
+            handle
+            title
+            descriptionHtml
+            createdAt
+            productType
+            category {
+              name
+            }
+            priceRangeV2 {
+              minVariantPrice {
+                amount
+              }
+            }
+            options {
+              name
+            }
+            collections(first: 20) {
+              edges {
+                node {
+                  title
+                }
+              }
+            }
+            amazon_link: metafield(namespace: "custom", key: "amazon_link") {
+              value
+            }
+            reviews_count: metafield(namespace: "reviews", key: "rating_count") {
+              value
+            }
+            judgeme_data: metafield(namespace: "judgeme", key: "review_widget_data") {
+              value
+            }
+            media(first: 50) {
+              edges {
+                node {
+                  ... on MediaImage {
+                    id
+                    image {
+                      url
+                    }
+                  }
+                  ... on Video {
+                    id
+                    preview {
+                      image {
+                        url
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    """
+    all_matched_edges = []
+    has_next = True
+    cursor = None
+    
+    while has_next:
+        variables = {}
+        if cursor:
+            variables["after"] = cursor
+            
+        res = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=HEADERS)
+        res.raise_for_status()
+        data = res.json()
+        if "errors" in data:
+            print("GraphQL Errors:", data["errors"])
+            break
+            
+        products_data = data["data"]["products"]
+        for edge in products_data["edges"]:
+            node = edge["node"]
+            count = 0
+            
+            rc = node.get("reviews_count")
+            if rc and rc.get("value"):
+                try:
+                    count = int(rc["value"])
+                except:
+                    pass
+                    
+            if count == 0:
+                jdgm = node.get("judgeme_data")
+                if jdgm and jdgm.get("value"):
+                    try:
+                        jdgm_data = json.loads(jdgm["value"])
+                        count = int(jdgm_data.get("number_of_reviews", 0))
+                    except:
+                        pass
+                        
+            matched = (count > 0) if has_reviews else (count == 0)
+            if matched:
+                all_matched_edges.append(edge)
+                
+        page_info = products_data.get("pageInfo", {})
+        has_next = page_info.get("hasNextPage", False)
+        cursor = page_info.get("endCursor")
+        
+    def get_sort_key(edge):
+        if sort_by in ["price_asc", "price_desc"]:
+            price_data = edge["node"].get("priceRangeV2")
+            if price_data and price_data.get("minVariantPrice"):
+                return float(price_data["minVariantPrice"].get("amount", 0))
+            return 0.0
+        return edge["node"].get("createdAt", "")
+        
+    reverse_sort = sort_by in ["created_desc", "price_desc"]
+    all_matched_edges.sort(key=get_sort_key, reverse=reverse_sort)
+        
+    return {
+        "products": {
+            "edges": all_matched_edges,
+            "pageInfo": {"hasNextPage": False, "hasPreviousPage": False}
+        },
+        "productsCount": {"count": len(all_matched_edges)}
+    }
+
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request, after: str = None, before: str = None, filter_type: str = "tag", filter_value: str = None, sort_by: str = "created_desc", special_filter: str = ""):
     try:
@@ -956,6 +1089,8 @@ async def read_root(request: Request, after: str = None, before: str = None, fil
             
         if special_filter and special_filter in ["out_of_stock", "in_stock", "not_tracked"]:
             data = get_products_by_special_filter(special_filter, sort_by=sort_by)
+        elif special_filter and special_filter in ["has_reviews", "no_reviews"]:
+            data = get_products_by_review_status(special_filter == "has_reviews", sort_by=sort_by)
         elif filter_value and filter_type == "metafield_amazon_link":
             data = get_products_by_metafield_amazon_link(filter_value, sort_by=sort_by)
         elif filter_value and filter_type == "metafield_rich_description":
