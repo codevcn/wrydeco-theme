@@ -53,7 +53,7 @@
     padding: var(--sp-0);
     border: var(--border-width) solid var(--color-bark);
     border-radius: var(--radius-full);
-    background-color: #ffffff63;
+    background-color: #ffffffc9;
     box-shadow: var(--shadow-elevation-1);
     color: var(--color-bark);
     cursor: pointer;
@@ -100,6 +100,40 @@
   }
   @media (prefers-reduced-motion: reduce) {
     .product-gallery__wishlist-loading {
+      animation: none;
+    }
+  }
+  .product-gallery__stage-loading {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    background-color: var(--surface-default);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .product-gallery__main.is-loading .product-gallery__stage-loading {
+    opacity: 1;
+    visibility: visible;
+  }
+  .product-gallery__stage-spinner {
+    display: block;
+    inline-size: var(--sp-7);
+    block-size: var(--sp-7);
+    border: calc(var(--border-width) * 2) solid var(--border-default);
+    border-block-start-color: var(--color-clay);
+    border-radius: var(--radius-full);
+    animation: product-gallery-stage-spin var(--timing-extra-long) linear infinite;
+  }
+  @keyframes product-gallery-stage-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .product-gallery__stage-spinner {
       animation: none;
     }
   }
@@ -566,6 +600,14 @@
         {% endcase %}
       </div>
     {% endfor %}
+    <div
+      class="product-gallery__stage-loading"
+      data-gallery-stage-loading
+      role="status"
+      aria-label="Loading product image"
+    >
+      <span class="product-gallery__stage-spinner" aria-hidden="true"></span>
+    </div>
   </div>
 
   {% if product.media.size > 1 %}
@@ -590,15 +632,6 @@
           aria-controls="ProductMedia-{{ section_id }}-{{ media.id }}"
           aria-pressed="{% if is_active_thumbnail %}true{% else %}false{% endif %}"
           aria-label="View {{ thumbnail_alt | escape }}, media {{ forloop.index }} of {{ product.media.size }}"
-          onclick="
-            const gallery = this.closest('[data-product-gallery]');
-            gallery.querySelectorAll('.product-gallery__main-item').forEach(el => el.classList.remove('is-active'));
-            gallery.querySelector('.product-gallery__main-item[data-main-media-id=\'{{ media.id }}\']').classList.add('is-active');
-            gallery.querySelectorAll('.product-gallery__thumbnail').forEach(el => el.classList.remove('is-active'));
-            gallery.querySelectorAll('.product-gallery__thumbnail').forEach(el => el.setAttribute('aria-pressed', 'false'));
-            this.classList.add('is-active');
-            this.setAttribute('aria-pressed', 'true');
-          "
         >
           {{ media | image_url: width: 160 | image_tag: loading: 'lazy', alt: thumbnail_alt }}
         </button>
@@ -692,6 +725,85 @@
 
 <script>
   (function () {
+    function initGalleryStageLoading() {
+      document.querySelectorAll('[data-product-gallery]').forEach(function (gallery) {
+        if (gallery.dataset.stageLoadingInit === 'true') return;
+
+        var stage = gallery.querySelector('.product-gallery__main');
+        var loadingIndicator = gallery.querySelector('[data-gallery-stage-loading]');
+        var thumbnails = Array.prototype.slice.call(gallery.querySelectorAll('.product-gallery__thumbnail'));
+        if (!stage || !loadingIndicator || !thumbnails.length) return;
+
+        gallery.dataset.stageLoadingInit = 'true';
+        var loadingRequestId = 0;
+        var minimumLoadingDuration = 180;
+
+        function setActiveThumbnail(selectedThumbnail) {
+          thumbnails.forEach(function (thumbnail) {
+            var isSelected = thumbnail === selectedThumbnail;
+            thumbnail.classList.toggle('is-active', isSelected);
+            thumbnail.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+          });
+        }
+
+        function setActiveItem(selectedItem) {
+          gallery.querySelectorAll('.product-gallery__main-item').forEach(function (item) {
+            item.classList.toggle('is-active', item === selectedItem);
+          });
+        }
+
+        function stopLoading(requestId) {
+          if (requestId !== loadingRequestId) return;
+          stage.classList.remove('is-loading');
+          stage.removeAttribute('aria-busy');
+        }
+
+        thumbnails.forEach(function (thumbnail) {
+          thumbnail.addEventListener('click', function () {
+            var selectedItem = gallery.querySelector(
+              '.product-gallery__main-item[data-main-media-id="' + thumbnail.dataset.thumbnailId + '"]'
+            );
+            if (!selectedItem) return;
+
+            var activeItem = gallery.querySelector('.product-gallery__main-item.is-active');
+            if (selectedItem === activeItem) return;
+
+            loadingRequestId += 1;
+            var requestId = loadingRequestId;
+            var selectedImage = selectedItem.querySelector('img.product-gallery__main-media');
+
+            setActiveThumbnail(thumbnail);
+
+            var loadingStartedAt = Date.now();
+            stage.classList.add('is-loading');
+            stage.setAttribute('aria-busy', 'true');
+            setActiveItem(selectedItem);
+
+            var finishLoading = function () {
+              var elapsedTime = Date.now() - loadingStartedAt;
+              var remainingTime = Math.max(0, minimumLoadingDuration - elapsedTime);
+              window.setTimeout(function () {
+                stopLoading(requestId);
+              }, remainingTime);
+            };
+
+            if (!selectedImage || (selectedImage.complete && selectedImage.naturalWidth > 0)) {
+              finishLoading();
+              return;
+            }
+
+            selectedImage.addEventListener('load', finishLoading, { once: true });
+            selectedImage.addEventListener('error', finishLoading, { once: true });
+            selectedImage.loading = 'eager';
+
+            if (selectedImage.complete) {
+              finishLoading();
+            }
+          });
+        });
+      });
+    }
+
     function initGalleryLightbox() {
       document.querySelectorAll('[data-product-gallery]').forEach(function (gallery) {
         if (gallery.dataset.lightboxInit === 'true') return;
@@ -1437,11 +1549,13 @@
 
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', function () {
+        initGalleryStageLoading();
         initGalleryLightbox();
         initGalleryZoom();
         initProductWishlist();
       });
     } else {
+      initGalleryStageLoading();
       initGalleryLightbox();
       initGalleryZoom();
       initProductWishlist();

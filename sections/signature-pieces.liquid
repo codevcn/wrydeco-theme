@@ -14,7 +14,43 @@
     {%- comment -%} Sort the pieces by price, lowest first. {%- endcomment -%}
     {%- assign sorted_products = collection.products | sort: 'price' -%}
 
-    <div class="signature-pieces__grid" role="list">
+    <div class="signature-pieces__carousel">
+      <div
+        class="signature-pieces__controls"
+        data-signature-carousel-controls
+        role="group"
+        aria-label="Carousel navigation"
+      >
+        <button
+          type="button"
+          class="signature-pieces__control signature-pieces__control--previous"
+          data-signature-carousel-previous
+          aria-controls="SignaturePiecesCarousel-{{ section.id }}"
+          aria-label="View previous signature pieces"
+        >
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+            <path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <button
+          type="button"
+          class="signature-pieces__control signature-pieces__control--next"
+          data-signature-carousel-next
+          aria-controls="SignaturePiecesCarousel-{{ section.id }}"
+          aria-label="View next signature pieces"
+        >
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+            <path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+
+      <div
+        id="SignaturePiecesCarousel-{{ section.id }}"
+        class="signature-pieces__grid"
+        data-signature-carousel
+        role="list"
+      >
       {%- for product in sorted_products limit: 12 -%}
         {%- assign display_title = product.metafields.custom.artwork_name.value | default: product.title -%}
         {%- liquid
@@ -45,6 +81,7 @@
           data-product-id="{{ product.id }}"
           data-product-handle="{{ product.handle | escape }}"
           data-variant-id="{{ product.variants.first.id }}"
+          data-product-url="{{ product.url | escape }}"
         >
           <div class="signature-pieces__media">
             <a
@@ -63,6 +100,7 @@
                     loading: 'lazy',
                     widths: '360, 540, 720, 900',
                     sizes: '(min-width: 80rem) 23vw, (min-width: 48rem) 46vw, 88vw',
+                    draggable: false,
                     alt: featured_media_alt
                 }}
                 {%- comment -%}
@@ -86,6 +124,7 @@
                       loading: 'lazy',
                       widths: '360, 540, 720, 900',
                       sizes: '(min-width: 80rem) 23vw, (min-width: 48rem) 46vw, 88vw',
+                      draggable: false,
                       alt: hover_media_alt
                   }}
                   {%- assign hover_count = hover_count | plus: 1 -%}
@@ -102,6 +141,7 @@
                   width="900"
                   height="1080"
                   loading="lazy"
+                  draggable="false"
                 >
               {%- endif -%}
             </a>
@@ -216,6 +256,7 @@
                   width="900"
                   height="1080"
                   loading="lazy"
+                  draggable="false"
                 >
               </span>
 
@@ -256,6 +297,7 @@
           </article>
         {%- endfor -%}
       {%- endfor -%}
+      </div>
     </div>
 
     {%- if section.settings.button_label != blank -%}
@@ -286,7 +328,7 @@
 {% stylesheet %}
   .signature-pieces {
     width: 100%;
-    padding: var(--section-padding-y, 80px) 16px;
+    padding: var(--section-padding-y) var(--container-padding-x);
     background: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0) 42%),
       linear-gradient(180deg, #f7f3ee 0%, #f5f1ed 100%);
     color: var(--text-primary);
@@ -317,19 +359,80 @@
     text-wrap: balance;
   }
 
+  .signature-pieces__carousel {
+    position: relative;
+  }
+
+  .signature-pieces__controls {
+    position: absolute;
+    inset: var(--sp-0);
+    z-index: 3;
+    display: none;
+    pointer-events: none;
+  }
+
+  .signature-pieces__controls[hidden] {
+    display: none;
+  }
+
+  .signature-pieces__control {
+    position: absolute;
+    top: 50%;
+    display: grid;
+    place-items: center;
+    inline-size: var(--sp-7);
+    block-size: var(--sp-7);
+    padding: var(--sp-0);
+    border: var(--border-width) solid var(--border-default);
+    border-radius: var(--radius-full);
+    background-color: var(--surface-elevated);
+    box-shadow: var(--shadow-elevation-1);
+    color: var(--color-earth-brown);
+    cursor: pointer;
+    pointer-events: auto;
+    transform: translateY(-50%);
+    transition: background-color var(--timing-short) var(--ease-standard),
+      color var(--timing-short) var(--ease-standard),
+      opacity var(--timing-short) var(--ease-standard);
+  }
+
+  .signature-pieces__control:disabled {
+    cursor: default;
+    opacity: 0.35;
+  }
+
+  .signature-pieces__control svg {
+    inline-size: var(--sp-4-bigger);
+    block-size: var(--sp-4-bigger);
+  }
+
+  .signature-pieces__control--previous svg {
+    transform: rotate(180deg);
+  }
+
+  .signature-pieces__control--previous {
+    inset-inline-start: var(--sp-3);
+  }
+
+  .signature-pieces__control--next {
+    inset-inline-end: var(--sp-3);
+  }
+
   .signature-pieces__grid {
     display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(272px, 84vw);
-    gap: 14px;
-    overflow-x: auto;
-    padding: 0 0 12px;
-    scroll-snap-type: x mandatory;
-    scrollbar-width: none;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--sp-3);
+    overflow: visible;
+    padding: var(--sp-0);
   }
 
   .signature-pieces__grid::-webkit-scrollbar {
     display: none;
+  }
+
+  .signature-pieces__grid.is-dragging {
+    cursor: grabbing;
+    scroll-snap-type: none;
   }
 
   .signature-pieces__card {
@@ -344,6 +447,10 @@
     box-shadow: 0 18px 42px rgba(62, 39, 25, 0.05);
     transition: transform var(--timing-base) var(--ease-standard), box-shadow var(--timing-base) var(--ease-standard),
       border-color var(--timing-base) var(--ease-standard);
+  }
+
+  .signature-pieces__card[data-product-url] {
+    cursor: pointer;
   }
 
   .signature-pieces__media {
@@ -374,6 +481,8 @@
     object-fit: cover;
     opacity: 0;
     z-index: 0;
+    user-select: none;
+    -webkit-user-drag: none;
     transition: transform 700ms var(--ease-standard), opacity var(--timing-base) var(--ease-standard);
   }
 
@@ -668,6 +777,11 @@
       transform: scale(1.05);
     }
 
+    .signature-pieces__control:not(:disabled):hover {
+      background-color: var(--color-earth-brown);
+      color: var(--color-cream);
+    }
+
     .signature-pieces__primary:hover,
     .signature-pieces__button:hover {
       transform: translateY(-2px);
@@ -690,29 +804,47 @@
     }
   }
 
-  @media screen and (min-width: 48rem) {
+  @media screen and (max-width: 74.999rem) {
     .signature-pieces {
-      padding-inline: 32px;
+      padding-inline: var(--sp-6);
+    }
+
+    .signature-pieces__controls {
+      display: block;
     }
 
     .signature-pieces__grid {
-      grid-auto-columns: calc((100% - 16px) / 2);
-      gap: 16px;
+      grid-auto-flow: column;
+      grid-auto-columns: 46%;
+      grid-template-columns: none;
+      gap: var(--sp-4);
+      overflow-x: auto;
+      padding-block-end: var(--sp-3);
+      scroll-snap-type: x mandatory;
+      scrollbar-width: none;
+      cursor: grab;
+      overscroll-behavior-inline: contain;
+      touch-action: pan-y;
+      user-select: none;
+    }
+
+    .signature-pieces__card[data-product-url] {
+      cursor: grab;
+    }
+
+    .signature-pieces__grid.is-dragging .signature-pieces__card[data-product-url] {
+      cursor: grabbing;
     }
   }
 
-  @media screen and (min-width: 75rem) {
+  @media screen and (max-width: 47.999rem) {
     .signature-pieces {
-      padding-inline: var(--container-padding-x, 64px);
+      padding-inline: var(--sp-4);
     }
 
     .signature-pieces__grid {
-      grid-auto-flow: initial;
-      grid-auto-columns: initial;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 14px;
-      overflow: visible;
-      padding-bottom: 0;
+      grid-auto-columns: minmax(calc(var(--sp-12) * 2 + var(--sp-4)), 84vw);
+      gap: var(--sp-3);
     }
   }
 
@@ -733,6 +865,7 @@
     .signature-pieces__image,
     .signature-pieces__quick,
     .signature-pieces__primary,
+    .signature-pieces__control,
     .signature-pieces__button,
     .signature-pieces__button svg {
       transition-duration: 0s;
@@ -806,9 +939,168 @@
       });
     }
 
+    function initCardLinks(root) {
+      var scope = root && root.querySelectorAll ? root : document;
+      scope.querySelectorAll('.signature-pieces__card[data-product-url]').forEach(function (card) {
+        if (card.dataset.cardLinkInit === 'true') return;
+        card.dataset.cardLinkInit = 'true';
+
+        card.addEventListener('click', function (event) {
+          if (event.defaultPrevented) return;
+          if (event.target.closest('a, button, input, select, textarea, [role="button"], [data-signature-wishlist]')) {
+            return;
+          }
+
+          window.location.assign(card.dataset.productUrl);
+        });
+      });
+    }
+
+    function initCarousel(root) {
+      var scope = root && root.querySelectorAll ? root : document;
+      scope.querySelectorAll('[data-signature-carousel]').forEach(function (carousel) {
+        if (carousel.dataset.carouselInit === 'true') return;
+
+        var section = carousel.closest('.signature-pieces');
+        var controls = section && section.querySelector('[data-signature-carousel-controls]');
+        var previousButton = controls && controls.querySelector('[data-signature-carousel-previous]');
+        var nextButton = controls && controls.querySelector('[data-signature-carousel-next]');
+        if (!section || !controls || !previousButton || !nextButton) return;
+
+        carousel.dataset.carouselInit = 'true';
+        var isPointerDown = false;
+        var didDrag = false;
+        var preventClick = false;
+        var pointerStartX = 0;
+        var scrollStart = 0;
+        var updateFrame = null;
+
+        carousel.querySelectorAll('img').forEach(function (image) {
+          image.draggable = false;
+        });
+
+        function isSliderViewport() {
+          return window.matchMedia('(max-width: 74.999rem)').matches;
+        }
+
+        function updateControls() {
+          var maxScrollLeft = Math.max(0, carousel.scrollWidth - carousel.clientWidth);
+          var hasOverflow = isSliderViewport() && maxScrollLeft > 1;
+          controls.hidden = !hasOverflow;
+          previousButton.disabled = !hasOverflow || carousel.scrollLeft <= 1;
+          nextButton.disabled = !hasOverflow || carousel.scrollLeft >= maxScrollLeft - 1;
+        }
+
+        function scheduleControlsUpdate() {
+          if (updateFrame !== null) return;
+          updateFrame = window.requestAnimationFrame(function () {
+            updateFrame = null;
+            updateControls();
+          });
+        }
+
+        function getScrollDistance() {
+          var card = carousel.querySelector('.signature-pieces__card');
+          if (!card) return carousel.clientWidth;
+
+          var styles = window.getComputedStyle(carousel);
+          var gap = parseFloat(styles.columnGap) || 0;
+          return card.getBoundingClientRect().width + gap;
+        }
+
+        function scrollCarousel(direction) {
+          var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          carousel.scrollBy({
+            left: getScrollDistance() * direction,
+            behavior: reduceMotion ? 'auto' : 'smooth',
+          });
+        }
+
+        function finishDrag(event) {
+          if (!isPointerDown) return;
+          isPointerDown = false;
+
+          if (carousel.hasPointerCapture(event.pointerId)) {
+            carousel.releasePointerCapture(event.pointerId);
+          }
+
+          carousel.classList.remove('is-dragging');
+          if (didDrag) {
+            preventClick = true;
+            window.setTimeout(function () {
+              preventClick = false;
+            }, 0);
+          }
+          scheduleControlsUpdate();
+        }
+
+        previousButton.addEventListener('click', function () {
+          scrollCarousel(-1);
+        });
+
+        nextButton.addEventListener('click', function () {
+          scrollCarousel(1);
+        });
+
+        carousel.addEventListener('scroll', scheduleControlsUpdate, { passive: true });
+        carousel.addEventListener('dragstart', function (event) {
+          if (event.target.closest('img')) event.preventDefault();
+        });
+
+        carousel.addEventListener('pointerdown', function (event) {
+          if (!isSliderViewport()) return;
+          if (event.button !== 0) return;
+          if (event.target.closest('button, input, select, textarea')) return;
+
+          isPointerDown = true;
+          didDrag = false;
+          pointerStartX = event.clientX;
+          scrollStart = carousel.scrollLeft;
+        });
+
+        carousel.addEventListener('pointermove', function (event) {
+          if (!isPointerDown) return;
+
+          var distance = event.clientX - pointerStartX;
+          var dragThreshold = event.pointerType === 'touch' ? 10 : 6;
+          if (!didDrag && Math.abs(distance) > dragThreshold) {
+            didDrag = true;
+            carousel.classList.add('is-dragging');
+            carousel.setPointerCapture(event.pointerId);
+          }
+          if (!didDrag) return;
+
+          event.preventDefault();
+          carousel.scrollLeft = scrollStart - distance;
+        });
+
+        carousel.addEventListener('pointerup', finishDrag);
+        carousel.addEventListener('pointercancel', finishDrag);
+        carousel.addEventListener(
+          'click',
+          function (event) {
+            if (!preventClick) return;
+            event.preventDefault();
+            event.stopPropagation();
+          },
+          true
+        );
+
+        if ('ResizeObserver' in window) {
+          var resizeObserver = new ResizeObserver(scheduleControlsUpdate);
+          resizeObserver.observe(carousel);
+        }
+        window.addEventListener('resize', scheduleControlsUpdate);
+
+        updateControls();
+      });
+    }
+
     function init(root) {
       initWishlist(root);
       initHoverGallery(root);
+      initCardLinks(root);
+      initCarousel(root);
     }
 
     if (document.readyState === 'loading') {

@@ -29,11 +29,40 @@
     assign cta_url = '/pages/customization'
   endif
 
-  assign amazon_placeholder_source = 'src="https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif"'
   assign rich_description_html = rich_description
-  if rich_description_html contains amazon_placeholder_source
-    assign rich_description_html = rich_description_html | replace: amazon_placeholder_source, ''
-    assign rich_description_html = rich_description_html | replace: 'data-src=', 'src='
+  if rich_description_html contains 'data-src="'
+    assign rich_description_fragments = rich_description_html | split: '<img'
+    capture rich_description_html
+      echo rich_description_fragments | first
+      for rich_description_fragment in rich_description_fragments offset: 1
+        assign image_attributes = rich_description_fragment | split: '>' | first
+        assign content_after_image = rich_description_fragment | remove_first: image_attributes | remove_first: '>'
+
+        if image_attributes contains 'data-src="'
+          assign data_source_tail = image_attributes | split: 'data-src="' | last
+          assign data_source_url = data_source_tail | split: '"' | first
+          assign data_source_attribute = ' data-src="' | append: data_source_url | append: '"'
+
+          if image_attributes contains ' src="'
+            assign current_source_tail = image_attributes | split: ' src="' | last
+            assign current_source_url = current_source_tail | split: '"' | first
+            assign current_source_attribute = ' src="' | append: current_source_url | append: '"'
+            assign resolved_source_attribute = ' src="' | append: data_source_url | append: '"'
+            assign image_attributes = image_attributes | replace_first: current_source_attribute, resolved_source_attribute
+          else
+            assign resolved_source_attribute = ' src="' | append: data_source_url | append: '"'
+            assign image_attributes = resolved_source_attribute | append: image_attributes
+          endif
+
+          assign image_attributes = image_attributes | remove_first: data_source_attribute
+        endif
+
+        echo '<img'
+        echo image_attributes
+        echo '>'
+        echo content_after_image
+      endfor
+    endcapture
   endif
   assign rich_description_html = rich_description_html | replace: '<img ', '<img loading="lazy" decoding="async" fetchpriority="low" '
 -%}
@@ -252,10 +281,10 @@
   (function () {
     function initRichDescriptionImages() {
       document.querySelectorAll('.product-rich-description__content img[data-src]').forEach(function (image) {
-        var currentSource = image.getAttribute('src') || '';
         var richSource = image.getAttribute('data-src');
-        if (!richSource || currentSource.indexOf('grey-pixel.gif') === -1) return;
+        if (!richSource) return;
         image.setAttribute('src', richSource);
+        image.removeAttribute('data-src');
       });
     }
 

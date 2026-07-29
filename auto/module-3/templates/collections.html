@@ -106,19 +106,36 @@
         </div>
     </main>
 
-    <!-- Scroll to Top Button -->
-    <button id="scrollToTopBtn" onclick="window.scrollTo({top: 0, behavior: 'instant'})" class="fixed bottom-8 right-8 bg-indigo-600 text-white p-3 rounded-full shadow-lg hover:bg-indigo-700 transition-all opacity-0 pointer-events-none z-50">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
-    </button>
+    <!-- Scroll Buttons -->
+    <div class="fixed bottom-8 right-8 flex flex-col gap-3 z-50">
+        <button id="scrollToTopBtn" onclick="window.scrollTo({top: 0, behavior: 'instant'})" class="bg-indigo-600 text-white p-3 rounded-full shadow-lg hover:bg-indigo-700 transition-all opacity-0 pointer-events-none" title="Cuộn lên đầu trang">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
+        </button>
+        <button id="scrollToBottomBtn" onclick="window.scrollTo({top: document.body.scrollHeight, behavior: 'instant'})" class="bg-indigo-600 text-white p-3 rounded-full shadow-lg hover:bg-indigo-700 transition-all opacity-0 pointer-events-none" title="Cuộn xuống cuối trang">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        </button>
+    </div>
+
     <script>
         const scrollToTopBtn = document.getElementById('scrollToTopBtn');
-        window.addEventListener('scroll', () => {
+        const scrollToBottomBtn = document.getElementById('scrollToBottomBtn');
+        
+        function toggleScrollButtons() {
             if (window.scrollY > 300) {
                 scrollToTopBtn.classList.remove('opacity-0', 'pointer-events-none');
             } else {
                 scrollToTopBtn.classList.add('opacity-0', 'pointer-events-none');
             }
-        });
+            
+            if (window.scrollY + window.innerHeight < document.body.scrollHeight - 300) {
+                scrollToBottomBtn.classList.remove('opacity-0', 'pointer-events-none');
+            } else {
+                scrollToBottomBtn.classList.add('opacity-0', 'pointer-events-none');
+            }
+        }
+
+        window.addEventListener('scroll', toggleScrollButtons);
+        window.addEventListener('load', toggleScrollButtons);
     </script>
 </body>
 </html>
