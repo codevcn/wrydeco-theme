@@ -638,11 +638,41 @@
     display: none;
   }
 
+  .main-product__sold-count {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding-inline-start: var(--sp-5);
+    border-inline-start: var(--border-width) solid var(--border-default);
+    color: var(--text-primary);
+    font: var(--type-body-small);
+    white-space: nowrap;
+  }
+
+  .main-product__sold-count svg {
+    flex: none;
+    width: var(--sp-5);
+    height: var(--sp-5);
+    color: var(--color-clay);
+  }
+
+  .main-product__sold-count-label {
+    font-weight: var(--font-weight-semibold);
+  }
+
   @media screen and (max-width: 400px) {
     .main-product__rating {
       align-items: flex-start;
       flex-direction: column;
-      gap: 4px;
+      gap: var(--sp-3);
+    }
+
+    .main-product__sold-count {
+      width: 100%;
+      padding-block-start: var(--sp-3);
+      padding-inline-start: 0;
+      border-block-start: var(--border-width) solid var(--border-light);
+      border-inline-start: 0;
     }
   }
 {% endstylesheet %}
@@ -719,6 +749,7 @@
         endif
 
         assign judgeme_average_rating = judgeme_average_rating | round: 1
+        assign bought_amount = product.metafields.custom.bought_amount.value | default: 0 | plus: 0
       -%}
       <div class="main-product__rating">
         <div
@@ -730,6 +761,27 @@
         >
           {{ judgeme_badge }}
         </div>
+        {% if bought_amount > 0 %}
+          <span
+            class="main-product__sold-count"
+            aria-label="{{ bought_amount }} items sold"
+            data-bought-amount="{{ bought_amount }}"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true">
+              <g
+                fill="none"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+              >
+                <path d="M11.5 21H8.574a3 3 0 0 1-2.965-2.544l-1.255-8.152A2 2 0 0 1 6.331 8H17.67a2 2 0 0 1 1.977 2.304l-.5 3.248"/>
+                <path d="M9 11V6a3 3 0 0 1 6 0v5m0 8l2 2l4-4"/>
+              </g>
+            </svg>
+            <span class="main-product__sold-count-label" data-bought-amount-label>{{ bought_amount }} sold</span>
+          </span>
+        {% endif %}
       </div>
 
       {% render 'product-variant-picker', product: product, current_variant: current_variant, section_id: section.id %}
@@ -949,6 +1001,17 @@
 
 {% javascript %}
   (function () {
+    function formatBoughtAmounts() {
+      document.querySelectorAll('[data-bought-amount]').forEach(function (soldCount) {
+        var amount = Number(soldCount.getAttribute('data-bought-amount'));
+        var label = soldCount.querySelector('[data-bought-amount-label]');
+        if (!label || !Number.isFinite(amount)) return;
+
+        var locale = document.documentElement.lang || 'en-US';
+        label.textContent = new Intl.NumberFormat(locale).format(amount) + ' sold';
+      });
+    }
+
     function initStickyAddToCart() {
       var bar = document.querySelector('[data-mp-sticky]');
       if (!bar || bar.dataset.init === 'true') return;
@@ -1070,10 +1133,15 @@
       }
     }
 
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initStickyAddToCart);
-    } else {
+    function initMainProductEnhancements() {
+      formatBoughtAmounts();
       initStickyAddToCart();
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initMainProductEnhancements);
+    } else {
+      initMainProductEnhancements();
     }
   })();
 {% endjavascript %}
