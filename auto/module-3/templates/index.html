@@ -12,6 +12,9 @@
         body {
             font-family: 'Inter', sans-serif;
         }
+        .active-row {
+            background-color: #eef2ff !important;
+        }
         /* Custom CSS cho những hiệu ứng đặc biệt của Lightbox */
         #lightbox {
             opacity: 0;
@@ -204,7 +207,7 @@
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
                         {% for product in products %}
-                        <tr class="hover:bg-gray-50/80 transition-colors duration-150 ease-in-out border-b border-gray-200 last:border-b-0">
+                        <tr onclick="highlightRow(this)" class="hover:bg-gray-50/80 transition-colors duration-150 ease-in-out border-b border-gray-200 last:border-b-0 cursor-auto">
                             <td class="px-6 py-5 whitespace-nowrap text-sm text-gray-900 font-bold text-center">
                                 {{ loop.index }}
                             </td>
@@ -333,6 +336,23 @@
             </div>
         </div>
     </div>
+    
+    <!-- Go to Row Modal -->
+    <div id="gotoRowModal" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 p-4 hidden">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm relative" onclick="event.stopPropagation()">
+            <button id="gotoRowCloseBtn" class="absolute top-4 right-4 text-gray-400 hover:text-gray-700 transition-colors focus:outline-none" title="Đóng">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            <h3 class="text-lg font-bold text-gray-800 mb-4 pr-6">Chuyển đến dòng (Ctrl + G)</h3>
+            <div class="flex items-center gap-3">
+                <input type="number" id="gotoRowInput" class="bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5 outline-none transition-colors" placeholder="Nhập số STT (VD: 5)" min="1">
+                <button id="gotoRowBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-sm px-5 py-2.5 transition-colors shadow-sm focus:ring-4 focus:ring-indigo-300">
+                    Go
+                </button>
+            </div>
+            <p class="text-xs text-gray-500 mt-3">Nhấn <kbd class="bg-gray-100 border border-gray-300 rounded px-1 font-mono text-gray-700">Esc</kbd> để đóng.</p>
+        </div>
+    </div>
 
     <!-- Lightbox Modal -->
     <div id="lightbox" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/90 backdrop-blur-sm p-4" onclick="closeLightbox()">
@@ -346,6 +366,9 @@
 
     <!-- Scroll Buttons -->
     <div class="fixed bottom-8 right-8 flex flex-col gap-3 z-50">
+        <button id="jumpToActiveBtn" onclick="jumpToActiveRow()" class="bg-teal-600 text-white p-3 rounded-full shadow-lg hover:bg-teal-700 transition-all opacity-0 pointer-events-none" title="Chuyển đến dòng đang chọn">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 22v-4m0-12V2m10 10h-4M6 12H2m10-7a7 7 0 100 14 7 7 0 000-14z"></path></svg>
+        </button>
         <button id="scrollToTopBtn" onclick="window.scrollTo({top: 0, behavior: 'instant'})" class="bg-indigo-600 text-white p-3 rounded-full shadow-lg hover:bg-indigo-700 transition-all opacity-0 pointer-events-none" title="Cuộn lên đầu trang">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
         </button>
@@ -446,6 +469,98 @@
                 closeLightbox();
             }
         });
+
+        function highlightRow(clickedRow) {
+            const tbody = clickedRow.closest('tbody');
+            const rows = tbody.querySelectorAll('tr');
+            rows.forEach(row => row.classList.remove('active-row'));
+            clickedRow.classList.add('active-row');
+            document.getElementById('jumpToActiveBtn').classList.remove('opacity-0', 'pointer-events-none');
+        }
+
+        function jumpToActiveRow() {
+            const activeRow = document.querySelector('.active-row');
+            if (activeRow) {
+                activeRow.scrollIntoView({ behavior: 'instant', block: 'center' });
+            }
+        }
+
+        class KeyboardShortcuts {
+            constructor() {
+                this.modal = document.getElementById('gotoRowModal');
+                this.input = document.getElementById('gotoRowInput');
+                this.btn = document.getElementById('gotoRowBtn');
+                
+                if(this.modal) this.initEvents();
+            }
+
+            initEvents() {
+                document.addEventListener('keydown', (e) => {
+                    if (e.ctrlKey && e.key.toLowerCase() === 'g') {
+                        e.preventDefault();
+                        this.openModal();
+                    }
+                    if (e.key === "Escape" && !this.modal.classList.contains('hidden')) {
+                        this.closeModal();
+                    }
+                    if (e.key === "Enter" && !this.modal.classList.contains('hidden')) {
+                        e.preventDefault();
+                        const val = parseInt(this.input.value);
+                        if (!isNaN(val)) {
+                            this.jumpToRow(val);
+                        }
+                        this.closeModal();
+                    }
+                });
+
+                this.modal.addEventListener('click', () => this.closeModal());
+                this.modal.querySelector('div').addEventListener('click', (e) => e.stopPropagation());
+
+                const closeBtn = document.getElementById('gotoRowCloseBtn');
+                if (closeBtn) closeBtn.addEventListener('click', () => this.closeModal());
+
+                this.input.addEventListener('input', (e) => {
+                    const val = parseInt(e.target.value);
+                    if (!isNaN(val)) {
+                        this.jumpToRow(val);
+                    }
+                });
+
+                this.btn.addEventListener('click', () => {
+                    const val = parseInt(this.input.value);
+                    if (!isNaN(val)) {
+                        this.jumpToRow(val);
+                    }
+                    this.closeModal();
+                });
+            }
+
+            openModal() {
+                this.modal.classList.remove('hidden');
+                this.input.value = '';
+                setTimeout(() => this.input.focus(), 50);
+            }
+
+            closeModal() {
+                this.modal.classList.add('hidden');
+                this.input.blur();
+            }
+
+            jumpToRow(rowNumber) {
+                const tbody = document.querySelector('table tbody');
+                if (!tbody) return;
+                const rows = tbody.querySelectorAll('tr');
+                const targetIndex = rowNumber - 1;
+                
+                if (targetIndex >= 0 && targetIndex < rows.length) {
+                    const targetRow = rows[targetIndex];
+                    highlightRow(targetRow);
+                    targetRow.scrollIntoView({ behavior: 'instant', block: 'center' });
+                }
+            }
+        }
+
+        const shortcuts = new KeyboardShortcuts();
     </script>
 </body>
 </html>

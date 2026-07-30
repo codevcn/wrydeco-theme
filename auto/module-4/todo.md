@@ -1,10 +1,11 @@
-> Nếu có mâu thuẫn dữ liệu trong quá trình tạo review, hãy dừng toàn bộ quá trình tạo review và báo cho tôi biết.
+> QUAN TRỌNG: Nếu có mâu thuẫn dữ liệu trong quá trình tạo review, hãy dừng toàn bộ quá trình tạo review và báo cho tôi biết.
 
 1. Đọc toàn bộ file `./human-reviews.md` để biết cách hành văn viết các review sản phẩm cho giống người bản xứ.
+   > QUAN TRỌNG: Các review phải mang tính "cá nhân hóa sâu sắc 100%". Tức là ở bước đọc thông tin chi tiết của sản phẩm bên dưới, sẽ phải dùng trí tuệ nhân tạo đọc kỹ tiêu đề và mô tả sản phẩm để tự tay viết hoàn toàn từng dòng review một (sẽ mất nhiều thời gian hơn để viết nhưng đổi lại sẽ có được các review mang tính chân thực cao).
 2. Đọc file `./template.csv` để biết cấu trúc viết review trong file CSV.
 3. Với mỗi sản phẩm được khai báo trong file `./config.json`, bạn hãy thực hiện các bước sau:
 
-- Bước 1 (BẮT BUỘC): Truy cập vào store Wrydeco bằng `./access-token.md` để đọc thông tin chi tiết của sản phẩm để viết review bám sát sản phẩm hơn, thay vì viết review chung chug.
+- Bước 1 **(QUAN TRỌNG)**: Truy cập vào store Wrydeco bằng `./access-token.md` để đọc thông tin chi tiết của sản phẩm để viết review bám sát sản phẩm hơn, thay vì viết review chung chug.
 - Bước 2: Chạy file `./auto/module-4/write_ratings_by_star.cmd` để lấy chỉ tiêu số lượng sao từ 1 đến 5 sao cho các review.
 - Bước 3: Đọc file `./reviews-rule.txt` để xác định chỉ tiêu tạo ra các review.
 - Bước 4:

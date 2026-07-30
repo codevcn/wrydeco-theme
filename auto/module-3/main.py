@@ -24,7 +24,7 @@ HEADERS = {
     "Content-Type": "application/json"
 }
 
-def get_products(first=30, after=None, before=None, last=None, filter_query=None, sort_key="CREATED_AT", reverse=True):
+def get_products(first=50, after=None, before=None, last=None, filter_query=None, sort_key="CREATED_AT", reverse=True):
     query = """
     query getProducts($first: Int, $last: Int, $after: String, $before: String, $query: String, $sortKey: ProductSortKeys, $reverse: Boolean) {
       productsCount(query: $query) {
@@ -668,15 +668,17 @@ def get_products_by_variant_option(keyword, sort_by="created_desc", exclude=Fals
         "productsCount": {"count": len(all_matched_edges)}
     }
 
-def get_products_by_collection(handle, sort_by="created_desc"):
+def get_products_by_collection(handle, sort_by="created_desc", after=None, before=None):
     query = """
-    query getCollectionProducts($handle: String!, $after: String) {
+    query getCollectionProducts($handle: String!, $first: Int, $last: Int, $after: String, $before: String, $sortKey: ProductCollectionSortKeys, $reverse: Boolean) {
       collectionByHandle(handle: $handle) {
         productsCount { count }
-        products(first: 25, after: $after) {
+        products(first: $first, last: $last, after: $after, before: $before, sortKey: $sortKey, reverse: $reverse) {
           pageInfo {
             hasNextPage
+            hasPreviousPage
             endCursor
+            startCursor
           }
           edges {
             node {
@@ -733,87 +735,38 @@ def get_products_by_collection(handle, sort_by="created_desc"):
       }
     }
     """
-    all_matched_edges = []
-    has_next = True
-    cursor = None
-    
-    while has_next:
-        variables = {"handle": handle}
-        if cursor:
-            variables["after"] = cursor
-            
-        res = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=HEADERS)
-        res.raise_for_status()
-        data = res.json()
-        if "errors" in data:
-            print("GraphQL Errors:", data["errors"])
-            break
-            
-        collection_data = data.get("data", {}).get("collectionByHandle")
-        if not collection_data:
-            break
-            
-        products_data = collection_data.get("products", {})
-        edges = products_data.get("edges", [])
-        if not edges:
-            break
-        all_matched_edges.extend(edges)
-                
-        page_info = products_data.get("pageInfo", {})
-        has_next = page_info.get("hasNextPage", False)
-        cursor = page_info.get("endCursor")
-        
-    def get_sort_key(edge):
-        if sort_by in ["price_asc", "price_desc"]:
-            price_data = edge["node"].get("priceRangeV2")
-            if price_data and price_data.get("minVariantPrice"):
-                return float(price_data["minVariantPrice"].get("amount", 0))
-            return 0.0
-        return edge["node"].get("createdAt", "")
-        
-    reverse_sort = sort_by in ["created_desc", "price_desc"]
-    all_matched_edges.sort(key=get_sort_key, reverse=reverse_sort)
-        
-    return {
-        "products": {
-            "edges": all_matched_edges,
-            "pageInfo": {"hasNextPage": False, "hasPreviousPage": False}
-        },
-        "productsCount": {"count": len(all_matched_edges)}
+    sort_key_map = {
+        "price_asc": ("PRICE", False),
+        "price_desc": ("PRICE", True),
+        "created_asc": ("CREATED", False),
+        "created_desc": ("CREATED", True)
     }
-
-def get_all_products_sorted_by_price(filter_query, sort_by):
-    all_matched_edges = []
-    has_next = True
-    cursor = None
+    sort_key, reverse = sort_key_map.get(sort_by, ("CREATED", True))
     
-    while has_next:
-        data = get_products(first=25, after=cursor, filter_query=filter_query, sort_key="CREATED_AT", reverse=True)
-        products_data = data.get("products", {})
-        edges = products_data.get("edges", [])
-        if not edges:
-            break
-        all_matched_edges.extend(edges)
+    variables = {"handle": handle, "sortKey": sort_key, "reverse": reverse}
+    if after:
+        variables["first"] = 50
+        variables["after"] = after
+    elif before:
+        variables["last"] = 50
+        variables["before"] = before
+    else:
+        variables["first"] = 50
         
-        page_info = products_data.get("pageInfo", {})
-        has_next = page_info.get("hasNextPage", False)
-        cursor = page_info.get("endCursor")
-
-    def get_sort_key(edge):
-        price_data = edge["node"].get("priceRangeV2")
-        if price_data and price_data.get("minVariantPrice"):
-            return float(price_data["minVariantPrice"].get("amount", 0))
-        return 0.0
+    res = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=HEADERS)
+    res.raise_for_status()
+    data = res.json()
+    if "errors" in data:
+        print("GraphQL Errors:", data["errors"])
+        return {"products": {"edges": [], "pageInfo": {}}, "productsCount": {"count": 0}}
         
-    reverse_sort = sort_by == "price_desc"
-    all_matched_edges.sort(key=get_sort_key, reverse=reverse_sort)
+    collection_data = data.get("data", {}).get("collectionByHandle")
+    if not collection_data:
+        return {"products": {"edges": [], "pageInfo": {}}, "productsCount": {"count": 0}}
         
     return {
-        "products": {
-            "edges": all_matched_edges,
-            "pageInfo": {"hasNextPage": False, "hasPreviousPage": False}
-        },
-        "productsCount": {"count": len(all_matched_edges)}
+        "products": collection_data.get("products", {}),
+        "productsCount": collection_data.get("productsCount", {})
     }
 
 def get_products_by_special_filter(special_filter, sort_by="created_desc"):
@@ -1104,7 +1057,7 @@ async def read_root(request: Request, after: str = None, before: str = None, fil
         elif filter_value and filter_type == "not_variant_option":
             data = get_products_by_variant_option(filter_value, sort_by=sort_by, exclude=True)
         elif filter_value and filter_type == "collection":
-            data = get_products_by_collection(filter_value, sort_by=sort_by)
+            data = get_products_by_collection(filter_value, sort_by=sort_by, after=after, before=before)
         else:
             if filter_value:
                 if filter_type == "tag":
@@ -1118,10 +1071,7 @@ async def read_root(request: Request, after: str = None, before: str = None, fil
                 elif filter_type == "product_type":
                     filter_query = f"product_type:'{filter_value}'"
                     
-            if sort_by in ["price_asc", "price_desc"]:
-                data = get_all_products_sorted_by_price(filter_query, sort_by)
-            else:
-                data = get_products(first=30, after=after, before=before, filter_query=filter_query, sort_key=sort_key_graphql, reverse=reverse)
+            data = get_products(first=50, after=after, before=before, filter_query=filter_query, sort_key=sort_key_graphql, reverse=reverse)
             
         products_data = data.get("products", {})
         total_count = data.get("productsCount", {}).get("count", 0)

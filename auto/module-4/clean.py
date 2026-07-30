@@ -6,8 +6,6 @@ from pathlib import Path
 
 
 KEEP_CONTENT = [
-    ".playwright-mcp/",
-    "output/",
 	"clean.cmd",
     "clean.py",
 	"config.json",
@@ -24,11 +22,9 @@ KEEP_CONTENT = [
 	"write_ratings_by_star.py",
 	"merge_csv.py",
 	"merge_csv.cmd",
-	"warehouse/",
     "note.txt",
     "access-token.md",
     "todo.images.md",
-    "media/",
     "upload_images.py",
     "upload_images.cmd",
     "upload.images.py",
@@ -96,19 +92,16 @@ def validate_target_directory(target_dir: Path) -> None:
 
 def delete_entry(path: Path) -> None:
     """
-    Delete a root-level file, symlink, or directory.
+    Delete a root-level file or symlink.
     Symlinks are unlinked instead of following their targets.
     """
     if path.is_symlink() or path.is_file():
         path.unlink()
         return
 
-    if path.is_dir():
-        shutil.rmtree(path)
-        return
-
-    # Handle unusual filesystem entries.
-    path.unlink()
+    # Handle unusual filesystem entries (e.g. block devices, sockets).
+    if not path.is_dir():
+        path.unlink()
 
 
 def main() -> int:
@@ -125,6 +118,10 @@ def main() -> int:
     for entry in target_dir.iterdir():
         if entry.name.casefold() in keep_names:
             print(f"[KEEP]   {entry.name}")
+            continue
+
+        if entry.is_dir():
+            print(f"[SKIP]   {entry.name} (Directory)")
             continue
 
         try:

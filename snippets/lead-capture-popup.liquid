@@ -1,12 +1,10 @@
 {% doc %}
-  Renders the homepage lead capture popup and submits natively to Shopify's
-  customer newsletter endpoint so the response state is rendered by Liquid.
+  Renders the global lead-capture popup and submits natively to Shopify's
+  customer newsletter endpoint.
 
-  Voucher copy for both states — the form popup (title, description, CTA label)
-  and the success popup (title, message, CTA label) — comes from the first entry
-  of the `voucher_welcome_customer` metaobject so merchants can edit the offer
-  without touching the theme. Hardcoded fallbacks keep the popup usable if the
-  entry is removed or left blank.
+  The offer title, voucher code, email field label, and email CTA come from the
+  first `voucher_welcome_customer` metaobject entry. All supporting copy is
+  intentionally fixed to preserve the approved campaign design.
 
   @example
   {% render 'lead-capture-popup' %}
@@ -14,14 +12,10 @@
 
 {% liquid
   assign voucher = metaobjects.voucher_welcome_customer.values | first
-  assign voucher_title = voucher.voucher_title.value | default: 'Begin Journey with a Welcome Gift'
-  assign voucher_description_fallback = 'Begin your Wrydeco story with a welcome gift for your first purchase.'
-  assign voucher_description = voucher.voucher_short_description.value | default: voucher_description_fallback
-  assign voucher_cta_text = voucher.voucher_cta_text.value | default: 'Receive your gift'
-  assign voucher_success_title = voucher.voucher_success_title.value | default: 'Congratulations!'
-  assign voucher_success_text_fallback = 'Your welcome gift is now on its way to your inbox.'
-  assign voucher_success_text = voucher.voucher_success_text.value | default: voucher_success_text_fallback
-  assign voucher_success_cta_text = voucher.voucher_success_cta_text.value | default: 'Explore the Wrydeco collection'
+  assign voucher_title = voucher.voucher_title.value | default: '<span class="lead-capture__voucher-title-strong">10% Off</span> Your First Order'
+  assign voucher_code = voucher.voucher_code.value | default: 'WRYDECO10'
+  assign email_cta_text = voucher.email_cta_text.value | default: 'Keep me updated'
+  assign email_label_text = voucher.email_label_text.value | default: 'Enter your email'
 %}
 
 <button
@@ -68,9 +62,9 @@
       type="button"
       class="lead-capture__close"
       data-lead-capture-close
-      aria-label="Close newsletter invitation"
+      aria-label="Close welcome offer"
     >
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
         <path
           fill="none"
           stroke="currentColor"
@@ -93,120 +87,177 @@
       >
     </div>
 
-    <div class="lead-capture__content">
-      <div data-lead-capture-form-state>
-        <div class="lead-capture__mark" aria-hidden="true">
-          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24">
-            <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
-              <path d="M18.9 7a8 8 0 0 1 1.1 5v1a6 6 0 0 0 .8 3M8 11a4 4 0 0 1 8 0v1a10 10 0 0 0 2 6"/>
-              <path d="M12 11v2a14 14 0 0 0 2.5 8M8 15a18 18 0 0 0 1.8 6m-4.9-2a22 22 0 0 1-.9-7v-1a8 8 0 0 1 12-6.95"/>
-            </g>
-          </svg>
-        </div>
-
-        <div class="lead-capture__eyebrow" aria-hidden="true">
-          <span></span>
-          <p>A quiet note from our studio</p>
-          <span></span>
-        </div>
-
-        <h2 id="LeadCaptureTitle" class="lead-capture__title">{{ voucher_title | escape }}</h2>
-        <p id="LeadCaptureDescription" class="lead-capture__description">
-          {{- voucher_description | escape -}}
-        </p>
-
-        {% comment %}
-          Native constraint validation stays enabled on purpose: Shopify's spam
-          protection can submit this form programmatically, which bypasses the
-          submit listener below. Without it an empty field would reload the page.
-          The `invalid` listener replaces the browser bubble with our own styled
-          message.
-        {% endcomment %}
-        {% form 'customer', class: 'lead-capture__form', id: 'LeadCaptureForm' %}
-          <input type="hidden" name="contact[tags]" value="newsletter">
-          {% if form.posted_successfully? %}
-            <span data-lead-capture-response-success hidden></span>
-          {% elsif form.errors %}
-            <div data-lead-capture-response-error hidden>{{ form.errors | default_errors }}</div>
-          {% endif %}
-          <div class="lead-capture__field">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+    <div class="lead-capture__panel">
+      <div class="lead-capture__content">
+        <div data-lead-capture-form-state>
+          <div class="lead-capture__mark" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
               <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
-                <path d="M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                <path d="m3 7l9 6l9-6"/>
+                <path d="M18.9 7a8 8 0 0 1 1.1 5v1a6 6 0 0 0 .8 3M8 11a4 4 0 0 1 8 0v1a10 10 0 0 0 2 6"/>
+                <path d="M12 11v2a14 14 0 0 0 2.5 8M8 15a18 18 0 0 0 1.8 6m-4.9-2a22 22 0 0 1-.9-7v-1a8 8 0 0 1 12-6.95"/>
               </g>
             </svg>
-            <label class="lead-capture__visually-hidden" for="LeadCaptureEmail">Email address</label>
-            <input
-              id="LeadCaptureEmail"
-              class="lead-capture__input"
-              type="email"
-              name="contact[email]"
-              value="{{ form.email | escape }}"
-              placeholder="Enter your email"
-              autocomplete="email"
-              inputmode="email"
-              aria-describedby="LeadCaptureError"
-              required
-            >
           </div>
-          <p id="LeadCaptureError" class="lead-capture__error" data-lead-capture-error role="alert" hidden></p>
-          <button class="lead-capture__submit" type="submit" data-lead-capture-submit>
-            <span data-lead-capture-submit-label>{{ voucher_cta_text | escape }}</span>
-            <span class="lead-capture__spinner" aria-hidden="true"></span>
+
+          <div class="lead-capture__eyebrow" aria-hidden="true">
+            <span></span>
+            <p>Welcome Offer</p>
+            <span></span>
+          </div>
+
+          <h2 id="LeadCaptureTitle" class="lead-capture__title">{{ voucher_title }}</h2>
+
+          <div class="lead-capture__voucher" aria-label="Welcome voucher">
+            <strong class="lead-capture__code" data-lead-capture-code>{{ voucher_code | escape }}</strong>
+            <button
+              type="button"
+              class="lead-capture__copy"
+              data-lead-capture-copy
+              data-code="{{ voucher_code | escape }}"
+              aria-label="Copy voucher code"
+            >
+              <span class="lead-capture__copy-icon" data-lead-capture-copy-icon aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                  <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+                    <path d="M8 8m-2 0a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2z"/>
+                    <path d="M16 6V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>
+                  </g>
+                </svg>
+              </span>
+              <span class="lead-capture__copy-icon" data-lead-capture-check-icon aria-hidden="true" hidden>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                  <path
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="m5 12l5 5L20 7"
+                  />
+                </svg>
+              </span>
+              <span class="lead-capture__visually-hidden" data-lead-capture-copy-status aria-live="polite"></span>
+            </button>
+          </div>
+
+          <h3 class="lead-capture__form-heading">{{ email_label_text | escape }}</h3>
+          <p id="LeadCaptureDescription" class="lead-capture__description">
+            {{- email_cta_text | escape -}}
+          </p>
+
+          {% form 'customer', class: 'lead-capture__form', id: 'LeadCaptureForm' %}
+            <input type="hidden" name="contact[tags]" value="newsletter">
+            {% if form.posted_successfully? %}
+              <span data-lead-capture-response-success hidden></span>
+            {% elsif form.errors %}
+              <div data-lead-capture-response-error hidden>{{ form.errors | default_errors }}</div>
+            {% endif %}
+
+            <div class="lead-capture__form-row">
+              <div class="lead-capture__field">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
+                  <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+                    <path d="M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                    <path d="m3 7l9 6l9-6"/>
+                  </g>
+                </svg>
+                <label class="lead-capture__visually-hidden" for="LeadCaptureEmail">Email address</label>
+                <input
+                  id="LeadCaptureEmail"
+                  class="lead-capture__input"
+                  type="email"
+                  name="contact[email]"
+                  value="{{ form.email | escape }}"
+                  placeholder="Enter your email"
+                  autocomplete="email"
+                  inputmode="email"
+                  aria-describedby="LeadCaptureError"
+                  required
+                >
+              </div>
+              <button class="lead-capture__submit" type="submit" data-lead-capture-submit>
+                <span data-lead-capture-submit-label>Keep me updated</span>
+                <span class="lead-capture__spinner" aria-hidden="true"></span>
+              </button>
+            </div>
+            <p id="LeadCaptureError" class="lead-capture__error" data-lead-capture-error role="alert" hidden></p>
+          {% endform %}
+
+          <div class="lead-capture__divider" aria-hidden="true">
+            <span></span>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+              <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+                <path d="M5 21c.5-4.5 2.5-8 7-10"/>
+                <path d="M9 18c6.218 0 10.5-3.288 11-12V4h-4.014c-9 0-11.986 4-12 9c0 1 0 3 2 5z"/>
+              </g>
+            </svg>
+            <span></span>
+          </div>
+
+          <button type="button" class="lead-capture__decline" data-lead-capture-close>
+            No thanks, I'll explore on my own.
           </button>
-        {% endform %}
-
-        <div class="lead-capture__divider" aria-hidden="true">
-          <span></span>
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-            <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
-              <path d="M5 21c.5-4.5 2.5-8 7-10"/>
-              <path d="M9 18c6.218 0 10.5-3.288 11-12V4h-4.014c-9 0-11.986 4-12 9c0 1 0 3 2 5z"/>
-            </g>
-          </svg>
-          <span></span>
-        </div>
-        <button type="button" class="lead-capture__decline" data-lead-capture-close>
-          No thanks, I will explore on my own.
-        </button>
-      </div>
-
-      <div class="lead-capture__success" data-lead-capture-success hidden>
-        <div class="lead-capture__mark" aria-hidden="true">
-          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24">
-            <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
-              <path d="M18.9 7a8 8 0 0 1 1.1 5v1a6 6 0 0 0 .8 3M8 11a4 4 0 0 1 8 0v1a10 10 0 0 0 2 6"/>
-              <path d="M12 11v2a14 14 0 0 0 2.5 8M8 15a18 18 0 0 0 1.8 6m-4.9-2a22 22 0 0 1-.9-7v-1a8 8 0 0 1 12-6.95"/>
-            </g>
-          </svg>
         </div>
 
-        <div class="lead-capture__eyebrow" aria-hidden="true">
-          <span></span>
-          <p>You're in</p>
-          <span></span>
-        </div>
-        <h2 id="LeadCaptureSuccessTitle" class="lead-capture__title lead-capture__title--success">
-          {{- voucher_success_title | escape -}}
-        </h2>
-        <p id="LeadCaptureSuccessDescription" class="lead-capture__description">
-          {{- voucher_success_text | escape -}}
-        </p>
+        <div class="lead-capture__success" data-lead-capture-success hidden>
+          <div class="lead-capture__mark" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24">
+              <path d="M0 0h24v24H0z" fill="none" />
+              <g fill="none">
+              	<path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z" />
+              	<path fill="currentColor" d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12S6.477 2 12 2m3.535 6.381l-4.95 4.95l-2.12-2.121a1 1 0 0 0-1.415 1.414l2.758 2.758a1.1 1.1 0 0 0 1.556 0l5.586-5.586a1 1 0 0 0-1.415-1.415" />
+              </g>
+            </svg>
+          </div>
 
-        <div class="lead-capture__divider" aria-hidden="true">
-          <span></span>
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-            <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
-              <path d="M5 21c.5-4.5 2.5-8 7-10"/>
-              <path d="M9 18c6.218 0 10.5-3.288 11-12V4h-4.014c-9 0-11.986 4-12 9c0 1 0 3 2 5z"/>
-            </g>
-          </svg>
-          <span></span>
+          <div class="lead-capture__eyebrow" aria-hidden="true">
+            <span></span>
+            <p>Welcome Offer</p>
+            <span></span>
+          </div>
+
+          <h2 id="LeadCaptureSuccessTitle" class="lead-capture__title">You're on the list.</h2>
+          <p id="LeadCaptureSuccessDescription" class="lead-capture__description lead-capture__description--success">
+            We'll send future studio offers to your inbox.
+          </p>
+
+          <div class="lead-capture__voucher lead-capture__voucher--success" aria-label="Welcome voucher">
+            <strong class="lead-capture__code">{{ voucher_code | escape }}</strong>
+            <button
+              type="button"
+              class="lead-capture__copy"
+              data-lead-capture-copy
+              data-code="{{ voucher_code | escape }}"
+              aria-label="Copy voucher code"
+            >
+              <span class="lead-capture__copy-icon" data-lead-capture-copy-icon aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                  <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+                    <path d="M8 8m-2 0a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2z"/>
+                    <path d="M16 6V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>
+                  </g>
+                </svg>
+              </span>
+              <span class="lead-capture__copy-icon" data-lead-capture-check-icon aria-hidden="true" hidden>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                  <path
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="m5 12l5 5L20 7"
+                  />
+                </svg>
+              </span>
+              <span class="lead-capture__visually-hidden" data-lead-capture-copy-status aria-live="polite"></span>
+            </button>
+          </div>
+
+          <button type="button" class="lead-capture__shop" data-lead-capture-shop data-lead-capture-close>
+            Continue exploring
+          </button>
         </div>
-        <span class="lead-capture__shop" data-lead-capture-shop data-lead-capture-close>
-          {{- voucher_success_cta_text | escape -}}
-        </span>
       </div>
     </div>
   </div>
@@ -216,6 +267,7 @@
   class="lead-capture-reminder"
   data-lead-capture-reminder
   hidden
+  style="background-image: url('{{ 'ic-wood-type-6.webp' | file_url }}')"
 >
   <button
     type="button"
@@ -224,7 +276,10 @@
     aria-haspopup="dialog"
     aria-controls="LeadCaptureDialog"
   >
-    <span class="lead-capture-reminder__label">10% OFF</span>
+    <span class="lead-capture-reminder__label">
+      <span class="value-10">10%</span>
+      <span class="value-text">OFF</span>
+    </span>
   </button>
   <button
     type="button"
@@ -232,7 +287,7 @@
     data-lead-capture-reminder-close
     aria-label="Dismiss gift reminder"
   >
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
       <path
         fill="none"
         stroke="currentColor"
@@ -246,7 +301,9 @@
 </div>
 
 {% stylesheet %}
-  .lead-capture-test-toggle[hidden] {
+  .lead-capture-test-toggle[hidden],
+  .lead-capture-reminder[hidden],
+  .lead-capture[hidden] {
     display: none;
   }
 
@@ -262,135 +319,125 @@
     background: var(--color-brown-dark);
     box-shadow: var(--shadow-elevation-2);
     color: var(--text-inverse);
+    cursor: pointer;
     font-family: var(--font-body);
     font-size: var(--font-size-body-sm);
     font-weight: var(--font-weight-semibold);
-    cursor: pointer;
-  }
-
-  .lead-capture-test-toggle:hover {
-    background: var(--color-brown);
   }
 
   .lead-capture-test-toggle--success {
     bottom: calc(var(--sp-4) * 2 + var(--sp-7));
   }
 
-  .lead-capture-test-toggle:focus-visible {
-    outline: var(--border-width) solid var(--color-sage);
-    outline-offset: var(--sp-1);
+  .lead-capture-test-toggle:hover {
+    background: var(--color-brown);
   }
 
-  .lead-capture-reminder[hidden] {
-    display: none;
+  .lead-capture-test-toggle:focus-visible,
+  .lead-capture-reminder__open:focus-visible,
+  .lead-capture-reminder__close:focus-visible,
+  .lead-capture__close:focus-visible,
+  .lead-capture__decline:focus-visible,
+  .lead-capture__submit:focus-visible,
+  .lead-capture__shop:focus-visible {
+    outline: var(--border-width) solid var(--color-sage);
+    outline-offset: var(--sp-1);
   }
 
   .lead-capture-reminder {
     position: fixed;
     z-index: calc(var(--z-drawer) + 9);
     bottom: 50%;
-    left: -10px;
+    left: calc(var(--sp-3) * -1);
     display: flex;
-    height: 65px;
-    width: 72px;
-    background-color: red;
-    border-bottom-right-radius: var(--radius-lg);
-    border-top-right-radius: var(--radius-lg);
+    width: calc(var(--sp-9));
+    height: calc(var(--sp-8) + var(--sp-1));
     align-items: stretch;
     border: var(--sp-0);
+    border-radius: var(--sp-0) var(--radius-lg) var(--radius-lg) var(--sp-0);
+    background-color: var(--color-brown-dark);
     background-position: center;
     background-repeat: no-repeat;
     background-size: cover;
     box-shadow: var(--shadow-elevation-2);
     opacity: 0;
     transform: translateY(50%);
-    transition: left 0.2s ease;
+    transition: left var(--timing-short) var(--ease-standard), opacity var(--timing-short) var(--ease-standard);
   }
 
   .lead-capture-reminder.is-visible {
     opacity: 1;
   }
 
+  .lead-capture-reminder:hover,
   .lead-capture-reminder:focus-within {
+    left: calc(var(--sp-1) * -1);
     box-shadow: var(--shadow-elevation-3);
-  }
-
-  .lead-capture-reminder:hover {
-    box-shadow: var(--shadow-elevation-3);
-    left: -1px;
   }
 
   .lead-capture-reminder__open {
     display: flex;
+    width: 100%;
+    height: 100%;
     align-items: center;
     justify-content: center;
+    padding: var(--sp-3) var(--sp-2);
     border: var(--sp-0);
     background: transparent;
     color: var(--text-inverse);
     cursor: pointer;
     font-family: var(--font-roboto);
-    font-size: var(--lead-capture-reminder-label-size);
     font-weight: var(--font-weight-bold);
-    letter-spacing: var(--letter-spacing-wide);
-    line-height: var(--line-height-normal);
-    height: 100%;
-    width: 100%;
-    padding: var(--sp-3) var(--sp-2);
   }
 
   .lead-capture-reminder__label {
-    position: relative;
-    z-index: 1;
-    line-height: 1.2;
-    letter-spacing: 0.05em;
-    transform: translateX(4px);
+    line-height: var(--line-height-tight);
+    text-align: center;
+    transform: translateX(var(--sp-1));
   }
 
-  .lead-capture-reminder__open:focus-visible {
-    outline: var(--border-width) solid var(--color-sage);
-    outline-offset: calc(var(--sp-1) * -1);
+  .lead-capture-reminder__label .value-10 {
+    display: block;
+    font-size: var(--font-size-body-2xl);
+  }
+
+  .lead-capture-reminder__label .value-text {
+    display: block;
+    font-size: var(--font-size-body-md);
+    letter-spacing: var(--letter-spacing-wide);
   }
 
   .lead-capture-reminder__close {
-    display: none; /* Hidden now, shown later */
+    position: absolute;
+    top: calc(var(--sp-2) * -1);
+    right: calc(var(--sp-2) * -1);
+    display: grid;
+    width: var(--sp-5);
+    height: var(--sp-5);
     place-items: center;
-    padding: var(--sp-0);
-    border: var(--sp-0);
+    padding: var(--sp-1);
+    border: var(--border-width) solid var(--color-cream);
+    border-radius: var(--radius-full);
+    background: var(--color-brown-dark);
     color: var(--text-inverse);
     cursor: pointer;
+    opacity: 0;
     transition: var(--transition-fast);
-    position: absolute;
-    right: var(--sp-0);
-    top: 5%;
-    transform: translate(80%, -80%);
-    background: #ff0000;
-    border-radius: var(--radius-full);
-    padding: var(--sp-1);
-    border: 2px solid var(--color-beige);
-    transition: var(--transition-fast);
+  }
+
+  .lead-capture-reminder:hover .lead-capture-reminder__close,
+  .lead-capture-reminder:focus-within .lead-capture-reminder__close {
+    opacity: 1;
   }
 
   .lead-capture-reminder__close svg {
-    width: 16px;
-    height: 16px;
-    border-radius: var(--radius-full);
-  }
-  .lead-capture-reminder__close:hover {
-    transform: translate(80%, -80%) scale(1.1);
-  }
-
-  .lead-capture-reminder__close:focus-visible {
-    outline: var(--border-width) solid var(--color-sage);
-    outline-offset: calc(var(--sp-1) * -1);
+    width: 100%;
+    height: 100%;
   }
 
   html.lead-capture-is-open,
   body.lead-capture-is-open {
     overflow: hidden;
-  }
-
-  .lead-capture[hidden] {
-    display: none;
   }
 
   .lead-capture {
@@ -400,9 +447,9 @@
     display: grid;
     place-items: center;
     overflow-y: auto;
-    padding: var(--sp-4);
-    background: color-mix(in srgb, var(--color-ebony) 66%, transparent);
-    backdrop-filter: blur(0.375rem);
+    padding: var(--sp-7);
+    background: color-mix(in srgb, var(--color-ebony) 78%, transparent);
+    backdrop-filter: blur(var(--sp-1));
     opacity: 0;
     transition: opacity var(--timing-base) var(--ease-standard);
   }
@@ -414,14 +461,13 @@
   .lead-capture__dialog {
     position: relative;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    width: min(var(--layout-max-width), calc(100vw - (var(--sp-7) * 2)));
-    max-height: calc(100dvh - (var(--sp-7) * 2));
-    border: var(--border-width) solid var(--color-clay);
-    overflow-x: hidden;
-    overflow-y: hidden;
+    grid-template-columns: minmax(var(--sp-0), 0.9fr) minmax(var(--sp-0), 1.1fr);
+    width: min(var(--layout-showcase-max-width), 80vw);
+    height: calc(100dvh - 200px);
+    max-height: calc(100dvh - 64px);
+    overflow: hidden;
+    border: var(--border-width) solid color-mix(in srgb, var(--color-clay) 42%, transparent);
     border-radius: var(--radius-xl);
-    outline-offset: calc(var(--sp-1) * -1);
     background: var(--color-bg);
     box-shadow: var(--shadow-modal);
     color: var(--color-text);
@@ -429,9 +475,12 @@
     transition: transform var(--timing-base) var(--ease-out);
   }
 
+  .lead-capture.is-open .lead-capture__dialog {
+    transform: translateY(var(--sp-0)) scale(1);
+  }
+
   .lead-capture__media {
     min-width: var(--sp-0);
-    max-height: calc(100dvh - (var(--sp-7) * 2));
     overflow: hidden;
     background: var(--color-bg-warm);
   }
@@ -443,26 +492,19 @@
     object-fit: cover;
   }
 
-  .lead-capture.is-open .lead-capture__dialog {
-    transform: translateY(var(--sp-0)) scale(1);
+  .lead-capture__panel {
+    min-width: var(--sp-0);
+    overflow-y: auto;
+    background: var(--color-milk);
   }
 
-  .lead-capture__dialog::before {
-    position: absolute;
-    bottom: var(--sp-8);
-    left: calc(var(--sp-8) * -1);
-    width: var(--sp-12);
-    height: var(--sp-12);
-    border-radius: 44% 56% 58% 42%;
-    background: repeating-radial-gradient(
-      ellipse at center,
-      transparent var(--sp-0),
-      transparent var(--sp-2),
-      color-mix(in srgb, var(--color-clay) 24%, transparent) var(--sp-2),
-      color-mix(in srgb, var(--color-clay) 24%, transparent) var(--sp-3)
-    );
-    content: '';
-    pointer-events: none;
+  .lead-capture__content {
+    display: grid;
+    min-height: 100%;
+    align-items: start;
+    align-content: center;
+    padding: var(--sp-7) var(--sp-8) var(--sp-6);
+    text-align: center;
   }
 
   .lead-capture__close {
@@ -474,105 +516,189 @@
     width: var(--sp-7);
     height: var(--sp-7);
     place-items: center;
-    padding: var(--sp-0);
+    padding: var(--sp-3);
     border: var(--border-width) solid var(--color-clay);
     border-radius: var(--radius-full);
-    background: var(--surface-elevated);
-    box-shadow: var(--shadow-elevation-1);
-    color: var(--color-brown);
+    background: color-mix(in srgb, var(--surface-elevated) 82%, transparent);
+    color: var(--color-brown-dark);
     cursor: pointer;
     transition: var(--transition-fast);
   }
 
   .lead-capture__close:hover {
-    background: color-mix(in srgb, var(--color-clay) 10%, transparent);
+    background: var(--surface-elevated);
+    transform: rotate(6deg);
   }
 
-  .lead-capture__content {
-    position: relative;
-    z-index: 1;
-    align-self: center;
-    min-width: var(--sp-0);
-    padding: var(--sp-7) var(--sp-6);
-    text-align: center;
+  .lead-capture__close svg,
+  .lead-capture__mark svg,
+  .lead-capture__field svg,
+  .lead-capture__divider svg {
+    width: 100%;
+    height: 100%;
   }
 
   .lead-capture__mark {
     display: grid;
-    width: var(--sp-7);
-    height: var(--sp-7);
-    margin: var(--sp-0) auto var(--sp-3);
-    place-items: center;
-    color: var(--color-dark-clay);
-  }
-
-  .lead-capture__mark svg {
     width: var(--sp-6);
     height: var(--sp-6);
+    margin: var(--sp-0) auto var(--sp-4);
+    place-items: center;
+    color: var(--color-brown-dark);
   }
 
   .lead-capture__eyebrow {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: var(--sp-4);
-    margin-bottom: var(--sp-4);
-    color: var(--color-brown);
+    gap: var(--sp-5);
+    margin-bottom: var(--sp-5);
+    color: var(--color-brown-dark);
   }
 
   .lead-capture__eyebrow span {
     width: var(--sp-8);
     height: var(--border-width);
-    background: var(--color-clay);
+    background: color-mix(in srgb, var(--color-clay) 54%, transparent);
   }
 
   .lead-capture__eyebrow p {
     margin: var(--sp-0);
     font-family: var(--font-body);
-    font-size: var(--eyebrow-size);
+    font-size: var(--font-size-caption);
     font-weight: var(--font-weight-semibold);
-    letter-spacing: 0.05rem;
+    letter-spacing: 0.24em;
     line-height: var(--line-height-normal);
     text-transform: uppercase;
   }
 
   .lead-capture__title {
-    margin: var(--sp-0);
-    color: var(--color-dark-clay);
+    max-width: calc(var(--sp-12) * 4);
+    margin: var(--sp-0) auto;
+    color: var(--color-brown-dark);
     font-family: var(--font-body);
-    font-size: clamp(var(--font-size-display-sm), 5vw, var(--font-size-display-md));
-    font-weight: var(--font-weight-bold);
+    font-size: clamp(var(--font-size-display-md), 4.2vw, var(--font-size-display-xl));
+    font-weight: var(--font-weight-light);
     letter-spacing: var(--letter-spacing-snug);
     line-height: var(--line-height-display);
   }
+  .lead-capture__voucher-title-strong {
+    font-weight: var(--font-weight-bold);
+  }
+
+  .lead-capture__voucher {
+    position: relative;
+    display: grid;
+    min-height: var(--sp-8);
+    place-items: center;
+    gap: var(--sp-2);
+    margin: var(--sp-5) auto var(--sp-4);
+    padding: var(--sp-4) var(--sp-9);
+    border: var(--border-width) solid color-mix(in srgb, var(--color-clay) 62%, transparent);
+    border-radius: var(--radius-md);
+    background: var(--color-dark-clay);
+  }
+
+  .lead-capture__code {
+    color: var(--color-cream);
+    font-family: var(--font-body);
+    font-size: clamp(var(--font-size-body-3xl), 3vw, var(--font-size-body-6xl));
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.08em;
+    line-height: var(--line-height-tight);
+  }
+
+  .lead-capture__copy {
+    position: absolute;
+    top: 50%;
+    right: var(--sp-3);
+    display: grid;
+    width: var(--sp-7);
+    height: var(--sp-7);
+    place-items: center;
+    padding: var(--sp-3);
+    border: var(--border-width) solid color-mix(in srgb, var(--color-cream) 56%, transparent);
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--color-cream) 10%, transparent);
+    color: var(--color-cream);
+    cursor: pointer;
+    transform: translateY(-50%);
+    transition: var(--transition-fast);
+  }
+
+  .lead-capture__copy:hover {
+    background: color-mix(in srgb, var(--color-cream) 18%, transparent);
+  }
+
+  .lead-capture__copy:focus-visible {
+    outline: var(--border-width) solid var(--color-cream);
+    outline-offset: var(--sp-1);
+  }
+
+  .lead-capture__copy-icon {
+    display: grid;
+    width: var(--sp-5);
+    height: var(--sp-5);
+    place-items: center;
+  }
+
+  .lead-capture__copy-icon[hidden] {
+    display: none;
+  }
+
+  .lead-capture__copy-icon svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .lead-capture__clipboard-proxy {
+    position: fixed;
+    top: var(--sp-0);
+    left: var(--sp-0);
+    width: var(--border-width);
+    height: var(--border-width);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .lead-capture__form-heading {
+    margin: var(--sp-0);
+    color: var(--color-brown-dark);
+    font-family: var(--font-display-light);
+    font-size: var(--font-size-display-sm);
+    font-weight: var(--font-weight-light);
+    line-height: var(--line-height-tight);
+  }
 
   .lead-capture__description {
-    max-width: 38rem;
-    margin: var(--sp-4) auto var(--sp-5);
+    margin: var(--sp-2) auto var(--sp-5);
     color: var(--color-text);
     font-family: var(--font-body);
-    font-size: var(--font-size-body-xl);
-    font-weight: var(--font-weight-regular);
+    font-size: var(--font-size-body-md);
     line-height: var(--line-height-relaxed);
   }
 
   .lead-capture__form {
-    display: grid;
-    gap: var(--sp-3);
-    max-width: 42rem;
     margin: var(--sp-0) auto;
+  }
+
+  .lead-capture__form-row {
+    display: grid;
+    grid-template-columns: minmax(var(--sp-0), 1.45fr) minmax(var(--sp-12), 1fr);
   }
 
   .lead-capture__field {
     display: flex;
+    min-width: var(--sp-0);
     min-height: var(--sp-7);
     align-items: center;
     gap: var(--sp-3);
     padding: var(--sp-3) var(--sp-4);
-    border: var(--border-width) solid var(--color-dark-clay);
-    border-radius: var(--radius-md);
-    background: color-mix(in srgb, var(--surface-elevated) 80%, transparent);
-    color: var(--color-dark-clay);
+    border: var(--border-width) solid var(--color-clay);
+    border-right: var(--sp-0);
+    border-radius: var(--radius-md) var(--radius-none) var(--radius-none) var(--radius-md);
+    background: color-mix(in srgb, var(--surface-elevated) 72%, transparent);
+    color: var(--color-brown-dark);
   }
 
   .lead-capture__field:focus-within {
@@ -580,8 +706,14 @@
     box-shadow: var(--shadow-focus);
   }
 
+  .lead-capture__field:has(.lead-capture__input[aria-invalid='true']) {
+    border-color: var(--color-error);
+  }
+
   .lead-capture__field svg {
-    flex: 0 0 auto;
+    flex: 0 0 var(--sp-5);
+    width: var(--sp-5);
+    height: var(--sp-5);
   }
 
   .lead-capture__input {
@@ -593,26 +725,13 @@
     background: transparent;
     color: var(--color-text);
     font-family: var(--font-display);
-    font-size: var(--font-size-body-lg);
+    font-size: var(--font-size-body-md);
     line-height: var(--line-height-normal);
   }
 
   .lead-capture__input::placeholder {
     color: var(--color-muted);
-    opacity: 0.8;
-  }
-
-  .lead-capture__field:has(.lead-capture__input[aria-invalid='true']) {
-    border-color: var(--color-error);
-  }
-
-  .lead-capture__error {
-    margin: var(--sp-0);
-    color: var(--color-error);
-    font-family: var(--font-body);
-    font-size: var(--font-size-body-sm);
-    line-height: var(--line-height-normal);
-    text-align: left;
+    opacity: 0.82;
   }
 
   .lead-capture__submit,
@@ -621,28 +740,24 @@
     min-height: var(--sp-7);
     align-items: center;
     justify-content: center;
-    padding: var(--sp-2) var(--sp-5);
+    padding: var(--sp-3) var(--sp-5);
     border: var(--border-width) solid var(--color-brown-dark);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-none) var(--radius-md) var(--radius-md) var(--radius-none);
     background: var(--color-brown-dark);
-    box-shadow: inset var(--sp-0) var(--sp-0) var(--sp-6) color-mix(in srgb, var(--color-clay) 18%, transparent);
     color: var(--text-inverse);
     cursor: pointer;
     font-family: var(--font-body);
-    font-size: var(--font-size-body-md);
+    font-size: var(--font-size-caption);
     font-weight: var(--font-weight-semibold);
-    letter-spacing: 0.05rem;
+    letter-spacing: 0.08em;
     line-height: var(--line-height-normal);
     text-align: center;
-    text-decoration: none;
     text-transform: uppercase;
     transition: var(--transition-fast);
   }
 
-  .lead-capture__submit:hover,
-  .lead-capture__shop:hover {
+  .lead-capture__submit:hover {
     background: var(--color-brown);
-    transform: translateY(calc(var(--sp-0) - var(--sp-1)));
   }
 
   .lead-capture__submit[aria-busy='true'] {
@@ -668,13 +783,21 @@
     display: block;
   }
 
+  .lead-capture__error {
+    margin: var(--sp-2) var(--sp-0) var(--sp-0);
+    color: var(--color-error);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-normal);
+    text-align: left;
+  }
+
   .lead-capture__divider {
     display: flex;
-    max-width: 28rem;
     align-items: center;
     justify-content: center;
     gap: var(--sp-4);
-    margin: var(--sp-2) auto var(--sp-2);
+    margin: var(--sp-4) auto var(--sp-2);
     color: var(--color-clay);
   }
 
@@ -684,16 +807,43 @@
     background: color-mix(in srgb, var(--color-clay) 42%, transparent);
   }
 
-  .lead-capture__success-note {
-    margin: var(--sp-0) auto var(--sp-5);
-    color: var(--color-muted);
-    font-family: var(--font-display);
-    font-size: var(--font-size-body-lg);
-    line-height: var(--line-height-relaxed);
+  .lead-capture__divider svg {
+    flex: 0 0 var(--sp-4);
+    width: var(--sp-4);
+    height: var(--sp-4);
   }
 
-  .lead-capture__success .lead-capture__divider {
+  .lead-capture__decline {
+    padding: var(--sp-1);
+    border: var(--sp-0);
+    background: transparent;
+    color: var(--color-brown-dark);
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-normal);
+    text-decoration: underline;
+    text-underline-offset: var(--sp-1);
+  }
+
+  .lead-capture__success .lead-capture__description--success {
+    max-width: calc(var(--sp-12) * 3);
     margin-top: var(--sp-4);
+  }
+
+  .lead-capture__voucher--success {
+    margin-top: var(--sp-5);
+  }
+
+  .lead-capture__shop {
+    width: 100%;
+    border-radius: var(--radius-md);
+    background-color: var(--color-cream);
+    color: var(--color-brown-dark);
+    font-weight: var(--font-weight-bold);
+  }
+  .lead-capture__shop:hover {
+    letter-spacing: 0.1rem;
   }
 
   .lead-capture__visually-hidden {
@@ -712,96 +862,196 @@
     }
   }
 
-  @media (max-width: 48rem) {
+  @media (max-width: 64rem) {
     .lead-capture {
-      padding: var(--sp-3);
+      padding: var(--sp-5);
     }
 
     .lead-capture__dialog {
-      grid-template-columns: minmax(0, 1fr);
-      width: min(100%, 36rem);
-      max-height: calc(100dvh - var(--sp-5));
-    }
-
-    .lead-capture__media {
-      min-height: var(--sp-0);
-      height: calc(var(--sp-12) + var(--sp-9));
+      width: min(92vw, var(--layout-max-width));
     }
 
     .lead-capture__content {
-      padding: var(--sp-6) var(--sp-5) var(--sp-4);
-    }
-
-    .lead-capture__close {
-      top: var(--sp-4);
-      right: var(--sp-4);
+      padding: var(--sp-6);
     }
 
     .lead-capture__title {
       font-size: var(--font-size-display-lg);
     }
 
-    .lead-capture__description {
-      margin-top: var(--sp-3);
-      font-size: var(--font-size-body-xl);
+    .lead-capture__voucher {
+      margin-block: var(--sp-5) var(--sp-4);
+      padding: var(--sp-4) var(--sp-8);
+    }
+
+    .lead-capture__form-row {
+      grid-template-columns: minmax(var(--sp-0), 1.3fr) minmax(var(--sp-12), 1fr);
+    }
+  }
+
+  @media (max-width: 48rem) {
+    .lead-capture {
+      padding: var(--sp-3);
+    }
+
+    .lead-capture__dialog {
+      grid-template-columns: minmax(var(--sp-0), 1fr);
+      width: min(100%, calc(var(--sp-12) * 4));
+      height: auto;
+      max-height: calc(100dvh - var(--sp-5));
+      overflow-y: auto;
+    }
+
+    .lead-capture__media {
+      height: calc(var(--sp-12) + var(--sp-8));
+    }
+
+    .lead-capture__panel {
+      overflow: visible;
+    }
+
+    .lead-capture__content {
+      min-height: auto;
+      align-content: start;
+      padding: var(--sp-5);
+    }
+
+    .lead-capture__close {
+      top: var(--sp-4);
+      right: var(--sp-4);
+      background: color-mix(in srgb, var(--surface-elevated) 92%, transparent);
+    }
+
+    .lead-capture__mark {
+      margin-bottom: var(--sp-3);
     }
 
     .lead-capture__eyebrow {
       gap: var(--sp-3);
+      margin-bottom: var(--sp-4);
     }
 
     .lead-capture__eyebrow span {
-      width: var(--sp-6);
+      width: var(--sp-7);
+    }
+
+    .lead-capture__title {
+      font-size: var(--font-size-display-md);
+    }
+
+    .lead-capture__form-row {
+      grid-template-columns: minmax(var(--sp-0), 1fr);
+      gap: var(--sp-3);
+    }
+
+    .lead-capture__field,
+    .lead-capture__submit {
+      border: var(--border-width) solid var(--color-clay);
+      border-radius: var(--radius-md);
     }
   }
 
   @media (max-width: 30rem) {
+    .lead-capture__dialog {
+      max-height: calc(100dvh - var(--sp-4));
+    }
+
     .lead-capture__media {
-      height: 180px;
+      height: calc(var(--sp-12) + var(--sp-5));
     }
 
     .lead-capture__content {
-      padding: var(--sp-4) var(--sp-5) var(--sp-3);
+      padding: var(--sp-5) var(--sp-4);
     }
 
-    .lead-capture__mark {
-      margin-bottom: var(--sp-2);
+    .lead-capture__close {
+      width: var(--sp-6);
+      height: var(--sp-6);
+      padding: var(--sp-2);
     }
 
     .lead-capture__eyebrow {
       margin-bottom: var(--sp-3);
     }
 
-    .lead-capture__eyebrow span {
-      width: var(--sp-5);
+    .lead-capture__eyebrow p {
+      letter-spacing: 0.16em;
     }
 
-    .lead-capture__eyebrow p {
-      letter-spacing: var(--letter-spacing-wide);
+    .lead-capture__eyebrow span {
+      width: var(--sp-6);
     }
 
     .lead-capture__title {
       font-size: var(--font-size-display-sm);
     }
 
-    .lead-capture__description,
-    .lead-capture__success-note {
-      font-size: var(--font-size-body-md);
+    .lead-capture__voucher {
+      gap: var(--sp-1);
+      margin-block: var(--sp-4);
+      padding: var(--sp-3) var(--sp-8);
     }
 
-    .lead-capture__field,
-    .lead-capture__submit,
-    .lead-capture__shop {
-      min-height: var(--sp-7);
+    .lead-capture__code {
+      font-size: var(--font-size-body-3xl);
     }
 
-    .lead-capture__input {
+    .lead-capture__form-heading {
+      font-size: var(--font-size-body-2xl);
+    }
+
+    .lead-capture__description {
+      margin-bottom: var(--sp-4);
       font-size: var(--font-size-body-sm);
     }
 
-    .lead-capture-reminder__close {
-      right: 5px;
-      top: -5px;
+    .lead-capture__divider {
+      margin-top: var(--sp-4);
+    }
+  }
+
+  @media (min-width: 48.0625rem) and (max-height: 52rem) {
+    .lead-capture {
+      padding: var(--sp-5);
+    }
+
+    .lead-capture__content {
+      padding-block: var(--sp-5);
+    }
+
+    .lead-capture__mark {
+      margin-bottom: var(--sp-3);
+    }
+
+    .lead-capture__eyebrow {
+      margin-bottom: var(--sp-4);
+    }
+
+    .lead-capture__title {
+      font-size: var(--font-size-display-lg);
+    }
+
+    .lead-capture__voucher {
+      gap: var(--sp-1);
+      margin-block: var(--sp-4);
+      padding: var(--sp-3) var(--sp-8);
+    }
+
+    .lead-capture__code {
+      font-size: var(--font-size-body-5xl);
+    }
+
+    .lead-capture__form-heading {
+      font-size: var(--font-size-body-4xl);
+    }
+
+    .lead-capture__description {
+      margin-bottom: var(--sp-4);
+      font-size: var(--font-size-body-sm);
+    }
+
+    .lead-capture__divider {
+      margin-top: var(--sp-3);
     }
   }
 {% endstylesheet %}
@@ -813,12 +1063,14 @@
     root.dataset.initialized = 'true';
 
     var testToggle = document.querySelector('[data-lead-capture-test-toggle]');
+    var testSuccessToggle = document.querySelector('[data-lead-capture-test-success-toggle]');
     var dialog = root.querySelector('[data-lead-capture-dialog]');
     var form = root.querySelector('form');
     var emailInput = root.querySelector('input[type="email"]');
     var submitButton = root.querySelector('[data-lead-capture-submit]');
     var submitLabel = root.querySelector('[data-lead-capture-submit-label]');
     var submitLabelText = submitLabel ? submitLabel.textContent.trim() : '';
+    var copyButtons = Array.prototype.slice.call(root.querySelectorAll('[data-lead-capture-copy]'));
     var errorMessage = root.querySelector('[data-lead-capture-error]');
     var formState = root.querySelector('[data-lead-capture-form-state]');
     var successState = root.querySelector('[data-lead-capture-success]');
@@ -834,6 +1086,7 @@
     var isSubscribed = false;
     var lastFocusedElement = null;
     var closeTimer = null;
+    var copyResetTimers = new WeakMap();
 
     function getReminderState() {
       try {
@@ -848,7 +1101,7 @@
       try {
         window.localStorage.setItem(reminderKey, state);
       } catch (error) {
-        // The reminder still works for the current session when storage is blocked.
+        return;
       }
     }
 
@@ -878,7 +1131,7 @@
       try {
         window.localStorage.setItem(storageKey, 'true');
       } catch (error) {
-        // The popup still works when storage is blocked by the browser.
+        return;
       }
     }
 
@@ -986,16 +1239,6 @@
       }
     }
 
-    root.addEventListener('click', function (event) {
-      if (event.target === root || event.target.closest('[data-lead-capture-close]')) {
-        closePopup();
-      }
-    });
-
-    emailInput.addEventListener('input', function () {
-      if (emailInput.validity.valid) setError('');
-    });
-
     function hasValidEmail() {
       emailInput.value = emailInput.value.trim();
       return Boolean(emailInput.value) && emailInput.validity.valid;
@@ -1007,15 +1250,105 @@
       emailInput.focus();
     }
 
-    // The browser blocks an empty or malformed email before any submit handler
-    // runs, so replace its default bubble with the styled message instead.
+    function fallbackCopy(value) {
+      var temporaryInput = document.createElement('textarea');
+      temporaryInput.value = value;
+      temporaryInput.setAttribute('readonly', '');
+      temporaryInput.className = 'lead-capture__clipboard-proxy';
+      document.body.appendChild(temporaryInput);
+      temporaryInput.select();
+      var copied = document.execCommand('copy');
+      temporaryInput.remove();
+      return copied;
+    }
+
+    function copyVoucherCode(value) {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        return navigator.clipboard.writeText(value).catch(function () {
+          if (fallbackCopy(value)) return;
+          throw new Error('Copy failed');
+        });
+      }
+
+      return fallbackCopy(value) ? Promise.resolve() : Promise.reject(new Error('Copy failed'));
+    }
+
+    function resetCopyIndicator(copyButton) {
+      var copyIcon = copyButton.querySelector('[data-lead-capture-copy-icon]');
+      var checkIcon = copyButton.querySelector('[data-lead-capture-check-icon]');
+      var copyStatus = copyButton.querySelector('[data-lead-capture-copy-status]');
+      if (!copyIcon || !checkIcon) return;
+      copyButton.classList.remove('is-copied');
+      copyButton.setAttribute('aria-label', 'Copy voucher code');
+      copyIcon.hidden = false;
+      checkIcon.hidden = true;
+      if (copyStatus) copyStatus.textContent = '';
+      copyResetTimers.delete(copyButton);
+    }
+
+    function showCopyIndicator(copyButton) {
+      var copyIcon = copyButton.querySelector('[data-lead-capture-copy-icon]');
+      var checkIcon = copyButton.querySelector('[data-lead-capture-check-icon]');
+      var copyStatus = copyButton.querySelector('[data-lead-capture-copy-status]');
+      if (!copyIcon || !checkIcon) return;
+      window.clearTimeout(copyResetTimers.get(copyButton));
+      copyButton.classList.add('is-copied');
+      copyButton.setAttribute('aria-label', 'Voucher code copied');
+      copyIcon.hidden = true;
+      checkIcon.hidden = false;
+      if (copyStatus) copyStatus.textContent = 'Voucher code copied.';
+      copyResetTimers.set(
+        copyButton,
+        window.setTimeout(function () {
+          resetCopyIndicator(copyButton);
+        }, 2000)
+      );
+    }
+
+    root.addEventListener('click', function (event) {
+      if (event.target === root || event.target.closest('[data-lead-capture-close]')) {
+        closePopup();
+      }
+    });
+
+    emailInput.addEventListener('input', function () {
+      if (emailInput.validity.valid) setError('');
+    });
+
     emailInput.addEventListener('invalid', function (event) {
       event.preventDefault();
       rejectSubmission();
     });
 
-    // Captured before the bubble phase so Shopify's spam protection never sees
-    // the click and cannot submit the form programmatically on an empty field.
+    copyButtons.forEach(function (copyButton) {
+      copyButton.addEventListener('click', function () {
+        var voucherCode = copyButton.dataset.code || '';
+        if (!voucherCode) return;
+
+        copyVoucherCode(voucherCode)
+          .then(function () {
+            showCopyIndicator(copyButton);
+            if (window.showToast) {
+              window.showToast({
+                message: 'Voucher code copied.',
+                type: 'success',
+                position: 'bottom-left',
+                duration: 2000,
+              });
+            }
+          })
+          .catch(function () {
+            if (window.showToast) {
+              window.showToast({
+                message: 'Unable to copy the voucher code.',
+                type: 'error',
+                position: 'bottom-left',
+              });
+            }
+          });
+      });
+    });
+
     submitButton.addEventListener(
       'click',
       function (event) {
@@ -1060,8 +1393,6 @@
       });
     }
 
-    var testSuccessToggle = document.querySelector('[data-lead-capture-test-success-toggle]');
-
     if (testToggle && new URLSearchParams(window.location.search).get('lead_popup_test') === '1') {
       testToggle.hidden = false;
       testToggle.addEventListener('click', function () {
@@ -1076,9 +1407,7 @@
         testSuccessToggle.hidden = false;
         testSuccessToggle.addEventListener('click', function () {
           showSuccess();
-          if (!isOpen) {
-            openPopup(true);
-          }
+          if (!isOpen) openPopup(true);
         });
       }
     }

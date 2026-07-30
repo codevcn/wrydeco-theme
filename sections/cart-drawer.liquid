@@ -1,9 +1,17 @@
+{% liquid
+  assign welcome_voucher = metaobjects.voucher_welcome_customer.values | first
+  assign auto_apply_voucher = welcome_voucher.auto_apply_voucher.value | default: 0
+  assign welcome_voucher_code = welcome_voucher.voucher_code.value
+%}
+
 <div
   id="CartDrawer"
   class="cart-drawer"
   data-cart-drawer-shell
   data-section-id="{{ section.id }}"
   data-cart-count="{{ cart.item_count }}"
+  data-auto-apply-voucher="{{ auto_apply_voucher }}"
+  data-welcome-voucher-code="{{ welcome_voucher_code | escape }}"
   aria-hidden="true"
   inert
 >
@@ -826,7 +834,7 @@
     position: relative;
     display: flex;
     flex-direction: column;
-    width: min(100%, 420px);
+    width: min(100%, 620px);
     max-height: calc(100dvh - var(--sp-8));
     overflow: hidden;
     border: 1px solid var(--border-light);
@@ -1569,7 +1577,7 @@
 
   .cart-drawer__voucher-dialog {
     position: relative;
-    width: min(100%, 760px);
+    width: min(100%, 560px);
     padding: var(--sp-6);
     border-radius: var(--radius-xl);
     background: var(--surface-elevated);
@@ -1953,6 +1961,23 @@
 
     const getShell = () => document.querySelector('[data-cart-drawer-shell]');
     const getPanel = () => getShell()?.querySelector('[data-cart-drawer-panel]');
+    const WELCOME_VOUCHER_NOTICE_KEY = 'wrydeco:welcome-voucher-notice';
+
+    const hasShownWelcomeVoucherNotice = (code) => {
+      try {
+        return window.localStorage.getItem(WELCOME_VOUCHER_NOTICE_KEY) === code;
+      } catch (error) {
+        return false;
+      }
+    };
+
+    const rememberWelcomeVoucherNotice = (code) => {
+      try {
+        window.localStorage.setItem(WELCOME_VOUCHER_NOTICE_KEY, code);
+      } catch (error) {
+        /* localStorage unavailable; the discount flow must continue */
+      }
+    };
 
     const floatingWidgetSelectors = [
       '#shopify-chat',
@@ -2100,6 +2125,61 @@
       updateCartBubble(Number.isNaN(count) ? 0 : count);
       syncPendingDiscount();
     };
+
+    const autoApplyWelcomeVoucher = async () => {
+      const shell = getShell();
+      if (!shell) return;
+
+      const isEnabled = ['1', 'true'].includes((shell.dataset.autoApplyVoucher || '').toLowerCase());
+      if (!isEnabled) return;
+
+      const code = (shell.dataset.welcomeVoucherCode || '').trim();
+      if (!code) return;
+
+      try {
+        const root = window.Shopify?.routes?.root || '/';
+        const response = await fetch(`${root}cart/update.js`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ discount: code }),
+        });
+        const cart = await response.json();
+        if (!response.ok || cart.status) throw new Error(cart.description || 'Unable to apply the welcome offer.');
+
+        const appliedDiscount = (cart.discount_codes || []).find(
+          (discount) => (discount.code || '').toLowerCase() === code.toLowerCase() && discount.applicable === true
+        );
+        if (!appliedDiscount) return;
+
+        await refreshDrawer();
+        if (!hasShownWelcomeVoucherNotice(code) && window.showToast) {
+          window.showToast({
+            message: `Welcome offer “${code}” applied.`,
+            type: 'success',
+            position: 'bottom-left',
+          });
+          rememberWelcomeVoucherNotice(code);
+        }
+      } catch (error) {
+        if (window.showToast) {
+          window.showToast({
+            message: error.message,
+            type: 'error',
+            position: 'bottom-left',
+          });
+        }
+      }
+    };
+
+    const scheduleWelcomeVoucher = () => {
+      window.setTimeout(autoApplyWelcomeVoucher, 0);
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', scheduleWelcomeVoucher, { once: true });
+    } else {
+      scheduleWelcomeVoucher();
+    }
 
     const changeLine = async (lineItem, quantity) => {
       const shell = getShell();

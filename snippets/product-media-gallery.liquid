@@ -53,7 +53,7 @@
     padding: var(--sp-0);
     border: var(--border-width) solid var(--color-bark);
     border-radius: var(--radius-full);
-    background-color: #ffffffc9;
+    background-color: var(--color-milk);
     box-shadow: var(--shadow-elevation-1);
     color: var(--color-bark);
     cursor: pointer;
@@ -518,6 +518,39 @@
       right: max(var(--sp-3), env(safe-area-inset-right));
     }
   }
+
+  .product-gallery__best-seller-badge {
+    position: absolute;
+    inset-block-start: var(--sp-4);
+    inset-inline-start: var(--sp-4);
+    z-index: 3;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: var(--sp-1) var(--sp-3);
+    background-color: var(--color-milk);
+    color: var(--color-clay);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-medium);
+    border-radius: var(--radius-full);
+    pointer-events: none;
+    box-shadow: var(--shadow-elevation-1);
+  }
+  .product-gallery__best-seller-badge svg {
+    width: 14px;
+    height: 14px;
+  }
+  .product-gallery__best-seller-badge svg path {
+    fill: var(--color-clay);
+  }
+
+  @media screen and (max-width: 720px) {
+    .product-gallery__best-seller-badge {
+      inset-block-start: var(--sp-3);
+      inset-inline-start: var(--sp-3);
+    }
+  }
 {% endstylesheet %}
 
 <div class="product-gallery" data-product-gallery>
@@ -536,6 +569,23 @@
       <span class="product-gallery__wishlist-icon" data-product-wishlist-icon aria-hidden="true"></span>
       <span class="product-gallery__wishlist-loading" aria-hidden="true"></span>
     </button>
+
+    {% assign has_best_seller = false %}
+    {% for coll in product.collections %}
+      {% if coll.handle == 'best-sellers-manually' %}
+        {% assign has_best_seller = true %}
+        {% break %}
+      {% endif %}
+    {% endfor %}
+    {% if has_best_seller %}
+      <div class="product-gallery__best-seller-badge">
+        <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24">
+          <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.12 2.12 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.12 2.12 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.12 2.12 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.12 2.12 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.12 2.12 0 0 0 1.597-1.16z"/>
+        </svg>
+        <span>Best Seller</span>
+      </div>
+    {% endif %}
+
     <div class="product-gallery__zoom-lens" data-zoom-lens aria-hidden="true"></div>
     {% assign featured_media = current_variant.featured_media | default: product.featured_media %}
     {% for media in product.media %}
@@ -883,7 +933,8 @@
           //    this media (0 network). Fall back to the hi-res source directly if
           //    the gallery image for this media hasn't been loaded yet.
           var galleryImg = getGalleryImageByMediaId(selectedThumbnail.dataset.lightboxMediaId);
-          var instantSrc = galleryImg && galleryImg.complete && galleryImg.naturalWidth > 0 ? galleryImg.currentSrc : '';
+          var instantSrc =
+            galleryImg && galleryImg.complete && galleryImg.naturalWidth > 0 ? galleryImg.currentSrc : '';
           var usedInstant = instantSrc && instantSrc !== hiResSrc;
           lightboxImg.src = usedInstant ? instantSrc : hiResSrc;
 
@@ -1313,8 +1364,7 @@
     }
 
     function findWishlistItem(apiHost, shopId, customerId, variantId) {
-      var query =
-        '?sid=' + encodeURIComponent(String(shopId)) + '&cid=' + encodeURIComponent(String(customerId));
+      var query = '?sid=' + encodeURIComponent(String(shopId)) + '&cid=' + encodeURIComponent(String(customerId));
 
       return window
         .fetch(apiHost + '/bundle/api/v2/sf/ws' + query, {

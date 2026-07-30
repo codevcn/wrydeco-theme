@@ -1,0 +1,975 @@
+{% doc %}
+  Renders the PDP trust-benefit grid and its accessible detail drawer.
+
+  @param {string} section_id - Unique section identifier used for ARIA relationships.
+
+  @example
+  {% render 'product-trust-benefits', section_id: section.id %}
+{% enddoc %}
+
+{%- capture icon_truck -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h11v11H3zM14 9h4l3 4v4h-7z"/><circle cx="7" cy="17" r="2"/><circle cx="18" cy="17" r="2"/></svg>
+{%- endcapture -%}
+{%- capture icon_shield -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.6 2.9 8 7 10 4.1-2 7-5.4 7-10V6z"/><path d="m9 12 2 2 4-4"/></svg>
+{%- endcapture -%}
+{%- capture icon_return -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8v5h5"/><path d="M5.5 13a7.5 7.5 0 1 0 2-6.5L4 9"/></svg>
+{%- endcapture -%}
+{%- capture icon_package_shield -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 7 8-4 8 4-8 4zM4 7v10l8 4 3-1.5M12 11v5"/><path d="M17.5 13.5 21 15v2.6c0 2.1-1.3 3.7-3.5 4.9-2.2-1.2-3.5-2.8-3.5-4.9V15z"/><path d="m16 18 1 1 2-2"/></svg>
+{%- endcapture -%}
+{%- capture icon_arrow -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+{%- endcapture -%}
+{%- capture icon_close -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+{%- endcapture -%}
+{%- capture icon_box -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 7 8-4 8 4-8 4zM4 7v10l8 4 8-4V7M12 11v10"/></svg>
+{%- endcapture -%}
+{%- capture icon_chair -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 12V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v7M5 12h14a2 2 0 0 1 2 2v3H3v-3a2 2 0 0 1 2-2ZM6 17v4M18 17v4"/></svg>
+{%- endcapture -%}
+{%- capture icon_tag -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6l10 10-6 6L4 10z"/><circle cx="8" cy="8" r="1"/></svg>
+{%- endcapture -%}
+{%- capture icon_info -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
+{%- endcapture -%}
+{%- capture icon_calendar -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14v16H5zM8 3v4M16 3v4M5 10h14"/><path d="M12 13v4M10 15h4"/></svg>
+{%- endcapture -%}
+{%- capture icon_blocked -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m6 6 12 12"/></svg>
+{%- endcapture -%}
+{%- capture icon_support -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15h4l3 3h5a3 3 0 0 0 3-3H9"/><path d="M4 11h3l2-2h5l3 3M4 19V9M14 4l3 1v4"/></svg>
+{%- endcapture -%}
+{%- capture icon_tools -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6 4-4 4 4-4 4M4 14l6 6-2 2-6-6zM12 8l4 4M8 12l4 4"/><path d="M15 15 5 5M9 5 5 9"/></svg>
+{%- endcapture -%}
+{%- capture icon_phone -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-3 2a14 14 0 0 0 5 5l2-3 5 2v4a2 2 0 0 1-2 2A15 15 0 0 1 3 6a2 2 0 0 1 2-2Z"/></svg>
+{%- endcapture -%}
+
+<section class="product-trust-benefits" aria-label="Purchase benefits" data-product-benefits>
+  <div class="product-trust-benefits__grid">
+    <button
+      type="button"
+      class="product-trust-benefits__trigger"
+      aria-controls="ProductBenefitDrawer-{{ section_id }}"
+      aria-expanded="false"
+      data-benefit-open="delivery"
+    >
+      <span class="product-trust-benefits__icon">{{ icon_truck }}</span>
+      <span class="product-trust-benefits__copy">
+        <strong>Free Delivery</strong>
+        <span>Complimentary delivery on all orders</span>
+      </span>
+      <span class="product-trust-benefits__arrow">{{ icon_arrow }}</span>
+    </button>
+
+    <button
+      type="button"
+      class="product-trust-benefits__trigger"
+      aria-controls="ProductBenefitDrawer-{{ section_id }}"
+      aria-expanded="false"
+      data-benefit-open="warranty"
+    >
+      <span class="product-trust-benefits__icon">{{ icon_shield }}</span>
+      <span class="product-trust-benefits__copy">
+        <strong>5-Year Warranty</strong>
+        <span>Structural coverage and peace of mind</span>
+      </span>
+      <span class="product-trust-benefits__arrow">{{ icon_arrow }}</span>
+    </button>
+
+    <button
+      type="button"
+      class="product-trust-benefits__trigger"
+      aria-controls="ProductBenefitDrawer-{{ section_id }}"
+      aria-expanded="false"
+      data-benefit-open="damage"
+    >
+      <span class="product-trust-benefits__icon">{{ icon_return }}</span>
+      <span class="product-trust-benefits__copy">
+        <strong>Damage &amp; Defect Support</strong>
+        <span>Prompt help for eligible delivery issues</span>
+      </span>
+      <span class="product-trust-benefits__arrow">{{ icon_arrow }}</span>
+    </button>
+
+    <button
+      type="button"
+      class="product-trust-benefits__trigger"
+      aria-controls="ProductBenefitDrawer-{{ section_id }}"
+      aria-expanded="false"
+      data-benefit-open="protection"
+    >
+      <span class="product-trust-benefits__icon">{{ icon_package_shield }}</span>
+      <span class="product-trust-benefits__copy">
+        <strong>Protected Delivery</strong>
+        <span>Secure packaging and insured transit</span>
+      </span>
+      <span class="product-trust-benefits__arrow">{{ icon_arrow }}</span>
+    </button>
+  </div>
+
+  <div
+    id="ProductBenefitDrawer-{{ section_id }}"
+    class="product-benefit-drawer"
+    data-benefit-drawer
+    aria-hidden="true"
+    hidden
+  >
+    <button
+      type="button"
+      class="product-benefit-drawer__overlay"
+      aria-label="Close benefit details"
+      data-benefit-close
+    ></button>
+
+    <aside class="product-benefit-drawer__panel" role="dialog" aria-modal="true" tabindex="-1" data-benefit-panel>
+      <button
+        type="button"
+        class="product-benefit-drawer__close"
+        aria-label="Close benefit details"
+        data-benefit-close
+      >
+        {{ icon_close }}
+      </button>
+
+      <div class="product-benefit-drawer__scroll">
+        <p class="product-benefit-drawer__eyebrow">Benefits</p>
+
+        <article class="product-benefit-drawer__view" data-benefit-view="delivery" hidden>
+          <header class="product-benefit-drawer__header">
+            <span class="product-benefit-drawer__title-icon">{{ icon_truck }}</span>
+            <h2 id="BenefitDeliveryTitle-{{ section_id }}">Free Delivery</h2>
+          </header>
+          <p class="product-benefit-drawer__lead">
+            We offer complimentary Standard Delivery and an optional Delivery &amp; Assembly Service.
+          </p>
+
+          <div class="product-benefit-drawer__cards">
+            <section class="product-benefit-drawer__card">
+              <span class="product-benefit-drawer__card-icon">{{ icon_box }}</span>
+              <div>
+                <h3>Standard Delivery</h3>
+                <p>
+                  Complimentary on orders delivered to eligible United States addresses. Delivery is made to the
+                  ground floor, lobby, or first accessible dry area and does not include unpacking or assembly.
+                </p>
+              </div>
+            </section>
+            <section class="product-benefit-drawer__card">
+              <span class="product-benefit-drawer__card-icon">{{ icon_chair }}</span>
+              <div>
+                <h3>Delivery &amp; Assembly Service</h3>
+                <p>
+                  Available by arrangement for selected pieces requiring specialist placement or setup. Scope,
+                  access requirements, and any additional service fee are confirmed before booking.
+                </p>
+              </div>
+            </section>
+          </div>
+
+          <div class="product-benefit-drawer__inline-note">
+            <span>{{ icon_tag }}</span>
+            <p>Optional installation, storage, redelivery, or specialized handling may carry a separate charge.</p>
+          </div>
+          <div class="product-benefit-drawer__notice">
+            <span>{{ icon_info }}</span>
+            <p>
+              <strong>Note:</strong> Assembly is scheduled in advance. Please prepare a clear, accessible space
+              before the delivery team arrives.
+            </p>
+          </div>
+        </article>
+
+        <article class="product-benefit-drawer__view" data-benefit-view="warranty" hidden>
+          <header class="product-benefit-drawer__hero-header">
+            <span class="product-benefit-drawer__hero-icon">{{ icon_package_shield }}</span>
+            <div>
+              <h2 id="BenefitWarrantyTitle-{{ section_id }}">5-Year Warranty</h2>
+              <p>
+                WRYDECO offers a <strong>5-year structural warranty</strong> covering the integrity of the joinery
+                and construction from the date of delivery.
+              </p>
+            </div>
+          </header>
+
+          <div class="product-benefit-drawer__divider" aria-hidden="true"></div>
+          <div class="product-benefit-drawer__cards">
+            <section class="product-benefit-drawer__card">
+              <span class="product-benefit-drawer__card-icon product-benefit-drawer__card-icon--outline">
+                {{ icon_shield }}
+              </span>
+              <div>
+                <h3>What’s Covered</h3>
+                <p>Structural failures in the joinery and construction that hold the piece together.</p>
+              </div>
+            </section>
+            <section class="product-benefit-drawer__card">
+              <span class="product-benefit-drawer__card-icon product-benefit-drawer__card-icon--outline">
+                {{ icon_blocked }}
+              </span>
+              <div>
+                <h3>Not Covered</h3>
+                <p>
+                  Natural wood movement, tonal shifts, patina, surface wear, misuse, unsuitable environments,
+                  harsh cleaning, accidents, or alterations made after delivery.
+                </p>
+              </div>
+            </section>
+          </div>
+
+          <div class="product-benefit-drawer__inline-note">
+            <span>{{ icon_support }}</span>
+            <p>Contact our team with clear photographs if you believe the structure of your piece has failed.</p>
+          </div>
+          <div class="product-benefit-drawer__notice">
+            <span>{{ icon_info }}</span>
+            <p>Natural variations in solid wood and signs of regular use are characteristics, not defects.</p>
+          </div>
+          <a class="product-benefit-drawer__text-link" href="{{ pages.faq.url | default: '/pages/faq' }}">
+            See full warranty details {{ icon_arrow }}
+          </a>
+        </article>
+
+        <article class="product-benefit-drawer__view" data-benefit-view="damage" hidden>
+          <header class="product-benefit-drawer__header">
+            <span class="product-benefit-drawer__title-icon product-benefit-drawer__title-icon--large">
+              {{ icon_return }}
+            </span>
+            <h2 id="BenefitDamageTitle-{{ section_id }}">Damage &amp; Defect Support</h2>
+          </header>
+          <div class="product-benefit-drawer__ornament" aria-hidden="true"><span></span></div>
+
+          <div class="product-benefit-drawer__cards">
+            <section class="product-benefit-drawer__card">
+              <span class="product-benefit-drawer__card-icon product-benefit-drawer__card-icon--outline">
+                {{ icon_calendar }}
+              </span>
+              <div>
+                <h3>Claim Window</h3>
+                <p>Contact us within 7 calendar days of delivery with your order number and clear photographs.</p>
+              </div>
+            </section>
+            <section class="product-benefit-drawer__card">
+              <span class="product-benefit-drawer__card-icon product-benefit-drawer__card-icon--outline">
+                {{ icon_tag }}
+              </span>
+              <div>
+                <h3>Eligibility</h3>
+                <p>Claims apply to manufacturing defects or damage that occurred during shipping.</p>
+              </div>
+            </section>
+            <section class="product-benefit-drawer__card">
+              <span class="product-benefit-drawer__card-icon product-benefit-drawer__card-icon--outline">
+                {{ icon_shield }}
+              </span>
+              <div>
+                <h3>Important Note</h3>
+                <p>
+                  Keep all original packaging and wait for written instructions before returning or disposing of
+                  any part of the shipment.
+                </p>
+              </div>
+            </section>
+          </div>
+
+          <div class="product-benefit-drawer__policy-footer">
+            <a class="product-benefit-drawer__text-link" href="{{ shop.refund_policy.url | default: '/policies/refund-policy' }}">
+              See full Return &amp; Refund Policy {{ icon_arrow }}
+            </a>
+          </div>
+        </article>
+
+        <article
+          class="product-benefit-drawer__view product-benefit-drawer__view--protection"
+          data-benefit-view="protection"
+          hidden
+        >
+          <header class="product-benefit-drawer__header product-benefit-drawer__header--centered">
+            <span class="product-benefit-drawer__hero-icon">{{ icon_package_shield }}</span>
+            <h2 id="BenefitProtectionTitle-{{ section_id }}">Protected Delivery</h2>
+          </header>
+          <div class="product-benefit-drawer__ornament" aria-hidden="true"><span></span></div>
+          <p class="product-benefit-drawer__lead">
+            We take great care in packaging and delivering your WRYDECO piece safely to your door.
+          </p>
+
+          <div class="product-benefit-drawer__cards">
+            <section class="product-benefit-drawer__card product-benefit-drawer__card--compact">
+              <span class="product-benefit-drawer__card-icon">{{ icon_package_shield }}</span>
+              <div>
+                <h3>Lost or Missing Packages</h3>
+                <p>If an order is confirmed lost in transit, we will arrange an appropriate resolution.</p>
+              </div>
+              <span class="product-benefit-drawer__card-arrow">{{ icon_arrow }}</span>
+            </section>
+            <section class="product-benefit-drawer__card product-benefit-drawer__card--compact">
+              <span class="product-benefit-drawer__card-icon">{{ icon_box }}</span>
+              <div>
+                <h3>Damaged or Defective Items</h3>
+                <p>Contact us with clear photographs so we can assess a repair, replacement, or refund.</p>
+              </div>
+              <span class="product-benefit-drawer__card-arrow">{{ icon_arrow }}</span>
+            </section>
+            <section class="product-benefit-drawer__card product-benefit-drawer__card--compact">
+              <span class="product-benefit-drawer__card-icon">{{ icon_tools }}</span>
+              <div>
+                <h3>Missing Parts or Assembly Tools</h3>
+                <p>Tell us what is missing and our team will help arrange the required parts or next steps.</p>
+              </div>
+              <span class="product-benefit-drawer__card-arrow">{{ icon_arrow }}</span>
+            </section>
+          </div>
+
+          <div class="product-benefit-drawer__notice">
+            <span>{{ icon_info }}</span>
+            <p>
+              <strong>Important:</strong> Inspect your order upon arrival and contact us within 7 days if you
+              encounter an issue.
+            </p>
+          </div>
+
+          <footer class="product-benefit-drawer__contact">
+            <p>Questions? Our team is here to help.</p>
+            <a href="{{ pages.contact.url | default: '/pages/contact' }}">
+              {{ icon_phone }} Contact Us {{ icon_arrow }}
+            </a>
+          </footer>
+        </article>
+      </div>
+    </aside>
+  </div>
+</section>
+
+{% stylesheet %}
+  .product-trust-benefits {
+    width: 100%;
+  }
+
+  .product-trust-benefits__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    border: var(--border-width) solid var(--border-light);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background: color-mix(in srgb, var(--surface-elevated) 70%, transparent);
+  }
+
+  .product-trust-benefits__trigger {
+    display: grid;
+    grid-template-columns: var(--sp-7) minmax(0, 1fr) var(--sp-5);
+    align-items: center;
+    gap: var(--sp-3);
+    min-height: calc(var(--sp-9) + var(--sp-4));
+    padding: var(--sp-4);
+    border: 0;
+    border-inline-end: var(--border-width) solid var(--border-light);
+    border-block-end: var(--border-width) solid var(--border-light);
+    background: transparent;
+    color: var(--text-primary);
+    text-align: start;
+    cursor: pointer;
+    transition: background-color var(--timing-short) var(--ease-standard);
+  }
+
+  .product-trust-benefits__trigger:nth-child(2n) {
+    border-inline-end: 0;
+  }
+
+  .product-trust-benefits__trigger:nth-last-child(-n + 2) {
+    border-block-end: 0;
+  }
+
+  .product-trust-benefits__trigger:hover,
+  .product-trust-benefits__trigger:focus-visible {
+    background: color-mix(in srgb, var(--color-clay) 7%, transparent);
+    outline: none;
+  }
+
+  .product-trust-benefits__icon,
+  .product-benefit-drawer__card-icon {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: var(--sp-7);
+    height: var(--sp-7);
+    border-radius: var(--radius-full);
+    background: var(--color-milk);
+    color: var(--color-clay);
+  }
+
+  .product-trust-benefits svg,
+  .product-benefit-drawer svg {
+    width: var(--sp-5);
+    height: var(--sp-5);
+    fill: none;
+    stroke: currentColor;
+    stroke-width: calc(var(--border-width) * 1.5);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .product-trust-benefits__copy {
+    display: grid;
+    gap: var(--sp-1);
+    min-width: 0;
+  }
+
+  .product-trust-benefits__copy strong {
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-md);
+    font-weight: var(--font-weight-semibold);
+    line-height: var(--line-height-tight);
+  }
+
+  .product-trust-benefits__copy span {
+    color: var(--text-secondary);
+    font: var(--type-caption);
+  }
+
+  .product-trust-benefits__arrow,
+  .product-benefit-drawer__card-arrow {
+    display: grid;
+    place-items: center;
+    color: var(--color-clay);
+  }
+
+  .product-trust-benefits__arrow svg,
+  .product-benefit-drawer__card-arrow svg,
+  .product-benefit-drawer__text-link svg {
+    width: var(--sp-4);
+    height: var(--sp-4);
+  }
+
+  .product-benefit-drawer[hidden] {
+    display: none;
+  }
+
+  .product-benefit-drawer {
+    position: fixed;
+    inset: 0;
+    z-index: calc(var(--z-drawer) + 2);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--timing-base) var(--ease-standard);
+  }
+
+  .product-benefit-drawer.is-open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .product-benefit-drawer__overlay {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    background: var(--bg-overlay);
+    cursor: pointer;
+  }
+
+  .product-benefit-drawer__panel {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: 0;
+    display: flex;
+    flex-direction: column;
+    width: min(100%, var(--cart-drawer-width));
+    background:
+      radial-gradient(circle at top right, var(--color-white-cream), transparent 58%),
+      var(--surface-elevated);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-modal);
+    outline: none;
+    transform: translateX(100%);
+    transition: transform var(--timing-long) var(--ease-out);
+  }
+
+  .product-benefit-drawer.is-open .product-benefit-drawer__panel {
+    transform: translateX(0);
+  }
+
+  .product-benefit-drawer__close {
+    position: absolute;
+    z-index: 1;
+    inset-block-start: var(--sp-5);
+    inset-inline-end: var(--sp-5);
+    display: grid;
+    place-items: center;
+    width: var(--sp-7);
+    height: var(--sp-7);
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-full);
+    background: transparent;
+    color: var(--color-earth-brown);
+    cursor: pointer;
+  }
+
+  .product-benefit-drawer__close:hover,
+  .product-benefit-drawer__close:focus-visible {
+    background: var(--color-milk);
+    outline: none;
+  }
+
+  .product-benefit-drawer__scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: var(--sp-7) var(--sp-6) var(--sp-6);
+  }
+
+  .product-benefit-drawer__eyebrow {
+    margin: 0 0 var(--sp-4);
+    color: var(--color-clay);
+    font: var(--type-caption);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--letter-spacing-wide);
+    text-transform: uppercase;
+  }
+
+  .product-benefit-drawer__view {
+    min-height: calc(100dvh - var(--sp-12));
+  }
+
+  .product-benefit-drawer__view[hidden] {
+    display: none;
+  }
+
+  .product-benefit-drawer__header,
+  .product-benefit-drawer__hero-header {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-4);
+    padding-inline-end: var(--sp-7);
+  }
+
+  .product-benefit-drawer__header--centered {
+    justify-content: flex-start;
+  }
+
+  .product-benefit-drawer__header h2,
+  .product-benefit-drawer__hero-header h2 {
+    margin: 0;
+    color: var(--color-earth-brown);
+    font: var(--type-display-medium);
+    font-weight: var(--font-weight-light);
+    letter-spacing: var(--letter-spacing-snug);
+  }
+
+  .product-benefit-drawer__title-icon {
+    display: grid;
+    place-items: center;
+    flex: none;
+    color: var(--color-earth-brown);
+  }
+
+  .product-benefit-drawer__title-icon svg {
+    width: var(--sp-7);
+    height: var(--sp-7);
+  }
+
+  .product-benefit-drawer__title-icon--large svg {
+    width: var(--sp-8);
+    height: var(--sp-8);
+  }
+
+  .product-benefit-drawer__hero-header {
+    align-items: flex-start;
+  }
+
+  .product-benefit-drawer__hero-header > div {
+    display: grid;
+    gap: var(--sp-3);
+  }
+
+  .product-benefit-drawer__hero-header p {
+    margin: 0;
+    color: var(--text-secondary);
+    font: var(--type-body-small);
+  }
+
+  .product-benefit-drawer__hero-icon {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: var(--sp-9);
+    height: var(--sp-9);
+    border: var(--border-width) solid var(--color-clay);
+    border-radius: var(--radius-full);
+    color: var(--color-earth-brown);
+  }
+
+  .product-benefit-drawer__hero-icon svg {
+    width: var(--sp-7);
+    height: var(--sp-7);
+  }
+
+  .product-benefit-drawer__lead {
+    max-width: 44ch;
+    margin: var(--sp-6) 0;
+    color: var(--text-primary);
+    font: var(--type-body-regular);
+  }
+
+  .product-benefit-drawer__divider {
+    height: var(--border-width);
+    margin: var(--sp-6) 0;
+    background: var(--border-light);
+  }
+
+  .product-benefit-drawer__ornament {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    margin: var(--sp-6) 0;
+    color: var(--color-clay);
+  }
+
+  .product-benefit-drawer__ornament::before,
+  .product-benefit-drawer__ornament::after {
+    content: '';
+    flex: 1;
+    height: var(--border-width);
+    background: var(--border-light);
+  }
+
+  .product-benefit-drawer__ornament span {
+    width: var(--sp-2);
+    height: var(--sp-2);
+    border: var(--border-width) solid currentColor;
+    transform: rotate(45deg);
+  }
+
+  .product-benefit-drawer__cards {
+    display: grid;
+    gap: var(--sp-4);
+  }
+
+  .product-benefit-drawer__card {
+    display: grid;
+    grid-template-columns: var(--sp-9) minmax(0, 1fr);
+    align-items: start;
+    gap: var(--sp-4);
+    padding: var(--sp-5);
+    border: var(--border-width) solid var(--border-light);
+    border-radius: var(--radius-lg);
+    background: color-mix(in srgb, var(--surface-elevated) 78%, transparent);
+  }
+
+  .product-benefit-drawer__card--compact {
+    grid-template-columns: var(--sp-9) minmax(0, 1fr) var(--sp-5);
+    align-items: center;
+  }
+
+  .product-benefit-drawer__card-icon {
+    width: var(--sp-9);
+    height: var(--sp-9);
+  }
+
+  .product-benefit-drawer__card-icon--outline {
+    border: var(--border-width) solid var(--border-light);
+    background: transparent;
+  }
+
+  .product-benefit-drawer__card h3 {
+    margin: 0 0 var(--sp-2);
+    color: var(--color-earth-brown);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--letter-spacing-wide);
+    line-height: var(--line-height-normal);
+    text-transform: uppercase;
+  }
+
+  .product-benefit-drawer__card p,
+  .product-benefit-drawer__inline-note p,
+  .product-benefit-drawer__notice p {
+    margin: 0;
+    color: var(--text-secondary);
+    font: var(--type-body-small);
+  }
+
+  .product-benefit-drawer__inline-note {
+    display: grid;
+    grid-template-columns: var(--sp-6) minmax(0, 1fr);
+    gap: var(--sp-3);
+    margin: var(--sp-5) 0;
+    padding-block: var(--sp-5);
+    border-block: var(--border-width) solid var(--border-light);
+  }
+
+  .product-benefit-drawer__inline-note > span,
+  .product-benefit-drawer__notice > span {
+    display: grid;
+    place-items: start center;
+    color: var(--color-earth-brown);
+  }
+
+  .product-benefit-drawer__notice {
+    display: grid;
+    grid-template-columns: var(--sp-6) minmax(0, 1fr);
+    gap: var(--sp-3);
+    margin-top: var(--sp-5);
+    padding: var(--sp-4);
+    border: var(--border-width) solid var(--border-light);
+    border-radius: var(--radius-lg);
+    background: var(--color-milk);
+  }
+
+  .product-benefit-drawer__text-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    margin-top: var(--sp-5);
+    color: var(--color-earth-brown);
+    font: var(--type-body-small);
+    text-decoration: underline;
+    text-underline-offset: var(--sp-1);
+  }
+
+  .product-benefit-drawer__policy-footer {
+    margin-top: var(--sp-5);
+    padding-top: var(--sp-5);
+    border-top: var(--border-width) solid var(--border-light);
+    text-align: center;
+  }
+
+  .product-benefit-drawer__contact {
+    margin: var(--sp-6) calc(var(--sp-6) * -1) calc(var(--sp-6) * -1);
+    padding: var(--sp-6);
+    background: var(--color-earth-brown);
+    color: var(--color-cream);
+    text-align: center;
+  }
+
+  .product-benefit-drawer__contact p {
+    margin: 0 0 var(--sp-3);
+    font: var(--type-body-small);
+  }
+
+  .product-benefit-drawer__contact a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-2);
+    min-height: var(--sp-7);
+    color: inherit;
+    font: var(--type-body-small);
+    letter-spacing: var(--letter-spacing-wide);
+    text-decoration: none;
+    text-transform: uppercase;
+  }
+
+  html.product-benefit-drawer-is-open,
+  body.product-benefit-drawer-is-open {
+    overflow: hidden;
+  }
+
+  @media screen and (max-width: 719px) {
+    .product-trust-benefits__grid {
+      grid-template-columns: 1fr;
+    }
+
+    .product-trust-benefits__trigger {
+      min-height: var(--sp-9);
+      border-inline-end: 0;
+      border-block-end: var(--border-width) solid var(--border-light);
+    }
+
+    .product-trust-benefits__trigger:nth-last-child(-n + 2) {
+      border-block-end: var(--border-width) solid var(--border-light);
+    }
+
+    .product-trust-benefits__trigger:last-child {
+      border-block-end: 0;
+    }
+
+    .product-benefit-drawer__panel {
+      width: 100%;
+    }
+
+    .product-benefit-drawer__scroll {
+      padding: var(--sp-6) var(--sp-4) var(--sp-4);
+    }
+
+    .product-benefit-drawer__close {
+      inset-block-start: var(--sp-3);
+      inset-inline-end: var(--sp-3);
+    }
+
+    .product-benefit-drawer__header,
+    .product-benefit-drawer__hero-header {
+      padding-inline-end: var(--sp-6);
+    }
+
+    .product-benefit-drawer__header h2,
+    .product-benefit-drawer__hero-header h2 {
+      font: var(--type-display-small);
+    }
+
+    .product-benefit-drawer__hero-header {
+      display: grid;
+    }
+
+    .product-benefit-drawer__hero-icon {
+      width: var(--sp-8);
+      height: var(--sp-8);
+    }
+
+    .product-benefit-drawer__hero-icon svg,
+    .product-benefit-drawer__title-icon svg,
+    .product-benefit-drawer__title-icon--large svg {
+      width: var(--sp-6);
+      height: var(--sp-6);
+    }
+
+    .product-benefit-drawer__card,
+    .product-benefit-drawer__card--compact {
+      grid-template-columns: var(--sp-7) minmax(0, 1fr);
+      padding: var(--sp-4);
+    }
+
+    .product-benefit-drawer__card-icon {
+      width: var(--sp-7);
+      height: var(--sp-7);
+    }
+
+    .product-benefit-drawer__card-arrow {
+      display: none;
+    }
+
+    .product-benefit-drawer__contact {
+      margin-inline: calc(var(--sp-4) * -1);
+      margin-block-end: calc(var(--sp-4) * -1);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .product-benefit-drawer,
+    .product-benefit-drawer__panel {
+      transition-duration: var(--timing-micro);
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  (() => {
+    const initializedRoots = new WeakSet();
+
+    const initializeBenefitDrawer = (root) => {
+      if (initializedRoots.has(root)) return;
+      initializedRoots.add(root);
+
+      const drawer = root.querySelector('[data-benefit-drawer]');
+      const panel = root.querySelector('[data-benefit-panel]');
+      const triggers = [...root.querySelectorAll('[data-benefit-open]')];
+      const views = [...root.querySelectorAll('[data-benefit-view]')];
+      let activeTrigger = null;
+      let closeTimer = null;
+
+      if (!drawer || !panel || !triggers.length || !views.length) return;
+
+      const closeDrawer = () => {
+        if (drawer.hidden) return;
+        window.clearTimeout(closeTimer);
+        drawer.classList.remove('is-open');
+        drawer.setAttribute('aria-hidden', 'true');
+        document.documentElement.classList.remove('product-benefit-drawer-is-open');
+        document.body.classList.remove('product-benefit-drawer-is-open');
+        triggers.forEach((trigger) => trigger.setAttribute('aria-expanded', 'false'));
+
+        closeTimer = window.setTimeout(() => {
+          drawer.hidden = true;
+          views.forEach((view) => {
+            view.hidden = true;
+          });
+          if (activeTrigger instanceof HTMLElement) activeTrigger.focus();
+          activeTrigger = null;
+        }, 300);
+      };
+
+      const openDrawer = (trigger) => {
+        const name = trigger.dataset.benefitOpen;
+        const view = views.find((candidate) => candidate.dataset.benefitView === name);
+        if (!view) return;
+
+        window.clearTimeout(closeTimer);
+        activeTrigger = trigger;
+        views.forEach((candidate) => {
+          candidate.hidden = candidate !== view;
+        });
+        triggers.forEach((candidate) => {
+          candidate.setAttribute('aria-expanded', candidate === trigger ? 'true' : 'false');
+        });
+
+        const title = view.querySelector('h2[id]');
+        if (title) panel.setAttribute('aria-labelledby', title.id);
+        drawer.hidden = false;
+        drawer.setAttribute('aria-hidden', 'false');
+        document.documentElement.classList.add('product-benefit-drawer-is-open');
+        document.body.classList.add('product-benefit-drawer-is-open');
+        window.requestAnimationFrame(() => {
+          drawer.classList.add('is-open');
+          panel.focus();
+        });
+      };
+
+      root.addEventListener('click', (event) => {
+        const trigger = event.target.closest('[data-benefit-open]');
+        if (trigger && root.contains(trigger)) {
+          openDrawer(trigger);
+          return;
+        }
+
+        if (event.target.closest('[data-benefit-close]')) closeDrawer();
+      });
+
+      drawer.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          closeDrawer();
+          return;
+        }
+
+        if (event.key !== 'Tab') return;
+        const focusable = [
+          ...panel.querySelectorAll(
+            'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          ),
+        ].filter((element) => !element.closest('[hidden]'));
+        if (!focusable.length) return;
+
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      });
+    };
+
+    const initializeBenefitDrawers = () => {
+      document.querySelectorAll('[data-product-benefits]').forEach(initializeBenefitDrawer);
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initializeBenefitDrawers, { once: true });
+    } else {
+      initializeBenefitDrawers();
+    }
+  })();
+{% endjavascript %}

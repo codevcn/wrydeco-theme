@@ -11,8 +11,8 @@ class ReviewSummary(TypedDict):
     reviews_3_star: int
 
 
-MIN_REVIEWS: int = 30
-MAX_REVIEWS: int = 50
+MIN_REVIEWS: int = 8
+MAX_REVIEWS: int = 25
 
 
 # Xác suất chọn rating trung bình cho sản phẩm (phân bổ đa dạng từ 4.60 đến 4.80).
