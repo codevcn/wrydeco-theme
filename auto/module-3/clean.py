@@ -1,6 +1,7 @@
-import os
+import sys
+from pathlib import Path
 
-main_files = [
+KEEP_CONTENT = [
     ".env",
     ".media.env",
     "main.py",
@@ -11,6 +12,9 @@ main_files = [
     "clean.py",
     "clean.cmd",
     "logo.png",
+    ".gitignore",
+    ".vps.env",
+    "scratch_ssh_test.py",
 ]
 
 
@@ -19,11 +23,7 @@ def normalize_keep_names(items: list[str]) -> set[str]:
     Convert entries such as 'data/' to root-level names such as 'data'.
     Comparison is case-insensitive for better compatibility with Windows.
     """
-    return {
-        item.rstrip("/\\").casefold()
-        for item in items
-        if item.rstrip("/\\")
-    }
+    return {item.rstrip("/\\").casefold() for item in items if item.rstrip("/\\")}
 
 
 def resolve_target_directory() -> Path:
@@ -36,9 +36,7 @@ def resolve_target_directory() -> Path:
             -> clean the directory containing the supplied CMD file
     """
     if len(sys.argv) > 2:
-        raise ValueError(
-            'Usage: python cleanup_folder.py ["path/to/file.cmd"]'
-        )
+        raise ValueError('Usage: python cleanup_folder.py ["path/to/file.cmd"]')
 
     if len(sys.argv) == 2:
         cmd_path = Path(sys.argv[1]).expanduser().resolve()

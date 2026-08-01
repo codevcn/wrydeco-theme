@@ -1134,7 +1134,7 @@ async def read_root(request: Request, after: str = None, before: str = None, fil
             
         page_info = products_data.get("pageInfo", {})
         
-        return templates.TemplateResponse("index.html", {
+        return templates.TemplateResponse(request=request, name="index.html", context={
             "request": request, 
             "products": products,
             "total_count": total_count,
@@ -1146,7 +1146,7 @@ async def read_root(request: Request, after: str = None, before: str = None, fil
             "error": None
         })
     except Exception as e:
-        return templates.TemplateResponse("index.html", {
+        return templates.TemplateResponse(request=request, name="index.html", context={
             "request": request,
             "products": [],
             "total_count": 0,
@@ -1286,13 +1286,13 @@ async def read_product(request: Request, product_handle: str):
             "metafields": metafields
         }
         
-        return templates.TemplateResponse("product.html", {
+        return templates.TemplateResponse(request=request, name="product.html", context={
             "request": request, 
             "product": product,
             "error": None
         })
     except Exception as e:
-        return templates.TemplateResponse("product.html", {
+        return templates.TemplateResponse(request=request, name="product.html", context={
             "request": request,
             "product": None,
             "error": str(e)
@@ -1382,7 +1382,7 @@ async def read_collections(request: Request,
         elif sort_by == "count_desc":
             collections.sort(key=lambda x: x["products_count"], reverse=True)
             
-        return templates.TemplateResponse("collections.html", {
+        return templates.TemplateResponse(request=request, name="collections.html", context={
             "request": request, 
             "collections": collections,
             "total_count": total_collections_count,
@@ -1391,7 +1391,7 @@ async def read_collections(request: Request,
             "error": None
         })
     except Exception as e:
-        return templates.TemplateResponse("collections.html", {
+        return templates.TemplateResponse(request=request, name="collections.html", context={
             "request": request,
             "collections": [],
             "total_count": 0,
@@ -1402,7 +1402,7 @@ async def read_collections(request: Request,
 
 @app.get("/create", response_class=HTMLResponse)
 async def create_product_form(request: Request):
-    return templates.TemplateResponse("create_product.html", {
+    return templates.TemplateResponse(request=request, name="create_product.html", context={
         "request": request,
         "error": None,
         "success_message": None
@@ -1461,14 +1461,14 @@ async def create_product_submit(
                 
             success_count += 1
             
-        return templates.TemplateResponse("create_product.html", {
+        return templates.TemplateResponse(request=request, name="create_product.html", context={
             "request": request,
             "error": None,
             "success_message": f"Đã tạo thành công {success_count} sản phẩm!"
         })
         
     except Exception as e:
-        return templates.TemplateResponse("create_product.html", {
+        return templates.TemplateResponse(request=request, name="create_product.html", context={
             "request": request,
             "error": str(e),
             "success_message": None
@@ -1586,7 +1586,7 @@ def is_ajax_request(request: Request) -> bool:
 
 @app.get("/edit-variants", response_class=HTMLResponse)
 async def edit_variants_form(request: Request):
-    return templates.TemplateResponse("edit_variants.html", {
+    return templates.TemplateResponse(request=request, name="edit_variants.html", context={
         "request": request,
         "error": None,
         "success_message": None
@@ -1608,7 +1608,7 @@ async def edit_variants_submit(request: Request):
             if is_ajax_request(request):
                 import json
                 return HTMLResponse(content=json.dumps({"success": False, "message": msg}, ensure_ascii=False), media_type="application/json")
-            return templates.TemplateResponse("edit_variants.html", {"request": request, "error": msg, "success_message": None})
+            return templates.TemplateResponse(request=request, name="edit_variants.html", context={"request": request, "error": msg, "success_message": None})
 
         option_pairs = []
         for name, vals_str in zip(option_names, option_values):
@@ -1625,7 +1625,7 @@ async def edit_variants_submit(request: Request):
             if is_ajax_request(request):
                 import json
                 return HTMLResponse(content=json.dumps({"success": False, "message": msg}, ensure_ascii=False), media_type="application/json")
-            return templates.TemplateResponse("edit_variants.html", {"request": request, "error": msg, "success_message": None})
+            return templates.TemplateResponse(request=request, name="edit_variants.html", context={"request": request, "error": msg, "success_message": None})
 
         success_count = 0
         details = []
@@ -1653,7 +1653,7 @@ async def edit_variants_submit(request: Request):
             }
             return HTMLResponse(content=json.dumps(res_data, ensure_ascii=False), media_type="application/json")
             
-        return templates.TemplateResponse("edit_variants.html", {
+        return templates.TemplateResponse(request=request, name="edit_variants.html", context={
             "request": request,
             "error": None if success_count > 0 else msg_summary,
             "success_message": msg_summary if success_count > 0 else None
@@ -1662,7 +1662,7 @@ async def edit_variants_submit(request: Request):
         if is_ajax_request(request):
             import json
             return HTMLResponse(content=json.dumps({"success": False, "message": str(e)}, ensure_ascii=False), media_type="application/json")
-        return templates.TemplateResponse("edit_variants.html", {"request": request, "error": str(e), "success_message": None})
+        return templates.TemplateResponse(request=request, name="edit_variants.html", context={"request": request, "error": str(e), "success_message": None})
 
 def add_tags_to_product(product_id: str, tags: list):
     mutation = """
@@ -1710,14 +1710,14 @@ async def add_tags_submit(request: Request):
             if is_ajax_request(request):
                 import json
                 return HTMLResponse(content=json.dumps({"success": False, "message": msg}, ensure_ascii=False), media_type="application/json")
-            return templates.TemplateResponse("edit_variants.html", {"request": request, "error": msg, "success_message": None})
+            return templates.TemplateResponse(request=request, name="edit_variants.html", context={"request": request, "error": msg, "success_message": None})
             
         if not tags:
             msg = "Danh sách tags trống"
             if is_ajax_request(request):
                 import json
                 return HTMLResponse(content=json.dumps({"success": False, "message": msg}, ensure_ascii=False), media_type="application/json")
-            return templates.TemplateResponse("edit_variants.html", {"request": request, "error": msg, "success_message": None})
+            return templates.TemplateResponse(request=request, name="edit_variants.html", context={"request": request, "error": msg, "success_message": None})
 
         success_count = 0
         details = []
@@ -1745,7 +1745,7 @@ async def add_tags_submit(request: Request):
             }
             return HTMLResponse(content=json.dumps(res_data, ensure_ascii=False), media_type="application/json")
             
-        return templates.TemplateResponse("edit_variants.html", {
+        return templates.TemplateResponse(request=request, name="edit_variants.html", context={
             "request": request,
             "error": None if success_count > 0 else msg_summary,
             "success_message": msg_summary if success_count > 0 else None
@@ -1754,4 +1754,4 @@ async def add_tags_submit(request: Request):
         if is_ajax_request(request):
             import json
             return HTMLResponse(content=json.dumps({"success": False, "message": str(e)}, ensure_ascii=False), media_type="application/json")
-        return templates.TemplateResponse("edit_variants.html", {"request": request, "error": str(e), "success_message": None})
+        return templates.TemplateResponse(request=request, name="edit_variants.html", context={"request": request, "error": str(e), "success_message": None})
