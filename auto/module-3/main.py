@@ -4,14 +4,16 @@ import time
 import uuid
 from datetime import datetime
 from fastapi import FastAPI, Request, Form
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 import requests
 
 load_dotenv()
 
 app = FastAPI()
+app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 SHOPIFY_SHOP = os.getenv("SHOPIFY_SHOP")
@@ -1021,6 +1023,37 @@ def get_products_by_review_status(has_reviews: bool, sort_by="created_desc"):
         },
         "productsCount": {"count": len(all_matched_edges)}
     }
+
+@app.post("/update-token")
+async def update_token(request: Request, access_token: str = Form(...)):
+    global SHOPIFY_ADMIN_TOKEN, HEADERS
+    new_token = access_token.strip()
+    if new_token:
+        SHOPIFY_ADMIN_TOKEN = new_token
+        HEADERS["X-Shopify-Access-Token"] = new_token
+        
+        env_file = ".env"
+        if os.path.exists(env_file):
+            with open(env_file, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+            
+            token_found = False
+            for i, line in enumerate(lines):
+                if line.startswith("SHOPIFY_ADMIN_TOKEN="):
+                    lines[i] = f"SHOPIFY_ADMIN_TOKEN={new_token}\n"
+                    token_found = True
+                    break
+            
+            if not token_found:
+                lines.append(f"SHOPIFY_ADMIN_TOKEN={new_token}\n")
+                
+            with open(env_file, "w", encoding="utf-8") as f:
+                f.writelines(lines)
+        else:
+            with open(env_file, "w", encoding="utf-8") as f:
+                f.write(f"SHOPIFY_ADMIN_TOKEN={new_token}\n")
+
+    return RedirectResponse(url="/", status_code=303)
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request, after: str = None, before: str = None, filter_type: str = "tag", filter_value: str = None, sort_by: str = "created_desc", special_filter: str = ""):

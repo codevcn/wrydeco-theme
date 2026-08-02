@@ -1,6 +1,6 @@
 # Task cập nhật sản phẩm đang có sẵn trong store
 
-> Dùng `../admin/access-token.md` để truy cập vào store, sau đó bạn hãy cập nhật sản phẩm có ID là `{{product_id}}` theo các yêu cầu bên dưới.
+> Dùng access token được mô tả trong file `./access-token.md` để truy cập vào store, sau đó bạn hãy cập nhật sản phẩm có ID là `{{product_id}}` theo các yêu cầu bên dưới.
 > Lưu ý: Bạn phải tự làm công việc cập nhật sản phẩm chứ ko phải để cho tôi làm.
 > QUAN TRỌNG: Trong quá trình cập nhật, nếu có bất kỳ lỗi nào xảy ra thì dừng toàn bộ quá trình cập nhật và báo lỗi cho tôi biết.
 

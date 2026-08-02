@@ -13,6 +13,7 @@ const IGNORE_TYPES = [
   "Custom Tier Size Confirmation",
   "Driftwood may differ from photos. We'll message the best raw piece. Check messages?",
   "Select Package",
+  "Communication"
 ];
 
 function showCopyJsonButton(json) {

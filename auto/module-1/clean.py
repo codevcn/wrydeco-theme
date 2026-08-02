@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 KEEP_CONTENT = [
-    ".env",
+    ".product.env",
     ".media.env",
 	"clean.cmd",
     "clean.py",
@@ -30,7 +30,11 @@ KEEP_CONTENT = [
     "replace_amazon_rich_images.py",
     "tmp.txt",
     "todo.update-product.md",
-    "update-product.json"
+    "update-product.json",
+    ".product.env",
+    "access-token.md",
+    "get_access_token.cmd",
+    "get_access_token.py",
 ]
 
 

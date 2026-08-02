@@ -16,7 +16,24 @@ try:
     ssh.connect(host, username=user, password=password, timeout=15)
     
     sftp = ssh.open_sftp()
-    sftp.put("main.py", f"/home/{user}/shopify-admin-app/main.py")
+    
+    def upload_file(local_path, remote_path):
+        print(f"Uploading {local_path} -> {remote_path}...")
+        sftp.put(local_path, remote_path)
+    
+    # Upload main.py
+    upload_file("main.py", f"/home/{user}/shopify-admin-app/main.py")
+    
+    # Upload templates
+    for f in os.listdir("templates"):
+        if f.endswith(".html"):
+            upload_file(f"templates/{f}", f"/home/{user}/shopify-admin-app/templates/{f}")
+            
+    # Upload static
+    ssh.exec_command(f"mkdir -p /home/{user}/shopify-admin-app/static")
+    for f in os.listdir("static"):
+        upload_file(f"static/{f}", f"/home/{user}/shopify-admin-app/static/{f}")
+
     sftp.close()
     
     print("Đã upload main.py mới lên VPS.")

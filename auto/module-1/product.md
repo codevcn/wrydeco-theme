@@ -1,6 +1,6 @@
 # Task cập nhật sản phẩm đang có sẵn trong store
 
-> Dùng `../admin/access-token.md` để truy cập vào store, sau đó bạn hãy cập nhật sản phẩm có ID là `8358165708857` theo các yêu cầu bên dưới.
+> Dùng access token được mô tả trong file `./access-token.md` để truy cập vào store, sau đó bạn hãy cập nhật sản phẩm có ID là `8364669698105` theo các yêu cầu bên dưới.
 > Lưu ý: Bạn phải tự làm công việc cập nhật sản phẩm chứ ko phải để cho tôi làm.
 > QUAN TRỌNG: Trong quá trình cập nhật, nếu có bất kỳ lỗi nào xảy ra thì dừng toàn bộ quá trình cập nhật và báo lỗi cho tôi biết.
 
@@ -9,7 +9,7 @@
 Product Title gốc:
 
 ```text
-Handcrafted Tree Branch Bookshelf - 3.75ft x 3.75ft Wall Mounted Natural Wood Floating Shelves, Decorative Rustic Tree Branch Wall Shelf for Living Room, Bedroom & Home Decor, 5-Tier Storage
+Personalized Hand-Carved Solid Wood Twisted End Table, Rustic Accent Stool and Nightstand with Natural Wood Grain Finish for Living Room and Bedroom
 ```
 
 - Viết lại product title gốc trên thành product title mới.
@@ -23,15 +23,15 @@ Handcrafted Tree Branch Bookshelf - 3.75ft x 3.75ft Wall Mounted Natural Wood Fl
 Mô tả sản phẩm gốc:
 
 ```text
-ARTISTIC TREE BRANCH SHELVES DESIGN: Transform your bare walls into a living art piece. This unique tree branch wall shelf features a whimsical, nature-inspired silhouette with 4 functional tiers, perfectly blending practical storage with organic botanical aesthetics.
+🌟 UNIQUE TWISTED DESIGN: This hand-carved wooden end table features a striking, sculptural twist that adds an organic, modern touch to any living room, bedroom, or office space.
 
-HANDCRAFTED BY VIETNAMESE ARTISANS: Each piece is meticulously crafted by skilled Vietnamese artisans using premium natural wood. Featuring organic live edges and authentic wood grain textures, no two pieces are exactly alike, giving you a truly custom masterpiece.
+🪵 PREMIUM SOLID WOOD: Crafted from high-quality solid natural wood, showcasing beautiful, unique grain patterns and variations. Every single piece is a one-of-a-kind work of art.
 
-PERFECT SPECIFICATIONS FOR HOME DECOR: Measuring approximately 45" W x 45" H x 6-7" D, this tree branch bookshelf provides ample space for books, small indoor plants, crystals, and collectibles without overwhelming your room layout.
+🛋️ MULTIFUNCTIONAL USE: Perfectly sized to serve as an elegant end table, a convenient bedside nightstand, a decorative plant stand, or a stylish accent stool for extra seating.
 
-STURDY WALL-MOUNTED FLOATING SYSTEM: Engineered for stability and safety, this heavy-duty wall-mounted unit creates a seamless floating appearance. All essential assembly tools and hardware are included for a straightforward installation experience.
+💪 STURDY & DURABLE: Built with a solid, stable base capable of supporting heavy items. The smooth, polished surface is easy to wipe clean, ensuring long-lasting daily utility.
 
-VERSATILE RUSTIC WALL STORAGE: The warm natural wood finish seamlessly complements rustic, bohemian, cottagecore, or modern farmhouse interiors. Ideal for elevating your living room, study, bedroom, or cozy reading nook.
+✨ NO ASSEMBLY REQUIRED: Arrives fully assembled and ready to use right out of the box. Instantly elevate your home interior decor with this conversation-starting furniture piece.
 ```
 
 Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết lại mô tả sản phẩm gốc trên.
@@ -302,8 +302,8 @@ Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết
 - Cập nhật biến thể cho sản phẩm theo field product.variant_data được liệt kê trong file `./config.json`.
 - **Lưu ý:**
   - field base_price trong file config.json sẽ được sử dụng làm giá cơ bản cho sản phẩm, field variant_data.additional_price sẽ được sử dụng để cộng thêm vào giá cơ bản để tạo ra giá cuối cùng cho biến thể.
-  - tắt track quantity cho tất cả các biến thể của sản phẩm này, tức là sản phẩm này có thể được đặt mua mãi mãi.
 - **Quan trọng:**
+  - tắt track quantity cho tất cả các biến thể của sản phẩm này, tức là sản phẩm này có thể được đặt mua mãi mãi.
   - nếu sản phẩm đã có sẵn loại biến thể tên là "Wood Finish" thì giữ nguyên loại biến thể đó và chỉ cập nhật hoặc thêm các loại biến thể khác.
   - vì shopify chỉ cho phép tối đa 3 loại biến thể, nên **NẾU TỔNG SỐ LOẠI BIẾN THỂ TÍNH THÊM CẢ "WOOD FINISH" ĐANG CÓ SẴN VƯỢT QUÁ 3 LOẠI BIẾN THỂ THÌ HÃY DỪNG TOÀN BỘ QUÁ TRÌNH CẬP NHẬT, SAU ĐÓ BÁO CHO TÔI BIẾT**.
 
@@ -312,10 +312,53 @@ Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết
 - rich_description:
 
 ```html
-<div class="description-root"><img alt="i2" src="https://cdn.shopify.com/s/files/1/0805/4410/4505/files/Handcrafted-Tree-Branch-Bookshelf---3.75ft-x-3.75ft-Wall-Mounted-Natural-Wood-Floating-Shelves-Decorative-Rustic-Tree-Branch-Wall-Shelf-for-Living-Room-Bedroom-Home-Decor-5-Tier-Stora.gif?v=1785231306" class="a-lazy-loaded" data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/0d0db3ad-e9f6-4aef-9c2b-37d681aa305c.__CR0,26,2172,672_PT0_SX970_V1___.png"> <img alt="1" src="https://cdn.shopify.com/s/files/1/0805/4410/4505/files/Handcrafted-Tree-Branch-Bookshelf---3.75ft-x-3.75ft-Wall-Mounted-Natural-Wood-Floating-Shelves-Decorative-Rustic-Tree-Branch-Wall-Shelf-for-Living-Room-Bedroom-Home-Decor-5-Tier-Stora.gif?v=1785231306" class="a-lazy-loaded" data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/2ee6a587-e945-491f-beea-371943b23211.__CR0,26,2172,672_PT0_SX970_V1___.png"> <img alt="2" src="https://cdn.shopify.com/s/files/1/0805/4410/4505/files/Handcrafted-Tree-Branch-Bookshelf---3.75ft-x-3.75ft-Wall-Mounted-Natural-Wood-Floating-Shelves-Decorative-Rustic-Tree-Branch-Wall-Shelf-for-Living-Room-Bedroom-Home-Decor-5-Tier-Stora.gif?v=1785231306" class="a-lazy-loaded" data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/d447546a-7f98-48cd-b82e-f8a4185e290a.__CR0,26,2172,672_PT0_SX970_V1___.png"> <img alt="5" src="https://cdn.shopify.com/s/files/1/0805/4410/4505/files/Handcrafted-Tree-Branch-Bookshelf---3.75ft-x-3.75ft-Wall-Mounted-Natural-Wood-Floating-Shelves-Decorative-Rustic-Tree-Branch-Wall-Shelf-for-Living-Room-Bedroom-Home-Decor-5-Tier-Stora.gif?v=1785231306" class="a-lazy-loaded" data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/e80b5470-d36f-4d79-8ad9-efbeca923ce5.__CR0,26,2172,672_PT0_SX970_V1___.png"> <img alt="6" src="https://cdn.shopify.com/s/files/1/0805/4410/4505/files/Handcrafted-Tree-Branch-Bookshelf---3.75ft-x-3.75ft-Wall-Mounted-Natural-Wood-Floating-Shelves-Decorative-Rustic-Tree-Branch-Wall-Shelf-for-Living-Room-Bedroom-Home-Decor-5-Tier-Stora.gif?v=1785231306" class="a-lazy-loaded" data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/a2aef06f-0d7a-480c-a45d-bdfd226e244c.__CR364,98,1212,375_PT0_SX970_V1___.png"></div>
+<div class="description-root">
+  <img
+    alt="Live Edge Rustic furniture"
+    src="https://cdn.shopify.com/s/files/1/0805/4410/4505/files/Personalized-Hand-Carved-Solid-Wood-Twisted-End-Table-Rustic-Accent-Stool-and-Nightstand-with-Natural-Wood-Grain-Finish-for-Living-Room-and-Bedroom-rich-001-2bb20425d644.gif?v=1785680000"
+    class="a-spacing-base a-lazy-loaded"
+    data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/03b093eb-e130-4b9a-8a7f-5faec4f10971.__CR0,0,1594,986_PT0_SX970_V1___.png"
+  />
+  <img
+    alt="Live Edge Rustic furniture"
+    src="https://cdn.shopify.com/s/files/1/0805/4410/4505/files/Personalized-Hand-Carved-Solid-Wood-Twisted-End-Table-Rustic-Accent-Stool-and-Nightstand-with-Natural-Wood-Grain-Finish-for-Living-Room-and-Bedroom-rich-001-2bb20425d644.gif?v=1785680000"
+    class="a-spacing-base a-lazy-loaded"
+    data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/7eadd856-7aa2-4087-a855-84505778dc4e.__CR0,0,1594,986_PT0_SX970_V1___.png"
+  />
+  <img
+    alt="Live Edge Rustic furniture"
+    src="https://cdn.shopify.com/s/files/1/0805/4410/4505/files/Personalized-Hand-Carved-Solid-Wood-Twisted-End-Table-Rustic-Accent-Stool-and-Nightstand-with-Natural-Wood-Grain-Finish-for-Living-Room-and-Bedroom-rich-001-2bb20425d644.gif?v=1785680000"
+    class="a-spacing-base a-lazy-loaded"
+    data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/33159267-3030-49a6-b945-9b7c7dcfa557.__CR0,0,1594,986_PT0_SX970_V1___.png"
+  />
+  <img
+    alt="Live Edge Rustic furniture"
+    src="https://cdn.shopify.com/s/files/1/0805/4410/4505/files/Personalized-Hand-Carved-Solid-Wood-Twisted-End-Table-Rustic-Accent-Stool-and-Nightstand-with-Natural-Wood-Grain-Finish-for-Living-Room-and-Bedroom-rich-001-2bb20425d644.gif?v=1785680000"
+    class="a-spacing-base a-lazy-loaded"
+    data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/719b7312-b88a-4838-aeb0-29bb41dffe47.__CR0,0,1594,986_PT0_SX970_V1___.png"
+  />
+  <img
+    alt="Live Edge Rustic furniture"
+    src="https://cdn.shopify.com/s/files/1/0805/4410/4505/files/Personalized-Hand-Carved-Solid-Wood-Twisted-End-Table-Rustic-Accent-Stool-and-Nightstand-with-Natural-Wood-Grain-Finish-for-Living-Room-and-Bedroom-rich-001-2bb20425d644.gif?v=1785680000"
+    class="a-spacing-base a-lazy-loaded"
+    data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/e59615e8-a8b0-4547-8e91-07082c2a245c.__CR0,0,1594,986_PT0_SX970_V1___.png"
+  />
+  <img
+    alt="Live Edge Rustic furniture"
+    src="https://cdn.shopify.com/s/files/1/0805/4410/4505/files/Personalized-Hand-Carved-Solid-Wood-Twisted-End-Table-Rustic-Accent-Stool-and-Nightstand-with-Natural-Wood-Grain-Finish-for-Living-Room-and-Bedroom-rich-001-2bb20425d644.gif?v=1785680000"
+    class="a-spacing-base a-lazy-loaded"
+    data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/ef6a08bb-02c0-42da-aaa7-51c55c8d657e.__CR0,0,1594,986_PT0_SX970_V1___.png"
+  />
+  <img
+    alt="Live Edge Rustic furniture"
+    src="https://cdn.shopify.com/s/files/1/0805/4410/4505/files/Personalized-Hand-Carved-Solid-Wood-Twisted-End-Table-Rustic-Accent-Stool-and-Nightstand-with-Natural-Wood-Grain-Finish-for-Living-Room-and-Bedroom-rich-001-2bb20425d644.gif?v=1785680000"
+    class="a-spacing-base a-lazy-loaded"
+    data-src="https://m.media-amazon.com/images/S/aplus-media-library-service-media/7187a281-4e7d-4158-87d9-2b639ad878ef.__CR0,0,1594,986_PT0_SX970_V1___.png"
+  />
+</div>
 ```
 
-- amazon_link: "https://www.amazon.com/dp/B0H39DW7DX?th=1"
+- amazon_link: "https://www.amazon.com/dp/B0H4R7NZDK"
 - author_info: "gid://shopify/Metaobject/195647275065"
 - product_material: "wood"
 - seo_product_title:
@@ -356,7 +399,7 @@ Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết
 
 ### 10. Cập nhật product type
 
-- Cập nhật product type cho sản phẩm là `bookshelf-rustic`.
+- Cập nhật product type cho sản phẩm là `end-table`.
 
 ### 11. Cập nhật vendor
 
@@ -368,4 +411,4 @@ Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết
 
 ### 13. Cập nhật handle của sản phẩm
 
-- Handle của sản phẩm sẽ được suy ra từ `Handcrafted Tree Branch Bookshelf - 3.75ft x 3.75ft Wall Mounted Natural Wood Floating Shelves, Decorative Rustic Tree Branch Wall Shelf for Living Room, Bedroom & Home Decor, 5-Tier Storage`, handle của sản phẩm phải được viết dưới dạng kebab-case.
+- Handle của sản phẩm sẽ được suy ra từ `Personalized Hand-Carved Solid Wood Twisted End Table, Rustic Accent Stool and Nightstand with Natural Wood Grain Finish for Living Room and Bedroom`, handle của sản phẩm phải được viết dưới dạng kebab-case.

@@ -3,6 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/static/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+    <link rel="shortcut icon" href="/static/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png" />
+    <link rel="manifest" href="/static/site.webmanifest" />
     <title>{{ product.title if product else 'Product Details' }} - Admin</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
@@ -235,7 +241,20 @@
                                 <span class="text-xs font-mono font-medium text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">{{ mf.namespace }}.{{ mf.key }}</span>
                                 <span class="text-[10px] text-gray-400 font-medium uppercase">{{ mf.type }}</span>
                             </div>
-                            <p class="text-sm text-gray-700 break-words mt-2 font-medium">{{ mf.value }}</p>
+                            {% if mf.namespace == 'custom' and mf.key == 'amazon_link' %}
+                            <div class="text-sm text-gray-700 break-words mt-2 font-medium">
+                                <a href="{{ mf.value }}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline break-all">{{ mf.value }}</a>
+                            </div>
+                            {% else %}
+                            <div class="metafield-container mt-2">
+                                <div class="metafield-content text-sm text-gray-700 break-words font-medium overflow-hidden transition-all duration-300" style="max-height: 200px;">
+                                    {{ mf.value }}
+                                </div>
+                                <div class="metafield-toggle hidden mt-2 text-center">
+                                    <button type="button" onclick="toggleMetafield(this)" class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-full transition-colors focus:outline-none">Read More</button>
+                                </div>
+                            </div>
+                            {% endif %}
                         </div>
                         {% endif %}
                         {% endfor %}
@@ -327,6 +346,29 @@
                 closeLightbox();
             }
         });
+
+        // Check metafield heights
+        document.addEventListener("DOMContentLoaded", function() {
+            document.querySelectorAll('.metafield-container').forEach(function(container) {
+                const content = container.querySelector('.metafield-content');
+                const toggleBtn = container.querySelector('.metafield-toggle');
+                if (content && content.scrollHeight > 200) {
+                    toggleBtn.classList.remove('hidden');
+                }
+            });
+        });
+
+        function toggleMetafield(btn) {
+            const container = btn.closest('.metafield-container');
+            const content = container.querySelector('.metafield-content');
+            if (content.style.maxHeight === '200px') {
+                content.style.maxHeight = 'none';
+                btn.textContent = 'Read Less';
+            } else {
+                content.style.maxHeight = '200px';
+                btn.textContent = 'Read More';
+            }
+        }
     </script>
 </body>
 </html>
