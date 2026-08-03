@@ -1,6 +1,6 @@
 # Task cập nhật sản phẩm đang có sẵn trong store
 
-> Dùng access token được mô tả trong file `./access-token.md` để truy cập vào store, sau đó bạn hãy cập nhật sản phẩm có ID là `8364753354809` theo các yêu cầu bên dưới.
+> Dùng access token được mô tả trong file `./access-token.md` để truy cập vào store, sau đó bạn hãy cập nhật sản phẩm có ID là `8364758597689` theo các yêu cầu bên dưới.
 > Lưu ý: Bạn phải tự làm công việc cập nhật sản phẩm chứ ko phải để cho tôi làm.
 > QUAN TRỌNG: Trong quá trình cập nhật, nếu có bất kỳ lỗi nào xảy ra thì dừng toàn bộ quá trình cập nhật và báo lỗi cho tôi biết.
 
@@ -9,7 +9,7 @@
 Product Title gốc:
 
 ```text
-Rustic Live Edge Wood TV Stand, Floating Tree Branch Media Console, Wabi-Sabi Solid Wood Entertainment Center, Handcrafted Low Profile Under TV Shelf for Living Room, Natural Wood, Style 3
+Handcrafted Natural Wood Tree Branch Bookshelf, Rustic Live Edge Shelf for Living Room Bedroom, Custom Wood Corner Wall Shelf with 7-Tier Display Storage, Custom Size & Color, 6ft x 7ft
 ```
 
 - Viết lại product title gốc trên thành product title mới.
@@ -23,15 +23,15 @@ Rustic Live Edge Wood TV Stand, Floating Tree Branch Media Console, Wabi-Sabi So
 Mô tả sản phẩm gốc:
 
 ```text
-🌿 Rustic Live Edge Art: Handcrafted from raw solid wood with natural living edges, bringing an authentic organic forest vibe and unique Wabi-Sabi aesthetic directly into your luxury living room.
+✦ HANDCRAFTED NATURAL WOOD – Made by skilled Vietnamese artisans, each corner tree shelf features unique wood grain, texture, and handcrafted character.
 
-🌿 Unique Tree Branch Accent: Features a stunning, integrated natural tree branch floating shelf system, turning your television entertainment wall area into a beautiful architectural masterpiece.
+✦ UNIQUE TREE BRANCH DESIGN – A sculptural tree-inspired bookshelf that turns an empty corner into a warm, artistic focal point for your home.
 
-🛠️ Heavy-Duty Floating Mount: Engineered with a robust, invisible heavy-duty mounting bracket system that safely secures the raw solid wood beam to your wall without any visible sagging.
+✦ CUSTOM SIZE & COLOR OPTIONS – Available in Natural, Light Oak, Walnut, Dark Walnut, with custom sizing and design adjustments for your space.
 
-💎 Premium Solid Wood Selection: Carved from highly durable, sustainably sourced timber that preserves raw cracks and organic knots, treated with a premium protective matte finish for lifelong use.
+✦ MULTI-TIER DISPLAY STORAGE – Perfect for books, plants, pottery, framed photos, candles, baskets, collectibles, and decorative accents.
 
-📦 Zero Complex Assembly: The main rustic solid wood unit arrives fully assembled. Includes complete professional heavy-duty wall anchor hardware kits and detailed guidance for easy installation.
+✦ RUSTIC BOHO HOME DECOR – Ideal for living rooms, bedrooms, reading nooks, offices, entryways, cabins, farmhouse homes, and cozy corners.
 ```
 
 Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết lại mô tả sản phẩm gốc trên.
@@ -315,7 +315,7 @@ Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết
 <div class="description-root"></div>
 ```
 
-- amazon_link: "https://www.amazon.com/dp/B0H757P7MT?th=1"
+- amazon_link: "https://www.amazon.com/dp/B0H6B27G2R?th=1"
 - author_info: "gid://shopify/Metaobject/195647701049"
 - product_material: "wood"
 - seo_product_title:
@@ -368,4 +368,4 @@ Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết
 
 ### 13. Cập nhật handle của sản phẩm
 
-- Handle của sản phẩm sẽ được suy ra từ `Rustic Live Edge Wood TV Stand, Floating Tree Branch Media Console, Wabi-Sabi Solid Wood Entertainment Center, Handcrafted Low Profile Under TV Shelf for Living Room, Natural Wood, Style 3`, handle của sản phẩm phải được viết dưới dạng kebab-case.
+- Handle của sản phẩm sẽ được suy ra từ `Handcrafted Natural Wood Tree Branch Bookshelf, Rustic Live Edge Shelf for Living Room Bedroom, Custom Wood Corner Wall Shelf with 7-Tier Display Storage, Custom Size & Color, 6ft x 7ft`, handle của sản phẩm phải được viết dưới dạng kebab-case.

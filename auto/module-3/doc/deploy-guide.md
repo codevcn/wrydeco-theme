@@ -11,16 +11,16 @@ Tài liệu này là hướng dẫn chuẩn dành cho các AI Agent để thực
 Khi USER yêu cầu "deploy code", "đẩy code", "cập nhật lên VPS", hãy ưu tiên sử dụng script python có sẵn trong source code để tự động hóa:
 
 1. **Chuẩn bị**: Đảm bảo toàn bộ logic code ở local (các file như `main.py`, `templates/*.html`, `static/*`, v.v.) đã hoàn tất và test ổn định.
-2. **Kiểm tra script upload**: Mở file `upload_main.py` lên để xem qua logic. Script này hiện tại đã được cấu hình để upload tự động qua giao thức SFTP (paramiko) các file sau:
+2. **Kiểm tra script upload**: Mở file `deploy_to_vps.py` lên để xem qua logic. Script này hiện tại đã được cấu hình để upload tự động qua giao thức SFTP (paramiko) các file sau:
    - `main.py`
    - Toàn bộ thư mục `templates/`
    - Toàn bộ thư mục `static/`
 3. **Thực thi script**:
-   - Sử dụng tool `run_command` để chạy lệnh: `python upload_main.py`
+   - Sử dụng tool `run_command` để chạy lệnh: `python deploy_to_vps.py`
    - Đặt `WaitMsBeforeAsync: 500` (hoặc giá trị phù hợp) và chờ task background trả về kết quả.
 4. **Kiểm tra kết quả**: Script sẽ tự động gọi SSH để thực thi lệnh `sudo systemctl restart shopify-admin-app.service`. Nếu kết quả log (stdout) báo thành công, website đã được cập nhật. Hãy thông báo cho USER.
 
-*(Lưu ý: Nếu bạn có thêm một file hoặc thư mục mới cần đẩy lên, hãy chủ động dùng tool sửa file `upload_main.py` để bổ sung lệnh `upload_file()` tương ứng trước khi chạy.)*
+*(Lưu ý: Nếu bạn có thêm một file hoặc thư mục mới cần đẩy lên, hãy chủ động dùng tool sửa file `deploy_to_vps.py` để bổ sung lệnh `upload_file()` tương ứng trước khi chạy.)*
 
 ## 3. Quy trình Deploy Toàn Bộ (Full Deploy)
 Nếu USER yêu cầu cài lại toàn bộ VPS, update các thư viện python mới (thay đổi `requirements.txt`), hoặc có thay đổi lớn:

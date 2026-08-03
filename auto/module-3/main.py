@@ -1712,6 +1712,7 @@ async def edit_variants_submit(request: Request):
         id_types = form.getlist("id_type")
         option_names = form.getlist("option_names[]")
         option_values = form.getlist("option_values[]")
+        delete_option_name = form.get("delete_option_name", "").strip()
 
         raw_list = re.split(r'[\r\n,]+', identifiers_raw)
         identifiers = [i.strip() for i in raw_list if i.strip()]
@@ -1722,18 +1723,24 @@ async def edit_variants_submit(request: Request):
                 return HTMLResponse(content=json.dumps({"success": False, "message": msg}, ensure_ascii=False), media_type="application/json")
             return templates.TemplateResponse(request=request, name="edit_variants.html", context={"request": request, "error": msg, "success_message": None})
 
-        option_pairs = []
-        for name, vals_str in zip(option_names, option_values):
-            name_clean = name.strip()
-            if not name_clean:
-                continue
-            vals_clean = [v.strip() for v in vals_str.split(",") if v.strip()]
-            if not vals_clean:
-                continue
-            option_pairs.append((name_clean, vals_clean))
+        action_type = form.get("action_type", "add")
 
-        if not option_pairs:
-            msg = "Danh sách option hoặc giá trị trống"
+        option_pairs = []
+        if action_type == "add":
+            delete_option_name = ""
+            for name, vals_str in zip(option_names, option_values):
+                name_clean = name.strip()
+                if not name_clean:
+                    continue
+                vals_clean = [v.strip() for v in vals_str.split(",") if v.strip()]
+                if not vals_clean:
+                    continue
+                option_pairs.append((name_clean, vals_clean))
+        elif action_type == "delete":
+            option_pairs = []
+
+        if not option_pairs and not delete_option_name:
+            msg = "Vui lòng nhập option cần thêm hoặc cần xóa"
             if is_ajax_request(request):
                 import json
                 return HTMLResponse(content=json.dumps({"success": False, "message": msg}, ensure_ascii=False), media_type="application/json")
@@ -1748,12 +1755,26 @@ async def edit_variants_submit(request: Request):
                 details.append({"identifier": ident, "status": "FAIL", "message": "Không tìm thấy định danh hoặc handle hợp lệ"})
                 continue
 
-            success, msg = add_variant_options_to_product(prod_id, option_pairs)
-            if success:
-                success_count += 1
-                details.append({"identifier": ident, "status": "OK", "message": msg})
+            msgs = []
+            has_error = False
+
+            if delete_option_name:
+                del_success, del_msg = delete_option_from_product(prod_id, delete_option_name)
+                msgs.append(del_msg)
+                if not del_success:
+                    has_error = True
+
+            if option_pairs:
+                add_success, add_msg = add_variant_options_to_product(prod_id, option_pairs)
+                msgs.append(add_msg)
+                if not add_success:
+                    has_error = True
+
+            if has_error:
+                details.append({"identifier": ident, "status": "FAIL", "message": " | ".join(msgs)})
             else:
-                details.append({"identifier": ident, "status": "FAIL", "message": msg})
+                success_count += 1
+                details.append({"identifier": ident, "status": "OK", "message": " | ".join(msgs)})
 
         msg_summary = f"Đã thực thi xong: Thành công {success_count}/{len(identifiers)} sản phẩm."
         if is_ajax_request(request):

@@ -507,6 +507,7 @@
                 this.modal = document.getElementById('gotoRowModal');
                 this.input = document.getElementById('gotoRowInput');
                 this.btn = document.getElementById('gotoRowBtn');
+                this.jumpTimeout = null;
                 
                 if(this.modal) this.initEvents();
             }
@@ -524,7 +525,8 @@
                         e.preventDefault();
                         const val = parseInt(this.input.value);
                         if (!isNaN(val)) {
-                            this.jumpToRow(val);
+                            clearTimeout(this.jumpTimeout);
+                            setTimeout(() => this.jumpToRow(val), 0);
                         }
                         this.closeModal();
                     }
@@ -537,16 +539,20 @@
                 if (closeBtn) closeBtn.addEventListener('click', () => this.closeModal());
 
                 this.input.addEventListener('input', (e) => {
-                    const val = parseInt(e.target.value);
-                    if (!isNaN(val)) {
-                        this.jumpToRow(val);
-                    }
+                    clearTimeout(this.jumpTimeout);
+                    this.jumpTimeout = setTimeout(() => {
+                        const val = parseInt(e.target.value);
+                        if (!isNaN(val)) {
+                            setTimeout(() => this.jumpToRow(val), 0);
+                        }
+                    }, 250);
                 });
 
                 this.btn.addEventListener('click', () => {
                     const val = parseInt(this.input.value);
                     if (!isNaN(val)) {
-                        this.jumpToRow(val);
+                        clearTimeout(this.jumpTimeout);
+                        setTimeout(() => this.jumpToRow(val), 0);
                     }
                     this.closeModal();
                 });
