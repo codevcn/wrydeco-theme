@@ -211,6 +211,7 @@ class ShopifyUploader:
         content = file_path.read_bytes()
 
         # Bước 1: Yêu cầu Shopify tạo url staged upload
+        file_size_str = str(file_path.stat().st_size)
         staged_data = self.graphql(
             self.STAGED_UPLOADS_MUTATION,
             {
@@ -220,6 +221,7 @@ class ShopifyUploader:
                         "mimeType": mime_type,
                         "httpMethod": "POST",
                         "resource": resource_type,
+                        "fileSize": file_size_str,
                     }
                 ]
             },
@@ -263,7 +265,6 @@ class ShopifyUploader:
                         "alt": alt_text or filename,
                         "contentType": resource_type,
                         "originalSource": resource_url,
-                        "filename": filename,
                     }
                 ]
             },

@@ -1,10 +1,19 @@
-# Báo cáo Tạo Reviews (Todo)
+# Báo cáo kết quả Module-4 (Image & Video Reviews)
 
-- Đã xử lý sản phẩm handcrafted-5-tier-wood-tree-branch-floating-bookshelf (ID: 8355782230073): Tạo 15 reviews (Cá nhân hóa sâu sắc 100%).
-- Đã xử lý sản phẩm handcrafted-4-tier-wood-tree-branch-bookshelf-sequoia (ID: 8355782197305): Tạo 24 reviews (Cá nhân hóa sâu sắc 100%).
-- Đã xử lý sản phẩm corner-tree-bookshelf-handcrafted-natural-wood-wall-shelf (ID: 8355546988601): Tạo 13 reviews (Cá nhân hóa sâu sắc 100%).
-- Đã xử lý sản phẩm luxury-live-edge-natural-wood-tree-branch-wall-bookshelf (ID: 8355546923065): Tạo 16 reviews (Cá nhân hóa sâu sắc 100%).
-- Đã xử lý sản phẩm modern-organic-solid-wood-tree-branch-floating-bookshelf (ID: 8355546890297): Tạo 18 reviews (Cá nhân hóa sâu sắc 100%).
-- Đã xử lý sản phẩm tree-bookshelf-handcrafted-natural-wood-wall-shelf-1 (ID: 8355546824761): Tạo 21 reviews (Cá nhân hóa sâu sắc 100%).
-- Đã xử lý sản phẩm handcrafted-twisted-wood-floor-sculpture-open-cutouts (ID: 8355494461497): Tạo 17 reviews (Cá nhân hóa sâu sắc 100%).
-- Đã xử lý sản phẩm rustic-tree-console-table-bookshelf-solid-wood-display (ID: 8355494330425): Tạo 23 reviews (Cá nhân hóa sâu sắc 100%).
+## Thông tin sản phẩm đã xử lý (Cập nhật mới)
+1. **Product ID:** 8355494395961
+   - **Handle:** `handcrafted-wooden-floor-sculpture-tall-rustic-art`
+   - **Đã sinh:** 18 reviews
+2. **Product ID:** 8355782328377
+   - **Handle:** `rustic-wood-tree-branch-floating-bookshelf-4-tier-decor`
+   - **Đã sinh:** 19 reviews
+
+## Kết quả thực thi
+- Đã upload thành công tổng cộng 7 files media (bao gồm 5 ảnh và 2 video) cho 2 sản phẩm mới lên hệ thống Shopify CDN.
+- Sinh được 2 file CSV gốc:
+  - `8355494395961-reviews.images.csv`
+  - `8355782328377-reviews.images.csv`
+- Các file gốc đã được di chuyển an toàn vào thư mục lưu trữ `warehouse`.
+- **Output cuối cùng:** Toàn bộ 37 reviews mới đã được gộp vào file `output/merged-reviews.csv` (Nâng tổng số dòng dữ liệu trong file này lên 56 dòng).
+
+Mọi thông tin đã được ghi nhận vào `handled.images.json` để tránh xử lý trùng lặp trong các lần tiếp theo.
