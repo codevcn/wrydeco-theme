@@ -9,7 +9,7 @@
 Product Title gốc:
 
 ```text
-Handcrafted Natural Wood Tree Branch Bookshelf, Rustic Live Edge Shelf for Living Room Bedroom, Custom Wood Corner Wall Shelf with 7-Tier Display Storage, Custom Size & Color, 6ft x 7ft
+Handcrafted Live Edge Tree Branch With Leaves Shelf, Rustic Natural Wood Bookshelf for Living Room Bedroom, Custom Wood Wall Shelf with Multi-Tier Display Storage, Custom Size & Color (Golden Bough)
 ```
 
 - Viết lại product title gốc trên thành product title mới.
@@ -315,7 +315,7 @@ Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết
 <div class="description-root"></div>
 ```
 
-- amazon_link: "https://www.amazon.com/dp/B0H6B27G2R?th=1"
+- amazon_link: "https://www.amazon.com/dp/B0H7C3M8WK?th=1"
 - author_info: "gid://shopify/Metaobject/195647701049"
 - product_material: "wood"
 - seo_product_title:
@@ -368,4 +368,4 @@ Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết
 
 ### 13. Cập nhật handle của sản phẩm
 
-- Handle của sản phẩm sẽ được suy ra từ `Handcrafted Natural Wood Tree Branch Bookshelf, Rustic Live Edge Shelf for Living Room Bedroom, Custom Wood Corner Wall Shelf with 7-Tier Display Storage, Custom Size & Color, 6ft x 7ft`, handle của sản phẩm phải được viết dưới dạng kebab-case.
+- Handle của sản phẩm sẽ được suy ra từ `Handcrafted Live Edge Tree Branch With Leaves Shelf, Rustic Natural Wood Bookshelf for Living Room Bedroom, Custom Wood Wall Shelf with Multi-Tier Display Storage, Custom Size & Color (Golden Bough)`, handle của sản phẩm phải được viết dưới dạng kebab-case.

@@ -34,7 +34,10 @@ LOGGER = logging.getLogger("upload.images")
 SCRIPT_DIR = Path(__file__).resolve().parent
 DEFAULT_TIMEOUT_SECONDS = 60
 READY_TIMEOUT_SECONDS = 180
-IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".avif", ".tif", ".tiff"}
+MEDIA_EXTENSIONS = {
+    ".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".avif", ".tif", ".tiff",
+    ".mp4", ".mov", ".avi", ".mkv", ".webm"
+}
 
 
 class AppError(RuntimeError):
@@ -103,6 +106,9 @@ class ShopifyUploader:
           ... on MediaImage {
             image { url width height }
           }
+          ... on Video {
+            sources { url format mimeType }
+          }
         }
         userErrors { field message code }
       }
@@ -118,9 +124,26 @@ class ShopifyUploader:
           alt
           image { url width height }
         }
+        ... on Video {
+          id
+          fileStatus
+          alt
+          sources { url format mimeType }
+        }
       }
     }
     """
+
+    @staticmethod
+    def _extract_url_from_node(node: dict[str, Any]) -> str | None:
+        if "image" in node and node["image"]:
+            return node["image"].get("url")
+        if "sources" in node and node["sources"]:
+            for src in node["sources"]:
+                if src.get("format", "").upper() == "MP4":
+                    return src.get("url")
+            return node["sources"][0].get("url")
+        return None
 
     def __init__(self, store_domain: str, access_token: str, api_version: str) -> None:
         self.store_domain = store_domain
@@ -163,8 +186,8 @@ class ShopifyUploader:
 
         filename = file_path.name
         mime_type, _ = mimetypes.guess_type(str(file_path))
+        ext = file_path.suffix.lower()
         if not mime_type:
-            ext = file_path.suffix.lower()
             if ext in {".jpg", ".jpeg"}:
                 mime_type = "image/jpeg"
             elif ext == ".png":
@@ -173,8 +196,17 @@ class ShopifyUploader:
                 mime_type = "image/webp"
             elif ext == ".gif":
                 mime_type = "image/gif"
+            elif ext == ".mp4":
+                mime_type = "video/mp4"
+            elif ext == ".webm":
+                mime_type = "video/webm"
+            elif ext == ".mov":
+                mime_type = "video/quicktime"
             else:
                 mime_type = "application/octet-stream"
+
+        is_video = (mime_type and mime_type.startswith("video/")) or ext in {".mp4", ".mov", ".avi", ".mkv", ".webm"}
+        resource_type = "VIDEO" if is_video else "IMAGE"
 
         content = file_path.read_bytes()
 
@@ -187,7 +219,7 @@ class ShopifyUploader:
                         "filename": filename,
                         "mimeType": mime_type,
                         "httpMethod": "POST",
-                        "resource": "IMAGE",
+                        "resource": resource_type,
                     }
                 ]
             },
@@ -229,7 +261,7 @@ class ShopifyUploader:
                 "files": [
                     {
                         "alt": alt_text or filename,
-                        "contentType": "IMAGE",
+                        "contentType": resource_type,
                         "originalSource": resource_url,
                         "filename": filename,
                     }
@@ -246,7 +278,7 @@ class ShopifyUploader:
 
         created = created_files[0]
         file_id = created["id"]
-        initial_url = (created.get("image") or {}).get("url")
+        initial_url = self._extract_url_from_node(created)
         if created.get("fileStatus") == "READY" and initial_url:
             return initial_url
 
@@ -264,7 +296,7 @@ class ShopifyUploader:
                 raise AppError(f"Không tìm thấy thông tin file ID trên Shopify: {file_id}")
 
             status = node.get("fileStatus")
-            url = (node.get("image") or {}).get("url")
+            url = self._extract_url_from_node(node)
             if status == "READY" and url:
                 return url
             if status == "FAILED":
@@ -361,10 +393,10 @@ def main() -> int:
         LOGGER.error("Lỗi cấu hình xác thực: %s", exc)
         return 1
 
-    # Tìm toàn bộ các file ảnh trong thư mục (sắp xếp alphabet)
+    # Tìm toàn bộ các file media (ảnh/video) trong thư mục (sắp xếp alphabet)
     image_files = sorted([
         f for f in target_folder.iterdir()
-        if f.is_file() and f.suffix.lower() in IMAGE_EXTENSIONS
+        if f.is_file() and f.suffix.lower() in MEDIA_EXTENSIONS
     ], key=lambda x: x.name.lower())
 
     LOGGER.info("=== ĐANG XỬ LÝ FOLDER SẢN PHẨM: '%s' ===", target_folder.name)
