@@ -1535,6 +1535,10 @@ def get_product_options_by_id(product_id: str):
           id
           name
           values
+          optionValues {
+            id
+            name
+          }
         }
       }
     }
@@ -1611,6 +1615,81 @@ def add_variant_options_to_product(product_id: str, option_pairs: list):
                     existing_opts = data["data"]["productOptionUpdate"]["product"].get("options", [])
     return True, f"Đã thêm/cập nhật thành công {len(option_pairs)} variant options cho '{product.get('title', product_id)}'"
 
+def delete_option_value_from_product(product_id: str, option_name: str, option_value: str):
+    product = get_product_options_by_id(product_id)
+    if not product:
+        return False, "Không tìm thấy sản phẩm trên Shopify"
+        
+    options = product.get("options", [])
+    target_option = next((o for o in options if o["name"] == option_name), None)
+    if not target_option:
+        return False, f"Không tìm thấy option '{option_name}'"
+        
+    target_value = next((v for v in target_option.get("optionValues", []) if v["name"] == option_value), None)
+    if not target_value:
+        return False, f"Không tìm thấy giá trị '{option_value}' trong option '{option_name}'"
+        
+    mutation = """
+    mutation productOptionUpdate($productId: ID!, $option: OptionUpdateInput!, $optionValuesToDelete: [ID!]) {
+      productOptionUpdate(productId: $productId, option: $option, optionValuesToDelete: $optionValuesToDelete, variantStrategy: MANAGE) {
+        product {
+          id
+          options { name values }
+        }
+        userErrors { field message }
+      }
+    }
+    """
+    variables = {
+        "productId": product_id,
+        "option": {"id": target_option["id"], "name": target_option["name"]},
+        "optionValuesToDelete": [target_value["id"]]
+    }
+    res = requests.post(GRAPHQL_URL, json={"query": mutation, "variables": variables}, headers=HEADERS)
+    res.raise_for_status()
+    data = res.json()
+    if "errors" in data:
+        return False, f"GraphQL Error: {data['errors'][0]['message']}"
+    user_errs = data.get("data", {}).get("productOptionUpdate", {}).get("userErrors", [])
+    if user_errs:
+        return False, f"Lỗi từ Shopify: {user_errs[0]['message']}"
+    return True, f"Đã xóa giá trị '{option_value}' khỏi '{option_name}' cho '{product.get('title', product_id)}'"
+
+def delete_option_from_product(product_id: str, option_name: str):
+    product = get_product_options_by_id(product_id)
+    if not product:
+        return False, "Không tìm thấy sản phẩm trên Shopify"
+        
+    options = product.get("options", [])
+    target_option = next((o for o in options if o["name"] == option_name), None)
+    if not target_option:
+        return False, f"Không tìm thấy option '{option_name}'"
+        
+    mutation = """
+    mutation productOptionsDelete($productId: ID!, $options: [ID!]!) {
+      productOptionsDelete(productId: $productId, options: $options, strategy: POSITION) {
+        product {
+          id
+          options { name }
+        }
+        userErrors { field message }
+      }
+    }
+    """
+    variables = {
+        "productId": product_id,
+        "options": [target_option["id"]]
+    }
+    res = requests.post(GRAPHQL_URL, json={"query": mutation, "variables": variables}, headers=HEADERS)
+    res.raise_for_status()
+    data = res.json()
+    if "errors" in data:
+        return False, f"GraphQL Error: {data['errors'][0]['message']}"
+    user_errs = data.get("data", {}).get("productOptionsDelete", {}).get("userErrors", [])
+    if user_errs:
+        return False, f"Lỗi từ Shopify: {user_errs[0]['message']}"
+    return True, f"Đã xóa thành công option '{option_name}' cho '{product.get('title', product_id)}'"
+
 def is_ajax_request(request: Request) -> bool:
     accept = request.headers.get("accept", "").lower()
     x_req = request.headers.get("x-requested-with", "").lower()
@@ -1670,6 +1749,131 @@ async def edit_variants_submit(request: Request):
                 continue
 
             success, msg = add_variant_options_to_product(prod_id, option_pairs)
+            if success:
+                success_count += 1
+                details.append({"identifier": ident, "status": "OK", "message": msg})
+            else:
+                details.append({"identifier": ident, "status": "FAIL", "message": msg})
+
+        msg_summary = f"Đã thực thi xong: Thành công {success_count}/{len(identifiers)} sản phẩm."
+        if is_ajax_request(request):
+            import json
+            res_data = {
+                "success": success_count > 0,
+                "message": msg_summary,
+                "details": details
+            }
+            return HTMLResponse(content=json.dumps(res_data, ensure_ascii=False), media_type="application/json")
+            
+        return templates.TemplateResponse(request=request, name="edit_variants.html", context={
+            "request": request,
+            "error": None if success_count > 0 else msg_summary,
+            "success_message": msg_summary if success_count > 0 else None
+        })
+    except Exception as e:
+        if is_ajax_request(request):
+            import json
+            return HTMLResponse(content=json.dumps({"success": False, "message": str(e)}, ensure_ascii=False), media_type="application/json")
+        return templates.TemplateResponse(request=request, name="edit_variants.html", context={"request": request, "error": str(e), "success_message": None})
+
+@app.post("/delete-option-value")
+async def delete_option_value_submit(request: Request):
+    try:
+        form = await request.form()
+        identifiers_raw = form.get("identifiers", "")
+        id_types = form.getlist("id_type")
+        option_name = form.get("option_name", "").strip()
+        option_value = form.get("option_value", "").strip()
+
+        raw_list = re.split(r'[\r\n,]+', identifiers_raw)
+        identifiers = [i.strip() for i in raw_list if i.strip()]
+        
+        if not identifiers:
+            msg = "Danh sách sản phẩm trống"
+            if is_ajax_request(request):
+                import json
+                return HTMLResponse(content=json.dumps({"success": False, "message": msg}, ensure_ascii=False), media_type="application/json")
+            return templates.TemplateResponse(request=request, name="edit_variants.html", context={"request": request, "error": msg, "success_message": None})
+            
+        if not option_name or not option_value:
+            msg = "Vui lòng nhập Tên Option và Giá trị cần xóa"
+            if is_ajax_request(request):
+                import json
+                return HTMLResponse(content=json.dumps({"success": False, "message": msg}, ensure_ascii=False), media_type="application/json")
+            return templates.TemplateResponse(request=request, name="edit_variants.html", context={"request": request, "error": msg, "success_message": None})
+
+        success_count = 0
+        details = []
+
+        for ident in identifiers:
+            prod_id = resolve_product_id(ident, id_types)
+            if not prod_id:
+                details.append({"identifier": ident, "status": "FAIL", "message": "Không tìm thấy định danh hoặc handle hợp lệ"})
+                continue
+
+            success, msg = delete_option_value_from_product(prod_id, option_name, option_value)
+            if success:
+                success_count += 1
+                details.append({"identifier": ident, "status": "OK", "message": msg})
+            else:
+                details.append({"identifier": ident, "status": "FAIL", "message": msg})
+
+        msg_summary = f"Đã thực thi xong: Thành công {success_count}/{len(identifiers)} sản phẩm."
+        if is_ajax_request(request):
+            import json
+            res_data = {
+                "success": success_count > 0,
+                "message": msg_summary,
+                "details": details
+            }
+            return HTMLResponse(content=json.dumps(res_data, ensure_ascii=False), media_type="application/json")
+            
+        return templates.TemplateResponse(request=request, name="edit_variants.html", context={
+            "request": request,
+            "error": None if success_count > 0 else msg_summary,
+            "success_message": msg_summary if success_count > 0 else None
+        })
+    except Exception as e:
+        if is_ajax_request(request):
+            import json
+            return HTMLResponse(content=json.dumps({"success": False, "message": str(e)}, ensure_ascii=False), media_type="application/json")
+        return templates.TemplateResponse(request=request, name="edit_variants.html", context={"request": request, "error": str(e), "success_message": None})
+
+@app.post("/delete-option")
+async def delete_option_submit(request: Request):
+    try:
+        form = await request.form()
+        identifiers_raw = form.get("identifiers", "")
+        id_types = form.getlist("id_type")
+        option_name = form.get("option_name", "").strip()
+
+        raw_list = re.split(r'[\r\n,]+', identifiers_raw)
+        identifiers = [i.strip() for i in raw_list if i.strip()]
+        
+        if not identifiers:
+            msg = "Danh sách sản phẩm trống"
+            if is_ajax_request(request):
+                import json
+                return HTMLResponse(content=json.dumps({"success": False, "message": msg}, ensure_ascii=False), media_type="application/json")
+            return templates.TemplateResponse(request=request, name="edit_variants.html", context={"request": request, "error": msg, "success_message": None})
+            
+        if not option_name:
+            msg = "Vui lòng nhập tên Variant Option cần xóa"
+            if is_ajax_request(request):
+                import json
+                return HTMLResponse(content=json.dumps({"success": False, "message": msg}, ensure_ascii=False), media_type="application/json")
+            return templates.TemplateResponse(request=request, name="edit_variants.html", context={"request": request, "error": msg, "success_message": None})
+
+        success_count = 0
+        details = []
+
+        for ident in identifiers:
+            prod_id = resolve_product_id(ident, id_types)
+            if not prod_id:
+                details.append({"identifier": ident, "status": "FAIL", "message": "Không tìm thấy định danh hoặc handle hợp lệ"})
+                continue
+
+            success, msg = delete_option_from_product(prod_id, option_name)
             if success:
                 success_count += 1
                 details.append({"identifier": ident, "status": "OK", "message": msg})

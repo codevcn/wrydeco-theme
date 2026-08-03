@@ -9,13 +9,11 @@ from requests import HTTPError
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-ROOT_DIR = SCRIPT_DIR.parent
 
-load_dotenv(SCRIPT_DIR / ".env")
-load_dotenv(ROOT_DIR / ".env.shopify", override=False)
+load_dotenv(SCRIPT_DIR / ".product.env")
 
 SHOPIFY_SHOP = os.getenv("SHOPIFY_SHOP", "").strip().strip('"')
-SHOPIFY_ADMIN_TOKEN = os.getenv("SHOPIFY_ADMIN_TOKEN", "").strip().strip('"')
+SHOPIFY_ADMIN_TOKEN = os.getenv("STORE_ADMIN_ACCESS_TOKEN", "").strip().strip('"')
 SHOPIFY_API_VERSION = os.getenv("SHOPIFY_API_VERSION", "2026-04").strip().strip('"')
 SHOPIFY_CLIENT_ID = os.getenv("SHOPIFY_CLIENT_ID", "").strip().strip('"')
 SHOPIFY_CLIENT_SECRET = os.getenv("SHOPIFY_CLIENT_SECRET", "").strip().strip('"')

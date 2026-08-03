@@ -13,8 +13,25 @@ const IGNORE_TYPES = [
   "Custom Tier Size Confirmation",
   "Driftwood may differ from photos. We'll message the best raw piece. Check messages?",
   "Select Package",
-  "Communication"
+  "Communication",
+  "Comunication",
+  "Select finish",
 ];
+
+/**
+ * Danh sách customization type cần bỏ option mặc định không tăng giá.
+ * So sánh không phân biệt chữ hoa/chữ thường.
+ *
+ * Giá trị đặc biệt "size" sẽ áp dụng cho các type:
+ * - Size
+ * - Choose Size
+ * - Custom Size
+ * - CustomSize
+ * - Mattress Size Options
+ *
+ * @type {string[]}
+ */
+const VARIANT_FOR_DEFAULT_OPTION_TO_IGNORE = ["size", "select width"];
 
 function showCopyJsonButton(json) {
   const oldButton = document.getElementById("amazon-product-json-copy-button");
@@ -217,7 +234,7 @@ async function copyToClipboard(text) {
    * @param {unknown} error
    */
   const warnFieldError = (field, error) => {
-    console.warn(`>>> Không thể lấy field "${field}". Field này được giữ nguyên là null.`, {
+    console.warn(`>>> Không thể lấy field "${field}". ` + "Field này được giữ nguyên là null.", {
       field,
       error: getErrorMessage(error),
     });
@@ -315,14 +332,14 @@ async function copyToClipboard(text) {
     }
 
     const customizationPriceElement = document.querySelector(
-      '#gc-desktop-footer-wrapper .a-price[data-a-size="xl"][data-a-color="base"]',
+      "#gc-desktop-footer-wrapper " + '.a-price[data-a-size="xl"][data-a-color="base"]',
     );
 
     if (customizationPriceElement) {
       return parseAmazonPriceElement(customizationPriceElement);
     }
 
-    throw new Error("Không tìm thấy giá ở cả khu vực giá chính và customization footer.");
+    throw new Error("Không tìm thấy giá ở cả khu vực giá chính " + "và customization footer.");
   };
 
   /**
@@ -420,7 +437,7 @@ async function copyToClipboard(text) {
         );
 
         if (!largeImageUrl) {
-          console.warn(`>>> Không lấy được URL ảnh lớn của thumbnail "${thumbnailId}".`);
+          console.warn(`>>> Không lấy được URL ảnh lớn ` + `của thumbnail "${thumbnailId}".`);
 
           continue;
         }
@@ -429,24 +446,19 @@ async function copyToClipboard(text) {
           links.push(largeImageUrl);
         }
       } catch (error) {
-        console.warn(`>>> Có lỗi khi xử lý thumbnail "${thumbnailId}".`, error);
+        console.warn(`>>> Có lỗi khi xử lý thumbnail ` + `"${thumbnailId}".`, error);
       }
 
       await sleep(300);
     }
 
     if (links.length === 0) {
-      throw new Error("Không lấy được URL ảnh lớn hợp lệ từ bất kỳ thumbnail nào.");
+      throw new Error("Không lấy được URL ảnh lớn hợp lệ " + "từ bất kỳ thumbnail nào.");
     }
 
     return links;
   };
 
-  /**
-   * Lấy A+ Content và ghép các thẻ img vào description-root.
-   *
-   * @returns {string}
-   */
   /**
    * Lấy A+ Content và ghép các thẻ img vào description-root.
    *
@@ -492,7 +504,7 @@ async function copyToClipboard(text) {
       .map((image) => image.outerHTML)
       .join(" ");
 
-    return `<div class="description-root">${htmlString}</div>`;
+    return `<div class="description-root">` + `${htmlString}` + `</div>`;
   };
 
   /**
@@ -537,6 +549,31 @@ async function copyToClipboard(text) {
     const compactType = normalizedType.replace(/[\s_-]+/g, "");
 
     return /\bsize\b/i.test(normalizedType) || compactType.includes("customsize");
+  };
+
+  /**
+   * Kiểm tra customization type có nằm trong danh sách cần
+   * bỏ option mặc định không tăng giá hay không.
+   *
+   * Quy tắc:
+   * - Giá trị "size" sử dụng logic isSizeType().
+   * - Các giá trị khác so sánh chính xác sau khi normalize.
+   *
+   * @param {string} normalizedType
+   * @returns {boolean}
+   */
+  const shouldRemoveDefaultOption = (normalizedType) => {
+    const normalizedConfiguredTypes = VARIANT_FOR_DEFAULT_OPTION_TO_IGNORE.map((type) =>
+      normalizeForComparison(type),
+    ).filter(Boolean);
+
+    return normalizedConfiguredTypes.some((configuredType) => {
+      if (configuredType === "size") {
+        return isSizeType(normalizedType);
+      }
+
+      return normalizedType === configuredType;
+    });
   };
 
   /**
@@ -628,7 +665,8 @@ async function copyToClipboard(text) {
     }));
 
     throw new Error(
-      `Không lấy được customization document sau ${timeoutMs}ms. ` +
+      `Không lấy được customization document ` +
+        `sau ${timeoutMs}ms. ` +
         `Context: ${JSON.stringify(getCurrentContextInfo())}. ` +
         `Iframe gần nhất: ${JSON.stringify(lastIframeInfo)}. ` +
         `Danh sách iframe: ${JSON.stringify(iframeList)}. ` +
@@ -696,7 +734,8 @@ async function copyToClipboard(text) {
     if (prices.length === 0) {
       throw new Error(
         `Không thể parse giá "${normalizedPrice}" ` +
-          `của option "${option}" trong type "${type}".`,
+          `của option "${option}" ` +
+          `trong type "${type}".`,
       );
     }
 
@@ -715,9 +754,11 @@ async function copyToClipboard(text) {
     }
 
     throw new Error(
-      `Phát hiện nhiều mức giá trong "${normalizedPrice}" ` +
-        `của option "${option}" thuộc type "${type}". ` +
-        'Đổi PRICE_RANGE_STRATEGY thành "min" hoặc "max" nếu cần.',
+      `Phát hiện nhiều mức giá trong ` +
+        `"${normalizedPrice}" của option ` +
+        `"${option}" thuộc type "${type}". ` +
+        'Đổi PRICE_RANGE_STRATEGY thành "min" ' +
+        'hoặc "max" nếu cần.',
     );
   };
 
@@ -789,13 +830,20 @@ async function copyToClipboard(text) {
   const roundPrice = (value) => Math.round((value + Number.EPSILON) * 100) / 100;
 
   /**
-   * Bỏ option mặc định của type Size.
+   * Bỏ option mặc định không tăng giá của customization type
+   * nằm trong VARIANT_FOR_DEFAULT_OPTION_TO_IGNORE.
    *
-   * Quy tắc:
-   * 1. Nếu chỉ có một option không tăng giá, loại option đó.
-   * 2. Nếu có nhiều option không tăng giá và option đầu DOM
-   *    nằm trong số đó, loại option đầu DOM.
-   * 3. Nếu không xác định được, dừng phần lấy variant.
+   * Giữ nguyên logic cũ:
+   *
+   * 1. Nếu chỉ có một option không tăng giá,
+   *    loại option đó.
+   *
+   * 2. Nếu có nhiều option không tăng giá và
+   *    option đầu DOM nằm trong số đó,
+   *    loại option đầu DOM.
+   *
+   * 3. Nếu không xác định được an toàn,
+   *    dừng phần lấy variant.
    *
    * @param {string} type
    * @param {Array<{
@@ -806,11 +854,13 @@ async function copyToClipboard(text) {
    *   dom_index: number
    * }>} options
    */
-  const removeDefaultSizeOption = (type, options) => {
+  const removeDefaultOption = (type, options) => {
     if (options.length <= 1) {
       throw new Error(
-        `Type size "${type}" chỉ có ${options.length} option. ` +
-          "Không thể bỏ option mặc định mà vẫn tạo tổ hợp hợp lệ.",
+        `Type "${type}" chỉ có ` +
+          `${options.length} option. ` +
+          "Không thể bỏ option mặc định " +
+          "mà vẫn tạo tổ hợp hợp lệ.",
       );
     }
 
@@ -829,8 +879,9 @@ async function copyToClipboard(text) {
       optionToRemove = zeroPriceOptions.find((option) => option.dom_index === 0) || null;
 
       console.warn(
-        `>>> Type size "${type}" có nhiều option không tăng giá. ` +
-          `Đang loại option đầu tiên trong DOM.`,
+        `>>> Type "${type}" có nhiều option ` +
+          "không tăng giá. " +
+          "Đang loại option đầu tiên trong DOM.",
         {
           removed_option: optionToRemove,
           zero_price_options: zeroPriceOptions,
@@ -838,8 +889,8 @@ async function copyToClipboard(text) {
       );
     } else {
       throw new Error(
-        `Không thể xác định an toàn option mặc định ` +
-          `cần bỏ trong type size "${type}". ` +
+        "Không thể xác định an toàn option mặc định " +
+          `cần bỏ trong type "${type}". ` +
           `Các option: ${JSON.stringify(
             options.map((option) => ({
               value: option.value,
@@ -853,7 +904,7 @@ async function copyToClipboard(text) {
     }
 
     if (!optionToRemove) {
-      throw new Error(`Không xác định được option mặc định của type size "${type}".`);
+      throw new Error(`Không xác định được option mặc định ` + `của type "${type}".`);
     }
 
     return options.filter((option) => option !== optionToRemove);
@@ -863,7 +914,10 @@ async function copyToClipboard(text) {
    * Lấy toàn bộ Cartesian product của customization options.
    *
    * @returns {Promise<Array<{
-   *   options: string[],
+   *   options: Array<{
+   *     name: string,
+   *     value: string
+   *   }>,
    *   additional_price: number
    * }>>}
    */
@@ -884,7 +938,7 @@ async function copyToClipboard(text) {
         try {
           button.click();
         } catch (error) {
-          console.warn(`>>> Không thể mở danh sách customization tại index ${index}.`, error);
+          console.warn(`>>> Không thể mở danh sách ` + `customization tại index ${index}.`, error);
         }
       });
 
@@ -898,7 +952,7 @@ async function copyToClipboard(text) {
     const typeElements = [...customizationDocument.querySelectorAll(TYPE_SELECTOR)];
 
     if (typeElements.length === 0) {
-      throw new Error(`Không tìm thấy "${TYPE_SELECTOR}" trong customization iframe.`);
+      throw new Error(`Không tìm thấy "${TYPE_SELECTOR}" ` + "trong customization iframe.");
     }
 
     const normalizedIgnoreTypes = IGNORE_TYPES.map((type) => normalizeForComparison(type)).filter(
@@ -913,14 +967,17 @@ async function copyToClipboard(text) {
 
         if (!type) {
           console.warn(
-            `>>> Bỏ customization component tại index ${typeIndex} vì không tìm thấy tên type.`,
+            `>>> Bỏ customization component ` +
+              `tại index ${typeIndex} vì không ` +
+              "tìm thấy tên type.",
           );
 
           return null;
         }
 
         /*
-         * Ignore nhiều type, không phân biệt chữ hoa/chữ thường.
+         * Ignore nhiều type,
+         * không phân biệt chữ hoa/chữ thường.
          */
         if (normalizedIgnoreTypes.includes(normalizedType)) {
           return null;
@@ -929,7 +986,7 @@ async function copyToClipboard(text) {
         const optionElements = [...typeElement.querySelectorAll(OPTION_SELECTOR)];
 
         if (optionElements.length === 0) {
-          console.warn(`>>> Không tìm thấy option trong customization type "${type}".`);
+          console.warn(`>>> Không tìm thấy option trong ` + `customization type "${type}".`);
 
           return null;
         }
@@ -944,7 +1001,9 @@ async function copyToClipboard(text) {
 
               if (!value) {
                 console.warn(
-                  `>>> Bỏ option tại index ${domIndex} trong type "${type}" vì không có value.`,
+                  `>>> Bỏ option tại index ` +
+                    `${domIndex} trong type ` +
+                    `"${type}" vì không có value.`,
                 );
 
                 return null;
@@ -965,7 +1024,7 @@ async function copyToClipboard(text) {
               };
             } catch (error) {
               console.warn(
-                `>>> Không thể đọc option tại index ${domIndex} trong type "${type}".`,
+                `>>> Không thể đọc option tại ` + `index ${domIndex} trong type ` + `"${type}".`,
                 error,
               );
 
@@ -987,14 +1046,16 @@ async function copyToClipboard(text) {
         );
 
         /*
-         * Xử lý type Size.
+         * Chỉ các type được liệt kê trong
+         * VARIANT_FOR_DEFAULT_OPTION_TO_IGNORE
+         * mới được xử lý bỏ option mặc định.
          */
-        if (isSizeType(normalizedType)) {
-          options = removeDefaultSizeOption(type, options);
+        if (shouldRemoveDefaultOption(normalizedType)) {
+          options = removeDefaultOption(type, options);
         }
 
         if (options.length === 0) {
-          console.warn(`>>> Bỏ customization type "${type}" vì không còn option hợp lệ.`);
+          console.warn(`>>> Bỏ customization type "${type}" ` + "vì không còn option hợp lệ.");
 
           return null;
         }
@@ -1007,7 +1068,7 @@ async function copyToClipboard(text) {
       .filter(Boolean);
 
     if (customizationTypes.length === 0) {
-      throw new Error("Không còn customization type hợp lệ sau khi xử lý.");
+      throw new Error("Không còn customization type hợp lệ " + "sau khi xử lý.");
     }
 
     /*
@@ -1073,7 +1134,9 @@ async function copyToClipboard(text) {
    */
   try {
     const productDescription = Array.from(
-      document.querySelectorAll("ul.a-unordered-list.a-vertical.a-spacing-mini > li .a-list-item"),
+      document.querySelectorAll(
+        "ul.a-unordered-list.a-vertical.a-spacing-mini " + "> li .a-list-item",
+      ),
     )
       .map((element) => normalizeText(element.textContent))
       .filter(Boolean);
