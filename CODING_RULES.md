@@ -23,8 +23,8 @@ All code must be optimized for search engines following an Server-Side Rendering
 Maintain design consistency by strictly adhering to the defined design system tokens and components.
 
 - **Reference File:** `assets/base.css` — this is the single source of truth for all CSS variables (colors, typography, spacing, shadows, motion).
-- **Approach:** All styling must reference the global CSS variables defined in `assets/base.css`. Do not use hardcoded hex codes, pixel values for spacing/radius, or arbitrary font sizes.
-- **Scope:** This rule applies across all CSS files, Liquid `{% stylesheet %}` tags, and inline styles.
+- **Approach:** Prefer the global CSS variables defined in `assets/base.css` when they help maintain design consistency. CSS values may also be hardcoded when appropriate; using a CSS variable is not mandatory.
+- **Scope:** This allowance applies across CSS files, Liquid `{% stylesheet %}` tags, and inline styles.
 
 ## 4. Business Context & Tone
 
