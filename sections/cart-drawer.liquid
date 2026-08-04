@@ -1,17 +1,9 @@
-{% liquid
-  assign welcome_voucher = metaobjects.voucher_welcome_customer.values | first
-  assign auto_apply_voucher = welcome_voucher.auto_apply_voucher.value | default: 0
-  assign welcome_voucher_code = welcome_voucher.voucher_code.value
-%}
-
 <div
   id="CartDrawer"
   class="cart-drawer"
   data-cart-drawer-shell
   data-section-id="{{ section.id }}"
   data-cart-count="{{ cart.item_count }}"
-  data-auto-apply-voucher="{{ auto_apply_voucher }}"
-  data-welcome-voucher-code="{{ welcome_voucher_code | escape }}"
   aria-hidden="true"
   inert
 >
@@ -291,7 +283,13 @@
         </div>
 
         <form action="{{ routes.cart_url }}" method="post" class="cart-drawer__checkout-form">
-          <button type="submit" name="checkout" class="cart-drawer__checkout" data-cart-checkout>
+          <button
+            style="background-image: url('{{ 'ic-wood-type-6.webp' | file_url }}'); background-size: cover; background-position: center; background-repeat: repeat;"
+            type="submit"
+            name="checkout"
+            class="cart-drawer__checkout"
+            data-cart-checkout
+          >
             <svg viewBox="0 0 24 24" aria-hidden="true" class="cart-drawer__checkout-icon">
               <rect x="6" y="10" width="12" height="10" rx="1"></rect>
               <path d="M9 10V7a3 3 0 0 1 6 0v3"></path>
@@ -306,13 +304,22 @@
       </footer>
     {% else %}
       <div class="cart-drawer__empty" data-cart-drawer-body>
-        <svg viewBox="0 0 64 64" aria-hidden="true">
-          <path d="M16 20h36l-4 24H20l-4-24Z"></path>
-          <path d="M16 20l-2-8H8M25 52h.01M44 52h.01"></path>
+        <svg xmlns="http://www.w3.org/2000/svg" width="1.3em" height="1.3em" viewBox="0 0 24 24">
+          <path d="M0 0h24v24H0z" fill="none" />
+          <path fill="currentColor" d="M19 6h-2c0-2.8-2.2-5-5-5S7 3.2 7 6H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2m-7-3c1.7 0 3 1.3 3 3H9c0-1.7 1.3-3 3-3m7 17H5V8h14zm-7-8c-1.7 0-3-1.3-3-3H7c0 2.8 2.2 5 5 5s5-2.2 5-5h-2c0 1.7-1.3 3-3 3" />
         </svg>
         <h3>Your cart is waiting</h3>
         <p>Discover pieces shaped by nature and made to last.</p>
-        <button type="button" class="cart-drawer__checkout" data-cart-drawer-close>Continue shopping</button>
+        <div class="cart-drawer__checkout-form cart-drawer__empty-checkout-form">
+          <button
+            type="button"
+            class="cart-drawer__checkout"
+            data-cart-drawer-close
+            style="background-image: url('{{ 'ic-wood-type-6.webp' | file_url }}'); background-size: cover; background-position: center; background-repeat: repeat;"
+          >
+            <span class="cart-drawer__checkout-label">Continue shopping</span>
+          </button>
+        </div>
       </div>
     {% endif %}
 
@@ -1731,7 +1738,6 @@
     inline-size: var(--sp-10);
     block-size: var(--sp-10);
     fill: none;
-    stroke: var(--color-clay);
     stroke-width: var(--border-width);
   }
 
@@ -1740,6 +1746,10 @@
     margin: var(--sp-0);
     color: var(--text-secondary);
     font: var(--type-body-small);
+  }
+
+  .cart-drawer__empty-checkout-form {
+    inline-size: 100%;
   }
 
   .cart-drawer__loading {
@@ -1961,24 +1971,6 @@
 
     const getShell = () => document.querySelector('[data-cart-drawer-shell]');
     const getPanel = () => getShell()?.querySelector('[data-cart-drawer-panel]');
-    const WELCOME_VOUCHER_NOTICE_KEY = 'wrydeco:welcome-voucher-notice';
-
-    const hasShownWelcomeVoucherNotice = (code) => {
-      try {
-        return window.localStorage.getItem(WELCOME_VOUCHER_NOTICE_KEY) === code;
-      } catch (error) {
-        return false;
-      }
-    };
-
-    const rememberWelcomeVoucherNotice = (code) => {
-      try {
-        window.localStorage.setItem(WELCOME_VOUCHER_NOTICE_KEY, code);
-      } catch (error) {
-        /* localStorage unavailable; the discount flow must continue */
-      }
-    };
-
     const floatingWidgetSelectors = [
       '#shopify-chat',
       '#ShopifyChat',
@@ -2125,61 +2117,6 @@
       updateCartBubble(Number.isNaN(count) ? 0 : count);
       syncPendingDiscount();
     };
-
-    const autoApplyWelcomeVoucher = async () => {
-      const shell = getShell();
-      if (!shell) return;
-
-      const isEnabled = ['1', 'true'].includes((shell.dataset.autoApplyVoucher || '').toLowerCase());
-      if (!isEnabled) return;
-
-      const code = (shell.dataset.welcomeVoucherCode || '').trim();
-      if (!code) return;
-
-      try {
-        const root = window.Shopify?.routes?.root || '/';
-        const response = await fetch(`${root}cart/update.js`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-          body: JSON.stringify({ discount: code }),
-        });
-        const cart = await response.json();
-        if (!response.ok || cart.status) throw new Error(cart.description || 'Unable to apply the welcome offer.');
-
-        const appliedDiscount = (cart.discount_codes || []).find(
-          (discount) => (discount.code || '').toLowerCase() === code.toLowerCase() && discount.applicable === true
-        );
-        if (!appliedDiscount) return;
-
-        await refreshDrawer();
-        if (!hasShownWelcomeVoucherNotice(code) && window.showToast) {
-          window.showToast({
-            message: `Welcome offer “${code}” applied.`,
-            type: 'success',
-            position: 'bottom-left',
-          });
-          rememberWelcomeVoucherNotice(code);
-        }
-      } catch (error) {
-        if (window.showToast) {
-          window.showToast({
-            message: error.message,
-            type: 'error',
-            position: 'bottom-left',
-          });
-        }
-      }
-    };
-
-    const scheduleWelcomeVoucher = () => {
-      window.setTimeout(autoApplyWelcomeVoucher, 0);
-    };
-
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', scheduleWelcomeVoucher, { once: true });
-    } else {
-      scheduleWelcomeVoucher();
-    }
 
     const changeLine = async (lineItem, quantity) => {
       const shell = getShell();

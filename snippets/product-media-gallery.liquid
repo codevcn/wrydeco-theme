@@ -271,8 +271,37 @@
       opacity: 1;
       visibility: visible;
     }
+    .product-gallery__zoom-loading {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      background: var(--bg-primary, #fff);
+    }
+    .product-gallery__zoom-loading[hidden] {
+      display: none;
+    }
+    .product-gallery__zoom-spinner {
+      width: var(--sp-7);
+      height: var(--sp-7);
+      border: calc(var(--border-width) * 2) solid color-mix(in srgb, var(--color-earth-brown) 22%, transparent);
+      border-top-color: var(--color-earth-brown);
+      border-radius: var(--radius-full);
+      animation: product-gallery-zoom-spin var(--timing-extra-long) linear infinite;
+    }
+    @keyframes product-gallery-zoom-spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
     .product-gallery__main:hover {
       cursor: crosshair;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .product-gallery__zoom-spinner {
+      animation: none;
     }
   }
 
@@ -770,7 +799,11 @@
     </div>
   </div>
 
-  <div class="product-gallery__zoom-popup" data-zoom-popup></div>
+  <div class="product-gallery__zoom-popup" data-zoom-popup>
+    <span class="product-gallery__zoom-loading" data-zoom-loading hidden aria-hidden="true">
+      <span class="product-gallery__zoom-spinner"></span>
+    </span>
+  </div>
 </div>
 
 <script>
@@ -1142,8 +1175,10 @@
         var zoomPopup = gallery.querySelector('[data-zoom-popup]');
         if (!mainContainer || !zoomPopup) return;
         var lens = gallery.querySelector('[data-zoom-lens]');
+        var zoomLoading = zoomPopup.querySelector('[data-zoom-loading]');
         var zoomPopupParent = zoomPopup.parentNode;
         var zoomPopupNextSibling = zoomPopup.nextSibling;
+        var zoomRequestId = 0;
 
         // The popup zooms to 200% (background-size), so the lens covers half the
         // image in each dimension — the exact region shown in the popup.
@@ -1171,9 +1206,15 @@
           }
         }
 
+        function setZoomLoading(loading) {
+          if (zoomLoading) zoomLoading.hidden = !loading;
+        }
+
         function deactivateZoom() {
+          zoomRequestId += 1;
           zoomPopup.classList.remove('is-active');
           zoomPopup.style.backgroundImage = 'none';
+          setZoomLoading(false);
           restoreZoomPopup();
           if (lens) lens.classList.remove('is-active');
         }
@@ -1188,10 +1229,24 @@
 
           var zoomSrc = img.getAttribute('data-zoom-src');
           if (zoomSrc) {
+            var requestId = ++zoomRequestId;
             mountZoomPopup();
-            zoomPopup.style.backgroundImage = 'url(' + zoomSrc + ')';
+            zoomPopup.style.backgroundImage = 'none';
             zoomPopup.classList.add('is-active');
+            setZoomLoading(true);
             if (lens) lens.classList.add('is-active');
+
+            var zoomImage = new Image();
+            zoomImage.addEventListener('load', function () {
+              if (requestId !== zoomRequestId) return;
+              zoomPopup.style.backgroundImage = 'url(' + zoomSrc + ')';
+              setZoomLoading(false);
+            });
+            zoomImage.addEventListener('error', function () {
+              if (requestId !== zoomRequestId) return;
+              deactivateZoom();
+            });
+            zoomImage.src = zoomSrc;
           }
         });
 

@@ -119,12 +119,12 @@
                 <div class="mb-6">
                     <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
                         <span class="bg-indigo-100 text-indigo-700 w-6 h-6 rounded-full inline-flex items-center justify-center text-xs font-bold">2</span>
-                        Các Variant Options Cần THÊM / CẬP NHẬT
+                        Cập nhật các option value của variant option name
                     </h2>
                     <p class="text-xs text-gray-500 mt-2 leading-relaxed">
                         <strong class="text-indigo-600">Lưu ý Logic Thực Thi:</strong><br>
-                        • Nếu Option <strong>chưa tồn tại</strong> ở sản phẩm: Hệ thống sẽ tạo Option mới và <strong>tự động sinh ra</strong> các biến thể (variants) mới tương ứng với các giá trị bạn nhập.<br>
-                        • Nếu Option <strong>đã tồn tại</strong> ở sản phẩm: Hệ thống sẽ chỉ <strong>bổ sung thêm</strong> các giá trị (values) mới vào danh sách giá trị của Option đó, mà <strong>không tự động sinh ra</strong> biến thể mới nào (bạn cần tự tạo biến thể nếu muốn).
+                        • Nếu Option <strong>chưa tồn tại</strong> ở sản phẩm: Hệ thống sẽ báo lỗi và bỏ qua sản phẩm đó.<br>
+                        • Nếu Option <strong>đã tồn tại</strong> ở sản phẩm: Hệ thống sẽ <strong>cập nhật</strong> sao cho Option đó chỉ chứa đúng các giá trị bạn nhập (ví dụ: đang là S, M, L -> nhập L, K -> thành L, K).
                     </p>
                 </div>
 
@@ -184,6 +184,35 @@
                     <button type="submit" name="action_type" value="delete" id="submit-delete-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer focus:ring-4 focus:ring-red-200">
                         <iconify-icon icon="mdi:delete-alert-outline" class="text-xl"></iconify-icon>
                         <span>Thực hiện Xóa Option</span>
+                    </button>
+                </div>
+            </div>
+            <!-- Section 4: Đổi tên Variant Option -->
+            <div class="bg-white p-6 rounded-2xl shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07)] border border-gray-100 mt-6">
+                <div class="mb-6">
+                    <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                        <span class="bg-yellow-100 text-yellow-700 w-6 h-6 rounded-full inline-flex items-center justify-center text-xs font-bold">4</span>
+                        Đổi tên Variant Option
+                    </h2>
+                    <p class="text-xs text-gray-500 mt-1">Lưu ý: Chức năng này sẽ đổi tên của một Option đang có thành tên mới (ví dụ từ "Size" thành "Kích thước"). Các biến thể và giá trị bên trong giữ nguyên.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Tên Option hiện tại (muốn đổi)</label>
+                        <input type="text" name="rename_old_option" placeholder="VD: Size..." class="w-full bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 focus:ring-2 focus:ring-yellow-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Tên Option MỚI</label>
+                        <input type="text" name="rename_new_option" placeholder="VD: Kích thước..." class="w-full bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 focus:ring-2 focus:ring-yellow-500 outline-none">
+                    </div>
+                </div>
+                
+                <!-- Submit Rename Section -->
+                <div class="flex items-center justify-end gap-4 mt-6">
+                    <button type="submit" name="action_type" value="rename" id="submit-rename-btn" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-8 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer focus:ring-4 focus:ring-yellow-200">
+                        <iconify-icon icon="mdi:rename-box" class="text-xl"></iconify-icon>
+                        <span>Thực hiện Đổi tên</span>
                     </button>
                 </div>
             </div>
@@ -249,7 +278,7 @@
         </div>
 
         <div id="delete-option-section" class="hidden">
-        <form id="delete-option-form" action="/delete-option-value" method="POST" class="space-y-8">
+        <form id="edit-option-value-form" method="POST" class="space-y-8">
             <div class="bg-white p-6 rounded-2xl shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07)] border border-gray-100">
                 <div class="mb-4">
                     <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
@@ -285,6 +314,34 @@
                 <div class="mb-6">
                     <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
                         <span class="bg-indigo-100 text-indigo-700 w-6 h-6 rounded-full inline-flex items-center justify-center text-xs font-bold">2</span>
+                        Thêm Option Value
+                    </h2>
+                    <p class="text-xs text-gray-500 mt-1">Lưu ý: Nhập chính xác tên option cần thêm value. Các value cách nhau bởi dấu chấm phẩy (;).</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Tên Variant Option</label>
+                        <input type="text" name="add_option_name" placeholder="VD: Size, Wood Finish..." class="w-full bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Các Value cần thêm (cách nhau bằng ;)</label>
+                        <input type="text" name="add_option_values" placeholder="VD: S; M; XL" class="w-full bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-4 mt-6">
+                    <button type="submit" name="action_type" value="add_value" id="submit-add-value-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer focus:ring-4 focus:ring-indigo-200">
+                        <iconify-icon icon="mdi:plus-box-multiple-outline" class="text-xl"></iconify-icon>
+                        <span>Thêm Option Value</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07)] border border-gray-100">
+                <div class="mb-6">
+                    <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                        <span class="bg-indigo-100 text-indigo-700 w-6 h-6 rounded-full inline-flex items-center justify-center text-xs font-bold">3</span>
                         Thông tin cần xóa
                     </h2>
                     <p class="text-xs text-gray-500 mt-1">Lưu ý: Nhập chính xác tên option và value (phân biệt chữ hoa/thường).</p>
@@ -293,21 +350,21 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Tên Variant Option</label>
-                        <input type="text" name="option_name" placeholder="VD: Size, Wood Finish..." class="w-full bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none" required>
+                        <input type="text" name="option_name" placeholder="VD: Size, Wood Finish..." class="w-full bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Value cần xóa</label>
-                        <input type="text" name="option_value" placeholder="VD: Custom, S, M..." class="w-full bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none" required>
+                        <input type="text" name="option_value" placeholder="VD: Custom, S, M..." class="w-full bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none">
                     </div>
                 </div>
-            </div>
 
-            <div class="flex items-center justify-end gap-4 pt-2">
-                <button type="submit" id="submit-delete-option-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer focus:ring-4 focus:ring-red-200">
-                    <iconify-icon icon="mdi:delete-empty-outline" class="text-xl"></iconify-icon>
-                    <span>Chỉnh sửa Option Value</span>
-                </button>
-        </div>
+                <div class="flex items-center justify-end gap-4 mt-6">
+                    <button type="submit" name="action_type" value="delete_value" id="submit-delete-option-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer focus:ring-4 focus:ring-red-200">
+                        <iconify-icon icon="mdi:delete-empty-outline" class="text-xl"></iconify-icon>
+                        <span>Chỉnh sửa Option Value</span>
+                    </button>
+                </div>
+            </div>
         </form>
         </div>
     </main>
@@ -399,6 +456,8 @@
             const optionNames = Array.from(form.querySelectorAll('input[name="option_names[]"]')).map(i => i.value.trim());
             const optionValues = Array.from(form.querySelectorAll('input[name="option_values[]"]')).map(i => i.value.trim());
             const deleteOptionName = form.querySelector('input[name="delete_option_name"]').value.trim();
+            const renameOldOption = form.querySelector('input[name="rename_old_option"]').value.trim();
+            const renameNewOption = form.querySelector('input[name="rename_new_option"]').value.trim();
 
             if (actionType === 'add') {
                 const hasValidAdd = optionNames.some((n, i) => n && optionValues[i]);
@@ -411,13 +470,21 @@
                     alert('Vui lòng nhập Tên Variant Option cần xóa!');
                     return;
                 }
+            } else if (actionType === 'rename') {
+                if (!renameOldOption || !renameNewOption) {
+                    alert('Vui lòng nhập đầy đủ tên Option cũ và mới!');
+                    return;
+                }
             }
 
             // Hiển thị trạng thái loading
             submitBtn.disabled = true;
             submitBtn.innerHTML = `<iconify-icon icon="mdi:loading" class="text-xl animate-spin"></iconify-icon> <span>Đang thực thi...</span>`;
             alertBox.className = 'mb-6 rounded-xl p-4 shadow-sm border bg-blue-50 border-blue-200 text-blue-700 font-medium flex items-center gap-3';
-            const loadingText = actionType === 'add' ? 'Đang xử lý thêm/cập nhật variant options...' : 'Đang xử lý xóa variant options...';
+            let loadingText = 'Đang xử lý...';
+            if (actionType === 'add') loadingText = 'Đang xử lý thêm/cập nhật variant options...';
+            else if (actionType === 'delete') loadingText = 'Đang xử lý xóa variant options...';
+            else if (actionType === 'rename') loadingText = 'Đang xử lý đổi tên variant options...';
             alertBox.innerHTML = `<iconify-icon icon="mdi:loading" class="text-xl animate-spin"></iconify-icon> <span>${loadingText}</span>`;
             alertBox.classList.remove('hidden');
 
@@ -460,8 +527,10 @@
                 submitBtn.disabled = false;
                 if (actionType === 'add') {
                     submitBtn.innerHTML = `<iconify-icon icon="mdi:plus-box-multiple-outline" class="text-xl"></iconify-icon> <span>Thực hiện Thêm/Cập nhật Options</span>`;
-                } else {
+                } else if (actionType === 'delete') {
                     submitBtn.innerHTML = `<iconify-icon icon="mdi:delete-alert-outline" class="text-xl"></iconify-icon> <span>Thực hiện Xóa Option</span>`;
+                } else if (actionType === 'rename') {
+                    submitBtn.innerHTML = `<iconify-icon icon="mdi:rename-box" class="text-xl"></iconify-icon> <span>Thực hiện Đổi tên</span>`;
                 }
                 alertBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
@@ -533,11 +602,13 @@
             }
         });
 
-        document.getElementById('delete-option-form').addEventListener('submit', async function(e) {
+        document.getElementById('edit-option-value-form').addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const form = e.target;
-            const submitBtn = document.getElementById('submit-delete-option-btn');
+            const submitter = e.submitter;
+            const actionType = submitter ? submitter.value : 'delete_value';
+            const submitBtn = submitter || document.getElementById('submit-delete-option-btn');
             const alertBox = document.getElementById('alert-box');
             
             const identifiers = form.querySelector('textarea[name="identifiers"]').value.trim();
@@ -546,22 +617,36 @@
                 return;
             }
 
-            const optionName = form.querySelector('input[name="option_name"]').value.trim();
-            const optionValue = form.querySelector('input[name="option_value"]').value.trim();
-            if (!optionName || !optionValue) {
-                alert('Vui lòng nhập đầy đủ Tên Option và Value cần xóa!');
-                return;
+            let endpoint = '';
+
+            if (actionType === 'delete_value') {
+                const optionName = form.querySelector('input[name="option_name"]').value.trim();
+                const optionValue = form.querySelector('input[name="option_value"]').value.trim();
+                if (!optionName || !optionValue) {
+                    alert('Vui lòng nhập đầy đủ Tên Option và Value cần xóa!');
+                    return;
+                }
+                endpoint = '/delete-option-value';
+            } else if (actionType === 'add_value') {
+                const optionName = form.querySelector('input[name="add_option_name"]').value.trim();
+                const optionValues = form.querySelector('input[name="add_option_values"]').value.trim();
+                if (!optionName || !optionValues) {
+                    alert('Vui lòng nhập đầy đủ Tên Option và Các Value cần thêm!');
+                    return;
+                }
+                endpoint = '/add-option-value';
             }
 
             submitBtn.disabled = true;
             submitBtn.innerHTML = `<iconify-icon icon="mdi:loading" class="text-xl animate-spin"></iconify-icon> <span>Đang thực thi...</span>`;
             alertBox.className = 'mb-6 rounded-xl p-4 shadow-sm border bg-blue-50 border-blue-200 text-blue-700 font-medium flex items-center gap-3';
-            alertBox.innerHTML = `<iconify-icon icon="mdi:loading" class="text-xl animate-spin"></iconify-icon> <span>Đang xử lý xóa option value khỏi các sản phẩm trên Shopify...</span>`;
+            const loadingText = actionType === 'add_value' ? 'Đang xử lý thêm option value vào các sản phẩm trên Shopify...' : 'Đang xử lý xóa option value khỏi các sản phẩm trên Shopify...';
+            alertBox.innerHTML = `<iconify-icon icon="mdi:loading" class="text-xl animate-spin"></iconify-icon> <span>${loadingText}</span>`;
             alertBox.classList.remove('hidden');
 
             try {
                 const formData = new FormData(form);
-                const response = await fetch('/delete-option-value', {
+                const response = await fetch(endpoint, {
                     method: 'POST',
                     headers: {
                         'Accept': 'application/json',
@@ -595,7 +680,11 @@
                 alertBox.innerHTML = `<iconify-icon icon="mdi:alert-circle" class="text-2xl text-red-600 flex-shrink-0"></iconify-icon> <div><p class="font-bold">Lỗi kết nối máy chủ!</p><p class="text-sm mt-0.5">${err.message}</p></div>`;
             } finally {
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = `<iconify-icon icon="mdi:delete-empty-outline" class="text-xl"></iconify-icon> <span>Chỉnh sửa Option Value</span>`;
+                if (actionType === 'add_value') {
+                    submitBtn.innerHTML = `<iconify-icon icon="mdi:plus-box-multiple-outline" class="text-xl"></iconify-icon> <span>Thêm Option Value</span>`;
+                } else {
+                    submitBtn.innerHTML = `<iconify-icon icon="mdi:delete-empty-outline" class="text-xl"></iconify-icon> <span>Chỉnh sửa Option Value</span>`;
+                }
                 alertBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         });

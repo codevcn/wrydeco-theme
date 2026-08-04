@@ -1099,8 +1099,16 @@ async def read_root(request: Request, after: str = None, before: str = None, fil
                     filter_query = f"title:*{filter_value}*"
                 elif filter_type == "id":
                     filter_query = f"id:{filter_value}"
+                elif filter_type == "id_list":
+                    ids = [i.strip() for i in filter_value.split(",") if i.strip()]
+                    if ids:
+                        filter_query = " OR ".join([f"id:{i}" for i in ids])
                 elif filter_type == "handle":
                     filter_query = f"handle:{filter_value}"
+                elif filter_type == "handle_list":
+                    handles = [h.strip() for h in filter_value.split(",") if h.strip()]
+                    if handles:
+                        filter_query = " OR ".join([f"handle:{h}" for h in handles])
                 elif filter_type == "product_type":
                     filter_query = f"product_type:'{filter_value}'"
                     
@@ -1558,38 +1566,16 @@ def add_variant_options_to_product(product_id: str, option_pairs: list):
     for opt_name, opt_values in option_pairs:
         existing_opt = next((o for o in existing_opts if o["name"].lower() == opt_name.lower()), None)
         if existing_opt is None:
-            mutation = """
-            mutation productOptionsCreate($productId: ID!, $options: [OptionCreateInput!]!) {
-              productOptionsCreate(productId: $productId, options: $options, variantStrategy: CREATE) {
-                product {
-                  id
-                  options { id name values }
-                }
-                userErrors { field message }
-              }
-            }
-            """
-            variables = {
-                "productId": product_id,
-                "options": [{"name": opt_name, "values": [{"name": v} for v in opt_values]}]
-            }
-            res = requests.post(GRAPHQL_URL, json={"query": mutation, "variables": variables}, headers=HEADERS)
-            res.raise_for_status()
-            data = res.json()
-            if "errors" in data:
-                return False, f"GraphQL Error: {data['errors'][0]['message']}"
-            user_errs = data.get("data", {}).get("productOptionsCreate", {}).get("userErrors", [])
-            if user_errs:
-                return False, f"Lỗi từ Shopify: {user_errs[0]['message']}"
-            if data.get("data", {}).get("productOptionsCreate", {}).get("product"):
-                existing_opts = data["data"]["productOptionsCreate"]["product"].get("options", [])
+            return False, f"Không tìm thấy variant option '{opt_name}' trên sản phẩm"
         else:
-            existing_vals = set(existing_opt.get("values", []))
-            new_vals = [v for v in opt_values if v not in existing_vals]
-            if new_vals:
+            existing_vals_map = {v["name"]: v["id"] for v in existing_opt.get("optionValues", [])}
+            new_vals = [v for v in opt_values if v not in existing_vals_map]
+            vals_to_delete = [v_id for v_name, v_id in existing_vals_map.items() if v_name not in opt_values]
+            
+            if new_vals or vals_to_delete:
                 mutation = """
-                mutation productOptionUpdate($productId: ID!, $option: OptionUpdateInput!, $optionValuesToAdd: [OptionValueCreateInput!]!) {
-                  productOptionUpdate(productId: $productId, option: $option, optionValuesToAdd: $optionValuesToAdd, variantStrategy: MANAGE) {
+                mutation productOptionUpdate($productId: ID!, $option: OptionUpdateInput!, $optionValuesToAdd: [OptionValueCreateInput!], $optionValuesToDelete: [ID!]) {
+                  productOptionUpdate(productId: $productId, option: $option, optionValuesToAdd: $optionValuesToAdd, optionValuesToDelete: $optionValuesToDelete, variantStrategy: MANAGE) {
                     product {
                       id
                       options { id name values }
@@ -1601,8 +1587,12 @@ def add_variant_options_to_product(product_id: str, option_pairs: list):
                 variables = {
                     "productId": product_id,
                     "option": {"id": existing_opt["id"], "name": existing_opt["name"]},
-                    "optionValuesToAdd": [{"name": v} for v in new_vals]
                 }
+                if new_vals:
+                    variables["optionValuesToAdd"] = [{"name": v} for v in new_vals]
+                if vals_to_delete:
+                    variables["optionValuesToDelete"] = vals_to_delete
+                    
                 res = requests.post(GRAPHQL_URL, json={"query": mutation, "variables": variables}, headers=HEADERS)
                 res.raise_for_status()
                 data = res.json()
@@ -1690,6 +1680,41 @@ def delete_option_from_product(product_id: str, option_name: str):
         return False, f"Lỗi từ Shopify: {user_errs[0]['message']}"
     return True, f"Đã xóa thành công option '{option_name}' cho '{product.get('title', product_id)}'"
 
+def rename_option_in_product(product_id: str, old_name: str, new_name: str):
+    product = get_product_options_by_id(product_id)
+    if not product:
+        return False, "Không tìm thấy sản phẩm trên Shopify"
+        
+    options = product.get("options", [])
+    target_option = next((o for o in options if o["name"].lower() == old_name.lower()), None)
+    if not target_option:
+        return False, f"Không tìm thấy option '{old_name}'"
+        
+    mutation = """
+    mutation productOptionUpdate($productId: ID!, $option: OptionUpdateInput!) {
+      productOptionUpdate(productId: $productId, option: $option, variantStrategy: MANAGE) {
+        product {
+          id
+          options { name }
+        }
+        userErrors { field message }
+      }
+    }
+    """
+    variables = {
+        "productId": product_id,
+        "option": {"id": target_option["id"], "name": new_name}
+    }
+    res = requests.post(GRAPHQL_URL, json={"query": mutation, "variables": variables}, headers=HEADERS)
+    res.raise_for_status()
+    data = res.json()
+    if "errors" in data:
+        return False, f"GraphQL Error: {data['errors'][0]['message']}"
+    user_errs = data.get("data", {}).get("productOptionUpdate", {}).get("userErrors", [])
+    if user_errs:
+        return False, f"Lỗi từ Shopify: {user_errs[0]['message']}"
+    return True, f"Đã đổi tên '{old_name}' thành '{new_name}' cho '{product.get('title', product_id)}'"
+
 def is_ajax_request(request: Request) -> bool:
     accept = request.headers.get("accept", "").lower()
     x_req = request.headers.get("x-requested-with", "").lower()
@@ -1713,6 +1738,8 @@ async def edit_variants_submit(request: Request):
         option_names = form.getlist("option_names[]")
         option_values = form.getlist("option_values[]")
         delete_option_name = form.get("delete_option_name", "").strip()
+        rename_old_option = form.get("rename_old_option", "").strip()
+        rename_new_option = form.get("rename_new_option", "").strip()
 
         raw_list = re.split(r'[\r\n,]+', identifiers_raw)
         identifiers = [i.strip() for i in raw_list if i.strip()]
@@ -1739,8 +1766,22 @@ async def edit_variants_submit(request: Request):
         elif action_type == "delete":
             option_pairs = []
 
-        if not option_pairs and not delete_option_name:
-            msg = "Vui lòng nhập option cần thêm hoặc cần xóa"
+        if action_type == "add" and not option_pairs:
+            msg = "Vui lòng nhập option cần thêm"
+            if is_ajax_request(request):
+                import json
+                return HTMLResponse(content=json.dumps({"success": False, "message": msg}, ensure_ascii=False), media_type="application/json")
+            return templates.TemplateResponse(request=request, name="edit_variants.html", context={"request": request, "error": msg, "success_message": None})
+            
+        if action_type == "delete" and not delete_option_name:
+            msg = "Vui lòng nhập option cần xóa"
+            if is_ajax_request(request):
+                import json
+                return HTMLResponse(content=json.dumps({"success": False, "message": msg}, ensure_ascii=False), media_type="application/json")
+            return templates.TemplateResponse(request=request, name="edit_variants.html", context={"request": request, "error": msg, "success_message": None})
+            
+        if action_type == "rename" and (not rename_old_option or not rename_new_option):
+            msg = "Vui lòng nhập đầy đủ tên Option cũ và mới"
             if is_ajax_request(request):
                 import json
                 return HTMLResponse(content=json.dumps({"success": False, "message": msg}, ensure_ascii=False), media_type="application/json")
@@ -1758,16 +1799,22 @@ async def edit_variants_submit(request: Request):
             msgs = []
             has_error = False
 
-            if delete_option_name:
+            if action_type == "delete" and delete_option_name:
                 del_success, del_msg = delete_option_from_product(prod_id, delete_option_name)
                 msgs.append(del_msg)
                 if not del_success:
                     has_error = True
 
-            if option_pairs:
+            if action_type == "add" and option_pairs:
                 add_success, add_msg = add_variant_options_to_product(prod_id, option_pairs)
                 msgs.append(add_msg)
                 if not add_success:
+                    has_error = True
+                    
+            if action_type == "rename" and rename_old_option and rename_new_option:
+                rename_success, rename_msg = rename_option_in_product(prod_id, rename_old_option, rename_new_option)
+                msgs.append(rename_msg)
+                if not rename_success:
                     has_error = True
 
             if has_error:
@@ -1775,6 +1822,71 @@ async def edit_variants_submit(request: Request):
             else:
                 success_count += 1
                 details.append({"identifier": ident, "status": "OK", "message": " | ".join(msgs)})
+
+        msg_summary = f"Đã thực thi xong: Thành công {success_count}/{len(identifiers)} sản phẩm."
+        if is_ajax_request(request):
+            import json
+            res_data = {
+                "success": success_count > 0,
+                "message": msg_summary,
+                "details": details
+            }
+            return HTMLResponse(content=json.dumps(res_data, ensure_ascii=False), media_type="application/json")
+            
+        return templates.TemplateResponse(request=request, name="edit_variants.html", context={
+            "request": request,
+            "error": None if success_count > 0 else msg_summary,
+            "success_message": msg_summary if success_count > 0 else None
+        })
+    except Exception as e:
+        if is_ajax_request(request):
+            import json
+            return HTMLResponse(content=json.dumps({"success": False, "message": str(e)}, ensure_ascii=False), media_type="application/json")
+        return templates.TemplateResponse(request=request, name="edit_variants.html", context={"request": request, "error": str(e), "success_message": None})
+
+@app.post("/add-option-value")
+async def add_option_value_submit(request: Request):
+    try:
+        form = await request.form()
+        identifiers_raw = form.get("identifiers", "")
+        id_types = form.getlist("id_type")
+        option_name = form.get("add_option_name", "").strip()
+        option_values_raw = form.get("add_option_values", "")
+
+        raw_list = re.split(r'[\r\n,]+', identifiers_raw)
+        identifiers = [i.strip() for i in raw_list if i.strip()]
+        
+        option_values = [v.strip() for v in option_values_raw.split(";") if v.strip()]
+
+        if not identifiers:
+            msg = "Danh sách sản phẩm trống"
+            if is_ajax_request(request):
+                import json
+                return HTMLResponse(content=json.dumps({"success": False, "message": msg}, ensure_ascii=False), media_type="application/json")
+            return templates.TemplateResponse(request=request, name="edit_variants.html", context={"request": request, "error": msg, "success_message": None})
+            
+        if not option_name or not option_values:
+            msg = "Vui lòng nhập Tên Option và Các Giá trị cần thêm"
+            if is_ajax_request(request):
+                import json
+                return HTMLResponse(content=json.dumps({"success": False, "message": msg}, ensure_ascii=False), media_type="application/json")
+            return templates.TemplateResponse(request=request, name="edit_variants.html", context={"request": request, "error": msg, "success_message": None})
+
+        success_count = 0
+        details = []
+
+        for ident in identifiers:
+            prod_id = resolve_product_id(ident, id_types)
+            if not prod_id:
+                details.append({"identifier": ident, "status": "FAIL", "message": "Không tìm thấy định danh hoặc handle hợp lệ"})
+                continue
+
+            success, msg = add_variant_options_to_product(prod_id, [(option_name, option_values)])
+            if success:
+                success_count += 1
+                details.append({"identifier": ident, "status": "OK", "message": msg})
+            else:
+                details.append({"identifier": ident, "status": "FAIL", "message": msg})
 
         msg_summary = f"Đã thực thi xong: Thành công {success_count}/{len(identifiers)} sản phẩm."
         if is_ajax_request(request):

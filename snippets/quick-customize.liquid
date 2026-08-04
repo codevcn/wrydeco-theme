@@ -101,7 +101,12 @@
             product, while this dialog resolves its product at runtime.
           {%- endcomment -%}
           <div class="sp-quick__buy-base" data-quick-buy-base>
-            <button type="button" class="sp-quick__buy" data-quick-buy>
+            <button
+              type="button"
+              class="sp-quick__buy"
+              style="background-image: url('{{ 'ic-wood-type-6.webp' | file_url }}'); background-size: cover; background-position: center; background-repeat: repeat;"
+              data-quick-buy
+            >
               <span class="sp-quick__buy-spinner" aria-hidden="true">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none">
                   <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3" opacity="0.25"></circle>
@@ -622,21 +627,13 @@
     width: 100%;
   }
 
-  /* Add-to-cart matches the PDP button exactly: a "3D pushable" button whose
-     base (the wrapper) shows a soft shadow under the button's feet, and the
-     button lifts on hover / presses down on active. Values mirror the PDP source
-     (snippets/product-buy-buttons.liquid) so the two stay visually identical. */
+  /* Keep the runtime-driven Quick Customize actions visually aligned with the
+     product form buttons rendered on the PDP. */
   .sp-quick__add-base {
     width: 100%;
     min-width: 0;
-    padding-bottom: 6px;
     border-radius: 8px;
-    background-image: linear-gradient(
-      to top,
-      rgba(128, 128, 128, 0.9) 0%,
-      rgba(0, 0, 0, 0.5) 28%,
-      rgba(0, 0, 0, 0) 100%
-    );
+    color: gray;
   }
 
   .sp-quick__add {
@@ -644,23 +641,24 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    width: 100%;
+    width: calc(100% - 6px);
     height: 48px;
-    border: none;
-    border-radius: 4px;
-    background-color: #ff8233;
-    color: #ffffff;
+    border: 3px solid #ff8233;
+    border-radius: 6px;
+    background-color: transparent;
+    color: #ff8233;
     font-family: var(--font-body, inherit);
     font-size: 12px;
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: 0.15em;
     cursor: pointer;
-    transition: transform 0.2s ease;
-    box-sizing: border-box;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    box-sizing: content-box;
   }
   .sp-quick__add [data-quick-add-text] {
     font-size: 1rem;
     text-transform: uppercase;
+    transform: translateY(2px);
     white-space: nowrap;
   }
 
@@ -676,12 +674,10 @@
     height: 24px;
   }
 
-  .sp-quick__add-base:hover .sp-quick__add {
-    transform: translateY(-3px);
-  }
-
+  .sp-quick__add-base:hover .sp-quick__add,
   .sp-quick__add-base:active .sp-quick__add {
-    transform: translateY(3px);
+    background-color: #ff8233;
+    color: var(--color-cream, #fff8f0);
   }
 
   .sp-quick__add:disabled,
@@ -739,17 +735,17 @@
     width: 100%;
     height: 48px;
     border: none;
-    border-radius: 4px;
+    border-radius: 6px;
     background-color: #ff3939;
     color: var(--color-cream, #fff8f0);
     font-family: var(--font-body, inherit);
     font-size: 1rem;
     font-weight: 900;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.15em;
     text-transform: uppercase;
     cursor: pointer;
     transition: transform 0.2s ease;
-    box-sizing: border-box;
+    box-sizing: content-box;
   }
 
   .sp-quick__buy [data-quick-buy-text] {
@@ -912,11 +908,6 @@
   @media screen and (max-width: 22rem) {
     .sp-quick__action-buttons {
       grid-template-columns: 1fr;
-    }
-
-    .sp-quick__add,
-    .sp-quick__buy {
-      height: 42px;
     }
   }
 
@@ -1459,10 +1450,14 @@
     }
 
     // Line-item properties for the current selection. PDP parity: the uploaded
-    // custom-colour image rides along while its option is still set to "Custom".
+    // custom-colour image rides along while its option value still contains "custom".
     function selectedProperties() {
       var properties = {};
-      if (customImage.url && customImage.optionIndex > -1 && state.selected[customImage.optionIndex] === 'Custom') {
+      if (
+        customImage.url &&
+        customImage.optionIndex > -1 &&
+        isCustomValue(state.selected[customImage.optionIndex])
+      ) {
         properties['added_url_image'] = customImage.url;
       }
       return properties;
@@ -1524,11 +1519,10 @@
     }
 
     function isCustomValue(val) {
-      return (
-        String(val == null ? '' : val)
-          .trim()
-          .toLowerCase() === 'custom'
-      );
+      return String(val == null ? '' : val)
+        .trim()
+        .toLowerCase()
+        .indexOf('custom') > -1;
     }
 
     // Turn a "Custom" colour/finish pill into a thumbnail of the uploaded

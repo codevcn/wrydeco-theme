@@ -12,10 +12,10 @@
 
 {% liquid
   assign voucher = metaobjects.voucher_welcome_customer.values | first
-  assign voucher_title = voucher.voucher_title.value | default: '<span class="lead-capture__voucher-title-strong">10% Off</span> Your First Order'
-  assign voucher_code = voucher.voucher_code.value | default: 'WRYDECO10'
-  assign email_cta_text = voucher.email_cta_text.value | default: 'Keep me updated'
-  assign email_label_text = voucher.email_label_text.value | default: 'Enter your email'
+  assign voucher_title = voucher.voucher_title.value
+  assign voucher_code = voucher.voucher_code.value
+  assign email_cta_text = voucher.email_cta_text.value
+  assign email_label_text = voucher.email_label_text.value
 %}
 
 <button
@@ -45,6 +45,7 @@
   data-lead-capture
   data-storage-key="wrydeco_lead_capture_seen_v1"
   data-reminder-key="wrydeco_lead_capture_reminder_v1"
+  data-subscribed-key="wrydeco_lead_capture_subscribed_v1"
   data-auto-open="{% if request.page_type == 'index' %}true{% else %}false{% endif %}"
   aria-hidden="true"
   hidden
@@ -55,8 +56,14 @@
     data-lead-capture-dialog
     role="dialog"
     aria-modal="true"
-    aria-labelledby="LeadCaptureTitle"
-    aria-describedby="LeadCaptureDescription"
+    {% if voucher_title != blank %}
+      aria-labelledby="LeadCaptureTitle"
+    {% else %}
+      aria-label="Welcome offer"
+    {% endif %}
+    {% if email_cta_text != blank %}
+      aria-describedby="LeadCaptureDescription"
+    {% endif %}
   >
     <button
       type="button"
@@ -105,9 +112,23 @@
             <span></span>
           </div>
 
-          <h2 id="LeadCaptureTitle" class="lead-capture__title">{{ voucher_title }}</h2>
+          <h2
+            id="LeadCaptureTitle"
+            class="lead-capture__title"
+            {% if voucher_title == blank %}
+              hidden
+            {% endif %}
+          >
+            {{- voucher_title -}}
+          </h2>
 
-          <div class="lead-capture__voucher" aria-label="Welcome voucher">
+          <div
+            class="lead-capture__voucher"
+            aria-label="Welcome voucher"
+            {% if voucher_code == blank %}
+              hidden
+            {% endif %}
+          >
             <strong class="lead-capture__code" data-lead-capture-code>{{ voucher_code | escape }}</strong>
             <button
               type="button"
@@ -140,8 +161,21 @@
             </button>
           </div>
 
-          <h3 class="lead-capture__form-heading">{{ email_label_text | escape }}</h3>
-          <p id="LeadCaptureDescription" class="lead-capture__description">
+          <h3
+            class="lead-capture__form-heading"
+            {% if email_label_text == blank %}
+              hidden
+            {% endif %}
+          >
+            {{- email_label_text | escape -}}
+          </h3>
+          <p
+            id="LeadCaptureDescription"
+            class="lead-capture__description"
+            {% if email_cta_text == blank %}
+              hidden
+            {% endif %}
+          >
             {{- email_cta_text | escape -}}
           </p>
 
@@ -221,7 +255,13 @@
             We'll send future studio offers to your inbox.
           </p>
 
-          <div class="lead-capture__voucher lead-capture__voucher--success" aria-label="Welcome voucher">
+          <div
+            class="lead-capture__voucher lead-capture__voucher--success"
+            aria-label="Welcome voucher"
+            {% if voucher_code == blank %}
+              hidden
+            {% endif %}
+          >
             <strong class="lead-capture__code">{{ voucher_code | escape }}</strong>
             <button
               type="button"
@@ -303,7 +343,11 @@
 {% stylesheet %}
   .lead-capture-test-toggle[hidden],
   .lead-capture-reminder[hidden],
-  .lead-capture[hidden] {
+  .lead-capture[hidden],
+  .lead-capture__title[hidden],
+  .lead-capture__voucher[hidden],
+  .lead-capture__form-heading[hidden],
+  .lead-capture__description[hidden] {
     display: none;
   }
 
@@ -582,6 +626,11 @@
     letter-spacing: var(--letter-spacing-snug);
     line-height: var(--line-height-display);
   }
+
+  .lead-capture__title:not([hidden]):has(+ .lead-capture__voucher[hidden]) {
+    margin-bottom: var(--sp-4);
+  }
+
   .lead-capture__voucher-title-strong {
     font-weight: var(--font-weight-bold);
   }
@@ -664,10 +713,14 @@
   .lead-capture__form-heading {
     margin: var(--sp-0);
     color: var(--color-brown-dark);
-    font-family: var(--font-display-light);
+    font-family: var(--font-body);
     font-size: var(--font-size-display-sm);
-    font-weight: var(--font-weight-light);
+    font-weight: var(--font-weight-regular);
     line-height: var(--line-height-tight);
+  }
+
+  .lead-capture__form-heading:not([hidden]):has(+ .lead-capture__description[hidden]) {
+    margin-bottom: var(--sp-4);
   }
 
   .lead-capture__description {
@@ -1047,7 +1100,7 @@
 
     .lead-capture__description {
       margin-bottom: var(--sp-4);
-      font-size: var(--font-size-body-sm);
+      font-size: var(--font-size-body-lg);
     }
 
     .lead-capture__divider {
@@ -1076,11 +1129,13 @@
     var successState = root.querySelector('[data-lead-capture-success]');
     var storageKey = root.dataset.storageKey;
     var reminderKey = root.dataset.reminderKey;
+    var subscribedKey = root.dataset.subscribedKey;
     var autoOpen = root.dataset.autoOpen === 'true';
     var reminder = document.querySelector('[data-lead-capture-reminder]');
     var reminderOpenButton = reminder ? reminder.querySelector('[data-lead-capture-reminder-open]') : null;
     var reminderCloseButton = reminder ? reminder.querySelector('[data-lead-capture-reminder-close]') : null;
     var reminderMemoryState = '';
+    var subscribedMemoryState = false;
     var isSubmitting = false;
     var isOpen = false;
     var isSubscribed = false;
@@ -1105,8 +1160,29 @@
       }
     }
 
+    function hasSubscribed() {
+      try {
+        return window.localStorage.getItem(subscribedKey) === 'true';
+      } catch (error) {
+        return subscribedMemoryState;
+      }
+    }
+
+    function rememberSubscription() {
+      subscribedMemoryState = true;
+      try {
+        window.localStorage.setItem(subscribedKey, 'true');
+      } catch (error) {
+        return;
+      }
+    }
+
     function showReminder() {
       if (!reminder) return;
+      if (isSubscribed || hasSubscribed()) {
+        hideReminder();
+        return;
+      }
       reminder.hidden = false;
       window.requestAnimationFrame(function () {
         reminder.classList.add('is-visible');
@@ -1209,6 +1285,7 @@
       setError('');
       form.reset();
       isSubscribed = true;
+      rememberSubscription();
       setReminderState('dismissed');
       hideReminder();
       formState.hidden = true;

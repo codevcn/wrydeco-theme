@@ -12,6 +12,7 @@
     <title>{{ product.title if product else 'Product Details' }} - Admin</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+    <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
     <style>
         body { font-family: 'Inter', sans-serif; }
         /* Lightbox Custom CSS */
@@ -295,6 +296,24 @@
 
     </main>
 
+    <!-- Floating Copy Buttons -->
+    {% if product %}
+    <div class="fixed top-24 right-4 sm:right-8 flex flex-col gap-3 z-50">
+        <div class="relative group flex items-center justify-end">
+            <span id="copy-id-indicator" class="absolute right-full mr-3 px-2.5 py-1.5 bg-gray-800 text-white text-xs font-medium rounded-lg opacity-0 transition-opacity whitespace-nowrap pointer-events-none">Đã copy ID</span>
+            <button onclick="copyToClipboard('{{ product.id }}', 'copy-id-indicator')" class="bg-blue-500 text-white p-3 rounded-full shadow-lg hover:bg-blue-600 transition-all flex items-center justify-center focus:outline-none cursor-pointer border-none" title="Copy Product ID">
+                <iconify-icon icon="mdi:identifier" class="text-xl"></iconify-icon>
+            </button>
+        </div>
+        <div class="relative group flex items-center justify-end">
+            <span id="copy-handle-indicator" class="absolute right-full mr-3 px-2.5 py-1.5 bg-gray-800 text-white text-xs font-medium rounded-lg opacity-0 transition-opacity whitespace-nowrap pointer-events-none">Đã copy Handle</span>
+            <button onclick="copyToClipboard('{{ product.handle }}', 'copy-handle-indicator')" class="bg-teal-500 text-white p-3 rounded-full shadow-lg hover:bg-teal-600 transition-all flex items-center justify-center focus:outline-none cursor-pointer border-none" title="Copy Product Handle">
+                <iconify-icon icon="mdi:link-variant" class="text-xl"></iconify-icon>
+            </button>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Scroll Buttons -->
     <div class="fixed bottom-8 right-8 flex flex-col gap-3 z-50">
         <button id="scrollToTopBtn" onclick="window.scrollTo({top: 0, behavior: 'instant'})" class="bg-indigo-600 text-white p-3 rounded-full shadow-lg hover:bg-indigo-700 transition-all opacity-0 pointer-events-none" title="Cuộn lên đầu trang">
@@ -321,6 +340,20 @@
             } else {
                 scrollToBottomBtn.classList.add('opacity-0', 'pointer-events-none');
             }
+        }
+
+        function copyToClipboard(text, indicatorId) {
+            navigator.clipboard.writeText(text).then(() => {
+                const indicator = document.getElementById(indicatorId);
+                indicator.classList.remove('opacity-0');
+                indicator.classList.add('opacity-100');
+                setTimeout(() => {
+                    indicator.classList.remove('opacity-100');
+                    indicator.classList.add('opacity-0');
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+            });
         }
 
         window.addEventListener('scroll', toggleScrollButtons);
