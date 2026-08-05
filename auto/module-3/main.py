@@ -2,9 +2,11 @@ import os
 import re
 import time
 import uuid
+import csv
+import io
 from datetime import datetime
 from fastapi import FastAPI, Request, Form
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
@@ -1054,6 +1056,76 @@ async def update_token(request: Request, access_token: str = Form(...)):
                 f.write(f"SHOPIFY_ADMIN_TOKEN={new_token}\n")
 
     return RedirectResponse(url="/", status_code=303)
+
+@app.get("/notes", response_class=HTMLResponse)
+async def get_notes(request: Request):
+    note_content = ""
+    try:
+        if os.path.exists("notes.txt"):
+            with open("notes.txt", "r", encoding="utf-8") as f:
+                note_content = f.read()
+    except Exception as e:
+        print(f"Error reading notes: {e}")
+        
+    return templates.TemplateResponse(request=request, name="notes.html", context={"request": request, "note_content": note_content})
+
+@app.post("/notes")
+async def save_notes(request: Request, note_content: str = Form(default="")):
+    try:
+        with open("notes.txt", "w", encoding="utf-8") as f:
+            f.write(note_content)
+        return {"status": "success", "message": "Đã lưu ghi chú thành công!"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.get("/export-all")
+async def export_all_products(request: Request):
+    async def iter_csv():
+        yield '\ufeff'
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(["ID", "Handle", "Title", "Product Type", "Created At", "Amazon Link"])
+        yield output.getvalue()
+        output.seek(0)
+        output.truncate(0)
+        
+        has_next_page = True
+        after_cursor = None
+        
+        while has_next_page:
+            try:
+                data = get_products(first=250, after=after_cursor)
+                if not data or "products" not in data:
+                    break
+                    
+                products = data["products"]["edges"]
+                
+                for edge in products:
+                    node = edge["node"]
+                    pid = node.get("id", "").split("/")[-1]
+                    handle = node.get("handle", "")
+                    title = node.get("title", "")
+                    product_type = node.get("productType", "")
+                    created_at = node.get("createdAt", "")
+                    amazon_link = node.get("amazon_link", {})
+                    amazon_val = amazon_link.get("value", "") if amazon_link else ""
+                    
+                    writer.writerow([pid, handle, title, product_type, created_at, amazon_val])
+                
+                yield output.getvalue()
+                output.seek(0)
+                output.truncate(0)
+                
+                has_next_page = data["products"]["pageInfo"]["hasNextPage"]
+                if has_next_page:
+                    after_cursor = data["products"]["pageInfo"]["endCursor"]
+            except Exception as e:
+                print(f"Export error: {e}")
+                break
+                
+    response = StreamingResponse(iter_csv(), media_type="text/csv")
+    response.headers["Content-Disposition"] = "attachment; filename=products_export.csv"
+    return response
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request, after: str = None, before: str = None, filter_type: str = "tag", filter_value: str = None, sort_by: str = "created_desc", special_filter: str = ""):

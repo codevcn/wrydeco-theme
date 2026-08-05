@@ -15,7 +15,6 @@ const IGNORE_TYPES = [
   "Select Package",
   "Communication",
   "Comunication",
-  "Select finish",
 ];
 
 /**

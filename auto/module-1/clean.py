@@ -35,6 +35,8 @@ KEEP_CONTENT = [
     "access-token.md",
     "get_access_token.cmd",
     "get_access_token.py",
+    "prompts.txt",
+    "config.update-product.json",
 ]
 
 
