@@ -1,6 +1,6 @@
 # Task cập nhật sản phẩm đang có sẵn trong store
 
-> Dùng access token được mô tả trong file `./access-token.md` để truy cập vào store, sau đó bạn hãy cập nhật sản phẩm có ID là `8365470613561` theo các yêu cầu bên dưới.
+> Dùng access token được mô tả trong file `./access-token.md` để truy cập vào store, sau đó bạn hãy cập nhật sản phẩm có ID là `8366356922425` theo các yêu cầu bên dưới.
 > Lưu ý: Bạn phải tự làm công việc cập nhật sản phẩm chứ ko phải để cho tôi làm.
 > QUAN TRỌNG: Trong quá trình cập nhật, nếu có bất kỳ lỗi nào xảy ra thì dừng toàn bộ quá trình cập nhật và báo lỗi cho tôi biết.
 
@@ -9,7 +9,7 @@
 Product Title gốc:
 
 ```text
-Rustic Tree Console Table Bookshelf, Handcrafted Natural Wood 3 Tier Display Shelf for Hallway, Entryway, Living Room and Home Decor (Option 3)
+Handcrafted Tree Branch Book Shelf – Unique Natural Wood Multi-Layer Wall Bookcase, Sculptural Art Shelf for Living Room, Study & Home Library (C6)
 ```
 
 - Viết lại product title gốc trên thành product title mới.
@@ -23,19 +23,15 @@ Rustic Tree Console Table Bookshelf, Handcrafted Natural Wood 3 Tier Display She
 Mô tả sản phẩm gốc:
 
 ```text
-🌿 Sculptural Tree-Inspired Bookcase – Designed for customers who appreciate natural materials and refined interiors, this rustic tree bookshelf blends functional storage with organic art, creating a warm statement piece for books, pottery, plants, and curated decor.
+【PREAUREUM MAIN BENEFIT】 Transform an empty living room corner into a functional piece of art with a handcrafted tree branch bookshelf that gives books, plants, pottery, framed photos, and collected décor a more intentional, visually warm place to live.
 
-🪵 Handcrafted Natural Wood Character – Made by experienced artisans using carefully selected wood, each shelf highlights rich grain movement, knots, texture, and live-edge inspired details. Natural variations make every piece distinctive and full of character.
+【UNIQUE HANDCRAFTED WOOD CHARACTER】 Each piece is individually handcrafted by skilled artisans, so every bookshelf carries its own organic grain flow, knots, tonal variation, and branch-inspired curves. That one-of-a-kind natural character makes it feel far more special than ordinary wall storage.
 
-📚 Spacious 3 Tier Display Design – The open multi-level structure provides generous room for books, ceramics, vases, baskets, framed photos, collectibles, and decorative objects while keeping your space organized, balanced, and visually elevated.
+【MULTI-LAYER DISPLAY FOR CURATED STYLING】 Designed with many layered display areas, this branch-style bookshelf creates vertical rhythm and visual depth for books, candles, ceramics, vases, keepsakes, and art objects—helping everyday décor feel more expressive, elevated, and beautifully arranged.
 
-🏡 Elevated Rustic Home Decor – A beautiful fit for living rooms, studies, home libraries, entryways, bedrooms, boutique offices, cabins, cottages, and nature-inspired interiors with farmhouse, wabi-sabi, organic modern, woodland, or vintage styling.
+【ARTWORK-INSPIRED STATEMENT PIECE】 The sculptural tree silhouette brings movement, texture, and a gallery-like presence to the wall, making it ideal for customers who want storage that also functions as décor. It adds a grounded, artful mood to refined living room interiors.
 
-✨ Statement Furniture with Warmth – The branch-style side form adds height, movement, and sculptural presence, while the natural wood shelves bring texture and depth to an empty wall or corner, making the room feel more intentional and collected.
-
-🛠️ Made to Order with Care – Each bookshelf is crafted, inspected, and prepared carefully before shipment. Since natural wood is used, grain pattern, branch shape, color tone, and surface markings may vary slightly from piece to piece.
-
-🎁 Memorable Gift for Design Lovers – An impressive housewarming, wedding, anniversary, holiday, or new home gift for book lovers, plant collectors, artists, designers, homeowners, and anyone who values artisan-style furniture with lasting impact.
+【DESIGNED FOR LIVING ROOM CORNERS & DESIGN-LED SPACES】 A strong fit for living room corners, reading nooks, studies, home libraries, bedrooms, entryways, cabins, and boutique offices. Works beautifully with organic modern, Japandi, wabi-sabi, farmhouse, woodland, rustic, and collected-vintage styling.
 ```
 
 Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết lại mô tả sản phẩm gốc trên.
@@ -319,7 +315,7 @@ Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết
 <div class="description-root"></div>
 ```
 
-- amazon_link: "https://www.amazon.com/dp/B0H82KPBVN?th=1"
+- amazon_link: "https://www.amazon.com/dp/B0H7Q81L3Z?lv=shuf&channelId=500&plpRedirect=mhFallback&th=1"
 - author_info: "gid://shopify/Metaobject/195647701049"
 - product_material: "wood"
 - seo_product_title:
@@ -360,7 +356,7 @@ Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết
 
 ### 10. Cập nhật product type
 
-- Cập nhật product type cho sản phẩm là `parrot-tree`.
+- Cập nhật product type cho sản phẩm là `bookshelf-corner-living-room`.
 
 ### 11. Cập nhật vendor
 
@@ -372,4 +368,4 @@ Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết
 
 ### 13. Cập nhật handle của sản phẩm
 
-- Handle của sản phẩm sẽ được suy ra từ `Rustic Tree Console Table Bookshelf, Handcrafted Natural Wood 3 Tier Display Shelf for Hallway, Entryway, Living Room and Home Decor (Option 3)`, handle của sản phẩm phải được viết dưới dạng kebab-case.
+- Handle của sản phẩm sẽ được suy ra từ `Handcrafted Tree Branch Book Shelf – Unique Natural Wood Multi-Layer Wall Bookcase, Sculptural Art Shelf for Living Room, Study & Home Library (C6)`, handle của sản phẩm phải được viết dưới dạng kebab-case.

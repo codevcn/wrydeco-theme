@@ -15,6 +15,7 @@ const IGNORE_TYPES = [
   "Select Package",
   "Communication",
   "Comunication",
+  "Product will slightly different as shown in pictures, please check your MESSAGES to confirm order!",
 ];
 
 /**

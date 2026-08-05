@@ -36,3 +36,4 @@
 | Wooden Fruit Bowls                   | wooden-fruit-bowl            | TYPE EQUALS wooden-fruit-bowl            |
 | Wooden Lamp Bases                    | wooden-lamp-base             | TYPE EQUALS wooden-lamp-base             |
 | Wooden Plant Stands                  | wooden-plant-stand           | TYPE EQUALS wooden-plant-stands          |
+| Bookshelf Corner Living Room         | bookshelf-corner-living-room | TYPE EQUALS bookshelf-corner-living-room |
