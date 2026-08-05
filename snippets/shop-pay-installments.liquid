@@ -1,0 +1,78 @@
+{% doc %}
+  Renders Shopify's native Shop Pay Installments message for the current product.
+
+  @param {product} product - The current product.
+  @param {variant} current_variant - The currently selected variant.
+  @param {string} section_id - The parent section ID, used to generate a stable form ID.
+
+  @example
+  {% render 'shop-pay-installments', product: product, current_variant: current_variant, section_id: section.id %}
+{% enddoc %}
+
+{%- liquid
+  assign installments_variant = current_variant | default: product.selected_or_first_available_variant
+  if installments_variant == blank
+    assign installments_variant = product.first_available_variant
+  endif
+  if installments_variant == blank
+    assign installments_variant = product.variants.first
+  endif
+  assign installment_form_id = 'ProductInstallmentsForm-' | append: section_id
+-%}
+
+{%- if installments_variant != blank -%}
+  <div class="product-shop-pay-installments" data-shop-pay-installments>
+    {%- form 'product', product, id: installment_form_id, class: 'product-shop-pay-installments__form' -%}
+      <input
+        type="hidden"
+        name="id"
+        value="{{ installments_variant.id }}"
+        data-shop-pay-installments-variant-id
+      >
+
+      {{ form | payment_terms }}
+    {%- endform -%}
+  </div>
+{%- endif -%}
+
+{% stylesheet %}
+  .product-shop-pay-installments {
+    margin-top: var(--sp-3);
+    margin-bottom: var(--sp-4);
+  }
+
+  .product-shop-pay-installments__form {
+    margin: 0;
+  }
+
+  .product-shop-pay-installments shopify-payment-terms {
+    display: block;
+    font-family: var(--font-roboto);
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-relaxed);
+    color: var(--text-secondary);
+  }
+
+  @media screen and (max-width: 768px) {
+    .product-shop-pay-installments {
+      margin-top: var(--sp-2);
+      margin-bottom: var(--sp-3);
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  (function () {
+    function syncShopPayInstallmentsVariant(event) {
+      var variantId = event && event.detail ? event.detail.variantId : null;
+      if (!variantId) return;
+
+      document.querySelectorAll('[data-shop-pay-installments-variant-id]').forEach(function (input) {
+        input.value = variantId;
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+    }
+
+    document.addEventListener('variant:change', syncShopPayInstallmentsVariant);
+  })();
+{% endjavascript %}

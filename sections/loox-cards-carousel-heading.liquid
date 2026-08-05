@@ -1,0 +1,341 @@
+{%- liquid
+  assign loox_global_stats = shop.metafields.loox.global_stats.value | default: shop.metafields.loox.global_stats | strip
+  assign rating_label = section.settings.rating_label
+  assign review_count_raw = section.settings.review_count_label
+
+  if loox_global_stats != blank
+    if loox_global_stats contains ','
+      assign loox_global_stats_parts = loox_global_stats | split: ','
+      assign loox_global_rating = loox_global_stats_parts | first | strip
+      assign loox_global_review_count = loox_global_stats_parts | last | strip
+
+      if loox_global_rating != blank
+        assign rating_label = loox_global_rating
+      endif
+
+      if loox_global_review_count != blank
+        assign review_count_raw = loox_global_review_count
+      endif
+    endif
+  endif
+
+  assign review_count_label = review_count_raw
+  assign review_count_size = review_count_raw | size
+  assign review_count_separator = section.settings.review_count_separator
+
+  if review_count_separator != 'none'
+    if review_count_size == 4
+      assign review_count_prefix = review_count_raw | slice: 0, 1
+      assign review_count_suffix = review_count_raw | slice: 1, 3
+      assign review_count_label = review_count_prefix | append: review_count_separator | append: review_count_suffix
+    elsif review_count_size == 5
+      assign review_count_prefix = review_count_raw | slice: 0, 2
+      assign review_count_suffix = review_count_raw | slice: 2, 3
+      assign review_count_label = review_count_prefix | append: review_count_separator | append: review_count_suffix
+    elsif review_count_size == 6
+      assign review_count_prefix = review_count_raw | slice: 0, 3
+      assign review_count_suffix = review_count_raw | slice: 3, 3
+      assign review_count_label = review_count_prefix | append: review_count_separator | append: review_count_suffix
+    endif
+  endif
+
+  assign rating_fill_percent = rating_label | plus: 0 | times: 20 | at_most: 100 | at_least: 0
+-%}
+
+<section
+  class="loox-collector-heading"
+  aria-labelledby="LooxCollectorHeading-{{ section.id }}"
+>
+  <div class="loox-collector-heading__inner">
+    <div class="loox-collector-heading__ornament" aria-hidden="true">
+      <span></span>
+      <svg viewBox="0 0 24 24" role="presentation">
+        <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M12 16.5A4.5 4.5 0 1 1 7.5 12A4.5 4.5 0 1 1 12 7.5a4.5 4.5 0 1 1 4.5 4.5a4.5 4.5 0 1 1-4.5 4.5m0-9V9m-4.5 3H9m7.5 0H15m-3 4.5V15M8 8l1.88 1.88m4.24 0L16 8m-8 8l1.88-1.88m4.24 0L16 16"></path>
+        </g>
+      </svg>
+      <span></span>
+    </div>
+
+    <p class="loox-collector-heading__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+    <h2 class="loox-collector-heading__title" id="LooxCollectorHeading-{{ section.id }}">
+      {{ section.settings.title | escape }}
+    </h2>
+
+    {% if section.settings.show_rating %}
+      {% if rating_label != blank %}
+        {% if review_count_label != blank %}
+          <div
+            class="loox-collector-heading__rating"
+            aria-label="Storewide collector rating {{ rating_label | escape }} out of 5 from {{ review_count_label | escape }} reviews"
+          >
+            <span
+              class="loox-collector-heading__stars"
+              style="--rating-fill: {{ rating_fill_percent }}%;"
+              aria-hidden="true"
+            >
+              <span class="loox-collector-heading__stars-base">
+                {% for index in (1..5) %}
+                  <svg viewBox="0 0 24 24" role="presentation">
+                    <path fill="currentColor" d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2L9.19 8.63L2 9.24l5.46 4.73L5.82 21z"></path>
+                  </svg>
+                {% endfor %}
+              </span>
+              <span class="loox-collector-heading__stars-fill">
+                {% for index in (1..5) %}
+                  <svg viewBox="0 0 24 24" role="presentation">
+                    <path fill="currentColor" d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2L9.19 8.63L2 9.24l5.46 4.73L5.82 21z"></path>
+                  </svg>
+                {% endfor %}
+              </span>
+            </span>
+            <span class="loox-collector-heading__score">
+              {{ rating_label | escape }} ({{ review_count_label | escape }})
+            </span>
+          </div>
+        {% endif %}
+      {% endif %}
+    {% endif %}
+  </div>
+
+  <div class="loox-collector-heading__app">
+    {% for block in section.blocks %}
+      {% render block %}
+    {% endfor %}
+  </div>
+</section>
+
+<style>
+  #shopify-section-{{ section.id }},
+  .loox-collector-heading,
+  #shopify-section-{{ section.id }} [data-block-handle='loox-card-carousel-section'] {
+    background-color: var(--color-cream);
+    background-image: url('{{ 'cards-carousel-background.png' | file_url }}');
+    background-position: center;
+    background-size: cover;
+  }
+</style>
+
+{% stylesheet %}
+  .loox-collector-heading {
+    padding: var(--sp-7) var(--layout-padding-desktop) var(--sp-0);
+    background-color: var(--color-cream);
+    color: var(--color-earth-brown);
+  }
+
+  .loox-collector-heading__inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: min(100%, var(--layout-max-width));
+    margin-inline: auto;
+    text-align: center;
+  }
+
+  .loox-collector-heading__ornament {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: min(176px, 48vw);
+    color: var(--color-clay);
+  }
+
+  .loox-collector-heading__ornament span {
+    flex: 1;
+    border-block-start: var(--border-width) solid var(--border-dark);
+  }
+
+  .loox-collector-heading__ornament svg {
+    width: var(--sp-5);
+    height: var(--sp-5);
+    margin-inline: var(--sp-3);
+  }
+
+  .loox-collector-heading__eyebrow {
+    margin: var(--sp-5) 0 0;
+    font: var(--type-caption);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: calc(var(--letter-spacing-wide) * 5);
+    text-transform: uppercase;
+    color: var(--color-bark);
+  }
+
+  .loox-collector-heading__title {
+    max-width: 1120px;
+    margin: var(--sp-3) 0 0;
+    font-family: var(--font-display);
+    font-size: var(--font-size-display-xl);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-tight);
+    letter-spacing: var(--letter-spacing-tight);
+    text-wrap: balance;
+    color: var(--color-earth-brown);
+  }
+
+  .loox-collector-heading__rating {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-3);
+    margin-block-start: var(--sp-3);
+    font: var(--type-body-lg);
+    color: var(--color-earth-brown);
+  }
+
+  .loox-collector-heading__stars {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+    color: color-mix(in srgb, var(--color-earth-brown) 28%, transparent);
+  }
+
+  .loox-collector-heading__stars-base,
+  .loox-collector-heading__stars-fill {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+  }
+
+  .loox-collector-heading__stars-fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: var(--rating-fill);
+    overflow: hidden;
+    color: var(--color-earth-brown);
+    white-space: nowrap;
+  }
+
+  .loox-collector-heading__stars svg,
+  .loox-collector-heading__stars-fill svg {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 20px;
+  }
+
+  .loox-collector-heading__app [data-block-handle='loox-card-carousel-section'] {
+    background-color: transparent;
+  }
+
+  @media (max-width: 1279px) {
+    .loox-collector-heading {
+      padding: var(--sp-8) var(--layout-padding-tablet) var(--sp-0);
+    }
+
+    .loox-collector-heading__title {
+      font-size: var(--font-size-display-lg);
+    }
+  }
+
+  @media (max-width: 719px) {
+    .loox-collector-heading {
+      padding: var(--sp-7) var(--layout-padding-mobile) var(--sp-0);
+    }
+
+    .loox-collector-heading__ornament {
+      width: min(128px, 42vw);
+    }
+
+    .loox-collector-heading__ornament svg {
+      width: var(--sp-5);
+      height: var(--sp-5);
+      margin-inline: var(--sp-2);
+    }
+
+    .loox-collector-heading__eyebrow {
+      margin-block-start: var(--sp-4);
+      letter-spacing: calc(var(--letter-spacing-wide) * 3);
+    }
+
+    .loox-collector-heading__title {
+      margin-block-start: var(--sp-2);
+      font-size: clamp(var(--font-size-body-2xl), 10vw, var(--font-size-display-sm));
+      overflow-wrap: anywhere;
+    }
+
+    .loox-collector-heading__rating {
+      flex-wrap: wrap;
+      gap: var(--sp-2);
+      margin-block-start: var(--sp-2);
+      font: var(--type-body-md);
+    }
+
+    .loox-collector-heading__stars svg {
+      width: 18px;
+      height: 18px;
+      flex-basis: 18px;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Loox Cards Heading",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "Eyebrow",
+      "default": "Collector Reviews"
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Heading",
+      "default": "What Our Collectors Are Saying"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_rating",
+      "label": "Show rating summary",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "rating_label",
+      "label": "Fallback rating label",
+      "default": "4.71"
+    },
+    {
+      "type": "text",
+      "id": "review_count_label",
+      "label": "Fallback review count",
+      "default": "1508"
+    },
+    {
+      "type": "select",
+      "id": "review_count_separator",
+      "label": "Review count separator",
+      "options": [
+        {
+          "value": ",",
+          "label": "Comma"
+        },
+        {
+          "value": ".",
+          "label": "Period"
+        },
+        {
+          "value": "none",
+          "label": "None"
+        }
+      ],
+      "default": "."
+    }
+  ],
+  "blocks": [
+    {
+      "type": "@app"
+    }
+  ],
+  "max_blocks": 1,
+  "presets": [
+    {
+      "name": "Loox Cards Heading"
+    }
+  ]
+}
+{% endschema %}
