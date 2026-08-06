@@ -1,19 +1,26 @@
-# Báo cáo kết quả Module-4 (Image & Video Reviews)
+# Báo cáo kết quả Module-4 (Text Reviews)
 
 ## Thông tin sản phẩm đã xử lý (Cập nhật mới)
-1. **Product ID:** 8355494395961
-   - **Handle:** `handcrafted-wooden-floor-sculpture-tall-rustic-art`
-   - **Đã sinh:** 18 reviews
-2. **Product ID:** 8355782328377
-   - **Handle:** `rustic-wood-tree-branch-floating-bookshelf-4-tier-decor`
-   - **Đã sinh:** 19 reviews
+1. **Product ID:** 8355492495417
+   - **Handle:** `solid-wood-tree-branch-wall-mounted-display-bookcase`
+   - **Đã sinh:** 62 reviews
+2. **Product ID:** 8358119211065
+   - **Handle:** `wall-mounted-solid-wood-wine-rack-with-glass-holder`
+   - **Đã sinh:** 67 reviews
+3. **Product ID:** 8358119145529
+   - **Handle:** `mid-century-solid-wood-wall-mounted-wine-rack-shelf`
+   - **Đã sinh:** 65 reviews
+4. **Product ID:** 8355491184697
+   - **Handle:** `nature-inspired-display-wooden-mushroom-tree-bookshelf-opt3`
+   - **Đã sinh:** 61 reviews
 
 ## Kết quả thực thi
-- Đã upload thành công tổng cộng 7 files media (bao gồm 5 ảnh và 2 video) cho 2 sản phẩm mới lên hệ thống Shopify CDN.
-- Sinh được 2 file CSV gốc:
-  - `8355494395961-reviews.images.csv`
-  - `8355782328377-reviews.images.csv`
+- Sinh được 4 file CSV gốc:
+  - `8355492495417-reviews.csv`
+  - `8358119211065-reviews.csv`
+  - `8358119145529-reviews.csv`
+  - `8355491184697-reviews.csv`
 - Các file gốc đã được di chuyển an toàn vào thư mục lưu trữ `warehouse`.
-- **Output cuối cùng:** Toàn bộ 37 reviews mới đã được gộp vào file `output/merged-reviews.csv` (Nâng tổng số dòng dữ liệu trong file này lên 56 dòng).
+- **Output cuối cùng:** Toàn bộ 255 reviews mới đã được gộp vào file `output/merged-reviews.csv` (Cộng dồn với các review cũ).
 
-Mọi thông tin đã được ghi nhận vào `handled.images.json` để tránh xử lý trùng lặp trong các lần tiếp theo.
+Mọi thông tin đã được ghi nhận vào `handled.json` để tránh xử lý trùng lặp trong các lần tiếp theo.

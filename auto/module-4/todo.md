@@ -15,7 +15,7 @@
     - Cách hành văn viết review như người bản xứ.
     - Thông tin sản phẩm đã đọc được.
     - Thông tin hình ảnh đã lấy được.
-  - Hãy đóng vai 1 người thường xuyên đặt hàng online để viết reviews (cho sản phẩm đã đọc được thông tin) vào file `./output/{product_id}-reviews.csv`.
+  - Hãy đóng vai 1 người thường xuyên đặt hàng online để viết reviews (cho sản phẩm đã đọc được thông tin) vào file `./output/{product_id}-reviews.csv`. Quy tắc viết review: Ko được viết tên reviewer như bot (User 1 or ABC or myname123...), tên reviewer phải giống người thật, mail của reviewer phải là Gmail or Outlook.
   - Hãy viết cả những review phản hồi (reply) cho một số review đã viết (bao gồm cả các review 5 sao), ưu tiên viết phản hồi cho các review có số sao thấp (3-4 sao) để tạo sự tương tác và tăng tính chân thực cho các review.
   - Chỉ tạo reviews trong file CSV trong folder "output", ko tạo reviews trong file bên ngoài folder "output".
 

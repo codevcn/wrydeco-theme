@@ -586,7 +586,7 @@
     }
   }
 
-  /* Judge.me star rating, placed right under the price */
+  /* Loox rating summary, placed right under the price */
   .main-product__rating {
     display: flex;
     gap: var(--sp-5);
@@ -596,57 +596,69 @@
   .main-product__rating:empty {
     display: none;
   }
-  .main-product__rating .jdgm-preview-badge {
+  .main-product__loox-summary {
     display: inline-flex;
-    align-items: center;
-  }
-  .main-product__rating .jdgm-prev-badge {
-    display: inline-flex !important;
     align-items: center;
     gap: var(--sp-2);
     font-family: var(--font-body);
     font-size: var(--font-size-body-sm);
     line-height: var(--line-height-normal);
-  }
-  .main-product__rating .jdgm-prev-badge__stars {
-    display: inline-flex;
-    align-items: center;
-    line-height: var(--line-height-normal);
-  }
-  .main-product__rating .jdgm-prev-badge__stars::after {
-    content: var(--jdgm-average-rating, attr(data-score));
-    display: inline-flex;
-    align-items: center;
-    margin-inline-start: var(--sp-2);
-    font-weight: var(--font-weight-medium);
-    line-height: var(--line-height-normal);
     color: var(--text-primary);
   }
-  .main-product__rating .jdgm-prev-badge__text {
+
+  .main-product__loox-stars {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    flex: none;
+    color: var(--border-default);
+  }
+
+  .main-product__loox-stars-base,
+  .main-product__loox-stars-fill {
+    display: inline-flex;
+    gap: 1px;
+  }
+
+  .main-product__loox-stars-fill {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    overflow: hidden;
+    width: var(--rating-fill);
+    color: var(--color-star-rating);
+    white-space: nowrap;
+  }
+
+  .main-product__loox-stars svg {
+    flex: none;
+    width: 16px;
+    height: 16px;
+  }
+
+  .main-product__loox-score {
+    font-weight: var(--font-weight-semibold);
+  }
+
+  .main-product__loox-count {
     display: inline-flex;
     align-items: center;
     font: inherit;
     line-height: var(--line-height-normal);
-  }
-  .main-product__rating .jdgm-prev-badge__text::before {
-    content: '(';
-  }
-  .main-product__rating .jdgm-prev-badge__text::after {
-    content: ')';
-  }
-  .main-product__rating .jdgm-prev-badge[data-number-of-reviews='0'] .jdgm-prev-badge__stars::after {
-    display: none;
   }
 
   .main-product__sold-count {
     display: inline-flex;
     align-items: center;
     gap: var(--sp-2);
-    padding-inline-start: var(--sp-4);
-    border-inline-start: var(--border-width) solid var(--border-default);
     color: var(--text-primary);
     font: var(--type-body-small);
     white-space: nowrap;
+  }
+
+  .main-product__rating--has-reviews .main-product__sold-count {
+    padding-inline-start: var(--sp-4);
+    border-inline-start: var(--border-width) solid var(--border-default);
   }
 
   .main-product__sold-count svg {
@@ -726,38 +738,56 @@
       %}
 
       {%- comment -%}
-        Judge.me star rating rendered from the product's judgeme.badge metafield so it appears
-        right under the price — independent of Judge.me's automatic JS placement (which otherwise
-        injects the badge elsewhere and leaves the preview placeholder empty). The Judge.me script
-        re-hydrates this .jdgm-preview-badge with live data on load.
+        Loox rating summary rendered from product metafields so it appears
+        under the price in the initial server-rendered HTML.
       {%- endcomment -%}
       {%- liquid
-        assign judgeme_badge = product.metafields.judgeme.badge | default: ''
-        assign judgeme_average_rating = 0
-        assign judgeme_score_parts = judgeme_badge | split: "data-score='"
-
-        if judgeme_score_parts.size > 1
-          assign judgeme_average_rating = judgeme_score_parts | last | split: "'" | first | plus: 0
-        else
-          assign judgeme_score_parts = judgeme_badge | split: 'data-score="'
-          if judgeme_score_parts.size > 1
-            assign judgeme_average_rating = judgeme_score_parts | last | split: '"' | first | plus: 0
-          endif
+        assign loox_average_rating = product.metafields.loox.avg_rating.value | default: product.metafields.loox.avg_rating | plus: 0
+        assign loox_review_count = product.metafields.loox.num_reviews.value | default: product.metafields.loox.num_reviews | plus: 0
+        if loox_average_rating <= 0
+          assign loox_average_rating = product.metafields.reviews.rating.value.rating | default: product.metafields.reviews.rating.value | default: product.metafields.reviews.rating | plus: 0
         endif
-
-        assign judgeme_average_rating = judgeme_average_rating | round: 1
+        if loox_review_count <= 0
+          assign loox_review_count = product.metafields.reviews.rating_count.value | default: product.metafields.reviews.rating_count | plus: 0
+        endif
+        assign loox_average_rating = loox_average_rating | round: 1
+        assign loox_rating_fill_percent = loox_average_rating | times: 20 | at_most: 100 | at_least: 0
+        assign loox_review_label = 'reviews'
+        if loox_review_count == 1
+          assign loox_review_label = 'review'
+        endif
         assign bought_amount = product.metafields.custom.bought_amount.value | default: 0 | plus: 0
       -%}
-      <div class="main-product__rating">
-        <div
-          class="jdgm-widget jdgm-preview-badge"
-          data-id="{{ product.id }}"
-          {% if judgeme_average_rating > 0 %}
-            style="--jdgm-average-rating: '{{ judgeme_average_rating }}';"
-          {% endif %}
-        >
-          {{ judgeme_badge }}
-        </div>
+      <div class="main-product__rating{% if loox_review_count > 0 and loox_average_rating > 0 %} main-product__rating--has-reviews{% endif %}">
+        {% if loox_review_count > 0 and loox_average_rating > 0 %}
+          <div
+            class="main-product__loox-summary"
+            aria-label="{{ loox_average_rating }} out of 5 stars from {{ loox_review_count }} {{ loox_review_label }}"
+          >
+            <span
+              class="main-product__loox-stars"
+              style="--rating-fill: {{ loox_rating_fill_percent }}%;"
+              aria-hidden="true"
+            >
+              <span class="main-product__loox-stars-base">
+                {% for star_index in (1..5) %}
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" focusable="false">
+                    <path fill="currentColor" d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.62L12 2L9.19 8.62L2 9.24l5.45 4.73L5.82 21z"/>
+                  </svg>
+                {% endfor %}
+              </span>
+              <span class="main-product__loox-stars-fill">
+                {% for star_index in (1..5) %}
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" focusable="false">
+                    <path fill="currentColor" d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.62L12 2L9.19 8.62L2 9.24l5.45 4.73L5.82 21z"/>
+                  </svg>
+                {% endfor %}
+              </span>
+            </span>
+            <span class="main-product__loox-score">{{ loox_average_rating }}</span>
+            <span class="main-product__loox-count">({{ loox_review_count }} {{ loox_review_label }})</span>
+          </div>
+        {% endif %}
         {% if bought_amount > 0 %}
           <span
             class="main-product__sold-count"
