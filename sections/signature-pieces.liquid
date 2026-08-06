@@ -11,8 +11,10 @@
       {%- assign collection = collections['signature-pieces'] -%}
     {%- endif -%}
 
-    {%- comment -%} Sort the pieces by price, lowest first. {%- endcomment -%}
-    {%- assign sorted_products = collection.products | sort: 'price' -%}
+    {%- comment -%}
+      Product cards are visually sorted by price using the CSS order property.
+      Liquid still controls which products are rendered; CSS controls their display order.
+    {%- endcomment -%}
 
     <div class="signature-pieces__carousel">
       <div
@@ -51,7 +53,7 @@
         data-signature-carousel
         role="list"
       >
-      {%- for product in sorted_products limit: 12 -%}
+      {%- for product in collection.products limit: 12 -%}
         {%- assign display_title = product.metafields.custom.artwork_name.value | default: product.title -%}
         {%- liquid
           assign artist = ''
@@ -82,6 +84,7 @@
           data-product-handle="{{ product.handle | escape }}"
           data-variant-id="{{ product.variants.first.id }}"
           data-product-url="{{ product.url | escape }}"
+          style="--signature-piece-order: {{ product.price }};"
         >
           <div class="signature-pieces__media">
             <a
@@ -186,12 +189,53 @@
               <p class="signature-pieces__artist">by {{ artist | escape }}</p>
             {%- endif -%}
             {%- comment -%}
-              Judge.me star rating, server-rendered from the product's judgeme.badge metafield.
-              Judge.me hides the badge for products with no reviews; the CSS collapses the row then.
+              Loox rating summary rendered from product metafields so it appears
+              in the initial server-rendered HTML. Loox-specific metafields are
+              preferred, with Shopify standard review metafields as the fallback.
             {%- endcomment -%}
-            {%- if product.metafields.judgeme.badge != blank -%}
-              <div class="signature-pieces__rating">
-                {{ product.metafields.judgeme.badge }}
+            {%- liquid
+              assign loox_average_rating = product.metafields.loox.avg_rating.value | default: product.metafields.loox.avg_rating | plus: 0
+              assign loox_review_count = product.metafields.loox.num_reviews.value | default: product.metafields.loox.num_reviews | plus: 0
+              if loox_average_rating <= 0
+                assign loox_average_rating = product.metafields.reviews.rating.value.rating | default: product.metafields.reviews.rating.value | default: product.metafields.reviews.rating | plus: 0
+              endif
+              if loox_review_count <= 0
+                assign loox_review_count = product.metafields.reviews.rating_count.value | default: product.metafields.reviews.rating_count | plus: 0
+              endif
+              assign loox_average_rating = loox_average_rating | round: 1
+              assign loox_rating_fill_percent = loox_average_rating | times: 20 | at_most: 100 | at_least: 0
+              assign loox_review_label = 'reviews'
+              if loox_review_count == 1
+                assign loox_review_label = 'review'
+              endif
+            -%}
+            {%- if loox_review_count > 0 and loox_average_rating > 0 -%}
+              <div
+                class="signature-pieces__rating"
+                aria-label="{{ loox_average_rating }} out of 5 stars from {{ loox_review_count }} {{ loox_review_label }}"
+              >
+                <span
+                  class="signature-pieces__rating-stars"
+                  style="--rating-fill: {{ loox_rating_fill_percent }}%;"
+                  aria-hidden="true"
+                >
+                  <span class="signature-pieces__rating-stars-base">
+                    {%- for star_index in (1..5) -%}
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" focusable="false">
+                        <path fill="currentColor" d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.62L12 2L9.19 8.62L2 9.24l5.45 4.73L5.82 21z"/>
+                      </svg>
+                    {%- endfor -%}
+                  </span>
+                  <span class="signature-pieces__rating-stars-fill">
+                    {%- for star_index in (1..5) -%}
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" focusable="false">
+                        <path fill="currentColor" d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.62L12 2L9.19 8.62L2 9.24l5.45 4.73L5.82 21z"/>
+                      </svg>
+                    {%- endfor -%}
+                  </span>
+                </span>
+                <span class="signature-pieces__rating-score">{{ loox_average_rating }}</span>
+                <span class="signature-pieces__rating-count">({{ loox_review_count }} {{ loox_review_label }})</span>
               </div>
             {%- endif -%}
             <p class="signature-pieces__price">
@@ -246,7 +290,7 @@
               {%- assign card_badge = section.settings.best_seller_badge -%}
           {%- endcase -%}
 
-          <article class="signature-pieces__card" role="listitem">
+          <article class="signature-pieces__card" role="listitem" style="--signature-piece-order: {{ i }};">
             <div class="signature-pieces__media">
               <span class="signature-pieces__image-link">
                 <img
@@ -419,8 +463,8 @@
   }
 
   .signature-pieces__grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    display: flex;
+    flex-wrap: wrap;
     gap: var(--sp-3);
     overflow: visible;
     padding: var(--sp-0);
@@ -436,8 +480,10 @@
   }
 
   .signature-pieces__card {
+    order: var(--signature-piece-order, 0);
     display: flex;
     flex-direction: column;
+    flex: 0 1 calc((100% - var(--sp-3) * 3) / 4);
     min-width: 0;
     overflow: hidden;
     border: 1px solid var(--color-border, rgba(76, 48, 30, 0.14));
@@ -636,43 +682,55 @@
   }
 
   .signature-pieces__rating {
-    margin: 0 0 0px;
-    line-height: 1;
-    /* Colour the Judge.me stars with the theme's star-rating token. */
-    --jm-review-widget-star-and-histogram-color: var(--color-star-rating, #cba077);
-  }
-
-  /* The judgeme.badge metafield ships the badge as display:none (meant to be revealed
-     by Judge.me's own widget JS, which doesn't hydrate this static copy). Reveal it here
-     so the server-rendered stars show immediately. */
-  .signature-pieces__rating .jdgm-prev-badge {
-    display: inline-flex !important;
+    display: inline-flex;
     align-items: center;
-    gap: 5px;
-    font-size: 13px;
-    margin-top: 8px;
-  }
-
-  .signature-pieces__rating .jdgm-star {
-    color: var(--color-star-rating, #cba077) !important;
-  }
-
-  /* Replace Judge.me's verbose "N reviews" label with a compact count, e.g. (11). */
-  .signature-pieces__rating .jdgm-prev-badge__text {
-    display: none;
-  }
-
-  .signature-pieces__rating .jdgm-prev-badge::after {
-    content: '(' attr(data-number-of-reviews) ')';
+    gap: 6px;
+    margin: 8px 0 0;
     font-family: var(--font-body);
     font-size: 13px;
     line-height: 1;
     color: var(--color-muted, #6a625c);
   }
 
-  /* Hide the row entirely for products with no reviews (don't show empty stars). */
-  .signature-pieces__rating:has(.jdgm-prev-badge[data-number-of-reviews='0']) {
-    display: none;
+  .signature-pieces__rating-stars {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    flex: none;
+    color: rgba(138, 93, 55, 0.22);
+  }
+
+  .signature-pieces__rating-stars-base,
+  .signature-pieces__rating-stars-fill {
+    display: inline-flex;
+    gap: 1px;
+  }
+
+  .signature-pieces__rating-stars-fill {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    overflow: hidden;
+    width: var(--rating-fill);
+    color: var(--color-star-rating, #8a5d37);
+    white-space: nowrap;
+  }
+
+  .signature-pieces__rating-stars svg {
+    flex: none;
+    width: 18px;
+    height: 18px;
+  }
+
+  .signature-pieces__rating-score {
+    font-size: 14px;
+    font-weight: var(--font-weight-semibold);
+    color: #352117;
+  }
+
+  .signature-pieces__rating-count {
+    font-size: 14px;
+    color: var(--color-muted, #6a625c);
   }
 
   .signature-pieces__price {
@@ -813,9 +871,7 @@
     }
 
     .signature-pieces__grid {
-      grid-auto-flow: column;
-      grid-auto-columns: 46%;
-      grid-template-columns: none;
+      flex-wrap: nowrap;
       gap: var(--sp-4);
       overflow-x: auto;
       padding-block-end: var(--sp-3);
@@ -825,6 +881,11 @@
       overscroll-behavior-inline: contain;
       touch-action: pan-y;
       user-select: none;
+    }
+
+    .signature-pieces__card {
+      flex-basis: 40%;
+      flex-shrink: 0;
     }
 
     .signature-pieces__card[data-product-url] {
@@ -842,8 +903,11 @@
     }
 
     .signature-pieces__grid {
-      grid-auto-columns: minmax(calc(var(--sp-12) * 2 + var(--sp-4)), 84vw);
       gap: var(--sp-3);
+    }
+
+    .signature-pieces__card {
+      flex-basis: max(calc(var(--sp-12) * 2 + var(--sp-4)), 48vw);
     }
   }
 
