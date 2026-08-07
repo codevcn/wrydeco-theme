@@ -12,9 +12,10 @@
     {%- endif -%}
 
     {%- comment -%}
-      Product cards are visually sorted by price using the CSS order property.
-      Liquid still controls which products are rendered; CSS controls their display order.
+      Sort by price ascending first. On desktop, the ninth sorted product is
+      pinned to the top-right grid position with CSS order.
     {%- endcomment -%}
+    {%- assign sorted_products = collection.products | sort: 'price' -%}
 
     <div class="signature-pieces__carousel">
       <div
@@ -53,7 +54,7 @@
         data-signature-carousel
         role="list"
       >
-      {%- for product in collection.products limit: 12 -%}
+      {%- for product in sorted_products limit: 12 -%}
         {%- assign display_title = product.metafields.custom.artwork_name.value | default: product.title -%}
         {%- liquid
           assign artist = ''
@@ -76,6 +77,12 @@
             {%- break -%}
           {%- endif -%}
         {%- endfor -%}
+        {%- liquid
+          assign desktop_order = forloop.index | times: 10
+          if forloop.index == 9
+            assign desktop_order = 35
+          endif
+        -%}
 
         <article
           class="signature-pieces__card"
@@ -84,7 +91,7 @@
           data-product-handle="{{ product.handle | escape }}"
           data-variant-id="{{ product.variants.first.id }}"
           data-product-url="{{ product.url | escape }}"
-          style="--signature-piece-order: {{ product.price }};"
+          style="--signature-piece-order: {{ forloop.index | times: 10 }}; --signature-piece-desktop-order: {{ desktop_order }};"
         >
           <div class="signature-pieces__media">
             <a
@@ -290,7 +297,17 @@
               {%- assign card_badge = section.settings.best_seller_badge -%}
           {%- endcase -%}
 
-          <article class="signature-pieces__card" role="listitem" style="--signature-piece-order: {{ i }};">
+          {%- liquid
+            assign desktop_order = i | times: 10
+            if i == 9
+              assign desktop_order = 35
+            endif
+          -%}
+          <article
+            class="signature-pieces__card"
+            role="listitem"
+            style="--signature-piece-order: {{ i }}; --signature-piece-desktop-order: {{ desktop_order }};"
+          >
             <div class="signature-pieces__media">
               <span class="signature-pieces__image-link">
                 <img
@@ -858,6 +875,12 @@
 
     .signature-pieces__button:hover svg {
       transform: translateX(4px);
+    }
+  }
+
+  @media screen and (min-width: 75rem) {
+    .signature-pieces__card {
+      order: var(--signature-piece-desktop-order, var(--signature-piece-order, 0));
     }
   }
 

@@ -152,6 +152,24 @@
     display: block;
     object-fit: contain;
   }
+  .product-gallery__main-video {
+    width: 100%;
+    height: 100%;
+    background-color: var(--color-ebony);
+  }
+  .product-gallery__main-video iframe,
+  .product-gallery__main-video video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background-color: var(--color-ebony);
+  }
+  .product-gallery__main-media iframe,
+  .product-gallery__main-media video,
+  .product-gallery__main-media model-viewer {
+    margin-inline: auto;
+  }
   .product-gallery__thumbnails {
     display: flex;
     overflow-x: auto;
@@ -196,6 +214,32 @@
     display: block;
     pointer-events: none;
     -webkit-user-drag: none;
+  }
+  .product-gallery__thumbnail--video,
+  .product-lightbox__thumbnail--video {
+    position: relative;
+    display: grid;
+    place-items: center;
+    color: var(--color-cream);
+    background:
+      linear-gradient(135deg, color-mix(in srgb, var(--color-earth-brown) 82%, transparent), rgba(0, 0, 0, 0.42)),
+      var(--color-ebony);
+  }
+  .product-gallery__thumbnail-video-icon,
+  .product-lightbox__thumbnail-video-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--sp-7);
+    height: var(--sp-7);
+    border: var(--border-width) solid currentColor;
+    border-radius: var(--radius-full);
+    background-color: color-mix(in srgb, var(--color-ebony) 28%, transparent);
+  }
+  .product-gallery__thumbnail-video-icon svg,
+  .product-lightbox__thumbnail-video-icon svg {
+    width: var(--sp-4);
+    height: var(--sp-4);
   }
 
   @media screen and (max-width: 1320px) {
@@ -408,7 +452,32 @@
     transform: translateY(var(--sp-3)) scale(0.98);
     transition: opacity var(--timing-base) var(--ease-standard), transform var(--timing-base) var(--ease-standard);
   }
-  .product-lightbox.is-open .product-lightbox__img {
+  .product-lightbox__video {
+    display: none;
+    width: min(100%, calc(100vh - (var(--sp-6) * 2)));
+    height: min(100%, calc(100vh - (var(--sp-6) * 2)));
+    max-width: 100%;
+    max-height: calc(100vh - (var(--sp-6) * 2));
+    aspect-ratio: 1 / 1;
+    border: 0;
+    border-radius: var(--radius-lg);
+    background-color: var(--color-ebony);
+    box-shadow: var(--shadow-elevation-4);
+    opacity: 0;
+    transform: translateY(var(--sp-3)) scale(0.98);
+    transition: opacity var(--timing-base) var(--ease-standard), transform var(--timing-base) var(--ease-standard);
+  }
+  .product-lightbox__video video,
+  .product-lightbox__video iframe {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    border-radius: inherit;
+    background-color: var(--color-ebony);
+  }
+  .product-lightbox.is-open .product-lightbox__img,
+  .product-lightbox.is-open .product-lightbox__video {
     opacity: 1;
     transform: translateY(var(--sp-0)) scale(1);
   }
@@ -537,6 +606,11 @@
       height: 100%;
       max-height: 100%;
     }
+    .product-lightbox__video {
+      width: 100%;
+      height: 100%;
+      max-height: 100%;
+    }
 
     .product-lightbox__navigation {
       display: none;
@@ -582,6 +656,122 @@
   }
 {% endstylesheet %}
 
+{%- liquid
+  assign product_video_position = 5
+  assign product_video_url = product.metafields.custom.product_video_media.value | default: product.metafields.custom.product_video_media | strip
+  assign has_product_video = false
+  if product_video_url != blank
+    assign has_product_video = true
+  endif
+
+  assign product_video_media_id = 'product-video-media'
+  assign product_video_alt = product.title | append: ' video'
+  assign product_video_embed_url = product_video_url
+  assign product_video_kind = 'iframe'
+  assign product_video_youtube_id = blank
+
+  if has_product_video
+    assign product_video_url_downcase = product_video_url | downcase
+    if product_video_url_downcase contains '.mp4'
+      assign product_video_kind = 'video'
+    endif
+    if product_video_url_downcase contains '.webm'
+      assign product_video_kind = 'video'
+    endif
+    if product_video_url_downcase contains '.ogg'
+      assign product_video_kind = 'video'
+    endif
+
+    if product_video_url_downcase contains 'youtu.be/'
+      assign product_video_youtube_id = product_video_url | split: 'youtu.be/' | last | split: '?' | first | split: '&' | first
+      assign product_video_embed_url = 'https://www.youtube.com/embed/' | append: product_video_youtube_id
+    elsif product_video_url_downcase contains 'youtube.com/shorts/'
+      assign product_video_youtube_id = product_video_url | split: 'youtube.com/shorts/' | last | split: '?' | first | split: '&' | first
+      assign product_video_embed_url = 'https://www.youtube.com/embed/' | append: product_video_youtube_id
+    elsif product_video_url_downcase contains 'youtube.com/embed/'
+      assign product_video_youtube_id = product_video_url | split: 'youtube.com/embed/' | last | split: '?' | first | split: '&' | first
+      assign product_video_embed_url = 'https://www.youtube.com/embed/' | append: product_video_youtube_id
+    elsif product_video_url_downcase contains 'youtube.com/watch'
+      assign product_video_youtube_id = product_video_url | split: 'v=' | last | split: '&' | first
+      assign product_video_embed_url = 'https://www.youtube.com/embed/' | append: product_video_youtube_id
+    elsif product_video_url_downcase contains 'vimeo.com/'
+      assign product_video_vimeo_id = product_video_url | split: 'vimeo.com/' | last | split: '?' | first | split: '/' | last
+      assign product_video_embed_url = 'https://player.vimeo.com/video/' | append: product_video_vimeo_id
+    endif
+  endif
+-%}
+
+{%- capture product_video_play_icon -%}
+  <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg>
+{%- endcapture -%}
+
+{%- capture product_video_main_item -%}
+  {%- if has_product_video -%}
+    <div
+      id="ProductMedia-{{ section_id }}-{{ product_video_media_id }}"
+      class="product-gallery__main-item{% if product.media.size == 0 %} is-active{% endif %}"
+      data-main-media-id="{{ product_video_media_id }}"
+      data-main-media-type="video"
+      data-alt="{{ product_video_alt | escape }}"
+    >
+      <div class="product-gallery__main-media product-gallery__main-video">
+        {%- if product_video_kind == 'video' -%}
+          <video controls preload="metadata" playsinline>
+            <source src="{{ product_video_url | escape }}">
+          </video>
+        {%- else -%}
+          <iframe
+            src="{{ product_video_embed_url | escape }}"
+            title="{{ product_video_alt | escape }}"
+            loading="lazy"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowfullscreen
+          ></iframe>
+        {%- endif -%}
+      </div>
+    </div>
+  {%- endif -%}
+{%- endcapture -%}
+
+{%- capture product_video_thumbnail -%}
+  {%- if has_product_video -%}
+    <button
+      type="button"
+      class="product-gallery__thumbnail product-gallery__thumbnail--video{% if product.media.size == 0 %} is-active{% endif %}"
+      data-thumbnail-id="{{ product_video_media_id }}"
+      data-alt="{{ product_video_alt | escape }}"
+      aria-controls="ProductMedia-{{ section_id }}-{{ product_video_media_id }}"
+      aria-pressed="{% if product.media.size == 0 %}true{% else %}false{% endif %}"
+      aria-label="View {{ product_video_alt | escape }}"
+    >
+      <span class="product-gallery__thumbnail-video-icon" aria-hidden="true">
+        {{ product_video_play_icon }}
+      </span>
+    </button>
+  {%- endif -%}
+{%- endcapture -%}
+
+{%- capture product_video_lightbox_thumbnail -%}
+  {%- if has_product_video -%}
+    <button
+      type="button"
+      class="product-lightbox__thumbnail product-lightbox__thumbnail--video"
+      data-lightbox-thumbnail
+      data-lightbox-media-id="{{ product_video_media_id }}"
+      data-lightbox-type="video"
+      data-lightbox-video-kind="{{ product_video_kind }}"
+      data-lightbox-video-src="{{ product_video_embed_url | escape }}"
+      data-lightbox-alt="{{ product_video_alt | escape }}"
+      aria-label="View {{ product_video_alt | escape }}"
+      aria-pressed="false"
+    >
+      <span class="product-lightbox__thumbnail-video-icon" aria-hidden="true">
+        {{ product_video_play_icon }}
+      </span>
+    </button>
+  {%- endif -%}
+{%- endcapture -%}
+
 <div class="product-gallery" data-product-gallery>
   <div class="product-gallery__main">
     {% assign wishlist_variant = current_variant | default: product.selected_or_first_available_variant %}
@@ -601,7 +791,7 @@
 
     {% assign has_best_seller = false %}
     {% for coll in product.collections %}
-      {% if coll.handle == 'best-sellers-manually' %}
+      {% if coll.handle == 'signature-pieces' %}
         {% assign has_best_seller = true %}
         {% break %}
       {% endif %}
@@ -618,6 +808,11 @@
     <div class="product-gallery__zoom-lens" data-zoom-lens aria-hidden="true"></div>
     {% assign featured_media = current_variant.featured_media | default: product.featured_media %}
     {% for media in product.media %}
+      {%- if has_product_video -%}
+        {%- if forloop.index == product_video_position -%}
+          {{ product_video_main_item }}
+        {%- endif -%}
+      {%- endif -%}
       {% liquid
         assign is_active_media = false
         if media.id == featured_media.id
@@ -647,6 +842,7 @@
         id="ProductMedia-{{ section_id }}-{{ media.id }}"
         class="product-gallery__main-item{% if is_active_media %} is-active{% endif %}"
         data-main-media-id="{{ media.id }}"
+        data-main-media-type="{{ media.media_type }}"
         data-alt="{{ media.alt | escape }}"
       >
         {% case media.media_type %}
@@ -679,6 +875,11 @@
         {% endcase %}
       </div>
     {% endfor %}
+    {%- if has_product_video -%}
+      {%- if product.media.size < product_video_position -%}
+        {{ product_video_main_item }}
+      {%- endif -%}
+    {%- endif -%}
     <div
       class="product-gallery__stage-loading"
       data-gallery-stage-loading
@@ -689,9 +890,23 @@
     </div>
   </div>
 
-  {% if product.media.size > 1 %}
+  {%- liquid
+    assign show_product_thumbnails = false
+    if product.media.size > 1
+      assign show_product_thumbnails = true
+    endif
+    if has_product_video
+      assign show_product_thumbnails = true
+    endif
+  -%}
+  {% if show_product_thumbnails %}
     <div class="product-gallery__thumbnails">
       {% for media in product.media %}
+        {%- if has_product_video -%}
+          {%- if forloop.index == product_video_position -%}
+            {{ product_video_thumbnail }}
+          {%- endif -%}
+        {%- endif -%}
         {% liquid
           assign is_active_thumbnail = false
           if media.id == featured_media.id
@@ -715,6 +930,11 @@
           {{ media | image_url: width: 160 | image_tag: loading: 'lazy', alt: thumbnail_alt }}
         </button>
       {% endfor %}
+      {%- if has_product_video -%}
+        {%- if product.media.size < product_video_position -%}
+          {{ product_video_thumbnail }}
+        {%- endif -%}
+      {%- endif -%}
     </div>
   {% endif %}
 
@@ -723,7 +943,7 @@
     data-product-lightbox
     role="dialog"
     aria-modal="true"
-    aria-label="{{ product.title | escape }} image gallery"
+    aria-label="{{ product.title | escape }} media gallery"
     hidden
   >
     <button type="button" class="product-lightbox__close" data-lightbox-close aria-label="Close">
@@ -739,21 +959,33 @@
         <line x1="6" y1="6" x2="18" y2="18"></line>
       </svg>
     </button>
-    {%- assign lightbox_images = product.media | where: 'media_type', 'image' -%}
+    {%- liquid
+      assign lightbox_images = product.media | where: 'media_type', 'image'
+      assign lightbox_media_count = lightbox_images.size
+      if has_product_video
+        assign lightbox_media_count = lightbox_media_count | plus: 1
+      endif
+    -%}
     <div class="product-lightbox__content">
-      <div class="product-lightbox__media-list custom-scrollbar" role="group" aria-label="Product images">
+      <div class="product-lightbox__media-list custom-scrollbar" role="group" aria-label="Product media">
         {% for media in lightbox_images %}
+          {%- if has_product_video -%}
+            {%- if forloop.index == product_video_position -%}
+              {{ product_video_lightbox_thumbnail }}
+            {%- endif -%}
+          {%- endif -%}
           {%- assign lightbox_alt = media.alt | default: product.title -%}
           <button
             type="button"
             class="product-lightbox__thumbnail"
             data-lightbox-thumbnail
             data-lightbox-media-id="{{ media.id }}"
+            data-lightbox-type="image"
             data-lightbox-src="{{ media | image_url: width: 2400 }}"
             data-lightbox-alt="{{ lightbox_alt | escape }}"
             data-lightbox-width="{{ media.width }}"
             data-lightbox-height="{{ media.height }}"
-            aria-label="View {{ lightbox_alt | escape }}, image {{ forloop.index }} of {{ lightbox_images.size }}"
+            aria-label="View {{ lightbox_alt | escape }}"
             aria-pressed="false"
           >
             {{
@@ -763,17 +995,23 @@
             }}
           </button>
         {% endfor %}
+        {%- if has_product_video -%}
+          {%- if lightbox_images.size < product_video_position -%}
+            {{ product_video_lightbox_thumbnail }}
+          {%- endif -%}
+        {%- endif -%}
       </div>
 
       <div class="product-lightbox__stage">
         {% # The source is assigned at runtime from the active gallery image (already optimized via image_url) %}
         {% # theme-check-disable ImgWidthAndHeight,RemoteAsset %}
         <img class="product-lightbox__img" data-lightbox-img src="" alt="">
+        <div class="product-lightbox__video" data-lightbox-video hidden></div>
         {% # theme-check-enable ImgWidthAndHeight,RemoteAsset %}
       </div>
 
-      {% if lightbox_images.size > 1 %}
-        <div class="product-lightbox__navigation" role="group" aria-label="Image navigation">
+      {% if lightbox_media_count > 1 %}
+        <div class="product-lightbox__navigation" role="group" aria-label="Media navigation">
           <button
             type="button"
             class="product-lightbox__nav-button"
@@ -832,6 +1070,14 @@
         function setActiveItem(selectedItem) {
           gallery.querySelectorAll('.product-gallery__main-item').forEach(function (item) {
             item.classList.toggle('is-active', item === selectedItem);
+            if (item !== selectedItem) {
+              item.querySelectorAll('video').forEach(function (video) {
+                video.pause();
+              });
+              item.querySelectorAll('iframe').forEach(function (iframe) {
+                iframe.src = iframe.src;
+              });
+            }
           });
         }
 
@@ -896,11 +1142,12 @@
         if (!lightbox) return;
 
         var lightboxImg = lightbox.querySelector('[data-lightbox-img]');
+        var lightboxVideo = lightbox.querySelector('[data-lightbox-video]');
         var closeBtn = lightbox.querySelector('[data-lightbox-close]');
         var lightboxThumbnails = Array.prototype.slice.call(lightbox.querySelectorAll('[data-lightbox-thumbnail]'));
         var previousBtn = lightbox.querySelector('[data-lightbox-previous]');
         var nextBtn = lightbox.querySelector('[data-lightbox-next]');
-        if (!lightboxImg || !closeBtn) return;
+        if (!lightboxImg || !lightboxVideo || !closeBtn) return;
 
         gallery.dataset.lightboxInit = 'true';
         var originalParent = lightbox.parentNode;
@@ -909,10 +1156,8 @@
         var currentLightboxIndex = 0;
         var lightboxOpener = null;
 
-        function getActiveImage() {
-          var activeItem = gallery.querySelector('.product-gallery__main-item.is-active');
-          if (!activeItem) return null;
-          return activeItem.querySelector('img.product-gallery__main-media');
+        function getActiveMediaItem() {
+          return gallery.querySelector('.product-gallery__main-item.is-active');
         }
 
         function getActiveMediaId() {
@@ -935,6 +1180,7 @@
           if (hiResPreloaded) return;
           hiResPreloaded = true;
           lightboxThumbnails.forEach(function (thumbnail) {
+            if (thumbnail.dataset.lightboxType !== 'image') return;
             var src = thumbnail.dataset.lightboxSrc;
             if (!src) return;
             var img = new Image();
@@ -948,6 +1194,42 @@
           });
         }
 
+        function clearLightboxVideo() {
+          lightboxVideo.hidden = true;
+          lightboxVideo.style.display = 'none';
+          lightboxVideo.innerHTML = '';
+        }
+
+        function showLightboxVideo(selectedThumbnail) {
+          var videoSrc = selectedThumbnail.dataset.lightboxVideoSrc;
+          if (!videoSrc) return;
+
+          lightboxImg.style.display = 'none';
+          lightboxImg.removeAttribute('src');
+          lightboxImg.alt = '';
+          lightboxVideo.hidden = false;
+          lightboxVideo.style.display = 'block';
+
+          if (selectedThumbnail.dataset.lightboxVideoKind === 'video') {
+            var video = document.createElement('video');
+            var source = document.createElement('source');
+            video.controls = true;
+            video.autoplay = true;
+            video.playsInline = true;
+            video.preload = 'metadata';
+            source.src = videoSrc;
+            video.appendChild(source);
+            lightboxVideo.appendChild(video);
+          } else {
+            var iframe = document.createElement('iframe');
+            iframe.src = videoSrc;
+            iframe.title = selectedThumbnail.dataset.lightboxAlt || 'Product video';
+            iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+            iframe.allowFullscreen = true;
+            lightboxVideo.appendChild(iframe);
+          }
+        }
+
         function showLightboxImage(index) {
           if (!lightboxThumbnails.length) return;
 
@@ -958,6 +1240,12 @@
           var imageHeight = selectedThumbnail.dataset.lightboxHeight;
           var hiResSrc = selectedThumbnail.dataset.lightboxSrc;
 
+          clearLightboxVideo();
+          lightboxImg.style.display = 'block';
+
+          if (selectedThumbnail.dataset.lightboxType === 'video') {
+            showLightboxVideo(selectedThumbnail);
+          } else {
           lightboxImg.alt = selectedThumbnail.dataset.lightboxAlt || '';
           if (imageWidth) lightboxImg.width = Number(imageWidth);
           if (imageHeight) lightboxImg.height = Number(imageHeight);
@@ -986,6 +1274,7 @@
             // Already cached (e.g. preloaded) → swap right away, no wait.
             if (upgrade.complete && upgrade.naturalWidth > 0) swapToHiRes();
           }
+          }
 
           lightboxThumbnails.forEach(function (thumbnail, thumbnailIndex) {
             var isActive = thumbnailIndex === currentLightboxIndex;
@@ -998,8 +1287,8 @@
         }
 
         function openLightbox() {
-          var img = getActiveImage();
-          if (!img) return;
+          var activeItem = getActiveMediaItem();
+          if (!activeItem) return;
           if (closeTransitionHandler) {
             lightbox.removeEventListener('transitionend', closeTransitionHandler);
             closeTransitionHandler = null;
@@ -1050,6 +1339,7 @@
             if (lightbox.dataset.open === 'true') return;
             lightbox.hidden = true;
             lightboxImg.src = '';
+            clearLightboxVideo();
             if (originalParent && lightbox.parentNode !== originalParent) {
               originalParent.insertBefore(lightbox, originalNextSibling);
             }
@@ -1076,6 +1366,7 @@
           mainContainer.addEventListener('click', function (event) {
             // Ignore if clicked on the zoom button itself to prevent duplicate handling
             if (event.target.closest('[data-gallery-zoom]')) return;
+            if (event.target.closest('video, iframe')) return;
             openLightbox();
           });
         }
