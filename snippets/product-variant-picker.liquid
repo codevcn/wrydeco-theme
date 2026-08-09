@@ -1409,104 +1409,123 @@
 
       syncOptionAvailability();
 
+      var variantChangeRequest = 0;
+      var runAfterPickerPaint = function (callback) {
+        if (window.requestAnimationFrame) {
+          window.requestAnimationFrame(function () {
+            window.requestAnimationFrame(callback);
+          });
+        } else {
+          window.setTimeout(callback, 0);
+        }
+      };
+
       variantInputs.forEach(function (input) {
         input.addEventListener('change', function () {
-          // Update the newly-picked value.
+          // Keep the actual radio/check indicator responsive: let the browser
+          // paint the native checked state before the heavier availability and
+          // gallery work runs.
           selectedOptions[input.dataset.index] = input.value;
-          syncOptionAvailability();
+          var requestId = ++variantChangeRequest;
 
-          // Find the variant matching the full set of selected options.
-          var selectedVariant = findVariantForOptions(selectedOptions);
-          if (!selectedVariant) return;
+          runAfterPickerPaint(function () {
+            if (requestId !== variantChangeRequest) return;
 
-          // Instant, no-API updates the moment a variant is picked:
-          // price + compare + "Save", the hidden variant id used by the form,
-          // the add-to-cart button state, and the ?variant= URL param.
-          if (window.updateProductPrice) {
-            window.updateProductPrice(selectedVariant.id);
-          }
+            syncOptionAvailability();
 
-          var variantIdInput = document.querySelector('[data-variant-id]');
-          if (variantIdInput) variantIdInput.value = selectedVariant.id;
+            // Find the variant matching the full set of selected options.
+            var selectedVariant = findVariantForOptions(selectedOptions);
+            if (!selectedVariant) return;
 
-          var addText = document.querySelector('[data-add-to-cart-text]');
-          var addBtn = document.querySelector('form[data-type="add-to-cart-form"] button[name="add"]');
-          if (addText) addText.textContent = selectedVariant.available ? 'ADD TO CART' : 'SOLD OUT';
-          if (addBtn) addBtn.disabled = !selectedVariant.available;
+            // Instant, no-API updates the moment a variant is picked:
+            // price + compare + "Save", the hidden variant id used by the form,
+            // the add-to-cart button state, and the ?variant= URL param.
+            if (window.updateProductPrice) {
+              window.updateProductPrice(selectedVariant.id);
+            }
 
-          if (window.history && window.history.replaceState) {
-            var nextUrl = new URL(window.location.href);
-            nextUrl.searchParams.set('variant', selectedVariant.id);
-            window.history.replaceState({}, '', nextUrl);
-          }
+            var variantIdInput = document.querySelector('[data-variant-id]');
+            if (variantIdInput) variantIdInput.value = selectedVariant.id;
 
-          // Let other components (e.g. the gallery wishlist heart) react to the
-          // newly-selected variant. Fired after the form id and URL are updated.
-          document.dispatchEvent(new CustomEvent('variant:change', { detail: { variantId: selectedVariant.id } }));
+            var addText = document.querySelector('[data-add-to-cart-text]');
+            var addBtn = document.querySelector('form[data-type="add-to-cart-form"] button[name="add"]');
+            if (addText) addText.textContent = selectedVariant.available ? 'ADD TO CART' : 'SOLD OUT';
+            if (addBtn) addBtn.disabled = !selectedVariant.available;
 
-          // Filter the gallery by the variant's `variant_images` metafield.
-          var variantImagesRaw = variantMetafieldsMap[selectedVariant.id];
-          if (variantImagesRaw) {
-            var variantImages = variantImagesRaw
-              .split('\n')
-              .map(function (s) {
-                return s.trim().replace(/<br\s*\/?>/g, '');
-              })
-              .filter(function (s) {
-                return s !== '';
-              });
+            if (window.history && window.history.replaceState) {
+              var nextUrl = new URL(window.location.href);
+              nextUrl.searchParams.set('variant', selectedVariant.id);
+              window.history.replaceState({}, '', nextUrl);
+            }
 
-            if (variantImages.length > 0) {
-              var thumbnails = document.querySelectorAll('.product-gallery__thumbnail');
-              var mainItems = document.querySelectorAll('.product-gallery__main-item');
+            // Let other components (e.g. the gallery wishlist heart) react to the
+            // newly-selected variant. Fired after the form id and URL are updated.
+            document.dispatchEvent(new CustomEvent('variant:change', { detail: { variantId: selectedVariant.id } }));
 
-              var firstMatchedThumbnail = null;
-
-              thumbnails.forEach(function (thumb) {
-                if (thumb.dataset.thumbnailId === 'product-video-media') {
-                  thumb.style.display = '';
-                  return;
-                }
-
-                var alt = thumb.dataset.alt || '';
-                var isMatch = variantImages.some(function (vImg) {
-                  return alt.includes(vImg);
+            // Filter the gallery by the variant's `variant_images` metafield.
+            var variantImagesRaw = variantMetafieldsMap[selectedVariant.id];
+            if (variantImagesRaw) {
+              var variantImages = variantImagesRaw
+                .split('\n')
+                .map(function (s) {
+                  return s.trim().replace(/<br\s*\/?>/g, '');
+                })
+                .filter(function (s) {
+                  return s !== '';
                 });
 
-                if (isMatch) {
-                  thumb.style.display = '';
-                  if (!firstMatchedThumbnail) firstMatchedThumbnail = thumb;
-                } else {
-                  thumb.style.display = 'none';
-                  thumb.classList.remove('is-active');
-                }
-              });
+              if (variantImages.length > 0) {
+                var thumbnails = document.querySelectorAll('.product-gallery__thumbnail');
+                var mainItems = document.querySelectorAll('.product-gallery__main-item');
 
-              mainItems.forEach(function (item) {
-                if (item.dataset.mainMediaId === 'product-video-media') return;
+                var firstMatchedThumbnail = null;
 
-                var alt = item.dataset.alt || '';
-                var isMatch = variantImages.some(function (vImg) {
-                  return alt.includes(vImg);
+                thumbnails.forEach(function (thumb) {
+                  if (thumb.dataset.thumbnailId === 'product-video-media') {
+                    thumb.style.display = '';
+                    return;
+                  }
+
+                  var alt = thumb.dataset.alt || '';
+                  var isMatch = variantImages.some(function (vImg) {
+                    return alt.includes(vImg);
+                  });
+
+                  if (isMatch) {
+                    thumb.style.display = '';
+                    if (!firstMatchedThumbnail) firstMatchedThumbnail = thumb;
+                  } else {
+                    thumb.style.display = 'none';
+                    thumb.classList.remove('is-active');
+                  }
                 });
-                if (!isMatch) {
-                  item.classList.remove('is-active');
-                }
-              });
 
-              if (firstMatchedThumbnail) {
-                firstMatchedThumbnail.click();
+                mainItems.forEach(function (item) {
+                  if (item.dataset.mainMediaId === 'product-video-media') return;
+
+                  var alt = item.dataset.alt || '';
+                  var isMatch = variantImages.some(function (vImg) {
+                    return alt.includes(vImg);
+                  });
+                  if (!isMatch) {
+                    item.classList.remove('is-active');
+                  }
+                });
+
+                if (firstMatchedThumbnail) {
+                  firstMatchedThumbnail.click();
+                }
+              } else {
+                document.querySelectorAll('.product-gallery__thumbnail').forEach(function (t) {
+                  t.style.display = '';
+                });
               }
             } else {
               document.querySelectorAll('.product-gallery__thumbnail').forEach(function (t) {
                 t.style.display = '';
               });
             }
-          } else {
-            document.querySelectorAll('.product-gallery__thumbnail').forEach(function (t) {
-              t.style.display = '';
-            });
-          }
+          });
         });
       });
     }

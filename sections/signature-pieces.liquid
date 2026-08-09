@@ -496,6 +496,11 @@
     scroll-snap-type: none;
   }
 
+  .signature-pieces__grid.is-dragging .signature-pieces__card {
+    user-select: none;
+    pointer-events: none;
+  }
+
   .signature-pieces__card {
     order: var(--signature-piece-order, 0);
     display: flex;
@@ -902,7 +907,6 @@
       scrollbar-width: none;
       cursor: grab;
       overscroll-behavior-inline: contain;
-      touch-action: pan-y;
       user-select: none;
     }
 
@@ -1060,11 +1064,6 @@
         if (!section || !controls || !previousButton || !nextButton) return;
 
         carousel.dataset.carouselInit = 'true';
-        var isPointerDown = false;
-        var didDrag = false;
-        var preventClick = false;
-        var pointerStartX = 0;
-        var scrollStart = 0;
         var updateFrame = null;
 
         carousel.querySelectorAll('img').forEach(function (image) {
@@ -1108,24 +1107,6 @@
           });
         }
 
-        function finishDrag(event) {
-          if (!isPointerDown) return;
-          isPointerDown = false;
-
-          if (carousel.hasPointerCapture(event.pointerId)) {
-            carousel.releasePointerCapture(event.pointerId);
-          }
-
-          carousel.classList.remove('is-dragging');
-          if (didDrag) {
-            preventClick = true;
-            window.setTimeout(function () {
-              preventClick = false;
-            }, 0);
-          }
-          scheduleControlsUpdate();
-        }
-
         previousButton.addEventListener('click', function () {
           scrollCarousel(-1);
         });
@@ -1136,44 +1117,58 @@
 
         carousel.addEventListener('scroll', scheduleControlsUpdate, { passive: true });
         carousel.addEventListener('dragstart', function (event) {
-          if (event.target.closest('img')) event.preventDefault();
+          event.preventDefault();
         });
 
-        carousel.addEventListener('pointerdown', function (event) {
+        // Press-and-drag to scroll (mouse). Uses the same threshold as the PDP
+        // "Pairs Beautifully With" carousel so a plain click still opens the card.
+        var isDown = false;
+        var startX = 0;
+        var scrollLeft = 0;
+        var isDragging = false;
+        var THRESHOLD = 5;
+
+        carousel.addEventListener('mousedown', function (event) {
           if (!isSliderViewport()) return;
           if (event.button !== 0) return;
           if (event.target.closest('button, input, select, textarea')) return;
 
-          isPointerDown = true;
-          didDrag = false;
-          pointerStartX = event.clientX;
-          scrollStart = carousel.scrollLeft;
+          isDown = true;
+          isDragging = false;
+          startX = event.pageX - carousel.offsetLeft;
+          scrollLeft = carousel.scrollLeft;
         });
 
-        carousel.addEventListener('pointermove', function (event) {
-          if (!isPointerDown) return;
+        function endDrag() {
+          isDown = false;
+          carousel.classList.remove('is-dragging');
+          scheduleControlsUpdate();
+        }
+        carousel.addEventListener('mouseleave', endDrag);
+        carousel.addEventListener('mouseup', endDrag);
 
-          var distance = event.clientX - pointerStartX;
-          var dragThreshold = event.pointerType === 'touch' ? 10 : 6;
-          if (!didDrag && Math.abs(distance) > dragThreshold) {
-            didDrag = true;
+        carousel.addEventListener('mousemove', function (event) {
+          if (!isDown) return;
+
+          var x = event.pageX - carousel.offsetLeft;
+          if (!isDragging && Math.abs(x - startX) > THRESHOLD) {
+            isDragging = true;
             carousel.classList.add('is-dragging');
-            carousel.setPointerCapture(event.pointerId);
           }
-          if (!didDrag) return;
+          if (!isDragging) return;
 
           event.preventDefault();
-          carousel.scrollLeft = scrollStart - distance;
+          carousel.scrollLeft = scrollLeft - (x - startX) * 1.4;
         });
 
-        carousel.addEventListener('pointerup', finishDrag);
-        carousel.addEventListener('pointercancel', finishDrag);
+        // Suppress the click that follows a real drag so links don't navigate.
         carousel.addEventListener(
           'click',
           function (event) {
-            if (!preventClick) return;
-            event.preventDefault();
-            event.stopPropagation();
+            if (isDragging) {
+              event.preventDefault();
+              event.stopPropagation();
+            }
           },
           true
         );
