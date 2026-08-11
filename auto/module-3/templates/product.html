@@ -298,16 +298,55 @@
     </main>
 
     <!-- Floating Copy Buttons -->
+    {% set ns = namespace(amazon_link='') %}
     {% if product %}
-    <div class="fixed top-24 right-4 sm:right-8 flex flex-col gap-3 z-50">
+    {% for mf in product.metafields %}
+        {% if mf.namespace == 'custom' and mf.key == 'amazon_link' %}
+            {% set ns.amazon_link = mf.value %}
+        {% endif %}
+    {% endfor %}
+    <div class="fixed top-24 right-4 sm:right-8 flex flex-row gap-2 z-50">
+        <!-- DEV Button -->
         <div class="relative group flex items-center justify-end">
-            <span id="copy-id-indicator" class="absolute right-full mr-3 px-2.5 py-1.5 bg-gray-800 text-white text-xs font-medium rounded-lg opacity-0 transition-opacity whitespace-nowrap pointer-events-none">Đã copy ID</span>
+            <button onclick="openDevUrl()" class="bg-purple-500 text-white p-3 rounded-full shadow-lg hover:bg-purple-600 transition-all flex items-center justify-center focus:outline-none cursor-pointer border-none" title="Open in DEV (wrydeco.myshopify.com)">
+                <span class="font-bold text-xs uppercase">DEV</span>
+            </button>
+        </div>
+
+        <!-- REAL Button -->
+        <div class="relative group flex items-center justify-end">
+            <button onclick="openRealUrl()" class="bg-green-500 text-white p-3 rounded-full shadow-lg hover:bg-green-600 transition-all flex items-center justify-center focus:outline-none cursor-pointer border-none" title="Open in Real (wrydeco.com)">
+                <span class="font-bold text-xs uppercase">REAL</span>
+            </button>
+        </div>
+
+        <!-- AMAZON Button -->
+        <div class="relative group flex items-center justify-end">
+            <span id="open-amazon-indicator" class="absolute top-full mt-2 left-1/2 -translate-x-1/2 px-2.5 py-1.5 bg-gray-800 text-white text-xs font-medium rounded-lg opacity-0 transition-opacity whitespace-nowrap pointer-events-none"></span>
+            <button onclick="openAmazonUrl('{{ ns.amazon_link }}')" class="bg-orange-500 text-white p-3 rounded-full shadow-lg hover:bg-orange-600 transition-all flex items-center justify-center focus:outline-none cursor-pointer border-none" title="Open Amazon Link">
+                <span class="font-bold text-xs uppercase">AMAZON</span>
+            </button>
+        </div>
+
+        <!-- ASIN Button -->
+        <div class="relative group flex items-center justify-end">
+            <span id="copy-asin-indicator" class="absolute top-full mt-2 left-1/2 -translate-x-1/2 px-2.5 py-1.5 bg-gray-800 text-white text-xs font-medium rounded-lg opacity-0 transition-opacity whitespace-nowrap pointer-events-none">Đã copy ASIN</span>
+            <button onclick="copyASIN('{{ ns.amazon_link }}')" class="bg-amber-500 text-white p-3 rounded-full shadow-lg hover:bg-amber-600 transition-all flex items-center justify-center focus:outline-none cursor-pointer border-none" title="Copy ASIN">
+                <span class="font-bold text-xs uppercase">ASIN</span>
+            </button>
+        </div>
+        
+        <!-- ID Button -->
+        <div class="relative group flex items-center justify-end">
+            <span id="copy-id-indicator" class="absolute top-full mt-2 left-1/2 -translate-x-1/2 px-2.5 py-1.5 bg-gray-800 text-white text-xs font-medium rounded-lg opacity-0 transition-opacity whitespace-nowrap pointer-events-none">Đã copy ID</span>
             <button onclick="copyToClipboard('{{ product.id }}', 'copy-id-indicator')" class="bg-blue-500 text-white p-3 rounded-full shadow-lg hover:bg-blue-600 transition-all flex items-center justify-center focus:outline-none cursor-pointer border-none" title="Copy Product ID">
                 <iconify-icon icon="mdi:identifier" class="text-xl"></iconify-icon>
             </button>
         </div>
+
+        <!-- Handle Button -->
         <div class="relative group flex items-center justify-end">
-            <span id="copy-handle-indicator" class="absolute right-full mr-3 px-2.5 py-1.5 bg-gray-800 text-white text-xs font-medium rounded-lg opacity-0 transition-opacity whitespace-nowrap pointer-events-none">Đã copy Handle</span>
+            <span id="copy-handle-indicator" class="absolute top-full mt-2 left-1/2 -translate-x-1/2 px-2.5 py-1.5 bg-gray-800 text-white text-xs font-medium rounded-lg opacity-0 transition-opacity whitespace-nowrap pointer-events-none">Đã copy Handle</span>
             <button onclick="copyToClipboard('{{ product.handle }}', 'copy-handle-indicator')" class="bg-teal-500 text-white p-3 rounded-full shadow-lg hover:bg-teal-600 transition-all flex items-center justify-center focus:outline-none cursor-pointer border-none" title="Copy Product Handle">
                 <iconify-icon icon="mdi:link-variant" class="text-xl"></iconify-icon>
             </button>
@@ -343,17 +382,84 @@
             }
         }
 
+        
+        function showIndicator(indicatorId, text, isError = false) {
+            const indicator = document.getElementById(indicatorId);
+            if (!indicator) return;
+            if (text) {
+                indicator.textContent = text;
+            }
+            if (isError) {
+                indicator.classList.remove('bg-gray-800');
+                indicator.classList.add('bg-red-600');
+            } else {
+                indicator.classList.remove('bg-red-600');
+                indicator.classList.add('bg-gray-800');
+            }
+            indicator.classList.remove('opacity-0');
+            indicator.classList.add('opacity-100');
+            setTimeout(() => {
+                indicator.classList.remove('opacity-100');
+                indicator.classList.add('opacity-0');
+            }, 2000);
+        }
+
+        function openDevUrl() {
+            let path = window.location.pathname;
+            if (path.startsWith('/product/')) {
+                path = '/products/' + path.substring(9);
+            }
+            window.open(`https://wrydeco.myshopify.com${path}${window.location.search}${window.location.hash}`, '_blank');
+        }
+
+        function openRealUrl() {
+            let path = window.location.pathname;
+            if (path.startsWith('/product/')) {
+                path = '/products/' + path.substring(9);
+            }
+            window.open(`https://wrydeco.com${path}${window.location.search}${window.location.hash}`, '_blank');
+        }
+
+        
+        function openAmazonUrl(url) {
+            if (!url) {
+                showIndicator('open-amazon-indicator', 'Chưa có Amazon Link', true);
+                return;
+            }
+            window.open(url, '_blank');
+        }
+
+        function copyASIN(url) {
+            if (!url) {
+                showIndicator('copy-asin-indicator', 'Chưa có Amazon Link', true);
+                return;
+            }
+            let asin = "";
+            const dpMatch = url.match(/\/dp\/([A-Z0-9]{10})/i);
+            const gpMatch = url.match(/\/gp\/product\/([A-Z0-9]{10})/i);
+            if (dpMatch) asin = dpMatch[1];
+            else if (gpMatch) asin = gpMatch[1];
+            
+            if (asin) {
+                navigator.clipboard.writeText(asin).then(() => {
+                    showIndicator('copy-asin-indicator', 'Đã copy ASIN', false);
+                }).catch(err => {
+                    console.error('Failed to copy: ', err);
+                    showIndicator('copy-asin-indicator', 'Lỗi copy', true);
+                });
+            } else {
+                showIndicator('copy-asin-indicator', 'Không tìm thấy ASIN', true);
+            }
+        }
+        
         function copyToClipboard(text, indicatorId) {
             navigator.clipboard.writeText(text).then(() => {
-                const indicator = document.getElementById(indicatorId);
-                indicator.classList.remove('opacity-0');
-                indicator.classList.add('opacity-100');
-                setTimeout(() => {
-                    indicator.classList.remove('opacity-100');
-                    indicator.classList.add('opacity-0');
-                }, 2000);
+                // Restore text in case it was changed to error previously
+                const defaultText = indicatorId === 'copy-id-indicator' ? 'Đã copy ID' : 'Đã copy Handle';
+                showIndicator(indicatorId, defaultText, false);
             }).catch(err => {
                 console.error('Failed to copy: ', err);
+                showIndicator(indicatorId, 'Lỗi copy', true);
             });
         }
 

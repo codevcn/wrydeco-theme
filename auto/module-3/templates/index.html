@@ -74,10 +74,6 @@
                 </div>
             </div>
             <div class="flex items-center gap-2">
-                <button id="export-btn" class="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2 rounded-lg transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-green-400">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                    <span>Export Tất cả</span>
-                </button>
                 <button onclick="window.location.reload()" class="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-4 py-2 rounded-lg transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-300">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
                     Tải lại trang
@@ -103,10 +99,10 @@
                 <div class="flex items-center gap-3 w-full sm:w-auto">
                     <label class="text-sm font-semibold text-gray-700 whitespace-nowrap">Lọc theo:</label>
                     <select name="filter_type" class="bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 outline-none transition-colors cursor-pointer hover:border-gray-300">
+                        <option value="id" {% if filter_type == 'id' %}selected{% endif %}>ID</option>
                         <option value="tag" {% if filter_type == 'tag' %}selected{% endif %}>Tag</option>
                         <option value="collection" {% if filter_type == 'collection' %}selected{% endif %}>Collection (Handle)</option>
                         <option value="title" {% if filter_type == 'title' %}selected{% endif %}>Tên sản phẩm</option>
-                        <option value="id" {% if filter_type == 'id' %}selected{% endif %}>ID</option>
                         <option value="id_list" {% if filter_type == 'id_list' %}selected{% endif %}>Danh sách ID (cách nhau bằng phẩy)</option>
                         <option value="handle" {% if filter_type == 'handle' %}selected{% endif %}>Handle</option>
                         <option value="handle_list" {% if filter_type == 'handle_list' %}selected{% endif %}>Danh sách Handle (cách nhau bằng phẩy)</option>
@@ -404,34 +400,6 @@
     </div>
 
     <script>
-        // Export Products Logic
-        document.getElementById('export-btn').addEventListener('click', async function() {
-            const btn = this;
-            const originalHtml = btn.innerHTML;
-            btn.disabled = true;
-            btn.innerHTML = `<svg class="animate-spin w-4 h-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> <span>Đang Export...</span>`;
-            
-            try {
-                const response = await fetch('/export-all');
-                if (response.ok) {
-                    const blob = await response.blob();
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `products_export_${new Date().toISOString().slice(0,10)}.csv`;
-                    document.body.appendChild(a);
-                    a.click();
-                    a.remove();
-                } else {
-                    alert('Lỗi khi export: ' + await response.text());
-                }
-            } catch (error) {
-                alert('Có lỗi xảy ra: ' + error);
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = originalHtml;
-            }
-        });
 
         const scrollToTopBtn = document.getElementById('scrollToTopBtn');
         const scrollToBottomBtn = document.getElementById('scrollToBottomBtn');

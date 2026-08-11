@@ -11,7 +11,73 @@
     <link rel="manifest" href="/static/site.webmanifest" />
     <title>Admin - Sửa hàng loạt</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+    <script src="https://unpkg.com/@tailwindcss/browser@4">        document.getElementById('meta-info-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const form = e.target;
+            const submitBtn = document.getElementById('submit-meta-info-btn');
+            const alertBox = document.getElementById('alert-box');
+            
+            const identifiers = form.querySelector('textarea[name="identifiers"]').value.trim();
+            if (!identifiers) {
+                alert('Vui lòng nhập danh sách Product ID hoặc Product Handle!');
+                return;
+            }
+
+            const productType = form.querySelector('input[name="product_type"]').value.trim();
+            if (!productType) {
+                alert('Vui lòng nhập Product Type!');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<iconify-icon icon="mdi:loading" class="text-xl animate-spin"></iconify-icon> <span>Đang thực thi...</span>`;
+            alertBox.className = 'mb-6 rounded-xl p-4 shadow-sm border bg-blue-50 border-blue-200 text-blue-700 font-medium flex items-center gap-3';
+            alertBox.innerHTML = `<iconify-icon icon="mdi:loading" class="text-xl animate-spin"></iconify-icon> <span>Đang xử lý cập nhật Product Type...</span>`;
+            alertBox.classList.remove('hidden');
+
+            try {
+                const formData = new FormData(form);
+                const response = await fetch('/edit-meta-info', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alertBox.className = 'mb-6 rounded-xl p-4 shadow-sm border bg-green-50 border-green-200 text-green-800';
+                    let html = `<div class="flex items-start gap-3"><iconify-icon icon="mdi:check-circle" class="text-2xl text-green-600 mt-0.5 flex-shrink-0"></iconify-icon><div>`;
+                    html += `<p class="font-bold text-base">${data.message}</p>`;
+                    if (data.details && data.details.length > 0) {
+                        html += `<ul class="mt-2 space-y-1 text-xs font-mono bg-white/70 p-3 rounded-lg border border-green-100 max-h-48 overflow-y-auto">`;
+                        data.details.forEach(detail => {
+                            const badgeColor = detail.status === 'OK' ? 'text-green-700' : 'text-red-600';
+                            html += `<li class="flex items-center justify-between py-0.5 border-b border-gray-100 last:border-0"><span class="truncate pr-2">${detail.identifier}</span><span class="font-bold ${badgeColor}">${detail.status}: ${detail.message}</span></li>`;
+                        });
+                        html += `</ul>`;
+                    }
+                    html += `</div></div>`;
+                    alertBox.innerHTML = html;
+                } else {
+                    alertBox.className = 'mb-6 rounded-xl p-4 shadow-sm border bg-red-50 border-red-200 text-red-700 flex items-center gap-3';
+                    alertBox.innerHTML = `<iconify-icon icon="mdi:alert-circle" class="text-2xl text-red-600 flex-shrink-0"></iconify-icon> <div><p class="font-bold">Đã xảy ra lỗi!</p><p class="text-sm mt-0.5">${data.message}</p></div>`;
+                }
+            } catch (err) {
+                alertBox.className = 'mb-6 rounded-xl p-4 shadow-sm border bg-red-50 border-red-200 text-red-700 flex items-center gap-3';
+                alertBox.innerHTML = `<iconify-icon icon="mdi:alert-circle" class="text-2xl text-red-600 flex-shrink-0"></iconify-icon> <div><p class="font-bold">Lỗi kết nối máy chủ!</p><p class="text-sm mt-0.5">${err.message}</p></div>`;
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `<iconify-icon icon="mdi:content-save-edit-outline" class="text-xl"></iconify-icon> <span>Cập nhật Product Type</span>`;
+                alertBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+
+    </script>
     <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
     <style>
         body { font-family: 'Inter', sans-serif; }
@@ -52,7 +118,7 @@
             <nav class="-mb-px flex space-x-4 overflow-x-auto min-w-max pb-2" aria-label="Tabs">
                 <a href="#variant-editor" id="tab-variant" class="border-indigo-600 text-indigo-600 group inline-flex items-center gap-2 py-3 px-1 border-b-2 font-bold text-sm cursor-pointer whitespace-nowrap" onclick="switchTab('variant')">
                     <iconify-icon icon="mdi:layers-triple-outline" class="text-lg"></iconify-icon>
-                    <span>Chỉnh sửa Variant</span>
+                    <span>Chỉnh sửa Variant Options</span>
                 </a>
                 <a href="#delete-option-editor" id="tab-delete-option" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 group inline-flex items-center gap-2 py-3 px-1 border-b-2 font-medium text-sm cursor-pointer whitespace-nowrap" onclick="switchTab('delete-option')">
                     <iconify-icon icon="mdi:delete-outline" class="text-lg"></iconify-icon>
@@ -61,6 +127,10 @@
                 <a href="#tag-editor" id="tab-tag" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 group inline-flex items-center gap-2 py-3 px-1 border-b-2 font-medium text-sm cursor-pointer whitespace-nowrap" onclick="switchTab('tag')">
                     <iconify-icon icon="mdi:tag-multiple-outline" class="text-lg"></iconify-icon>
                     <span>Thêm Tag cho sản phẩm</span>
+                </a>
+                <a href="#meta-info-editor" id="tab-meta-info" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 group inline-flex items-center gap-2 py-3 px-1 border-b-2 font-medium text-sm cursor-pointer whitespace-nowrap" onclick="switchTab('meta-info')">
+                    <iconify-icon icon="mdi:information-outline" class="text-lg"></iconify-icon>
+                    <span>Chỉnh sửa Meta Info</span>
                 </a>
             </nav>
         </div>
@@ -115,57 +185,51 @@
                 </div>
             </div>
 
-            <!-- Section 2: Variant Options -->
-            <div class="bg-white p-6 rounded-2xl shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07)] border border-gray-100">
+            
+            <!-- Section 2: Thêm mới Variant Options -->
+            <div class="bg-white p-6 rounded-2xl shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07)] border border-gray-100 mt-6">
                 <div class="mb-6">
                     <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
                         <span class="bg-indigo-100 text-indigo-700 w-6 h-6 rounded-full inline-flex items-center justify-center text-xs font-bold">2</span>
-                        Cập nhật các option value của variant option name
+                        Thêm mới variant option
                     </h2>
                     <p class="text-xs text-gray-500 mt-2 leading-relaxed">
-                        <strong class="text-indigo-600">Lưu ý Logic Thực Thi:</strong><br>
-                        • Nếu Option <strong>chưa tồn tại</strong> ở sản phẩm: Hệ thống sẽ báo lỗi và bỏ qua sản phẩm đó.<br>
-                        • Nếu Option <strong>đã tồn tại</strong> ở sản phẩm: Hệ thống sẽ <strong>cập nhật</strong> sao cho Option đó chỉ chứa đúng các giá trị bạn nhập (ví dụ: đang là S, M, L -> nhập L, K -> thành L, K).
+                        <strong class="text-indigo-600">Lưu ý:</strong> Nếu Variant Option đã tồn tại trong sản phẩm mục tiêu thì sẽ báo lỗi.
                     </p>
                 </div>
 
                 <!-- Container -->
-                <div id="options-container" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <!-- Default Option: Wood Finish -->
+                <div id="new-options-container" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div class="option-card bg-gray-50/80 border border-gray-200 rounded-xl p-4 relative group hover:border-gray-300 transition-all">
-                        <button type="button" onclick="removeOptionCard(this)" class="absolute top-3 right-3 text-gray-400 hover:text-red-500 transition-colors p-1" title="Xóa option này">
+                        <button type="button" onclick="removeNewOptionCard(this)" class="absolute top-3 right-3 text-gray-400 hover:text-red-500 transition-colors p-1" title="Xóa option này">
                             <iconify-icon icon="mdi:trash-can-outline" class="text-lg"></iconify-icon>
                         </button>
-                        
                         <div class="space-y-3 pr-6">
                             <div>
-                                <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Tên Option</label>
-                                <input type="text" name="option_names[]" value="Wood Finish" placeholder="VD: Size, Wood Finish..." class="w-full bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm font-semibold text-gray-800 focus:ring-2 focus:ring-indigo-500 outline-none">
+                                <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Tên Variant Option</label>
+                                <input type="text" name="option_names[]" value="" placeholder="VD: Size, Material..." class="w-full bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm font-semibold text-gray-800 focus:ring-2 focus:ring-indigo-500 outline-none">
                             </div>
                             <div>
-                                <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Các giá trị (cách nhau bởi dấu phẩy)</label>
-                                <input type="text" name="option_values[]" value="Natural, Light Oak, Walnut, Dark Walnut, Custom" placeholder="VD: Natural, Light Oak, Walnut..." class="w-full bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none">
+                                <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Các giá trị (cách nhau bởi dấu phẩy hoặc chấm phẩy)</label>
+                                <input type="text" name="option_values[]" value="" placeholder="VD: S; M; L..." class="w-full bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none">
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Add Button Box -->
-                <button type="button" onclick="addOptionCard()" class="w-full py-4 border-2 border-dashed border-gray-300 hover:border-indigo-500 rounded-xl flex items-center justify-center gap-2 text-gray-500 hover:text-indigo-600 bg-gray-50/40 hover:bg-indigo-50/30 transition-all cursor-pointer group">
+                <button type="button" onclick="addNewOptionCard()" class="w-full py-4 border-2 border-dashed border-gray-300 hover:border-indigo-500 rounded-xl flex items-center justify-center gap-2 text-gray-500 hover:text-indigo-600 bg-gray-50/40 hover:bg-indigo-50/30 transition-all cursor-pointer group">
                     <iconify-icon icon="mdi:plus-circle" class="text-2xl group-hover:scale-110 transition-transform"></iconify-icon>
-                    <span class="font-bold text-sm">Thêm mới 1 variant option</span>
+                    <span class="font-bold text-sm">Thêm mới 1 variant option nữa</span>
                 </button>
 
-                <!-- Submit Add Section -->
                 <div class="flex items-center justify-end gap-4 mt-6">
-                    <button type="submit" name="action_type" value="add" id="submit-add-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer focus:ring-4 focus:ring-indigo-200">
+                    <button type="submit" name="action_type" value="add_new" id="submit-add-new-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer focus:ring-4 focus:ring-indigo-200">
                         <iconify-icon icon="mdi:plus-box-multiple-outline" class="text-xl"></iconify-icon>
-                        <span>Cập nhật Variant Options</span>
+                        <span>Thực hiện Thêm Mới Option</span>
                     </button>
                 </div>
             </div>
-
-            <!-- Section 3: Variant Option Cần Xóa -->
+<!-- Section 3: Variant Option Cần Xóa -->
             <div class="bg-white p-6 rounded-2xl shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07)] border border-gray-100 mt-6">
                 <div class="mb-6">
                     <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
@@ -366,8 +430,116 @@
                     </button>
                 </div>
             </div>
+        <!-- Section 4: Cập nhật các option value -->
+            <div class="bg-white p-6 rounded-2xl shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07)] border border-gray-100 mt-6">
+                <div class="mb-6">
+                    <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                        <span class="bg-indigo-100 text-indigo-700 w-6 h-6 rounded-full inline-flex items-center justify-center text-xs font-bold">4</span>
+                        Cập nhật các option value của variant option name
+                    </h2>
+                    <p class="text-xs text-gray-500 mt-2 leading-relaxed">
+                        <strong class="text-indigo-600">Lưu ý Logic Thực Thi:</strong><br>
+                        • Nếu Option <strong>chưa tồn tại</strong> ở sản phẩm: Hệ thống sẽ báo lỗi và bỏ qua sản phẩm đó.<br>
+                        • Nếu Option <strong>đã tồn tại</strong> ở sản phẩm: Hệ thống sẽ <strong>cập nhật</strong> sao cho Option đó chỉ chứa đúng các giá trị bạn nhập (ví dụ: đang là S, M, L -> nhập L, K -> thành L, K).
+                    </p>
+                </div>
+
+                <!-- Container -->
+                <div id="options-container" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <!-- Default Option: Wood Finish -->
+                    <div class="option-card bg-gray-50/80 border border-gray-200 rounded-xl p-4 relative group hover:border-gray-300 transition-all">
+                        <button type="button" onclick="removeOptionCard(this)" class="absolute top-3 right-3 text-gray-400 hover:text-red-500 transition-colors p-1" title="Xóa option này">
+                            <iconify-icon icon="mdi:trash-can-outline" class="text-lg"></iconify-icon>
+                        </button>
+                        
+                        <div class="space-y-3 pr-6">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Tên Option</label>
+                                <input type="text" name="option_names[]" value="Wood Finish" placeholder="VD: Size, Wood Finish..." class="w-full bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm font-semibold text-gray-800 focus:ring-2 focus:ring-indigo-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Các giá trị (cách nhau bởi dấu phẩy)</label>
+                                <input type="text" name="option_values[]" value="Natural, Light Oak, Walnut, Dark Walnut, Custom" placeholder="VD: Natural, Light Oak, Walnut..." class="w-full bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Add Button Box -->
+                <button type="button" onclick="addOptionCard()" class="w-full py-4 border-2 border-dashed border-gray-300 hover:border-indigo-500 rounded-xl flex items-center justify-center gap-2 text-gray-500 hover:text-indigo-600 bg-gray-50/40 hover:bg-indigo-50/30 transition-all cursor-pointer group">
+                    <iconify-icon icon="mdi:plus-circle" class="text-2xl group-hover:scale-110 transition-transform"></iconify-icon>
+                    <span class="font-bold text-sm">Thêm mới 1 variant option</span>
+                </button>
+
+                <!-- Submit Add Section -->
+                <div class="flex items-center justify-end gap-4 mt-6">
+                    <button type="submit" name="action_type" value="add" id="submit-add-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer focus:ring-4 focus:ring-indigo-200">
+                        <iconify-icon icon="mdi:plus-box-multiple-outline" class="text-xl"></iconify-icon>
+                        <span>Cập nhật Variant Options</span>
+                    </button>
+                </div>
+            </div>
+
+            </form>
+        </div>
+    
+        <div id="meta-info-section" class="hidden">
+        <form id="meta-info-form" action="/edit-meta-info" method="POST" class="space-y-8">
+            <div class="bg-white p-6 rounded-2xl shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07)] border border-gray-100">
+                <div class="mb-4">
+                    <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                        <span class="bg-indigo-100 text-indigo-700 w-6 h-6 rounded-full inline-flex items-center justify-center text-xs font-bold">1</span>
+                        Xác định sản phẩm mục tiêu
+                    </h2>
+                    <p class="text-xs text-gray-500 mt-1">Nhập danh sách định danh của các sản phẩm muốn chỉnh sửa thông tin.</p>
+                </div>
+
+                <div class="space-y-3">
+                    <textarea 
+                        name="identifiers" 
+                        rows="5" 
+                        placeholder="Ví dụ:&#10;8355489677369&#10;twisted-open-cutout-wooden-floor-sculpture-2" 
+                        class="w-full p-3.5 bg-gray-50/70 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm outline-none transition-all resize-y"
+                        required></textarea>
+                    
+                    <div class="flex items-center gap-6 pt-1">
+                        <span class="text-xs font-semibold text-gray-600">Loại định danh:</span>
+                        <label class="inline-flex items-center gap-2 cursor-pointer text-sm font-medium text-gray-700 hover:text-indigo-600 transition-colors">
+                            <input type="checkbox" name="id_type" value="id" checked class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer">
+                            <span>Product ID</span>
+                        </label>
+                        <label class="inline-flex items-center gap-2 cursor-pointer text-sm font-medium text-gray-700 hover:text-indigo-600 transition-colors">
+                            <input type="checkbox" name="id_type" value="handle" class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer">
+                            <span>Product Handle</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07)] border border-gray-100">
+                <div class="mb-6">
+                    <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                        <span class="bg-indigo-100 text-indigo-700 w-6 h-6 rounded-full inline-flex items-center justify-center text-xs font-bold">2</span>
+                        Chỉnh sửa Product Type
+                    </h2>
+                    <p class="text-xs text-gray-500 mt-1">Nhập Product Type mới cho sản phẩm.</p>
+                </div>
+
+                <div class="space-y-3">
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Product Type mới</label>
+                    <input type="text" name="product_type" placeholder="VD: Furniture, Decor..." class="w-full bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none" required>
+                </div>
+                
+                <div class="flex items-center justify-end gap-4 mt-6">
+                    <button type="submit" name="action_type" value="edit_product_type" id="submit-meta-info-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer focus:ring-4 focus:ring-indigo-200">
+                        <iconify-icon icon="mdi:content-save-edit-outline" class="text-xl"></iconify-icon>
+                        <span>Cập nhật Product Type</span>
+                    </button>
+                </div>
+            </div>
         </form>
         </div>
+
     </main>
 
     <!-- Template cho card Option mới -->
@@ -391,19 +563,43 @@
     </template>
 
     <script>
+        
+        function addNewOptionCard() {
+            const container = document.getElementById('new-options-container');
+            const template = document.getElementById('option-card-template');
+            const clone = template.content.cloneNode(true);
+            container.appendChild(clone);
+            const newCard = container.lastElementChild;
+            newCard.querySelector('button').setAttribute('onclick', 'removeNewOptionCard(this)');
+            const firstInput = newCard.querySelector('input[name="option_names[]"]');
+            if (firstInput) firstInput.focus();
+        }
+
+        function removeNewOptionCard(btn) {
+            const container = document.getElementById('new-options-container');
+            if (container.querySelectorAll('.option-card').length <= 1) {
+                alert('Bạn cần giữ tối thiểu 1 Variant Option!');
+                return;
+            }
+            btn.closest('.option-card').remove();
+        }
+
         function switchTab(tabId) {
             const variantTab = document.getElementById('tab-variant');
             const tagTab = document.getElementById('tab-tag');
             const deleteOptionTab = document.getElementById('tab-delete-option');
+            const metaInfoTab = document.getElementById('tab-meta-info');
+            
             const variantSection = document.getElementById('variant-section');
             const tagSection = document.getElementById('tag-section');
             const deleteOptionSection = document.getElementById('delete-option-section');
+            const metaInfoSection = document.getElementById('meta-info-section');
 
             const inactiveTabClass = 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 group inline-flex items-center gap-2 py-3 px-1 border-b-2 font-medium text-sm cursor-pointer whitespace-nowrap';
             const activeTabClass = 'border-indigo-600 text-indigo-600 group inline-flex items-center gap-2 py-3 px-1 border-b-2 font-bold text-sm cursor-pointer whitespace-nowrap';
 
-            [variantTab, tagTab, deleteOptionTab].forEach(t => t.className = inactiveTabClass);
-            [variantSection, tagSection, deleteOptionSection].forEach(s => s.classList.add('hidden'));
+            [variantTab, tagTab, deleteOptionTab, metaInfoTab].forEach(t => t.className = inactiveTabClass);
+            [variantSection, tagSection, deleteOptionSection, metaInfoSection].forEach(s => s.classList.add('hidden'));
             document.getElementById('alert-box').classList.add('hidden');
 
             if (tabId === 'variant') {
@@ -412,9 +608,12 @@
             } else if (tabId === 'delete-option') {
                 deleteOptionTab.className = activeTabClass;
                 deleteOptionSection.classList.remove('hidden');
-            } else {
+            } else if (tabId === 'tag') {
                 tagTab.className = activeTabClass;
                 tagSection.classList.remove('hidden');
+            } else {
+                metaInfoTab.className = activeTabClass;
+                metaInfoSection.classList.remove('hidden');
             }
         }
         function addOptionCard() {
@@ -454,16 +653,17 @@
                 return;
             }
 
-            const optionNames = Array.from(form.querySelectorAll('input[name="option_names[]"]')).map(i => i.value.trim());
-            const optionValues = Array.from(form.querySelectorAll('input[name="option_values[]"]')).map(i => i.value.trim());
             const deleteOptionName = form.querySelector('input[name="delete_option_name"]').value.trim();
             const renameOldOption = form.querySelector('input[name="rename_old_option"]').value.trim();
             const renameNewOption = form.querySelector('input[name="rename_new_option"]').value.trim();
 
-            if (actionType === 'add') {
+                        const optionNames = Array.from(form.querySelectorAll('input[name="option_names[]"]')).map(i => i.value.trim());
+            const optionValues = Array.from(form.querySelectorAll('input[name="option_values[]"]')).map(i => i.value.trim());
+
+            if (actionType === 'add_new') {
                 const hasValidAdd = optionNames.some((n, i) => n && optionValues[i]);
                 if (!hasValidAdd) {
-                    alert('Vui lòng điền đầy đủ Tên Option và Các giá trị để thêm/cập nhật!');
+                    alert('Vui lòng điền đầy đủ Tên Option và Các giá trị để thêm mới!');
                     return;
                 }
             } else if (actionType === 'delete') {
@@ -483,7 +683,7 @@
             submitBtn.innerHTML = `<iconify-icon icon="mdi:loading" class="text-xl animate-spin"></iconify-icon> <span>Đang thực thi...</span>`;
             alertBox.className = 'mb-6 rounded-xl p-4 shadow-sm border bg-blue-50 border-blue-200 text-blue-700 font-medium flex items-center gap-3';
             let loadingText = 'Đang xử lý...';
-            if (actionType === 'add') loadingText = 'Đang cập nhật variant options...';
+            if (actionType === 'add_new') loadingText = 'Đang xử lý thêm mới variant options...';
             else if (actionType === 'delete') loadingText = 'Đang xử lý xóa variant options...';
             else if (actionType === 'rename') loadingText = 'Đang xử lý đổi tên variant options...';
             alertBox.innerHTML = `<iconify-icon icon="mdi:loading" class="text-xl animate-spin"></iconify-icon> <span>${loadingText}</span>`;
@@ -526,10 +726,19 @@
                 alertBox.innerHTML = `<iconify-icon icon="mdi:alert-circle" class="text-2xl text-red-600 flex-shrink-0"></iconify-icon> <div><p class="font-bold">Lỗi kết nối máy chủ!</p><p class="text-sm mt-0.5">${err.message}</p></div>`;
             } finally {
                 submitBtn.disabled = false;
-                if (actionType === 'add') {
-                    submitBtn.innerHTML = `<iconify-icon icon="mdi:plus-box-multiple-outline" class="text-xl"></iconify-icon> <span>Cập nhật Variant Options</span>`;
-                } else if (actionType === 'delete') {
+                            const optionNames = Array.from(form.querySelectorAll('input[name="option_names[]"]')).map(i => i.value.trim());
+            const optionValues = Array.from(form.querySelectorAll('input[name="option_values[]"]')).map(i => i.value.trim());
+
+            if (actionType === 'add_new') {
+                const hasValidAdd = optionNames.some((n, i) => n && optionValues[i]);
+                if (!hasValidAdd) {
+                    alert('Vui lòng điền đầy đủ Tên Option và Các giá trị để thêm mới!');
+                    return;
+                }
+            } else if (actionType === 'delete') {
                     submitBtn.innerHTML = `<iconify-icon icon="mdi:delete-alert-outline" class="text-xl"></iconify-icon> <span>Thực hiện Xóa Option</span>`;
+                } else if (actionType === 'add_new') {
+                    submitBtn.innerHTML = `<iconify-icon icon="mdi:plus-box-multiple-outline" class="text-xl"></iconify-icon> <span>Thực hiện Thêm Mới Option</span>`;
                 } else if (actionType === 'rename') {
                     submitBtn.innerHTML = `<iconify-icon icon="mdi:rename-box" class="text-xl"></iconify-icon> <span>Thực hiện Đổi tên</span>`;
                 }
@@ -636,12 +845,24 @@
                     return;
                 }
                 endpoint = '/add-option-value';
+            } else if (actionType === 'add') {
+                const optionNames = Array.from(form.querySelectorAll('input[name="option_names[]"]')).map(i => i.value.trim());
+                const optionValues = Array.from(form.querySelectorAll('input[name="option_values[]"]')).map(i => i.value.trim());
+                const hasValidAdd = optionNames.some((n, i) => n && optionValues[i]);
+                if (!hasValidAdd) {
+                    alert('Vui lòng điền đầy đủ Tên Option và Các giá trị để thêm/cập nhật!');
+                    return;
+                }
+                endpoint = '/edit-variants';
             }
 
             submitBtn.disabled = true;
             submitBtn.innerHTML = `<iconify-icon icon="mdi:loading" class="text-xl animate-spin"></iconify-icon> <span>Đang thực thi...</span>`;
             alertBox.className = 'mb-6 rounded-xl p-4 shadow-sm border bg-blue-50 border-blue-200 text-blue-700 font-medium flex items-center gap-3';
-            const loadingText = actionType === 'add_value' ? 'Đang xử lý thêm option value vào các sản phẩm trên Shopify...' : 'Đang xử lý xóa option value khỏi các sản phẩm trên Shopify...';
+            let loadingText = 'Đang xử lý...';
+            if (actionType === 'add_value') loadingText = 'Đang xử lý thêm option value vào các sản phẩm trên Shopify...';
+            else if (actionType === 'delete_value') loadingText = 'Đang xử lý xóa option value khỏi các sản phẩm trên Shopify...';
+            else if (actionType === 'add') loadingText = 'Đang cập nhật variant options...';
             alertBox.innerHTML = `<iconify-icon icon="mdi:loading" class="text-xl animate-spin"></iconify-icon> <span>${loadingText}</span>`;
             alertBox.classList.remove('hidden');
 

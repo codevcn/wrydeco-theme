@@ -604,6 +604,20 @@
     font-size: var(--font-size-body-sm);
     line-height: var(--line-height-normal);
     color: var(--text-primary);
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .main-product__loox-summary:hover .main-product__loox-count,
+  .main-product__loox-summary:focus-visible .main-product__loox-count {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .main-product__loox-summary:focus-visible {
+    outline: 2px solid var(--color-sage);
+    outline-offset: var(--sp-1);
+    border-radius: var(--radius-sm);
   }
 
   .main-product__loox-stars {
@@ -632,8 +646,8 @@
 
   .main-product__loox-stars svg {
     flex: none;
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
   }
 
   .main-product__loox-score {
@@ -645,31 +659,6 @@
     align-items: center;
     font: inherit;
     line-height: var(--line-height-normal);
-  }
-
-  .main-product__sold-count {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--sp-2);
-    color: var(--text-primary);
-    font: var(--type-body-small);
-    white-space: nowrap;
-  }
-
-  .main-product__rating--has-reviews .main-product__sold-count {
-    padding-inline-start: var(--sp-4);
-    border-inline-start: var(--border-width) solid var(--border-default);
-  }
-
-  .main-product__sold-count svg {
-    flex: none;
-    width: var(--sp-5);
-    height: var(--sp-5);
-    color: var(--color-clay);
-  }
-
-  .main-product__sold-count-label {
-    font-weight: var(--font-weight-semibold);
   }
 
   @media screen and (max-width: 400px) {
@@ -754,17 +743,73 @@
         endif
         assign loox_average_rating = loox_average_rating | round: 1
         assign loox_rating_fill_percent = loox_average_rating | times: 20 | at_most: 100 | at_least: 0
-        assign loox_review_label = 'reviews'
-        if loox_review_count == 1
-          assign loox_review_label = 'review'
+        assign loox_global_stats_metafield = shop.metafields.loox["global_stats"]
+        assign loox_global_stats = loox_global_stats_metafield.value | default: loox_global_stats_metafield
+        assign loox_global_stats_values = loox_global_stats | split: ','
+        assign store_review_count = loox_global_stats_values[1] | default: loox_review_count | plus: 0
+        if store_review_count <= 0
+          assign store_review_count = loox_review_count
         endif
-        assign bought_amount = product.metafields.custom.bought_amount.value | default: 0 | plus: 0
+        assign store_review_count_text = store_review_count
+        if store_review_count >= 1000000
+          assign store_review_millions = store_review_count | divided_by: 1000000
+          assign store_review_remainder = store_review_count | modulo: 1000000
+          assign store_review_thousands = store_review_remainder | divided_by: 1000
+          assign store_review_last = store_review_count | modulo: 1000
+          capture store_review_thousands_text
+            if store_review_thousands < 10
+              echo '00'
+            elsif store_review_thousands < 100
+              echo '0'
+            endif
+            echo store_review_thousands
+          endcapture
+          capture store_review_last_text
+            if store_review_last < 10
+              echo '00'
+            elsif store_review_last < 100
+              echo '0'
+            endif
+            echo store_review_last
+          endcapture
+          capture store_review_count_text
+            echo store_review_millions
+            echo ','
+            echo store_review_thousands_text | strip
+            echo ','
+            echo store_review_last_text | strip
+          endcapture
+          assign store_review_count_text = store_review_count_text | strip
+        elsif store_review_count >= 1000
+          assign store_review_thousands = store_review_count | divided_by: 1000
+          assign store_review_last = store_review_count | modulo: 1000
+          capture store_review_last_text
+            if store_review_last < 10
+              echo '00'
+            elsif store_review_last < 100
+              echo '0'
+            endif
+            echo store_review_last
+          endcapture
+          capture store_review_count_text
+            echo store_review_thousands
+            echo ','
+            echo store_review_last_text | strip
+          endcapture
+          assign store_review_count_text = store_review_count_text | strip
+        endif
+        assign store_review_label = 'reviews'
+        if store_review_count == 1
+          assign store_review_label = 'review'
+        endif
       -%}
-      <div class="main-product__rating{% if loox_review_count > 0 and loox_average_rating > 0 %} main-product__rating--has-reviews{% endif %}">
+      <div class="main-product__rating">
         {% if loox_review_count > 0 and loox_average_rating > 0 %}
-          <div
+          <a
+            href="#ProductReviews"
             class="main-product__loox-summary"
-            aria-label="{{ loox_average_rating }} out of 5 stars from {{ loox_review_count }} {{ loox_review_label }}"
+            aria-label="{{ loox_average_rating }} out of 5 stars from {{ store_review_count_text }} store {{ store_review_label }}. Skip to reviews."
+            data-product-rating-link
           >
             <span
               class="main-product__loox-stars"
@@ -787,29 +832,8 @@
               </span>
             </span>
             <span class="main-product__loox-score">{{ loox_average_rating }}</span>
-            <span class="main-product__loox-count">({{ loox_review_count }} {{ loox_review_label }})</span>
-          </div>
-        {% endif %}
-        {% if bought_amount > 0 %}
-          <span
-            class="main-product__sold-count"
-            aria-label="{{ bought_amount }} items sold"
-            data-bought-amount="{{ bought_amount }}"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true">
-              <g
-                fill="none"
-                stroke="currentColor"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-              >
-                <path d="M11.5 21H8.574a3 3 0 0 1-2.965-2.544l-1.255-8.152A2 2 0 0 1 6.331 8H17.67a2 2 0 0 1 1.977 2.304l-.5 3.248"/>
-                <path d="M9 11V6a3 3 0 0 1 6 0v5m0 8l2 2l4-4"/>
-              </g>
-            </svg>
-            <span class="main-product__sold-count-label" data-bought-amount-label>{{ bought_amount }} sold</span>
-          </span>
+            <span class="main-product__loox-count">({{ store_review_count_text }} {{ store_review_label }})</span>
+          </a>
         {% endif %}
       </div>
 
@@ -1030,17 +1054,6 @@
 
 {% javascript %}
   (function () {
-    function formatBoughtAmounts() {
-      document.querySelectorAll('[data-bought-amount]').forEach(function (soldCount) {
-        var amount = Number(soldCount.getAttribute('data-bought-amount'));
-        var label = soldCount.querySelector('[data-bought-amount-label]');
-        if (!label || !Number.isFinite(amount)) return;
-
-        var locale = document.documentElement.lang || 'en-US';
-        label.textContent = new Intl.NumberFormat(locale).format(amount) + ' sold';
-      });
-    }
-
     function initStickyAddToCart() {
       var bar = document.querySelector('[data-mp-sticky]');
       if (!bar || bar.dataset.init === 'true') return;
@@ -1162,8 +1175,27 @@
       }
     }
 
+    function initRatingReviewLinks() {
+      document.querySelectorAll('[data-product-rating-link]').forEach(function (link) {
+        if (link.dataset.ratingLinkInit === 'true') return;
+        link.dataset.ratingLinkInit = 'true';
+
+        link.addEventListener('click', function (event) {
+          var target = document.querySelector('#ProductReviews') || document.querySelector('[data-loox-reviews-section]');
+          if (!target) return;
+
+          event.preventDefault();
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+          if (window.history && window.history.pushState) {
+            window.history.pushState(null, '', '#ProductReviews');
+          }
+        });
+      });
+    }
+
     function initMainProductEnhancements() {
-      formatBoughtAmounts();
+      initRatingReviewLinks();
       initStickyAddToCart();
     }
 

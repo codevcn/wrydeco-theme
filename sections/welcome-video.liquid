@@ -1,0 +1,404 @@
+{%- liquid
+  assign store_media_info = metaobjects.store_media_info.values | first
+  assign intro_video_url = store_media_info.intro_video_url.value | default: store_media_info.intro_video_url
+-%}
+
+{%- if intro_video_url != blank -%}
+  <section class="welcome-video" aria-labelledby="welcome-video-title">
+    <div class="welcome-video__inner">
+      <header class="welcome-video__header">
+        <p class="welcome-video__story-label">The WRYDECO Story</p>
+        <p class="welcome-video__intro">
+          Discover the people, process, and artistry that shape our handcrafted wooden furniture.
+        </p>
+      </header>
+
+      <div class="welcome-video__frame">
+        <video
+          class="welcome-video__media"
+          preload="metadata"
+          playsinline
+          aria-label="WRYDECO craftsmanship story video"
+        >
+          <source src="{{ intro_video_url | append: '#t=0.001' | escape }}" type="video/mp4">
+        </video>
+
+        <div class="welcome-video__shade" aria-hidden="true"></div>
+
+        <div class="welcome-video__content">
+          <button class="welcome-video__play" type="button" aria-label="Play WRYDECO craftsmanship story video">
+            <span class="welcome-video__play-icon" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" width="42" height="42" viewBox="0 0 24 24">
+                <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/>
+              </svg>
+            </span>
+          </button>
+
+          <p class="welcome-video__eyebrow">Welcome to WRYDECO</p>
+          <h3 class="welcome-video__heading">Our Story in Craftsmanship</h3>
+        </div>
+      </div>
+    </div>
+  </section>
+{%- endif -%}
+
+{% stylesheet %}
+  .welcome-video {
+    position: relative;
+    display: block;
+    background:
+      radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.82), transparent 38%),
+      linear-gradient(180deg, #fbf8f3 0%, #f5efe7 100%);
+    color: var(--color-charcoal, #2a2622);
+    padding: clamp(28px, 3.2vw, 42px) clamp(24px, 3.6vw, 52px) clamp(32px, 2vw, 56px);
+    overflow: hidden;
+  }
+
+  .welcome-video__inner {
+    position: relative;
+    z-index: 1;
+    width: min(100%, 1640px);
+    margin: 0 auto;
+  }
+
+  .welcome-video__header {
+    max-width: 1320px;
+    margin: 0 auto 20px;
+    text-align: center;
+  }
+
+  .welcome-video__story-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 22px;
+    margin: 0 0 12px;
+    color: var(--color-clay, #8a5d37);
+    font-family: var(--font-body);
+    font-size: 15px;
+    font-weight: var(--font-weight-medium, 500);
+    line-height: 1.2;
+    letter-spacing: 0.48em;
+    text-transform: uppercase;
+  }
+
+  .welcome-video__story-label::before,
+  .welcome-video__story-label::after {
+    width: 112px;
+    height: 1px;
+    background: rgba(138, 93, 55, 0.22);
+    content: '';
+  }
+
+  .welcome-video__intro {
+    position: relative;
+    max-width: 900px;
+    margin: 12px auto 0;
+    color: var(--color-charcoal, #2a2622);
+    font-family: var(--font-body);
+    font-size: clamp(18px, 1.45vw, 23px);
+    line-height: 1.45;
+  }
+
+  .welcome-video__frame {
+    position: relative;
+    isolation: isolate;
+    width: min(100%, 1460px);
+    height: clamp(480px, 42vw, 620px);
+    margin: 0 auto;
+    overflow: hidden;
+    border-radius: 16px;
+    background-color: var(--color-ebony, #1a1815);
+    box-shadow: 0 22px 52px rgba(26, 24, 21, 0.14);
+  }
+
+  .welcome-video__media,
+  .welcome-video__shade {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .welcome-video__media {
+    z-index: 0;
+    display: block;
+    object-fit: cover;
+    object-position: center center;
+  }
+
+  .welcome-video__shade {
+    z-index: 1;
+    background:
+      radial-gradient(circle at 50% 44%, rgba(0, 0, 0, 0.08) 0%, rgba(0, 0, 0, 0.62) 52%, rgba(0, 0, 0, 0.84) 100%),
+      linear-gradient(180deg, rgba(0, 0, 0, 0.16) 0%, rgba(0, 0, 0, 0.4) 100%);
+    pointer-events: none;
+    transition: opacity var(--timing-base, 300ms) var(--ease-standard, ease);
+  }
+
+  .welcome-video__content {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(36px, 5vw, 72px);
+    text-align: center;
+    pointer-events: none;
+  }
+
+  .welcome-video__play {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: clamp(86px, 5.7vw, 112px);
+    height: clamp(86px, 5.7vw, 112px);
+    min-width: 44px;
+    min-height: 44px;
+    margin: 0 0 clamp(30px, 2.7vw, 42px);
+    border: 1px solid rgba(245, 241, 237, 0.76);
+    border-radius: 50%;
+    background-color: rgba(255, 249, 242, 0.95);
+    color: var(--color-charcoal, #2a2622);
+    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.24);
+    pointer-events: auto;
+    transition:
+      transform var(--timing-short, 200ms) var(--ease-standard, ease),
+      background-color var(--timing-short, 200ms) var(--ease-standard, ease),
+      opacity var(--timing-short, 200ms) var(--ease-standard, ease);
+  }
+
+  .welcome-video__play:hover {
+    transform: scale(1.04);
+    background-color: var(--color-cream, #f5f1ed);
+  }
+
+  .welcome-video__play-icon {
+    display: inline-flex;
+    width: clamp(34px, 2.55vw, 48px);
+    height: clamp(34px, 2.55vw, 48px);
+    transform: translateX(3px);
+  }
+
+  .welcome-video__play-icon svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .welcome-video__eyebrow {
+    margin: 0 0 clamp(12px, 1.05vw, 18px);
+    font-family: var(--font-body);
+    font-size: clamp(13px, 0.95vw, 16px);
+    font-weight: var(--font-weight-medium, 500);
+    line-height: 1.2;
+    letter-spacing: 0.42em;
+    text-transform: uppercase;
+    color: rgba(245, 241, 237, 0.96);
+    text-shadow: 0 2px 16px rgba(0, 0, 0, 0.5);
+  }
+
+  .welcome-video__heading {
+    max-width: min(100%, 1180px);
+    margin: 0;
+    font-family: var(--font-display-light, var(--font-display));
+    font-size: clamp(50px, 4.25vw, 72px);
+    font-weight: var(--font-weight-light, 300);
+    line-height: 1;
+    letter-spacing: 0;
+    color: var(--color-cream, #f5f1ed);
+    text-wrap: balance;
+    text-shadow: 0 3px 26px rgba(0, 0, 0, 0.56);
+  }
+
+  .welcome-video.is-playing .welcome-video__play,
+  .welcome-video.is-playing .welcome-video__eyebrow,
+  .welcome-video.is-playing .welcome-video__heading {
+    opacity: 0;
+  }
+
+  .welcome-video.is-playing .welcome-video__play {
+    pointer-events: none;
+  }
+
+  .welcome-video.is-playing .welcome-video__shade {
+    opacity: 0.18;
+  }
+
+  @media screen and (max-width: 1024px) {
+    .welcome-video {
+      padding: 28px 24px 40px;
+    }
+
+    .welcome-video__story-label {
+      letter-spacing: 0.34em;
+    }
+
+    .welcome-video__header {
+      margin-top: 48px;
+    }
+
+    .welcome-video__story-label {
+      gap: 16px;
+      font-size: 13px;
+    }
+
+    .welcome-video__story-label::before,
+    .welcome-video__story-label::after {
+      width: 74px;
+    }
+
+    .welcome-video__intro {
+      max-width: 680px;
+      font-size: 18px;
+    }
+
+    .welcome-video__frame {
+      height: clamp(430px, 55vw, 560px);
+      border-radius: 14px;
+    }
+
+    .welcome-video__heading {
+      font-size: clamp(42px, 7vw, 68px);
+    }
+  }
+
+  @media screen and (max-width: 640px) {
+    .welcome-video {
+      padding: 24px var(--layout-padding-mobile, 16px) 34px;
+    }
+
+    .welcome-video__header {
+      margin: 30px auto 24px;
+    }
+
+    .welcome-video__story-label {
+      gap: 12px;
+      margin-bottom: 16px;
+      font-size: 11px;
+      letter-spacing: 0.22em;
+    }
+
+    .welcome-video__story-label::before,
+    .welcome-video__story-label::after {
+      width: 36px;
+    }
+
+    .welcome-video__intro {
+      max-width: 280px;
+      margin-top: 12px;
+      font-size: 16px;
+      line-height: 1.5;
+    }
+
+    .welcome-video__intro::before {
+      width: 10px;
+      height: 10px;
+      margin-bottom: 10px;
+    }
+
+    .welcome-video__frame {
+      height: clamp(360px, 92vw, 460px);
+      border-radius: 12px;
+    }
+
+    .welcome-video__media {
+      object-position: center center;
+    }
+
+    .welcome-video__content {
+      padding: 32px 20px;
+    }
+
+    .welcome-video__play {
+      width: 82px;
+      height: 82px;
+      margin-bottom: 28px;
+    }
+
+    .welcome-video__play-icon {
+      width: 30px;
+      height: 30px;
+      transform: translateX(2px);
+    }
+
+    .welcome-video__eyebrow {
+      max-width: 280px;
+      margin-bottom: 12px;
+      font-size: 12px;
+      letter-spacing: 0.28em;
+    }
+
+    .welcome-video__heading {
+      max-width: 310px;
+      font-size: clamp(30px, 8vw, 40px);
+      line-height: 1.04;
+    }
+  }
+
+  @media screen and (max-width: 380px) {
+    .welcome-video__frame {
+      height: clamp(400px, 112vw, 500px);
+    }
+
+    .welcome-video__heading {
+      font-size: 34px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .welcome-video__play,
+    .welcome-video__shade {
+      transition: none;
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.welcome-video').forEach((section) => {
+      const video = section.querySelector('.welcome-video__media');
+      const playButton = section.querySelector('.welcome-video__play');
+
+      if (!video || !playButton) return;
+
+      playButton.addEventListener('click', async () => {
+        try {
+          video.controls = true;
+          await video.play();
+          section.classList.add('is-playing');
+        } catch (error) {
+          video.controls = false;
+          section.classList.remove('is-playing');
+        }
+      });
+
+      video.addEventListener('pause', () => {
+        if (!video.ended) {
+          section.classList.remove('is-playing');
+        }
+      });
+
+      video.addEventListener('ended', () => {
+        video.controls = false;
+        section.classList.remove('is-playing');
+      });
+    });
+  });
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "Welcome Video",
+  "tag": "section",
+  "class": "section section-welcome-video",
+  "settings": [],
+  "presets": [
+    {
+      "name": "Welcome Video"
+    }
+  ]
+}
+{% endschema %}
