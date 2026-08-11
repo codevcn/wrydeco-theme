@@ -4,8 +4,7 @@
 
 > QUAN TRỌNG: Các review phải mang tính "cá nhân hóa sâu sắc 100%". Tức là ở bước đọc thông tin chi tiết của sản phẩm bên dưới, sẽ phải dùng trí tuệ nhân tạo đọc kỹ tiêu đề và mô tả sản phẩm để tự tay viết hoàn toàn từng dòng review một (sẽ mất nhiều thời gian hơn để viết nhưng đổi lại sẽ có được các review mang tính chân thực cao).
 
-2. Đọc file `./template.csv` để biết cấu trúc viết review trong file CSV.
-3. Với mỗi sản phẩm được khai báo trong file `./config.images.json`, bạn hãy thực hiện lần lượt các bước sau:
+2. Với mỗi sản phẩm được khai báo trong file `./config.images.json`, bạn hãy thực hiện lần lượt các bước sau:
 
 - Bước 1 **(QUAN TRỌNG)**: Truy cập vào store Wrydeco bằng `./access-token.md` để đọc thông tin chi tiết của sản phẩm để viết review bám sát sản phẩm hơn, thay vì viết review chung chung.
 - Bước 2: Truy cập vào từng folder con của folder `products.images_folder_path_to_add_into_csv`, ví dụ truy cập vào `./media/images/8355804676153/r1` ("r1" là Review ID), mỗi folder con là 1 review, ở mỗi folder con (folder con chứa các file ảnh review, nếu folder con có nhiều ảnh thì tức là review đó có nhiều ảnh) cần thực hiện tuần tự:
@@ -30,7 +29,7 @@
   - Bước 2.6: Lặp lại các bước 2.1 đến 2.5 cho tất cả các folder con còn lại.
 - Bước 4: Sau khi đã viết xong hết tất cả các review cho sản phẩm đang xử lý, tiếp tục với các sản phẩm còn lại trong file `./config.images.json`.
 
-4. Chạy file `./clean.cmd` để xóa các file tạm thời và các file không cần thiết.
-5. Chạy file `./merge_csv.cmd` để gộp tất cả các file CSV reviews của các sản phẩm vào 1 file CSV duy nhất.
-6. Viết báo cáo kết quả tạo reviews cho các sản phẩm vào file `./report.md`.
-7. Khi xong việc, hãy chạy lệnh CLI `mod toast {message muốn thông báo}` để thông báo cho tôi biết.
+3. Chạy file `./clean.cmd` để xóa các file tạm thời và các file không cần thiết.
+4. Chạy file `./merge_csv.cmd` để gộp tất cả các file CSV reviews của các sản phẩm vào 1 file CSV duy nhất.
+5. Viết báo cáo kết quả tạo reviews cho các sản phẩm vào file `./report.md`.
+6. Khi xong việc, hãy chạy lệnh CLI `mod toast {message muốn thông báo}` để thông báo cho tôi biết.
