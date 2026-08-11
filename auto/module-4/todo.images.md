@@ -7,26 +7,30 @@
 2. Đọc file `./template.csv` để biết cấu trúc viết review trong file CSV.
 3. Với mỗi sản phẩm được khai báo trong file `./config.images.json`, bạn hãy thực hiện lần lượt các bước sau:
 
-- Bước 1: Chạy file `./write_ratings_by_star.images.cmd` để lấy chỉ tiêu số lượng sao từ 1 đến 5 sao cho các review.
-- Bước 2: Đọc file `./reviews-rule.txt` để xác định chỉ tiêu tạo ra các review.
-- Bước 3 **(QUAN TRỌNG)**: Truy cập vào store Wrydeco bằng `./access-token.md` để đọc thông tin chi tiết của sản phẩm để viết review bám sát sản phẩm hơn, thay vì viết review chung chung.
+- Bước 1 **(QUAN TRỌNG)**: Truy cập vào store Wrydeco bằng `./access-token.md` để đọc thông tin chi tiết của sản phẩm để viết review bám sát sản phẩm hơn, thay vì viết review chung chung.
+- Bước 2: Truy cập vào từng folder con của folder `products.images_folder_path_to_add_into_csv`, ví dụ truy cập vào `./media/images/8355804676153/r1` ("r1" là Review ID), mỗi folder con là 1 review, ở mỗi folder con (folder con chứa các file ảnh review, nếu folder con có nhiều ảnh thì tức là review đó có nhiều ảnh) cần thực hiện tuần tự:
+  - Bước 2.1: **Đọc trực tiếp từng file ảnh** trong folder con để nắm rõ chi tiết màu sắc, kiểu dáng, chất liệu, vị trí đặt và bối cảnh thực tế của sản phẩm trong ảnh. Bước này đã lấy được `thông tin về sản phẩm trong ảnh review`.
+  - Bước 2.2: Chạy file `./upload.images.cmd "{folder_path}"` (ví dụ: `./upload.images.cmd "media/images/8355804676153/r1"`) để tự động upload toàn bộ file ảnh trong folder con lên Shopify store và nhận về danh sách URL ảnh public (CDN). Bước này đã lấy được `danh sách URL ảnh public (CDN)`.
+  - Bước 2.3: Hãy đóng vai 1 người mua hàng online để tiến hành viết review. Hãy tạo 1 json object trong mảng `products.reviews` của sản phẩm đang xử lý. Mỗi json object là 1 review cho sản phẩm đang xử lý với các field như sau:
+    - "review_id": "{Review ID}",
+    - "product_handle": "{handle của sản phẩm đang xử lý}",
+    - "product_id": "{ID của sản phẩm đang xử lý}",
+    - "rating": {rating ngẫu nhiên từ 3-5 sao, tỷ lệ là: 3 sao: 10%, 4 sao: 40%, 5 sao: 50%},
+    - "author": "{tên người viết review tham khảo từ file `./human-info-list.md`}",
+    - "email": "{email của người viết review tham khảo từ file `./human-info-list.md`}",
+    - "body": "{viết nội dung review dựa vào Cách hành văn viết review như người bản xứ, Thông tin sản phẩm đã đọc được ở Bước 1, Thông tin về sản phẩm trong ảnh review đã đọc được ở Bước 2.1, Danh sách URL ảnh public (CDN) đã upload xong ở Bước 2.2}",
+    - "created_at": "{thời gian tạo review hiện tại theo format ISO 8601}",
+    - "photo_urls": [{danh sách URL của ảnh review đã upload}],
+    - "reply": "{phản hồi từ người bán, phản hồi các review theo tỷ lệ: 3 sao: 50%, 4 sao: 30%, 5 sao: 20%}",
+    - "replied_at": "{thời gian phản hồi review hiện tại theo format ISO 8601, nếu không có phản hồi thì để chuỗi rỗng}",
+    - "verified_purchase": {luôn là true},
+    - "incentivized": {luôn là false},
+  - Bước 2.4: Đọc file `./template.csv` để biết cấu trúc viết review trong file CSV, sau đó ánh xạ json object của review đã viết xong ở bước 2.3 vào file `./output/{product_id}-reviews.images.csv` (chỉ tạo reviews CSV trong folder "output", ko tạo reviews bên ngoài folder "output".).
+  - Bước 2.5: hãy lưu lại toàn bộ thông tin sản phẩm và thông tin review đã viết vào file `./handled.images.json` (ko xóa nội dung hiện có).
+  - Bước 2.6: Lặp lại các bước 2.1 đến 2.5 cho tất cả các folder con còn lại.
+- Bước 4: Sau khi đã viết xong hết tất cả các review cho sản phẩm đang xử lý, tiếp tục với các sản phẩm còn lại trong file `./config.images.json`.
 
-> Ở bước tiếp theo: Với các file video thì chỉ cần trích xuất vài frame ở giữa thời lượng video để xem là được.
-
-- Bước 4 **(QUAN TRỌNG)**: **Đọc và xem trực tiếp từng file ảnh/video local** trong thư mục khai báo tại field `products.images_folder_path_to_add_into_csv` (ví dụ: `media/images/8355804676153`) **trước khi upload lên Shopify** để AI nắm rõ chi tiết nội dung, màu sắc, kiểu dáng, chất liệu và bối cảnh thực tế của sản phẩm trong ảnh/video.
-- Bước 5 **(QUAN TRỌNG)**: Chạy file `./upload.images.cmd {folder_path}` (ví dụ: `.\upload.images.cmd "media/images/8355804676153"`) để tự động upload toàn bộ ảnh và video local trong thư mục của sản phẩm đang xử lý lên Shopify store và nhận về danh sách URL ảnh/video public (CDN) được tự động lưu vào mảng `products.images_file_paths_to_add_into_csv`.
-- Bước 6:
-  - Dựa vào:
-    - Cách hành văn viết review như người bản xứ.
-    - Thông tin sản phẩm đã đọc được.
-    - **Thông tin và nội dung hình ảnh/video thực tế đã đọc/xem ở Bước 2.**
-  - Hãy đóng vai 1 người thường xuyên đặt hàng online để viết reviews (cho sản phẩm đã đọc được thông tin) vào file `./output/{product_id}-reviews.images.csv`. Gán các URL ảnh/video (CDN URL đã upload xong ở Bước 3) trong field `products.images_file_paths_to_add_into_csv` vào ngẫu nhiên 1 review (gán vào cột phù hợp trong file CSV), đảm bảo bất cứ review nào bạn tạo cũng đều có ảnh hoặc video đính kèm. **Quan trọng: 1 review chỉ được phép có 1 file media (ảnh hoặc video) và ko gán 1 file media vào nhiều review khác nhau, 1 file media chỉ được phép thuộc 1 review thôi**.
-  - Hãy viết cả những review phản hồi (reply) cho một số review ngẫu nhiên đã viết (bao gồm cả các review 5 sao), ưu tiên viết phản hồi cho các review có số sao thấp (3-4 sao) để tạo sự tương tác và tăng tính chân thực cho các review.
-  - Chỉ tạo reviews trong file CSV trong folder "output", ko tạo reviews trong file bên ngoài folder "output".
-- Bước 7: Sau khi viết reviews trong file CSV xong, lặp lại các bước trên cho các sản phẩm còn lại.
-
-4. Sau khi viết xong reviews thì thêm thông tin sản phẩm và thông tin tạo review vào cuối file `./handled.images.json` (ko xóa nội dung hiện có).
-5. Chạy file `./clean.cmd` để xóa các file tạm thời và các file không cần thiết.
-6. Chạy file `./merge_csv.cmd` để gộp tất cả các file CSV reviews của các sản phẩm vào 1 file CSV duy nhất.
-7. Viết báo cáo kết quả tạo reviews cho các sản phẩm vào file `./report.md`.
-8. Khi xong việc, hãy chạy lệnh CLI `mod toast {message muốn thông báo}` để thông báo cho tôi biết.
+4. Chạy file `./clean.cmd` để xóa các file tạm thời và các file không cần thiết.
+5. Chạy file `./merge_csv.cmd` để gộp tất cả các file CSV reviews của các sản phẩm vào 1 file CSV duy nhất.
+6. Viết báo cáo kết quả tạo reviews cho các sản phẩm vào file `./report.md`.
+7. Khi xong việc, hãy chạy lệnh CLI `mod toast {message muốn thông báo}` để thông báo cho tôi biết.

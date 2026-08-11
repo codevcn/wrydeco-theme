@@ -34,39 +34,63 @@
 
     <!-- Right Column: Image Slider -->
     <div class="client-reviews__right">
-      <div class="client-reviews__slider" data-client-reviews-slider>
-        {%- for testimonial in customer_testimonials -%}
-          {%- assign customer_name = testimonial.customer_name.value -%}
-          {%- assign customer_comment = testimonial.customer_comment.value -%}
-          {%- assign customer_location = testimonial.customer_location.value -%}
-          {%- assign review_image_url = testimonial.review_image_url.value -%}
-          {%- assign product_type = testimonial.product_type_to_review.value -%}
-          {%- assign review_image_alt = 'WRYDECO customer testimonial' -%}
-          {%- if product_type != blank -%}
-            {%- capture review_image_alt -%}{{ product_type }} reviewed by {{ customer_name }}{%- endcapture -%}
-          {%- elsif customer_name != blank -%}
-            {%- capture review_image_alt -%}WRYDECO customer testimonial from {{ customer_name }}{%- endcapture -%}
-          {%- endif -%}
-          <div
-            class="client-reviews__card{% if forloop.first %} slider-focused{% endif %}"
-            data-review="{{ customer_comment | escape }}"
-            data-author="{{ customer_name | escape }}"
-            data-location="{{ customer_location | escape }}"
-            data-product-type="{{ product_type | escape }}"
-          >
-            {%- if review_image_url != blank -%}
-              <img
-                src="{{ review_image_url | escape }}"
-                alt="{{ review_image_alt | escape }}"
-                class="client-reviews__img"
-                loading="lazy"
-                draggable="false"
-                width="900"
-                height="1100"
-              >
+      <div class="client-reviews__slider-shell" data-client-reviews-carousel>
+        <button
+          type="button"
+          class="client-reviews__nav client-reviews__nav--prev"
+          data-client-reviews-prev
+          aria-label="View previous testimonial"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m15 18-6-6 6-6"/>
+          </svg>
+        </button>
+
+        <div class="client-reviews__slider" data-client-reviews-slider>
+          {%- for testimonial in customer_testimonials -%}
+            {%- assign customer_name = testimonial.customer_name.value -%}
+            {%- assign customer_comment = testimonial.customer_comment.value -%}
+            {%- assign customer_location = testimonial.customer_location.value -%}
+            {%- assign review_image_url = testimonial.review_image_url.value -%}
+            {%- assign product_type = testimonial.product_type_to_review.value -%}
+            {%- assign review_image_alt = 'WRYDECO customer testimonial' -%}
+            {%- if product_type != blank -%}
+              {%- capture review_image_alt -%}{{ product_type }} reviewed by {{ customer_name }}{%- endcapture -%}
+            {%- elsif customer_name != blank -%}
+              {%- capture review_image_alt -%}WRYDECO customer testimonial from {{ customer_name }}{%- endcapture -%}
             {%- endif -%}
-          </div>
-        {%- endfor -%}
+            <div
+              class="client-reviews__card{% if forloop.first %} slider-focused{% endif %}"
+              data-review="{{ customer_comment | escape }}"
+              data-author="{{ customer_name | escape }}"
+              data-location="{{ customer_location | escape }}"
+              data-product-type="{{ product_type | escape }}"
+            >
+              {%- if review_image_url != blank -%}
+                <img
+                  src="{{ review_image_url | escape }}"
+                  alt="{{ review_image_alt | escape }}"
+                  class="client-reviews__img"
+                  loading="lazy"
+                  draggable="false"
+                  width="900"
+                  height="1100"
+                >
+              {%- endif -%}
+            </div>
+          {%- endfor -%}
+        </div>
+
+        <button
+          type="button"
+          class="client-reviews__nav client-reviews__nav--next"
+          data-client-reviews-next
+          aria-label="View next testimonial"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 18 6-6-6-6"/>
+          </svg>
+        </button>
       </div>
     </div>
   </div>
@@ -184,6 +208,10 @@
     min-width: 0; /* Important for flex-child overflow */
   }
 
+  .client-reviews__slider-shell {
+    position: relative;
+  }
+
   .client-reviews__slider {
     display: flex;
     gap: var(--sp-4, 16px);
@@ -200,31 +228,38 @@
 
   .client-reviews__slider.is-dragging {
     cursor: grabbing;
+    scroll-snap-type: none;
   }
 
   .client-reviews__slider.is-dragging .client-reviews__card {
+    user-select: none;
     pointer-events: none;
   }
 
   .client-reviews__card {
-    flex: 0 0 85%;
-    max-width: 450px;
+    flex: 0 0 calc((100% - var(--sp-4, 16px)) / 2);
+    max-width: none;
     border-radius: var(--radius-lg, 12px);
     overflow: hidden;
     position: relative;
     aspect-ratio: 3 / 4; /* Tall portrait images like the screenshot */
-    opacity: 0.4;
-    transition: opacity 0.4s ease;
-  }
-
-  .client-reviews__card.slider-focused {
     opacity: 1;
   }
 
-  @media screen and (min-width: 768px) {
-    .client-reviews__card {
-      flex: 0 0 65%;
-    }
+  .client-reviews__card::after {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(135deg, rgba(255, 255, 255, 0.56), rgba(255, 255, 255, 0.18)),
+      rgba(255, 255, 255, 0.18);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.28s ease;
+    content: '';
+  }
+
+  .client-reviews__card.is-comment-preview::after {
+    opacity: 1;
   }
 
   .client-reviews__img {
@@ -234,6 +269,48 @@
     display: block;
     -webkit-user-drag: none;
     user-select: none;
+  }
+
+  .client-reviews__nav {
+    position: absolute;
+    z-index: 2;
+    top: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    border: 1px solid rgba(74, 44, 24, 0.18);
+    border-radius: 999px;
+    background: rgba(255, 252, 248, 0.86);
+    color: var(--color-brown, #4a2c18);
+    box-shadow: 0 14px 30px rgba(59, 31, 15, 0.12);
+    cursor: pointer;
+    transform: translateY(-50%);
+    transition: background-color var(--timing-short, 0.2s) var(--ease-standard, ease),
+      border-color var(--timing-short, 0.2s) var(--ease-standard, ease),
+      color var(--timing-short, 0.2s) var(--ease-standard, ease),
+      opacity var(--timing-short, 0.2s) var(--ease-standard, ease),
+      transform var(--timing-short, 0.2s) var(--ease-standard, ease);
+  }
+
+  .client-reviews__nav--prev {
+    left: calc(var(--sp-5, 24px) * -1);
+  }
+
+  .client-reviews__nav--next {
+    right: calc(var(--sp-5, 24px) * -1);
+  }
+
+  .client-reviews__nav svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .client-reviews__nav:disabled {
+    opacity: 0.36;
+    cursor: default;
+    pointer-events: none;
   }
 
   /* Footer Section */
@@ -291,8 +368,7 @@
     }
 
     .client-reviews__card {
-      flex: 0 0 50%;
-      max-width: 540px;
+      flex-basis: calc((100% - var(--sp-4, 16px)) / 2);
     }
   }
 
@@ -327,6 +403,30 @@
       letter-spacing: 0.22em;
     }
   }
+
+  @media screen and (max-width: 640px) {
+    .client-reviews__nav {
+      width: 40px;
+      height: 40px;
+    }
+
+    .client-reviews__nav--prev {
+      left: var(--sp-2, 8px);
+    }
+
+    .client-reviews__nav--next {
+      right: var(--sp-2, 8px);
+    }
+  }
+
+  @media (hover: hover) {
+    .client-reviews__nav:not(:disabled):hover {
+      background: var(--color-brown, #4a2c18);
+      border-color: var(--color-brown, #4a2c18);
+      color: #fff8f0;
+      transform: translateY(-50%) scale(1.04);
+    }
+  }
 {% endstylesheet %}
 
 {% javascript %}
@@ -334,64 +434,73 @@
     const sectionRoot = document.querySelector('[data-client-reviews]');
     if (!sectionRoot) return;
 
+    const carousel = sectionRoot.querySelector('[data-client-reviews-carousel]');
     const slider = sectionRoot.querySelector('[data-client-reviews-slider]');
     if (!slider) return;
 
     const cards = Array.from(slider.querySelectorAll('.client-reviews__card'));
+    const prev = carousel ? carousel.querySelector('[data-client-reviews-prev]') : null;
+    const next = carousel ? carousel.querySelector('[data-client-reviews-next]') : null;
     const textEl = sectionRoot.querySelector('[data-client-review-text]');
     const authorEl = sectionRoot.querySelector('[data-client-review-author]');
     const locationEl = sectionRoot.querySelector('[data-client-review-location]');
 
-    let isUpdating = false;
-    let currentFocusedCard = null;
+    let currentCommentCard = null;
+    let textUpdateTimer = null;
 
     function updateText(card) {
-      if (!card || card === currentFocusedCard || isUpdating) return;
-      isUpdating = true;
-      currentFocusedCard = card;
-
-      // Update active class on cards
-      cards.forEach((c) => c.classList.remove('slider-focused'));
-      card.classList.add('slider-focused');
+      if (!card || card === currentCommentCard) return;
+      currentCommentCard = card;
+      window.clearTimeout(textUpdateTimer);
 
       // Slight fade effect
       textEl.style.opacity = '0';
       authorEl.style.opacity = '0';
 
-      setTimeout(() => {
+      textUpdateTimer = window.setTimeout(() => {
         textEl.textContent = card.dataset.review;
         authorEl.textContent = card.dataset.author;
         if (locationEl) locationEl.textContent = card.dataset.location || '';
         textEl.style.opacity = '1';
         authorEl.style.opacity = '1';
-        isUpdating = false;
       }, 150);
     }
 
-    function updateLayout() {
+    function cardStep() {
+      const card = cards[0];
+      if (!card) return slider.clientWidth;
+
+      const styles = getComputedStyle(slider);
+      const gap = parseFloat(styles.columnGap || styles.gap) || 16;
+      return card.getBoundingClientRect().width + gap;
+    }
+
+    function updateTrailingSpace() {
       if (cards.length === 0) return;
+
+      cards.forEach((card) => {
+        card.style.marginRight = '';
+      });
+
       const lastCard = cards[cards.length - 1];
-      const sliderWidth = slider.clientWidth;
-      const cardWidth = lastCard.offsetWidth;
-      const extraSpace = sliderWidth - cardWidth;
+      const extraSpace = slider.clientWidth - lastCard.getBoundingClientRect().width;
       if (extraSpace > 0) {
         lastCard.style.marginRight = `${extraSpace}px`;
       }
     }
 
-    function updateFocusedCard() {
+    function firstCardInViewport() {
       if (cards.length === 0) return;
 
       const sliderRect = slider.getBoundingClientRect();
-      const sliderLeftEdge = sliderRect.left;
+      const sliderLeft = sliderRect.left;
 
       let closestCard = cards[0];
       let minDistance = Infinity;
 
       cards.forEach((card) => {
         const cardRect = card.getBoundingClientRect();
-        const cardLeftEdge = cardRect.left;
-        const distance = Math.abs(sliderLeftEdge - cardLeftEdge);
+        const distance = Math.abs(sliderLeft - cardRect.left);
 
         if (distance < minDistance) {
           minDistance = distance;
@@ -399,21 +508,70 @@
         }
       });
 
-      updateText(closestCard);
+      return closestCard;
+    }
+
+    function updateCommentFromViewport() {
+      const sourceCard = firstCardInViewport();
+      const sourceIndex = cards.indexOf(sourceCard);
+
+      cards.forEach((card) => {
+        card.classList.remove('is-comment-source', 'is-comment-preview');
+      });
+
+      if (sourceCard) {
+        sourceCard.classList.add('is-comment-source');
+      }
+
+      if (sourceIndex >= 0 && cards[sourceIndex + 1]) {
+        cards[sourceIndex + 1].classList.add('is-comment-preview');
+      }
+
+      updateText(sourceCard);
+    }
+
+    function updateNav() {
+      const maxScroll = slider.scrollWidth - slider.clientWidth;
+      const hasOverflow = maxScroll > 1;
+      if (prev) prev.disabled = !hasOverflow || slider.scrollLeft <= 1;
+      if (next) next.disabled = !hasOverflow || slider.scrollLeft >= maxScroll - 1;
+    }
+
+    function scrollByCard(direction) {
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      slider.scrollBy({
+        left: cardStep() * direction,
+        behavior: reduceMotion ? 'auto' : 'smooth',
+      });
     }
 
     // Initial check
-    updateLayout();
-    updateFocusedCard();
+    updateTrailingSpace();
+    updateCommentFromViewport();
+    updateNav();
 
-    // Listen for scroll events on the slider to update the focused card
+    if (prev) {
+      prev.addEventListener('click', () => {
+        scrollByCard(-1);
+      });
+    }
+
+    if (next) {
+      next.addEventListener('click', () => {
+        scrollByCard(1);
+      });
+    }
+
+    // Listen for scroll events on the slider to update the comment from the
+    // first card in the viewport.
     let ticking = false;
     slider.addEventListener(
       'scroll',
       () => {
         if (!ticking) {
           window.requestAnimationFrame(() => {
-            updateFocusedCard();
+            updateCommentFromViewport();
+            updateNav();
             ticking = false;
           });
           ticking = true;
@@ -426,40 +584,80 @@
     window.addEventListener('resize', () => {
       if (!ticking) {
         window.requestAnimationFrame(() => {
-          updateLayout();
-          updateFocusedCard();
+          updateTrailingSpace();
+          updateCommentFromViewport();
+          updateNav();
           ticking = false;
         });
         ticking = true;
       }
     });
 
-    // Drag to scroll logic
+    if ('ResizeObserver' in window) {
+      const resizeObserver = new ResizeObserver(() => {
+        updateTrailingSpace();
+        updateCommentFromViewport();
+        updateNav();
+      });
+      resizeObserver.observe(slider);
+    }
+
+    // Press-and-drag to scroll (mouse). Matches the PDP "Pairs Beautifully With"
+    // carousel: threshold protects simple clicks, real drags suppress click.
     let isDown = false;
-    let startX;
-    let scrollLeft;
+    let startX = 0;
+    let isDragging = false;
+    let dragDirection = 0;
+    const THRESHOLD = 5;
+
+    slider.addEventListener('dragstart', (e) => {
+      e.preventDefault();
+    });
 
     slider.addEventListener('mousedown', (e) => {
       isDown = true;
-      slider.classList.add('is-dragging');
+      isDragging = false;
+      dragDirection = 0;
       startX = e.pageX - slider.offsetLeft;
-      scrollLeft = slider.scrollLeft;
     });
-    slider.addEventListener('mouseleave', () => {
+
+    function endDrag() {
+      const shouldScroll = isDragging && dragDirection !== 0;
       isDown = false;
       slider.classList.remove('is-dragging');
-    });
-    slider.addEventListener('mouseup', () => {
-      isDown = false;
-      slider.classList.remove('is-dragging');
-    });
+      if (shouldScroll) {
+        scrollByCard(dragDirection);
+      }
+      updateNav();
+    }
+
+    slider.addEventListener('mouseleave', endDrag);
+    slider.addEventListener('mouseup', endDrag);
+
     slider.addEventListener('mousemove', (e) => {
       if (!isDown) return;
-      e.preventDefault();
       const x = e.pageX - slider.offsetLeft;
-      const walk = (x - startX) * 2.5; // Scroll speed multiplier
-      slider.scrollLeft = scrollLeft - walk;
+      const distance = x - startX;
+      if (!isDragging && Math.abs(distance) > THRESHOLD) {
+        isDragging = true;
+        slider.classList.add('is-dragging');
+      }
+      if (!isDragging) return;
+
+      e.preventDefault();
+      dragDirection = distance < 0 ? 1 : -1;
     });
+
+    slider.addEventListener(
+      'click',
+      (e) => {
+        if (isDragging) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      },
+      true
+    );
   });
 {% endjavascript %}
 

@@ -35,7 +35,9 @@ KEEP_CONTENT = [
     ".media.env",
     "get_access_token.cmd",
     "get_access_token.py",
-    "todo-strict.images.md"
+    "todo-strict.images.md",
+    "clean.py",
+    "human-info-list.md"
 ]
 
 
