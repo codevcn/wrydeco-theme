@@ -3,6 +3,8 @@
 
   @param {string} video_url - The MP4 video URL to render.
   @param {string} [story_label] - The story badge label shown on the video.
+  @param {string} [intro] - Supporting copy shown above the video frame.
+  @param {string} [eyebrow] - Eyebrow text shown above the video frame.
   @param {string} [heading] - Accessible heading text for the section.
   @param {string} [video_label] - Accessible label for the video.
   @param {string} [play_label] - Accessible label for the play button.
@@ -14,7 +16,9 @@
 
 {%- liquid
   assign story_label = story_label | default: 'Behind the Craft'
-  assign heading = heading | default: 'Welcome to WRYDECO craftsmanship video'
+  assign intro = intro | default: 'Discover the people, process, and artistry that shape our handcrafted wooden furniture.'
+  assign eyebrow = eyebrow | default: 'The WRYDECO Story'
+  assign heading = heading | default: 'Our Story in Craftsmanship'
   assign video_label = video_label | default: 'WRYDECO craftsmanship story video'
   assign play_label = play_label | default: 'Play WRYDECO craftsmanship story video'
   assign component_id = id | default: 'welcome-video'
@@ -23,9 +27,19 @@
 
 {%- if video_url != blank -%}
   <section class="welcome-video" aria-labelledby="{{ title_id }}">
-    <h2 id="{{ title_id }}" class="welcome-video__sr-title">{{ heading | escape }}</h2>
-
     <div class="welcome-video__inner">
+      <header class="welcome-video__header">
+        {%- if eyebrow != blank -%}
+          <p class="welcome-video__eyebrow">{{ eyebrow | escape }}</p>
+        {%- endif -%}
+        {%- if heading != blank -%}
+          <h2 id="{{ title_id }}" class="welcome-video__heading">{{ heading | escape }}</h2>
+        {%- endif -%}
+        {%- if intro != blank -%}
+          <p class="welcome-video__intro">{{ intro | escape }}</p>
+        {%- endif -%}
+      </header>
+
       <div class="welcome-video__frame">
         <video
           class="welcome-video__media"
@@ -178,14 +192,63 @@
     margin: 0 auto;
   }
 
+  .welcome-video__header {
+    max-width: 1040px;
+    margin: 0 auto clamp(18px, 1.8vw, 28px);
+    text-align: center;
+  }
+
+  .welcome-video__eyebrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 22px;
+    margin: 0 0 12px;
+    color: var(--color-clay, #8a5d37);
+    font-family: var(--font-body);
+    font-size: 15px;
+    font-weight: var(--font-weight-medium, 500);
+    line-height: 1.2;
+    letter-spacing: 0.48em;
+    text-transform: uppercase;
+  }
+
+  .welcome-video__eyebrow::before,
+  .welcome-video__eyebrow::after {
+    width: 112px;
+    height: 1px;
+    background: rgba(138, 93, 55, 0.22);
+    content: '';
+  }
+
+  .welcome-video__heading {
+    margin: 0;
+    color: var(--color-charcoal, #2a2622);
+    font-family: var(--font-display-light, var(--font-display));
+    font-size: clamp(42px, 3.65vw, 64px);
+    font-weight: var(--font-weight-light, 300);
+    line-height: 1;
+    letter-spacing: 0;
+    text-wrap: balance;
+  }
+
+  .welcome-video__intro {
+    max-width: 820px;
+    margin: 14px auto 0;
+    color: rgba(42, 38, 34, 0.78);
+    font-family: var(--font-body);
+    font-size: clamp(17px, 1.15vw, 21px);
+    line-height: 1.5;
+  }
+
   .welcome-video__frame {
     position: relative;
     isolation: isolate;
     width: 100%;
-    height: clamp(540px, 39.4vw, 710px);
+    aspect-ratio: 170 / 71;
     overflow: hidden;
     border: 1px solid rgba(93, 62, 38, 0.12);
-    border-radius: clamp(28px, 1.9vw, 36px);
+    border-radius: 16px;
     background-color: var(--color-ebony, #1a1815);
     box-shadow: 0 26px 62px rgba(63, 39, 23, 0.2);
   }
@@ -229,6 +292,9 @@
     color: var(--color-milk, #fff9f1);
     box-shadow: 0 12px 26px rgba(0, 0, 0, 0.22);
     backdrop-filter: blur(16px);
+    transition:
+      opacity var(--timing-short, 200ms) var(--ease-standard, ease),
+      visibility var(--timing-short, 200ms) var(--ease-standard, ease);
   }
 
   .welcome-video__badge {
@@ -304,8 +370,8 @@
     grid-template-columns: 48px auto minmax(180px, 1fr) 48px minmax(110px, 150px) 48px 48px;
     align-items: center;
     gap: 16px;
-    min-height: 82px;
-    padding: 14px 22px;
+    min-height: 62px;
+    padding: 8px 22px;
     border: 1px solid rgba(255, 250, 242, 0.08);
     border-radius: 10px;
     background: rgba(39, 34, 29, 0.82);
@@ -484,6 +550,12 @@
     pointer-events: none;
   }
 
+  .welcome-video.is-playing .welcome-video__badge,
+  .welcome-video.is-playing .welcome-video__duration {
+    opacity: 0;
+    visibility: hidden;
+  }
+
   .welcome-video.is-playing .welcome-video__shade {
     opacity: 0.54;
   }
@@ -494,7 +566,27 @@
     }
 
     .welcome-video__frame {
-      height: clamp(430px, 58vw, 620px);
+      aspect-ratio: 170 / 71;
+    }
+
+    .welcome-video__eyebrow {
+      gap: 16px;
+      font-size: 13px;
+      letter-spacing: 0.34em;
+    }
+
+    .welcome-video__eyebrow::before,
+    .welcome-video__eyebrow::after {
+      width: 74px;
+    }
+
+    .welcome-video__heading {
+      font-size: clamp(38px, 6vw, 56px);
+    }
+
+    .welcome-video__intro {
+      max-width: 680px;
+      font-size: 18px;
     }
 
     .welcome-video__badge,
@@ -524,58 +616,96 @@
     }
 
     .welcome-video__frame {
-      height: clamp(360px, 102vw, 520px);
-      border-radius: 24px;
+      aspect-ratio: 170 / 91;
+    }
+
+    .welcome-video__header {
+      margin-bottom: 20px;
+    }
+
+    .welcome-video__eyebrow {
+      gap: 12px;
+      margin-bottom: 12px;
+      font-size: 11px;
+      letter-spacing: 0.22em;
+    }
+
+    .welcome-video__eyebrow::before,
+    .welcome-video__eyebrow::after {
+      width: 36px;
+    }
+
+    .welcome-video__heading {
+      font-size: clamp(32px, 8.2vw, 42px);
+      line-height: 1.05;
+    }
+
+    .welcome-video__intro {
+      max-width: 320px;
+      margin-top: 12px;
+      font-size: 12px;
+      line-height: 1.48;
     }
 
     .welcome-video__badge,
     .welcome-video__duration {
-      top: 18px;
-      min-height: 36px;
-      padding: 0 12px;
-      font-size: 12px;
+      top: 10px;
+      min-height: 30px;
+      padding: 0 10px;
+      font-size: 11px;
     }
 
     .welcome-video__badge {
-      left: 16px;
-      max-width: calc(100% - 118px);
-      gap: 8px;
+      left: 10px;
+      max-width: calc(100% - 104px);
+      gap: 6px;
     }
 
     .welcome-video__badge-icon {
-      width: 20px;
-      height: 20px;
+      width: 18px;
+      height: 18px;
       flex: 0 0 auto;
     }
 
+    .welcome-video__badge svg,
+    .welcome-video__duration svg {
+      width: 15px;
+      height: 15px;
+    }
+
     .welcome-video__duration {
-      right: 16px;
+      right: 10px;
     }
 
     .welcome-video__center-play {
-      width: 88px;
-      height: 88px;
+      width: 62px;
+      height: 62px;
       box-shadow:
-        0 0 0 4px rgba(129, 84, 48, 0.32),
-        0 18px 34px rgba(30, 18, 11, 0.2);
+        0 0 0 3px rgba(129, 84, 48, 0.32),
+        0 14px 26px rgba(30, 18, 11, 0.2);
     }
 
     .welcome-video__center-play svg {
-      width: 38px;
-      height: 38px;
+      width: 28px;
+      height: 28px;
+    }
+
+    .welcome-video:not(.are-controls-hidden) .welcome-video__center-play {
+      opacity: 0;
+      pointer-events: none;
     }
 
     .welcome-video__controls {
-      right: 14px;
-      bottom: 14px;
-      left: 14px;
+      right: 10px;
+      bottom: 10px;
+      left: 10px;
       grid-template-columns: 44px auto 44px 44px 44px;
       grid-template-areas:
         'play time mute settings fullscreen'
         'progress progress progress progress progress';
-      gap: 6px 8px;
-      min-height: 96px;
-      padding: 10px 12px 12px;
+      gap: 2px 4px;
+      min-height: 72px;
+      padding: 4px 8px 8px;
       border-radius: 10px;
     }
 
@@ -586,7 +716,7 @@
     .welcome-video__time {
       grid-area: time;
       min-width: 0;
-      font-size: 14px;
+      font-size: 12px;
     }
 
     .welcome-video__range-label {
@@ -612,6 +742,35 @@
     .welcome-video__control-button {
       width: 44px;
       height: 44px;
+    }
+
+    .welcome-video__control-button svg {
+      width: 21px;
+      height: 21px;
+    }
+
+    .welcome-video__range {
+      height: 18px;
+    }
+
+    .welcome-video__range::-webkit-slider-runnable-track {
+      height: 4px;
+    }
+
+    .welcome-video__range::-moz-range-track,
+    .welcome-video__range::-moz-range-progress {
+      height: 4px;
+    }
+
+    .welcome-video__range::-webkit-slider-thumb {
+      width: 16px;
+      height: 16px;
+      margin-top: -6px;
+    }
+
+    .welcome-video__range::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
     }
 
     .welcome-video__settings-panel {
@@ -760,8 +919,15 @@
       frame.addEventListener('focusin', showControls);
       frame.addEventListener('focusout', queueControlsHide);
 
-      video.addEventListener('click', () => {
+      frame.addEventListener('click', (event) => {
+        if (event.target.closest('[data-welcome-video-controls]')) return;
+        if (event.target.closest('[data-welcome-video-toggle]')) return;
+        if (event.target.closest('[data-welcome-video-settings-panel]')) return;
+        if (event.target.closest('.welcome-video__badge')) return;
+        if (event.target.closest('.welcome-video__duration')) return;
+
         showControls();
+        togglePlayback();
       });
 
       document.addEventListener('click', (event) => {
