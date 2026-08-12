@@ -1,0 +1,880 @@
+{% doc %}
+  Renders the WRYDECO welcome story video component with custom controls.
+
+  @param {string} video_url - The MP4 video URL to render.
+  @param {string} [story_label] - The story badge label shown on the video.
+  @param {string} [heading] - Accessible heading text for the section.
+  @param {string} [video_label] - Accessible label for the video.
+  @param {string} [play_label] - Accessible label for the play button.
+  @param {string} [id] - Unique id suffix for accessibility attributes.
+
+  @example
+  {% render 'welcome-video-component', video_url: intro_video_url %}
+{% enddoc %}
+
+{%- liquid
+  assign story_label = story_label | default: 'Behind the Craft'
+  assign heading = heading | default: 'Welcome to WRYDECO craftsmanship video'
+  assign video_label = video_label | default: 'WRYDECO craftsmanship story video'
+  assign play_label = play_label | default: 'Play WRYDECO craftsmanship story video'
+  assign component_id = id | default: 'welcome-video'
+  assign title_id = 'welcome-video-title-' | append: component_id
+-%}
+
+{%- if video_url != blank -%}
+  <section class="welcome-video" aria-labelledby="{{ title_id }}">
+    <h2 id="{{ title_id }}" class="welcome-video__sr-title">{{ heading | escape }}</h2>
+
+    <div class="welcome-video__inner">
+      <div class="welcome-video__frame">
+        <video
+          class="welcome-video__media"
+          preload="metadata"
+          playsinline
+          aria-label="{{ video_label | escape }}"
+          data-welcome-video-media
+        >
+          <source src="{{ video_url | append: '#t=0.001' | escape }}" type="video/mp4">
+        </video>
+
+        <div class="welcome-video__shade" aria-hidden="true"></div>
+
+        {%- if story_label != blank -%}
+          <div class="welcome-video__badge" aria-hidden="true">
+            <span class="welcome-video__badge-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24">
+                <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="m15.477 12.89l1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526"/>
+                <circle cx="12" cy="8" r="6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7"/>
+              </svg>
+            </span>
+            <span>{{ story_label | escape }}</span>
+          </div>
+        {%- endif -%}
+
+        <div class="welcome-video__duration" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+            <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6l4 2"/>
+          </svg>
+          <span data-welcome-video-duration>00:00</span>
+        </div>
+
+        <button class="welcome-video__center-play" type="button" aria-label="{{ play_label | escape }}" data-welcome-video-toggle>
+          <span class="welcome-video__icon welcome-video__icon--play" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="54" height="54" viewBox="0 0 24 24">
+              <path fill="currentColor" d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/>
+            </svg>
+          </span>
+          <span class="welcome-video__icon welcome-video__icon--pause" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="54" height="54" viewBox="0 0 24 24">
+              <path fill="currentColor" d="M8 5.75A1.75 1.75 0 0 1 9.75 4h.5A1.75 1.75 0 0 1 12 5.75v12.5A1.75 1.75 0 0 1 10.25 20h-.5A1.75 1.75 0 0 1 8 18.25zm4.75 0A1.75 1.75 0 0 1 14.5 4h.5a1.75 1.75 0 0 1 1.75 1.75v12.5A1.75 1.75 0 0 1 15 20h-.5a1.75 1.75 0 0 1-1.75-1.75z"/>
+            </svg>
+          </span>
+        </button>
+
+        <div class="welcome-video__controls" data-welcome-video-controls>
+          <button class="welcome-video__control-button" type="button" aria-label="{{ play_label | escape }}" data-welcome-video-toggle>
+            <span class="welcome-video__icon welcome-video__icon--play" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="0 0 24 24">
+                <path fill="currentColor" d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/>
+              </svg>
+            </span>
+            <span class="welcome-video__icon welcome-video__icon--pause" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="0 0 24 24">
+                <path fill="currentColor" d="M8 5.75A1.75 1.75 0 0 1 9.75 4h.5A1.75 1.75 0 0 1 12 5.75v12.5A1.75 1.75 0 0 1 10.25 20h-.5A1.75 1.75 0 0 1 8 18.25zm4.75 0A1.75 1.75 0 0 1 14.5 4h.5a1.75 1.75 0 0 1 1.75 1.75v12.5A1.75 1.75 0 0 1 15 20h-.5a1.75 1.75 0 0 1-1.75-1.75z"/>
+              </svg>
+            </span>
+          </button>
+
+          <div class="welcome-video__time" aria-live="off">
+            <span data-welcome-video-current>0:00</span>
+            <span aria-hidden="true">/</span>
+            <span data-welcome-video-total>0:00</span>
+          </div>
+
+          <label class="welcome-video__range-label">
+            <span class="welcome-video__sr-title">Video progress</span>
+            <input class="welcome-video__range welcome-video__range--progress" type="range" min="0" max="1000" value="0" step="1" data-welcome-video-progress>
+          </label>
+
+          <button class="welcome-video__control-button" type="button" aria-label="Mute video" data-welcome-video-mute>
+            <span class="welcome-video__icon welcome-video__icon--volume" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="0 0 24 24">
+                <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5L6 9H2v6h4l5 4zM15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"/>
+              </svg>
+            </span>
+            <span class="welcome-video__icon welcome-video__icon--muted" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="0 0 24 24">
+                <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m16 9l5 5m0-5l-5 5M11 5L6 9H2v6h4l5 4z"/>
+              </svg>
+            </span>
+          </button>
+
+          <label class="welcome-video__range-label welcome-video__range-label--volume">
+            <span class="welcome-video__sr-title">Volume</span>
+            <input class="welcome-video__range welcome-video__range--volume" type="range" min="0" max="1" value="1" step="0.01" data-welcome-video-volume>
+          </label>
+
+          <div class="welcome-video__settings">
+            <button class="welcome-video__control-button" type="button" aria-label="Video settings" aria-expanded="false" data-welcome-video-settings>
+              <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0a2.34 2.34 0 0 0 3.319 1.915a2.34 2.34 0 0 1 2.33 4.033a2.34 2.34 0 0 0 0 3.831a2.34 2.34 0 0 1-2.33 4.033a2.34 2.34 0 0 0-3.319 1.915a2.34 2.34 0 0 1-4.659 0a2.34 2.34 0 0 0-3.32-1.915a2.34 2.34 0 0 1-2.33-4.033a2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/>
+                <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+              </svg>
+            </button>
+            <div class="welcome-video__settings-panel" hidden data-welcome-video-settings-panel>
+              <button type="button" data-welcome-video-rate="0.75">0.75x</button>
+              <button type="button" data-welcome-video-rate="1" aria-current="true">1x</button>
+              <button type="button" data-welcome-video-rate="1.25">1.25x</button>
+            </div>
+          </div>
+
+          <button class="welcome-video__control-button" type="button" aria-label="Enter fullscreen" data-welcome-video-fullscreen>
+            <span class="welcome-video__icon welcome-video__icon--maximize" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="0 0 24 24">
+                <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3m8 0h3a2 2 0 0 0 2-2v-3"/>
+              </svg>
+            </span>
+            <span class="welcome-video__icon welcome-video__icon--minimize" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="0 0 24 24">
+                <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3m8 0v-3a2 2 0 0 1 2-2h3"/>
+              </svg>
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+{%- endif -%}
+
+{% stylesheet %}
+  .welcome-video {
+    position: relative;
+    display: block;
+    background:
+      radial-gradient(circle at 50% 18%, rgba(255, 255, 255, 0.9), transparent 34%),
+      linear-gradient(180deg, #fbf7f0 0%, #f6eee4 100%);
+    color: var(--color-charcoal, #2a2622);
+    padding: clamp(18px, 1.5vw, 28px) clamp(28px, 3.8vw, 72px) clamp(36px, 3.4vw, 64px);
+    overflow: hidden;
+  }
+
+  .welcome-video__sr-title {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .welcome-video__inner {
+    position: relative;
+    z-index: 1;
+    width: min(100%, 1700px);
+    margin: 0 auto;
+  }
+
+  .welcome-video__frame {
+    position: relative;
+    isolation: isolate;
+    width: 100%;
+    height: clamp(540px, 39.4vw, 710px);
+    overflow: hidden;
+    border: 1px solid rgba(93, 62, 38, 0.12);
+    border-radius: clamp(28px, 1.9vw, 36px);
+    background-color: var(--color-ebony, #1a1815);
+    box-shadow: 0 26px 62px rgba(63, 39, 23, 0.2);
+  }
+
+  .welcome-video__media,
+  .welcome-video__shade {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .welcome-video__media {
+    z-index: 0;
+    display: block;
+    object-fit: cover;
+    object-position: center center;
+  }
+
+  .welcome-video__shade {
+    z-index: 1;
+    background:
+      radial-gradient(circle at 50% 48%, rgba(255, 248, 238, 0.18) 0%, rgba(0, 0, 0, 0.08) 32%, rgba(0, 0, 0, 0.18) 100%),
+      linear-gradient(180deg, rgba(30, 20, 13, 0.12) 0%, rgba(30, 20, 13, 0.05) 44%, rgba(30, 20, 13, 0.2) 100%);
+    pointer-events: none;
+    transition: opacity var(--timing-base, 300ms) var(--ease-standard, ease);
+  }
+
+  .welcome-video__badge,
+  .welcome-video__duration {
+    position: absolute;
+    z-index: 4;
+    top: clamp(24px, 1.55vw, 34px);
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 18px;
+    border: 1px solid rgba(245, 241, 237, 0.11);
+    border-radius: 999px;
+    background: rgba(48, 32, 22, 0.72);
+    color: var(--color-milk, #fff9f1);
+    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.22);
+    backdrop-filter: blur(16px);
+  }
+
+  .welcome-video__badge {
+    left: clamp(28px, 2vw, 40px);
+    gap: 10px;
+    font-family: var(--font-body);
+    font-size: 17px;
+    font-weight: var(--font-weight-medium, 500);
+    line-height: 1;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+
+  .welcome-video__badge-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: 1px solid currentColor;
+    border-radius: 50%;
+  }
+
+  .welcome-video__duration {
+    right: clamp(28px, 2vw, 40px);
+    gap: 8px;
+    font-family: var(--font-body);
+    font-size: 17px;
+    line-height: 1;
+  }
+
+  .welcome-video__center-play {
+    position: absolute;
+    z-index: 3;
+    top: 50%;
+    left: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: clamp(108px, 7vw, 148px);
+    height: clamp(108px, 7vw, 148px);
+    min-width: 44px;
+    min-height: 44px;
+    border: 2px solid rgba(255, 250, 242, 0.96);
+    border-radius: 50%;
+    background:
+      radial-gradient(circle, rgba(255, 252, 247, 0.96) 0%, rgba(247, 239, 229, 0.88) 100%);
+    color: var(--color-dark-clay, #4b2c1d);
+    box-shadow:
+      0 0 0 5px rgba(129, 84, 48, 0.34),
+      0 22px 46px rgba(30, 18, 11, 0.2);
+    transform: translate(-50%, -50%);
+    transition:
+      opacity var(--timing-short, 200ms) var(--ease-standard, ease),
+      transform var(--timing-short, 200ms) var(--ease-standard, ease);
+  }
+
+  .welcome-video__center-play:hover {
+    transform: translate(-50%, -50%) scale(1.035);
+  }
+
+  .welcome-video__center-play .welcome-video__icon--play {
+    transform: translateX(4px);
+  }
+
+  .welcome-video__controls {
+    position: absolute;
+    z-index: 4;
+    right: clamp(24px, 1.55vw, 34px);
+    bottom: clamp(22px, 1.45vw, 32px);
+    left: clamp(24px, 1.55vw, 34px);
+    display: grid;
+    grid-template-columns: 48px auto minmax(180px, 1fr) 48px minmax(110px, 150px) 48px 48px;
+    align-items: center;
+    gap: 16px;
+    min-height: 82px;
+    padding: 14px 22px;
+    border: 1px solid rgba(255, 250, 242, 0.08);
+    border-radius: 10px;
+    background: rgba(39, 34, 29, 0.82);
+    box-shadow: 0 20px 48px rgba(20, 15, 12, 0.26);
+    color: var(--color-milk, #fff9f1);
+    backdrop-filter: blur(18px);
+    transition:
+      opacity var(--timing-short, 200ms) var(--ease-standard, ease),
+      transform var(--timing-short, 200ms) var(--ease-standard, ease),
+      visibility var(--timing-short, 200ms) var(--ease-standard, ease);
+  }
+
+  .welcome-video.are-controls-hidden .welcome-video__controls {
+    opacity: 0;
+    transform: translateY(12px);
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .welcome-video__control-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: currentColor;
+  }
+
+  .welcome-video__control-button:hover,
+  .welcome-video__control-button:focus-visible {
+    background: rgba(255, 250, 242, 0.1);
+  }
+
+  .welcome-video__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .welcome-video__icon--pause,
+  .welcome-video__icon--muted,
+  .welcome-video__icon--minimize {
+    display: none;
+  }
+
+  .welcome-video.is-playing .welcome-video__icon--play,
+  .welcome-video.is-muted .welcome-video__icon--volume,
+  .welcome-video.is-fullscreen .welcome-video__icon--maximize {
+    display: none;
+  }
+
+  .welcome-video.is-playing .welcome-video__icon--pause,
+  .welcome-video.is-muted .welcome-video__icon--muted,
+  .welcome-video.is-fullscreen .welcome-video__icon--minimize {
+    display: inline-flex;
+  }
+
+  .welcome-video__time {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 112px;
+    color: rgba(255, 250, 242, 0.92);
+    font-family: var(--font-body);
+    font-size: 18px;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .welcome-video__range-label {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+  }
+
+  .welcome-video__range {
+    width: 100%;
+    height: 26px;
+    margin: 0;
+    appearance: none;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .welcome-video__range::-webkit-slider-runnable-track {
+    height: 5px;
+    border-radius: 999px;
+    background:
+      linear-gradient(90deg, var(--color-maple, #d09a5b) 0%, var(--color-maple, #d09a5b) var(--range-fill, 0%), rgba(255, 250, 242, 0.18) var(--range-fill, 0%), rgba(255, 250, 242, 0.18) 100%);
+  }
+
+  .welcome-video__range::-moz-range-track {
+    height: 5px;
+    border-radius: 999px;
+    background: rgba(255, 250, 242, 0.18);
+  }
+
+  .welcome-video__range::-moz-range-progress {
+    height: 5px;
+    border-radius: 999px;
+    background: var(--color-maple, #d09a5b);
+  }
+
+  .welcome-video__range::-webkit-slider-thumb {
+    width: 17px;
+    height: 17px;
+    margin-top: -6px;
+    appearance: none;
+    border: 2px solid rgba(255, 250, 242, 0.95);
+    border-radius: 50%;
+    background: var(--color-maple, #d09a5b);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
+  }
+
+  .welcome-video__range::-moz-range-thumb {
+    width: 17px;
+    height: 17px;
+    border: 2px solid rgba(255, 250, 242, 0.95);
+    border-radius: 50%;
+    background: var(--color-maple, #d09a5b);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
+  }
+
+  .welcome-video__range--volume::-webkit-slider-runnable-track {
+    background:
+      linear-gradient(90deg, var(--color-maple, #d09a5b) 0%, var(--color-maple, #d09a5b) var(--range-fill, 100%), rgba(255, 250, 242, 0.18) var(--range-fill, 100%), rgba(255, 250, 242, 0.18) 100%);
+  }
+
+  .welcome-video__settings {
+    position: relative;
+  }
+
+  .welcome-video__settings-panel {
+    position: absolute;
+    right: 0;
+    bottom: calc(100% + 12px);
+    display: grid;
+    gap: 4px;
+    min-width: 96px;
+    padding: 8px;
+    border: 1px solid rgba(255, 250, 242, 0.12);
+    border-radius: 8px;
+    background: rgba(39, 34, 29, 0.94);
+    box-shadow: 0 16px 34px rgba(0, 0, 0, 0.24);
+  }
+
+  .welcome-video__settings-panel[hidden] {
+    display: none;
+  }
+
+  .welcome-video__settings-panel button {
+    min-height: 36px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--color-milk, #fff9f1);
+    font-family: var(--font-body);
+    font-size: 14px;
+    text-align: left;
+  }
+
+  .welcome-video__settings-panel button:hover,
+  .welcome-video__settings-panel button[aria-current='true'] {
+    background: rgba(255, 250, 242, 0.12);
+  }
+
+  .welcome-video.is-playing .welcome-video__center-play {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .welcome-video.is-playing .welcome-video__shade {
+    opacity: 0.54;
+  }
+
+  @media screen and (max-width: 1024px) {
+    .welcome-video {
+      padding: 22px 24px 46px;
+    }
+
+    .welcome-video__frame {
+      height: clamp(430px, 58vw, 620px);
+    }
+
+    .welcome-video__badge,
+    .welcome-video__duration {
+      top: 24px;
+      min-height: 40px;
+      padding: 0 15px;
+      font-size: 15px;
+    }
+
+    .welcome-video__controls {
+      grid-template-columns: 46px auto minmax(150px, 1fr) 46px minmax(86px, 116px) 46px 46px;
+      gap: 10px;
+      min-height: 76px;
+      padding: 12px 16px;
+    }
+
+    .welcome-video__time {
+      min-width: 96px;
+      font-size: 15px;
+    }
+  }
+
+  @media screen and (max-width: 640px) {
+    .welcome-video {
+      padding: 18px var(--layout-padding-mobile, 16px) 34px;
+    }
+
+    .welcome-video__frame {
+      height: clamp(360px, 102vw, 520px);
+      border-radius: 24px;
+    }
+
+    .welcome-video__badge,
+    .welcome-video__duration {
+      top: 18px;
+      min-height: 36px;
+      padding: 0 12px;
+      font-size: 12px;
+    }
+
+    .welcome-video__badge {
+      left: 16px;
+      max-width: calc(100% - 118px);
+      gap: 8px;
+    }
+
+    .welcome-video__badge-icon {
+      width: 20px;
+      height: 20px;
+      flex: 0 0 auto;
+    }
+
+    .welcome-video__duration {
+      right: 16px;
+    }
+
+    .welcome-video__center-play {
+      width: 88px;
+      height: 88px;
+      box-shadow:
+        0 0 0 4px rgba(129, 84, 48, 0.32),
+        0 18px 34px rgba(30, 18, 11, 0.2);
+    }
+
+    .welcome-video__center-play svg {
+      width: 38px;
+      height: 38px;
+    }
+
+    .welcome-video__controls {
+      right: 14px;
+      bottom: 14px;
+      left: 14px;
+      grid-template-columns: 44px auto 44px 44px 44px;
+      grid-template-areas:
+        'play time mute settings fullscreen'
+        'progress progress progress progress progress';
+      gap: 6px 8px;
+      min-height: 96px;
+      padding: 10px 12px 12px;
+      border-radius: 10px;
+    }
+
+    .welcome-video__controls > [data-welcome-video-toggle] {
+      grid-area: play;
+    }
+
+    .welcome-video__time {
+      grid-area: time;
+      min-width: 0;
+      font-size: 14px;
+    }
+
+    .welcome-video__range-label {
+      grid-area: progress;
+    }
+
+    .welcome-video__range-label--volume {
+      display: none;
+    }
+
+    .welcome-video__controls > [data-welcome-video-mute] {
+      grid-area: mute;
+    }
+
+    .welcome-video__settings {
+      grid-area: settings;
+    }
+
+    .welcome-video__controls > [data-welcome-video-fullscreen] {
+      grid-area: fullscreen;
+    }
+
+    .welcome-video__control-button {
+      width: 44px;
+      height: 44px;
+    }
+
+    .welcome-video__settings-panel {
+      right: -46px;
+    }
+  }
+
+  @media screen and (max-width: 380px) {
+    .welcome-video__badge {
+      max-width: calc(100% - 105px);
+      font-size: 11px;
+    }
+
+    .welcome-video__duration {
+      font-size: 11px;
+    }
+
+    .welcome-video__time {
+      font-size: 13px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .welcome-video__center-play,
+    .welcome-video__controls,
+    .welcome-video__shade {
+      transition: none;
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  document.addEventListener('DOMContentLoaded', () => {
+    const formatTime = (seconds, paddedMinutes = false) => {
+      if (!Number.isFinite(seconds) || seconds < 0) return paddedMinutes ? '00:00' : '0:00';
+
+      const totalSeconds = Math.floor(seconds);
+      const minutes = Math.floor(totalSeconds / 60);
+      const remainingSeconds = totalSeconds % 60;
+      const minuteText = paddedMinutes ? String(minutes).padStart(2, '0') : String(minutes);
+
+      return `${minuteText}:${String(remainingSeconds).padStart(2, '0')}`;
+    };
+
+    const setRangeFill = (range, percent) => {
+      if (!range) return;
+      range.style.setProperty('--range-fill', `${Math.max(0, Math.min(100, percent))}%`);
+    };
+
+    document.querySelectorAll('.welcome-video').forEach((section) => {
+      const frame = section.querySelector('.welcome-video__frame');
+      const video = section.querySelector('[data-welcome-video-media]');
+      const toggleButtons = section.querySelectorAll('[data-welcome-video-toggle]');
+      const progressRange = section.querySelector('[data-welcome-video-progress]');
+      const currentTime = section.querySelector('[data-welcome-video-current]');
+      const totalTime = section.querySelector('[data-welcome-video-total]');
+      const durationPill = section.querySelector('[data-welcome-video-duration]');
+      const muteButton = section.querySelector('[data-welcome-video-mute]');
+      const volumeRange = section.querySelector('[data-welcome-video-volume]');
+      const settingsButton = section.querySelector('[data-welcome-video-settings]');
+      const settingsPanel = section.querySelector('[data-welcome-video-settings-panel]');
+      const rateButtons = section.querySelectorAll('[data-welcome-video-rate]');
+      const fullscreenButton = section.querySelector('[data-welcome-video-fullscreen]');
+      let hideControlsTimer;
+
+      if (!frame || !video || section.dataset.welcomeVideoInit === 'true') return;
+      section.dataset.welcomeVideoInit = 'true';
+
+      const showControls = () => {
+        window.clearTimeout(hideControlsTimer);
+        section.classList.remove('are-controls-hidden');
+      };
+
+      const hideControls = () => {
+        if (settingsPanel && !settingsPanel.hidden) return;
+        if (section.matches(':focus-within')) return;
+
+        section.classList.add('are-controls-hidden');
+      };
+
+      const queueControlsHide = () => {
+        window.clearTimeout(hideControlsTimer);
+        hideControlsTimer = window.setTimeout(hideControls, 1200);
+      };
+
+      const updatePlayState = () => {
+        const isPlaying = !video.paused && !video.ended;
+        section.classList.toggle('is-playing', isPlaying);
+
+        toggleButtons.forEach((button) => {
+          button.setAttribute('aria-label', isPlaying ? 'Pause video' : 'Play video');
+        });
+      };
+
+      const updateMutedState = () => {
+        const isMuted = video.muted || video.volume === 0;
+        section.classList.toggle('is-muted', isMuted);
+
+        if (muteButton) {
+          muteButton.setAttribute('aria-label', isMuted ? 'Unmute video' : 'Mute video');
+        }
+
+        if (volumeRange) {
+          volumeRange.value = isMuted ? 0 : video.volume;
+          setRangeFill(volumeRange, Number(volumeRange.value) * 100);
+        }
+      };
+
+      const updateDuration = () => {
+        if (totalTime) totalTime.textContent = formatTime(video.duration);
+        if (durationPill) durationPill.textContent = formatTime(video.duration, true);
+      };
+
+      const updateProgress = () => {
+        const duration = video.duration;
+        const progress = Number.isFinite(duration) && duration > 0 ? (video.currentTime / duration) * 100 : 0;
+
+        if (currentTime) currentTime.textContent = formatTime(video.currentTime);
+        if (progressRange && document.activeElement !== progressRange) {
+          progressRange.value = Math.round(progress * 10);
+        }
+        setRangeFill(progressRange, progress);
+      };
+
+      const togglePlayback = async () => {
+        if (video.paused || video.ended) {
+          try {
+            await video.play();
+          } catch (error) {
+            section.classList.remove('is-playing');
+          }
+        } else {
+          video.pause();
+        }
+
+        updatePlayState();
+      };
+
+      toggleButtons.forEach((button) => {
+        button.addEventListener('click', togglePlayback);
+      });
+
+      frame.addEventListener('mouseenter', showControls);
+      frame.addEventListener('mousemove', showControls);
+      frame.addEventListener('mouseleave', queueControlsHide);
+      frame.addEventListener('focusin', showControls);
+      frame.addEventListener('focusout', queueControlsHide);
+
+      video.addEventListener('click', () => {
+        showControls();
+      });
+
+      document.addEventListener('click', (event) => {
+        if (frame.contains(event.target)) {
+          showControls();
+          return;
+        }
+
+        hideControls();
+      });
+
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+          hideControls();
+        }
+      });
+
+      video.addEventListener('loadedmetadata', () => {
+        updateDuration();
+        updateProgress();
+      });
+      video.addEventListener('durationchange', updateDuration);
+      video.addEventListener('timeupdate', updateProgress);
+      video.addEventListener('play', updatePlayState);
+      video.addEventListener('pause', updatePlayState);
+      video.addEventListener('ended', () => {
+        updatePlayState();
+        updateProgress();
+      });
+
+      if (progressRange) {
+        progressRange.addEventListener('input', () => {
+          const duration = video.duration;
+          const progress = Number(progressRange.value) / 1000;
+
+          if (Number.isFinite(duration) && duration > 0) {
+            video.currentTime = duration * progress;
+          }
+
+          setRangeFill(progressRange, progress * 100);
+        });
+      }
+
+      if (muteButton) {
+        muteButton.addEventListener('click', () => {
+          video.muted = !(video.muted || video.volume === 0);
+          if (!video.muted && video.volume === 0) {
+            video.volume = 0.8;
+          }
+          updateMutedState();
+        });
+      }
+
+      if (volumeRange) {
+        volumeRange.addEventListener('input', () => {
+          video.volume = Number(volumeRange.value);
+          video.muted = video.volume === 0;
+          updateMutedState();
+        });
+      }
+
+      if (settingsButton && settingsPanel) {
+        settingsButton.addEventListener('click', () => {
+          const shouldOpen = settingsPanel.hidden;
+          settingsPanel.hidden = !shouldOpen;
+          settingsButton.setAttribute('aria-expanded', String(shouldOpen));
+          showControls();
+        });
+      }
+
+      rateButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+          video.playbackRate = Number(button.dataset.welcomeVideoRate);
+          rateButtons.forEach((rateButton) => {
+            rateButton.setAttribute('aria-current', String(rateButton === button));
+          });
+          if (settingsPanel && settingsButton) {
+            settingsPanel.hidden = true;
+            settingsButton.setAttribute('aria-expanded', 'false');
+          }
+        });
+      });
+
+      if (fullscreenButton) {
+        fullscreenButton.addEventListener('click', async () => {
+          try {
+            if (document.fullscreenElement) {
+              await document.exitFullscreen();
+            } else if (section.requestFullscreen) {
+              await section.requestFullscreen();
+            }
+          } catch (error) {
+            section.classList.remove('is-fullscreen');
+          }
+        });
+      }
+
+      document.addEventListener('fullscreenchange', () => {
+        const isFullscreen = document.fullscreenElement === section;
+        section.classList.toggle('is-fullscreen', isFullscreen);
+
+        if (fullscreenButton) {
+          fullscreenButton.setAttribute('aria-label', isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen');
+        }
+      });
+
+      setRangeFill(progressRange, 0);
+      setRangeFill(volumeRange, 100);
+      updateDuration();
+      updateProgress();
+      updateMutedState();
+      updatePlayState();
+      showControls();
+    });
+  });
+{% endjavascript %}

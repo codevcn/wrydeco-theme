@@ -225,6 +225,116 @@ def get_products_by_metafield_amazon_link(keyword, sort_by="created_desc"):
         "productsCount": {"count": len(all_matched_edges)}
     }
 
+def get_products_by_metafield_amazon_link_list(keywords_str, sort_by="created_desc"):
+    query = """
+    query getProducts($after: String) {
+      products(first: 25, after: $after) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        edges {
+          node {
+            id
+            handle
+            title
+            descriptionHtml
+            createdAt
+            productType
+            category {
+              name
+            }
+            priceRangeV2 {
+              minVariantPrice {
+                amount
+              }
+            }
+            options {
+              name
+            }
+            collections(first: 20) {
+              edges {
+                node {
+                  title
+                }
+              }
+            }
+            metafield(namespace: "custom", key: "amazon_link") {
+              value
+            }
+            media(first: 50) {
+              edges {
+                node {
+                  ... on MediaImage {
+                    id
+                    image {
+                      url
+                    }
+                  }
+                  ... on Video {
+                    id
+                    preview {
+                      image {
+                        url
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    """
+    all_matched_edges = []
+    has_next = True
+    cursor = None
+    keyword_list = [k.strip().lower() for k in keywords_str.split(',') if k.strip()]
+    
+    while has_next:
+        variables = {}
+        if cursor:
+            variables["after"] = cursor
+            
+        res = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=HEADERS)
+        res.raise_for_status()
+        data = res.json()
+        if "errors" in data:
+            print("GraphQL Errors:", data["errors"])
+            break
+            
+        products_data = data["data"]["products"]
+        for edge in products_data["edges"]:
+            mf = edge["node"].get("metafield")
+            if mf and mf.get("value"):
+                mf_val = mf["value"].lower()
+                if any(k in mf_val for k in keyword_list):
+                    all_matched_edges.append(edge)
+                
+        page_info = products_data.get("pageInfo", {})
+        has_next = page_info.get("hasNextPage", False)
+        cursor = page_info.get("endCursor")
+        
+    def get_sort_key(edge):
+        if sort_by in ["price_asc", "price_desc"]:
+            price_data = edge["node"].get("priceRangeV2")
+            if price_data and price_data.get("minVariantPrice"):
+                return float(price_data["minVariantPrice"].get("amount", 0))
+            return 0.0
+        return edge["node"].get("createdAt", "")
+        
+    reverse_sort = sort_by in ["created_desc", "price_desc"]
+    all_matched_edges.sort(key=get_sort_key, reverse=reverse_sort)
+        
+    return {
+        "products": {
+            "edges": all_matched_edges,
+            "pageInfo": {"hasNextPage": False, "hasPreviousPage": False}
+        },
+        "productsCount": {"count": len(all_matched_edges)}
+    }
+
 def get_products_by_metafield_rich_description(keyword, sort_by="created_desc"):
     query = """
     query getProducts($after: String) {
@@ -1080,7 +1190,7 @@ async def save_notes(request: Request, note_content: str = Form(default="")):
 
 
 @app.get("/", response_class=HTMLResponse)
-async def read_root(request: Request, after: str = None, before: str = None, filter_type: str = "id", filter_value: str = None, sort_by: str = "created_desc", special_filter: str = ""):
+async def read_root(request: Request, after: str = None, before: str = None, filter_type: str = "id_list", filter_value: str = None, sort_by: str = "created_desc", special_filter: str = ""):
     try:
         filter_query = None
         data = None
@@ -1103,6 +1213,8 @@ async def read_root(request: Request, after: str = None, before: str = None, fil
             data = get_products_by_review_status(special_filter == "has_reviews", sort_by=sort_by)
         elif filter_value and filter_type == "metafield_amazon_link":
             data = get_products_by_metafield_amazon_link(filter_value, sort_by=sort_by)
+        elif filter_value and filter_type == "metafield_amazon_link_list":
+            data = get_products_by_metafield_amazon_link_list(filter_value, sort_by=sort_by)
         elif filter_value and filter_type == "metafield_rich_description":
             data = get_products_by_metafield_rich_description(filter_value, sort_by=sort_by)
         elif filter_value and filter_type == "description":
@@ -1117,8 +1229,10 @@ async def read_root(request: Request, after: str = None, before: str = None, fil
             data = get_products_by_collection(filter_value, sort_by=sort_by, after=after, before=before)
         else:
             if filter_value:
-                if filter_type == "tag":
-                    filter_query = f"tag:{filter_value}"
+                if filter_type == "tag_list":
+                    tags = [t.strip() for t in filter_value.split(",") if t.strip()]
+                    if tags:
+                        filter_query = " OR ".join([f"tag:{t}" for t in tags])
                 elif filter_type == "title":
                     filter_query = f"title:*{filter_value}*"
                 elif filter_type == "id":
@@ -1161,7 +1275,7 @@ async def read_root(request: Request, after: str = None, before: str = None, fil
                 
             asin = ""
             amz_link_node = node.get("amazon_link")
-            if not amz_link_node and filter_type == "metafield_amazon_link":
+            if not amz_link_node and filter_type in ["metafield_amazon_link", "metafield_amazon_link_list"]:
                 amz_link_node = node.get("metafield")
                 
             if amz_link_node and amz_link_node.get("value"):
