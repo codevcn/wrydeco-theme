@@ -47,6 +47,7 @@
           class="welcome-video__media"
           preload="none"
           playsinline
+          webkit-playsinline
           {% if poster_url != blank %}
             poster="{{ poster_url | escape }}"
           {% endif %}
@@ -599,6 +600,42 @@
     opacity: 0.54;
   }
 
+  .welcome-video__frame:fullscreen {
+    width: 100vw;
+    height: 100vh;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+    background: #000;
+    box-shadow: none;
+  }
+
+  .welcome-video__frame:fullscreen .welcome-video__media {
+    object-fit: contain;
+  }
+
+  .welcome-video__frame:fullscreen .welcome-video__shade {
+    opacity: 0;
+  }
+
+  .welcome-video__frame:-webkit-full-screen {
+    width: 100vw;
+    height: 100vh;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+    background: #000;
+    box-shadow: none;
+  }
+
+  .welcome-video__frame:-webkit-full-screen .welcome-video__media {
+    object-fit: contain;
+  }
+
+  .welcome-video__frame:-webkit-full-screen .welcome-video__shade {
+    opacity: 0;
+  }
+
   @media screen and (max-width: 1024px) {
     .welcome-video {
       padding: 22px 24px 46px;
@@ -916,6 +953,17 @@
 
       const isCompactViewport = () => window.matchMedia('(max-width: 1024px)').matches;
 
+      const clearNativePoster = () => {
+        if (!video.hasAttribute('poster')) return;
+        video.dataset.welcomeVideoPoster = video.getAttribute('poster');
+        video.removeAttribute('poster');
+      };
+
+      const restoreNativePoster = () => {
+        if (video.hasAttribute('poster') || !video.dataset.welcomeVideoPoster) return;
+        video.setAttribute('poster', video.dataset.welcomeVideoPoster);
+      };
+
       const showControls = () => {
         window.clearTimeout(hideControlsTimer);
         section.classList.remove('are-controls-hidden');
@@ -984,6 +1032,7 @@
 
         if (video.paused || video.ended) {
           try {
+            clearNativePoster();
             const playPromise = video.play();
             if (shouldHideCompactControls) {
               toggleButton.blur();
@@ -992,6 +1041,7 @@
             await playPromise;
           } catch (error) {
             section.classList.remove('is-playing');
+            restoreNativePoster();
             if (shouldHideCompactControls) {
               showControls();
             }
@@ -1051,7 +1101,11 @@
       });
       video.addEventListener('durationchange', updateDuration);
       video.addEventListener('timeupdate', updateProgress);
-      video.addEventListener('play', updatePlayState);
+      video.addEventListener('play', () => {
+        clearNativePoster();
+        updatePlayState();
+      });
+      video.addEventListener('playing', clearNativePoster);
       video.addEventListener('pause', updatePlayState);
       video.addEventListener('ended', () => {
         updatePlayState();
@@ -1116,8 +1170,14 @@
           try {
             if (document.fullscreenElement) {
               await document.exitFullscreen();
-            } else if (section.requestFullscreen) {
-              await section.requestFullscreen();
+            } else if (document.webkitFullscreenElement && document.webkitExitFullscreen) {
+              document.webkitExitFullscreen();
+            } else if (frame.requestFullscreen) {
+              await frame.requestFullscreen();
+            } else if (frame.webkitRequestFullscreen) {
+              frame.webkitRequestFullscreen();
+            } else if (video.webkitEnterFullscreen) {
+              video.webkitEnterFullscreen();
             }
           } catch (error) {
             section.classList.remove('is-fullscreen');
@@ -1125,14 +1185,20 @@
         });
       }
 
-      document.addEventListener('fullscreenchange', () => {
-        const isFullscreen = document.fullscreenElement === section;
+      const updateFullscreenState = () => {
+        const fullscreenElement = document.fullscreenElement || document.webkitFullscreenElement;
+        const isFullscreen = fullscreenElement === frame || fullscreenElement === video;
         section.classList.toggle('is-fullscreen', isFullscreen);
 
         if (fullscreenButton) {
           fullscreenButton.setAttribute('aria-label', isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen');
         }
-      });
+      };
+
+      document.addEventListener('fullscreenchange', updateFullscreenState);
+      document.addEventListener('webkitfullscreenchange', updateFullscreenState);
+      video.addEventListener('webkitbeginfullscreen', updateFullscreenState);
+      video.addEventListener('webkitendfullscreen', updateFullscreenState);
 
       setRangeFill(progressRange, 0);
       setRangeFill(volumeRange, 100);
