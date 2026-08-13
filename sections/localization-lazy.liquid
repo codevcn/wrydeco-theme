@@ -1,0 +1,372 @@
+<div class="loc-picker-panel" role="dialog" aria-modal="true" aria-labelledby="LocPanelTitle" data-loc-panel hidden>
+  <button class="loc-picker-panel__overlay" type="button" aria-label="Close" data-loc-overlay></button>
+
+  <div class="loc-picker-panel__dialog">
+    <div class="loc-picker-panel__header">
+      <h2 id="LocPanelTitle" class="loc-picker-panel__title">{{ 'general.localization.country_label' | t }}</h2>
+      <button class="loc-picker-panel__close" type="button" aria-label="Close" data-loc-close>
+        <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24">
+          <path d="M18.3 5.71 12 12l6.3 6.29-1.41 1.41L10.59 13.41 4.29 19.7 2.88 18.29 9.17 12 2.88 5.71 4.29 4.3l6.3 6.29 6.29-6.29z" fill="currentColor"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="loc-picker__search">
+      <svg
+        class="loc-picker__search-icon"
+        aria-hidden="true"
+        focusable="false"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <circle cx="11" cy="11" r="8"></circle>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+      </svg>
+      <input
+        type="text"
+        class="loc-picker__search-input"
+        placeholder="{{ 'general.localization.search' | t }}"
+        aria-label="{{ 'general.localization.search' | t }}"
+        autocomplete="off"
+        data-loc-search
+      >
+    </div>
+
+    {% form 'localization', id: 'LocForm-lazy', class: 'loc-picker__form' %}
+      <input type="hidden" name="return_to" value="{{ request.path }}">
+      <ul class="loc-picker__list" data-loc-list>
+        {%- for country in localization.available_countries -%}
+          {%- liquid
+            assign is_selected = false
+            if country.iso_code == localization.country.iso_code
+              assign is_selected = true
+            endif
+            assign search_hay = country.name | append: ' ' | append: country.currency.iso_code | append: ' ' | append: country.currency.symbol | downcase
+          -%}
+          <li class="loc-picker__item" data-loc-item data-search="{{ search_hay | escape }}">
+            <button
+              type="submit"
+              name="country_code"
+              value="{{ country.iso_code }}"
+              class="loc-picker__option{% if is_selected %} is-selected{% endif %}"
+              {% if is_selected %}
+                aria-current="true"
+              {% endif %}
+            >
+              <span class="loc-picker__flag">
+                <img
+                  src="https://flagcdn.com/{{ country.iso_code | downcase }}.svg"
+                  width="40"
+                  height="28"
+                  loading="lazy"
+                  alt=""
+                >
+              </span>
+              <span class="loc-picker__code">{{ country.currency.iso_code }}</span>
+              <span class="loc-picker__symbol">{{ country.currency.symbol }}</span>
+              <span class="loc-picker__divider" aria-hidden="true"></span>
+              <span class="loc-picker__name">{{ country.name }}</span>
+              <span class="loc-picker__check" aria-hidden="true">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="3"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </span>
+            </button>
+          </li>
+        {%- endfor -%}
+      </ul>
+      <p class="loc-picker__empty" data-loc-empty hidden>{{ 'general.localization.no_results' | t }}</p>
+    {% endform %}
+  </div>
+</div>
+
+{% stylesheet %}
+  .loc-picker-panel[hidden] {
+    display: none;
+  }
+
+  .loc-picker-panel {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-modal, 1000);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--sp-4);
+  }
+
+  .loc-picker-panel__overlay {
+    position: absolute;
+    inset: 0;
+    border: 0;
+    background: var(--bg-overlay, rgba(0, 0, 0, 0.44));
+    cursor: pointer;
+  }
+
+  .loc-picker-panel__dialog {
+    position: relative;
+    z-index: 1;
+    width: min(420px, calc(100vw - var(--sp-6)));
+    max-height: min(680px, calc(100dvh - var(--sp-6)));
+    padding: var(--sp-4) var(--sp-3) var(--sp-3);
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+    border-radius: calc(var(--radius-xl) * 2);
+    background: var(--color-milk);
+    box-shadow: var(--shadow-modal, var(--shadow-dropdown));
+  }
+
+  .loc-picker-panel__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-3);
+    margin-bottom: var(--sp-4);
+  }
+
+  .loc-picker-panel__title {
+    margin: 0;
+    color: var(--color-earth-brown);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-lg);
+    font-weight: var(--font-weight-semibold);
+  }
+
+  .loc-picker-panel__close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--sp-7);
+    height: var(--sp-7);
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-full);
+    background: transparent;
+    color: var(--color-earth-brown);
+    cursor: pointer;
+  }
+
+  .loc-picker-panel__close svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .loc-picker__search {
+    position: relative;
+    margin-bottom: var(--sp-4);
+  }
+
+  .loc-picker__search-icon {
+    position: absolute;
+    top: 50%;
+    left: var(--sp-4);
+    width: 18px;
+    height: 18px;
+    transform: translateY(-50%);
+    color: var(--text-tertiary);
+    pointer-events: none;
+  }
+
+  .loc-picker__search-input {
+    width: 100%;
+    min-height: var(--sp-7);
+    padding: 0 var(--sp-4) 0 calc(var(--sp-7) + var(--sp-2));
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    background: var(--surface-elevated);
+    color: var(--text-primary);
+    font-family: var(--font-roboto);
+    font-size: var(--font-size-body-md);
+  }
+
+  .loc-picker__search-input::placeholder {
+    color: var(--text-tertiary);
+  }
+
+  .loc-picker__search-input:focus {
+    outline: none;
+    border-color: var(--color-clay);
+    box-shadow: var(--shadow-focus);
+  }
+
+  .loc-picker__list {
+    max-height: min(440px, calc(100dvh - 220px));
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-clay) transparent;
+  }
+
+  .loc-picker__list::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .loc-picker__list::-webkit-scrollbar-thumb {
+    border-radius: var(--radius-full);
+    background: var(--color-clay);
+  }
+
+  .loc-picker__item {
+    margin: 0;
+  }
+
+  .loc-picker__option {
+    display: grid;
+    grid-template-columns: auto auto auto auto 1fr auto;
+    align-items: center;
+    gap: var(--sp-2);
+    width: 100%;
+    padding: var(--sp-2) var(--sp-3);
+    border: 0;
+    border-radius: var(--radius-lg);
+    background: transparent;
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-weight: var(--font-weight-regular);
+    text-align: left;
+    cursor: pointer;
+    transition: background-color var(--timing-short) var(--ease-standard);
+  }
+
+  .loc-picker__option:hover {
+    background: var(--color-cream);
+  }
+
+  .loc-picker__option:focus-visible {
+    outline: 2px solid var(--color-sage);
+    outline-offset: -2px;
+  }
+
+  .loc-picker__option.is-selected {
+    background: color-mix(in srgb, var(--color-earth-brown) 8%, var(--color-milk));
+    box-shadow: inset 0 0 0 var(--border-width) var(--color-border);
+  }
+
+  .loc-picker__flag img {
+    display: block;
+    width: 33px;
+    aspect-ratio: 40 / 24;
+    object-fit: cover;
+    border-radius: var(--radius-md);
+    box-shadow: 0 0 0 var(--border-width) var(--color-border);
+  }
+
+  .loc-picker-panel .loc-picker__code {
+    color: var(--color-earth-brown);
+    font-size: var(--font-size-body-md);
+    font-weight: var(--font-weight-medium);
+    font-family: var(--font-roboto);
+    letter-spacing: var(--letter-spacing-wide);
+  }
+
+  .loc-picker__symbol {
+    min-width: var(--sp-4);
+    font-size: var(--font-size-body-md);
+    color: var(--text-secondary);
+  }
+
+  .loc-picker__divider {
+    width: var(--border-width);
+    height: var(--sp-5);
+    background: var(--border-light);
+  }
+
+  .loc-picker__name {
+    min-width: 0;
+    font-size: var(--font-size-body-lg);
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .loc-picker__option.is-selected .loc-picker__name,
+  .loc-picker__option.is-selected .loc-picker__code {
+    color: var(--color-earth-brown);
+    font-weight: var(--font-weight-semibold);
+  }
+
+  .loc-picker__check {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--sp-6);
+    height: var(--sp-6);
+    border-radius: var(--radius-full);
+    background: var(--color-earth-brown);
+    color: var(--color-cream);
+    opacity: 0;
+    transform: scale(0.6);
+    transition: opacity var(--timing-short) var(--ease-standard), transform var(--timing-short) var(--ease-standard);
+  }
+
+  .loc-picker__check svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .loc-picker__option.is-selected .loc-picker__check {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  .loc-picker__empty {
+    margin: var(--sp-4) 0 0;
+    padding: var(--sp-3);
+    color: var(--text-secondary);
+    font-size: var(--font-size-body-sm);
+    text-align: center;
+  }
+
+  @media screen and (max-width: 48rem) {
+    .loc-picker-panel {
+      align-items: flex-end;
+      padding: 0;
+    }
+
+    .loc-picker-panel__dialog {
+      width: 100%;
+      max-height: min(720px, calc(100dvh - var(--sp-6)));
+      border-right: 0;
+      border-bottom: 0;
+      border-left: 0;
+      border-radius: calc(var(--radius-xl) * 2) calc(var(--radius-xl) * 2) 0 0;
+    }
+
+    .loc-picker__option {
+      gap: var(--sp-2);
+      padding-inline: var(--sp-2);
+    }
+
+    .loc-picker__name {
+      font-size: var(--font-size-body-md);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .loc-picker__check,
+    .loc-picker__option {
+      transition: none;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Localization lazy",
+  "settings": []
+}
+{% endschema %}
