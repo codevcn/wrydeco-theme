@@ -6,6 +6,7 @@ from pathlib import Path
 
 
 KEEP_CONTENT = [
+    "note.txt",
     ".product.env",
     ".media.env",
 	"clean.cmd",
@@ -37,6 +38,8 @@ KEEP_CONTENT = [
     "get_access_token.py",
     "prompts.txt",
     "config.update-product.json",
+    "script.fixed.js",
+    "module-1.zip"
 ]
 
 

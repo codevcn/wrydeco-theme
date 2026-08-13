@@ -1,6 +1,6 @@
 # Task cập nhật sản phẩm đang có sẵn trong store
 
-> Dùng access token được mô tả trong file `./access-token.md` để truy cập vào store, sau đó bạn hãy cập nhật sản phẩm có ID là `8366356922425` theo các yêu cầu bên dưới.
+> Dùng access token được mô tả trong file `./access-token.md` để truy cập vào store, sau đó bạn hãy cập nhật sản phẩm có ID là `8373267333177` theo các yêu cầu bên dưới.
 > Lưu ý: Bạn phải tự làm công việc cập nhật sản phẩm chứ ko phải để cho tôi làm. Trong suốt quá trình cập nhật tuyệt đối ko được chạy script lấy access token mới, nếu access token hết hạn thì dừng toàn bộ quá trình cập nhật và báo lỗi cho tôi biết để tôi cấp lại access token mới.
 > QUAN TRỌNG: Trong quá trình cập nhật, nếu có bất kỳ lỗi nào xảy ra thì dừng toàn bộ quá trình cập nhật và báo lỗi cho tôi biết.
 
@@ -9,7 +9,7 @@
 Product Title gốc:
 
 ```text
-Handcrafted Tree Branch Book Shelf – Unique Natural Wood Multi-Layer Wall Bookcase, Sculptural Art Shelf for Living Room, Study & Home Library (C6)
+Tree Bookshelf with Branch Shelves, Wooden Standing Bookcase for Living Room, Entryway, Bedroom & Boho Rustic Home Decor
 ```
 
 - Viết lại product title gốc trên thành product title mới.
@@ -23,15 +23,19 @@ Handcrafted Tree Branch Book Shelf – Unique Natural Wood Multi-Layer Wall Book
 Mô tả sản phẩm gốc:
 
 ```text
-【PREAUREUM MAIN BENEFIT】 Transform an empty living room corner into a functional piece of art with a handcrafted tree branch bookshelf that gives books, plants, pottery, framed photos, and collected décor a more intentional, visually warm place to live.
+🌳 Tree-inspired bookshelf design – A striking wooden bookcase shaped like a natural tree trunk with branch-style shelves, bringing warmth, movement, and artistic character to your living room, entryway, bedroom, or reading corner.
 
-【UNIQUE HANDCRAFTED WOOD CHARACTER】 Each piece is individually handcrafted by skilled artisans, so every bookshelf carries its own organic grain flow, knots, tonal variation, and branch-inspired curves. That one-of-a-kind natural character makes it feel far more special than ordinary wall storage.
+📚 Multiple open shelves for display – Designed to hold books, small plants, vases, candles, framed photos, keepsakes, decorative bowls, and collected treasures while turning everyday storage into beautiful wall decor.
 
-【MULTI-LAYER DISPLAY FOR CURATED STYLING】 Designed with many layered display areas, this branch-style bookshelf creates vertical rhythm and visual depth for books, candles, ceramics, vases, keepsakes, and art objects—helping everyday décor feel more expressive, elevated, and beautifully arranged.
+🪵 Natural wood grain with rustic charm – The warm wood tone, visible grain, knots, textured trunk details, and organic branch forms create a handcrafted look that feels earthy, cozy, and one of a kind.
 
-【ARTWORK-INSPIRED STATEMENT PIECE】 The sculptural tree silhouette brings movement, texture, and a gallery-like presence to the wall, making it ideal for customers who want storage that also functions as décor. It adds a grounded, artful mood to refined living room interiors.
+🏡 Statement piece for home styling – Perfect for boho, farmhouse, rustic modern, organic modern, woodland, cabin, cottage, Mediterranean, vintage-inspired, and nature-inspired interiors.
 
-【DESIGNED FOR LIVING ROOM CORNERS & DESIGN-LED SPACES】 A strong fit for living room corners, reading nooks, studies, home libraries, bedrooms, entryways, cabins, and boutique offices. Works beautifully with organic modern, Japandi, wabi-sabi, farmhouse, woodland, rustic, and collected-vintage styling.
+✨ Functional storage with artistic appeal – This tree bookcase adds vertical storage without looking bulky, making it ideal for styling blank walls, cozy corners, reading spaces, entryways, and living room focal points.
+
+🎁 Meaningful gift or home upgrade – A thoughtful choice for housewarming gifts, new homes, apartment makeovers, reading room refreshes, nursery upgrades, or anyone who loves unique wooden furniture with natural design value.
+
+📦 Carefully packed for delivery – Each bookshelf is prepared with protective packing to help safeguard the trunk body, branch supports, shelf surfaces, wood texture, and decorative details during shipping.
 ```
 
 Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết lại mô tả sản phẩm gốc trên.
@@ -312,10 +316,10 @@ Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết
 - rich_description:
 
 ```html
-<div class="description-root"></div>
+<div class="description-root"><img alt="1" src="https://via.placeholder.com/800" class="a-spacing-base" data-src="https://vnote.io.vn/uploads/images/808039d0a47b455baeb3bd96b11c3a0c--Tree-Bookshelf-with-Branch-Shelves-Wooden-Standing-Bookcase-for-Living-Room-Entryway-Bedroom-Boho-Rustic-Home-Decor-rich-001.jpg"> <img alt="1" src="https://via.placeholder.com/800" class="a-spacing-base" data-src="https://vnote.io.vn/uploads/images/8ccaf049884d477aa35e7d871944638d--Tree-Bookshelf-with-Branch-Shelves-Wooden-Standing-Bookcase-for-Living-Room-Entryway-Bedroom-Boho-Rustic-Home-Decor-rich-002.jpg"> <img alt="1" src="https://via.placeholder.com/800" class="a-spacing-base" data-src="https://vnote.io.vn/uploads/images/73ee763946b34a74b74937ca1fa46992--Tree-Bookshelf-with-Branch-Shelves-Wooden-Standing-Bookcase-for-Living-Room-Entryway-Bedroom-Boho-Rustic-Home-Decor-rich-003.jpg"> <img alt="1" src="https://via.placeholder.com/800" class="a-spacing-base" data-src="https://vnote.io.vn/uploads/images/1bdd25c11aa248cd8a35e98c685e331b--Tree-Bookshelf-with-Branch-Shelves-Wooden-Standing-Bookcase-for-Living-Room-Entryway-Bedroom-Boho-Rustic-Home-Decor-rich-004.jpg"> <img alt="1" src="https://via.placeholder.com/800" class="a-spacing-base" data-src="https://vnote.io.vn/uploads/images/867282473f544b1a8531d527eace006e--Tree-Bookshelf-with-Branch-Shelves-Wooden-Standing-Bookcase-for-Living-Room-Entryway-Bedroom-Boho-Rustic-Home-Decor-rich-005.jpg"> <img alt="1" src="https://via.placeholder.com/800" class="a-spacing-base" data-src="https://vnote.io.vn/uploads/images/63a900d7ecf34988a8b4b122279e3bac--Tree-Bookshelf-with-Branch-Shelves-Wooden-Standing-Bookcase-for-Living-Room-Entryway-Bedroom-Boho-Rustic-Home-Decor-rich-006.jpg"></div>
 ```
 
-- amazon_link: "https://www.amazon.com/dp/B0H7Q81L3Z?lv=shuf&channelId=500&plpRedirect=mhFallback&th=1"
+- amazon_link: "https://www.amazon.com/dp/B0H4LS94TH"
 - author_info: "gid://shopify/Metaobject/195647701049"
 - product_material: "wood"
 - seo_product_title:
@@ -352,11 +356,11 @@ Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết
 
 ### 9. Cập nhật đăng lên các channel bán hàng
 
-- Cập nhật sản phẩm được đăng lên các channel bán hàng: Online Store, Point of Sale, Inbox.
+- Cập nhật sản phẩm phải được đăng lên các channel bán hàng (bật các channel): Online Store, Point of Sale, Inbox.
 
 ### 10. Cập nhật product type
 
-- Cập nhật product type cho sản phẩm là `bookshelf-corner-living-room`.
+- Cập nhật product type cho sản phẩm là `standing-bookshelf`.
 
 ### 11. Cập nhật vendor
 
@@ -368,4 +372,4 @@ Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết
 
 ### 13. Cập nhật handle của sản phẩm
 
-- Handle của sản phẩm sẽ được suy ra từ `Handcrafted Tree Branch Book Shelf – Unique Natural Wood Multi-Layer Wall Bookcase, Sculptural Art Shelf for Living Room, Study & Home Library (C6)`, handle của sản phẩm phải được viết dưới dạng kebab-case.
+- Handle của sản phẩm sẽ được suy ra từ `Tree Bookshelf with Branch Shelves, Wooden Standing Bookcase for Living Room, Entryway, Bedroom & Boho Rustic Home Decor`, handle của sản phẩm phải được viết dưới dạng kebab-case.

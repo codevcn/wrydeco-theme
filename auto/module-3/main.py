@@ -1136,6 +1136,125 @@ def get_products_by_review_status(has_reviews: bool, sort_by="created_desc"):
         "productsCount": {"count": len(all_matched_edges)}
     }
 
+def get_products_by_rich_description_status(has_rich: bool, sort_by="created_desc"):
+    query = """
+    query getProducts($after: String) {
+      products(first: 50, after: $after) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        edges {
+          node {
+            id
+            handle
+            title
+            descriptionHtml
+            createdAt
+            productType
+            category {
+              name
+            }
+            priceRangeV2 {
+              minVariantPrice {
+                amount
+              }
+            }
+            options {
+              name
+            }
+            collections(first: 20) {
+              edges {
+                node {
+                  title
+                }
+              }
+            }
+            rich_description: metafield(namespace: "custom", key: "rich_description") {
+              value
+            }
+            media(first: 50) {
+              edges {
+                node {
+                  ... on MediaImage {
+                    id
+                    image {
+                      url
+                    }
+                  }
+                  ... on Video {
+                    id
+                    preview {
+                      image {
+                        url
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    """
+    all_matched_edges = []
+    has_next = True
+    cursor = None
+    
+    while has_next:
+        variables = {}
+        if cursor:
+            variables["after"] = cursor
+            
+        res = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=HEADERS)
+        res.raise_for_status()
+        data = res.json()
+        if "errors" in data:
+            print("GraphQL Errors:", data["errors"])
+            break
+            
+        products_data = data["data"]["products"]
+        for edge in products_data["edges"]:
+            node = edge["node"]
+            rich_desc_field = node.get("rich_description")
+            
+            has_rich_desc = False
+            if rich_desc_field and rich_desc_field.get("value"):
+                val = rich_desc_field.get("value")
+                match = re.search(r'<div\s+[^>]*class=["\'][^"\']*description-root[^"\']*["\'][^>]*>(.*?)</div>', val, re.IGNORECASE | re.DOTALL)
+                if match:
+                    inner_html = match.group(1)
+                    if re.search(r'<[a-zA-Z]+', inner_html):
+                        has_rich_desc = True
+            
+            matched = has_rich_desc if has_rich else not has_rich_desc
+            if matched:
+                all_matched_edges.append(edge)
+                
+        page_info = products_data.get("pageInfo", {})
+        has_next = page_info.get("hasNextPage", False)
+        cursor = page_info.get("endCursor")
+        
+    def get_sort_key(edge):
+        if sort_by in ["price_asc", "price_desc"]:
+            price_data = edge["node"].get("priceRangeV2")
+            if price_data and price_data.get("minVariantPrice"):
+                return float(price_data["minVariantPrice"].get("amount", 0))
+            return 0.0
+        return edge["node"].get("createdAt", "")
+        
+    reverse_sort = sort_by in ["created_desc", "price_desc"]
+    all_matched_edges.sort(key=get_sort_key, reverse=reverse_sort)
+        
+    return {
+        "products": {
+            "edges": all_matched_edges,
+            "pageInfo": {"hasNextPage": False, "hasPreviousPage": False}
+        },
+        "productsCount": {"count": len(all_matched_edges)}
+    }
+
 @app.post("/update-token")
 async def update_token(request: Request, access_token: str = Form(...)):
     global SHOPIFY_ADMIN_TOKEN, HEADERS
@@ -1211,6 +1330,8 @@ async def read_root(request: Request, after: str = None, before: str = None, fil
             data = get_products_by_special_filter(special_filter, sort_by=sort_by)
         elif special_filter and special_filter in ["has_reviews", "no_reviews"]:
             data = get_products_by_review_status(special_filter == "has_reviews", sort_by=sort_by)
+        elif special_filter and special_filter in ["has_rich", "no_rich"]:
+            data = get_products_by_rich_description_status(special_filter == "has_rich", sort_by=sort_by)
         elif filter_value and filter_type == "metafield_amazon_link":
             data = get_products_by_metafield_amazon_link(filter_value, sort_by=sort_by)
         elif filter_value and filter_type == "metafield_amazon_link_list":
@@ -2355,6 +2476,148 @@ async def add_tags_submit(request: Request):
             return HTMLResponse(content=json.dumps({"success": False, "message": str(e)}, ensure_ascii=False), media_type="application/json")
         return templates.TemplateResponse(request=request, name="edit_variants.html", context={"request": request, "error": str(e), "success_message": None})
 
+
+def get_publications_map():
+    query = """
+    query {
+      publications(first: 20) {
+        edges {
+          node {
+            id
+            name
+          }
+        }
+      }
+    }
+    """
+    res = requests.post(GRAPHQL_URL, json={"query": query}, headers=HEADERS)
+    res.raise_for_status()
+    data = res.json()
+    pub_map = {}
+    if "data" in data and "publications" in data["data"]:
+        for edge in data["data"]["publications"]["edges"]:
+            node = edge["node"]
+            pub_map[node["name"]] = node["id"]
+    return pub_map
+
+def update_product_channels(prod_id: str, desired_states: dict, pub_map: dict):
+    publish_inputs = []
+    unpublish_inputs = []
+    
+    for channel_name, should_publish in desired_states.items():
+        if channel_name in pub_map:
+            pub_id = pub_map[channel_name]
+            if should_publish:
+                publish_inputs.append({"publicationId": pub_id})
+            else:
+                unpublish_inputs.append({"publicationId": pub_id})
+                
+    results = []
+    
+    if publish_inputs:
+        pub_query = """
+        mutation publishablePublish($id: ID!, $input: [PublicationInput!]!) {
+          publishablePublish(id: $id, input: $input) {
+            userErrors {
+              message
+            }
+          }
+        }
+        """
+        res = requests.post(GRAPHQL_URL, json={"query": pub_query, "variables": {"id": prod_id, "input": publish_inputs}}, headers=HEADERS)
+        data = res.json()
+        user_errs = data.get("data", {}).get("publishablePublish", {}).get("userErrors", [])
+        if user_errs:
+            results.append(f"Lỗi Bật: {user_errs[0]['message']}")
+            
+    if unpublish_inputs:
+        unpub_query = """
+        mutation publishableUnpublish($id: ID!, $input: [PublicationInput!]!) {
+          publishableUnpublish(id: $id, input: $input) {
+            userErrors {
+              message
+            }
+          }
+        }
+        """
+        res = requests.post(GRAPHQL_URL, json={"query": unpub_query, "variables": {"id": prod_id, "input": unpublish_inputs}}, headers=HEADERS)
+        data = res.json()
+        user_errs = data.get("data", {}).get("publishableUnpublish", {}).get("userErrors", [])
+        if user_errs:
+            results.append(f"Lỗi Tắt: {user_errs[0]['message']}")
+            
+    if results:
+        return False, " | ".join(results)
+    return True, "Cập nhật channel thành công"
+
+
+@app.post("/edit-channels")
+async def edit_channels_submit(request: Request):
+    try:
+        form = await request.form()
+        identifiers_raw = form.get("identifiers", "")
+        id_types = form.getlist("id_type")
+        
+        channel_online = form.get("channel_online") == "on"
+        channel_pos = form.get("channel_pos") == "on"
+        channel_headless = form.get("channel_headless") == "on"
+        channel_inbox = form.get("channel_inbox") == "on"
+
+        raw_list = re.split(r'[\r\n,]+', identifiers_raw)
+        identifiers = [i.strip() for i in raw_list if i.strip()]
+
+        if not identifiers:
+            msg = "Danh sách sản phẩm trống"
+            if is_ajax_request(request):
+                import json
+                return HTMLResponse(content=json.dumps({"success": False, "message": msg}, ensure_ascii=False), media_type="application/json")
+            return templates.TemplateResponse(request=request, name="edit_variants.html", context={"request": request, "error": msg, "success_message": None})
+            
+        success_count = 0
+        details = []
+        
+        pub_map = get_publications_map()
+        
+        desired_states = {
+            "Online Store": channel_online,
+            "Point of Sale": channel_pos,
+            "Wrydeco Headless": channel_headless,
+            "Inbox": channel_inbox
+        }
+
+        for ident in identifiers:
+            prod_id = resolve_product_id(ident, id_types)
+            if not prod_id:
+                details.append({"identifier": ident, "status": "FAIL", "message": "Không tìm thấy định danh hoặc handle hợp lệ"})
+                continue
+
+            success, msg = update_product_channels(prod_id, desired_states, pub_map)
+            if success:
+                success_count += 1
+                details.append({"identifier": ident, "status": "OK", "message": msg})
+            else:
+                details.append({"identifier": ident, "status": "FAIL", "message": msg})
+
+        msg_summary = f"Đã thực thi xong: Thành công {success_count}/{len(identifiers)} sản phẩm."
+        if is_ajax_request(request):
+            import json
+            res_data = {
+                "success": success_count > 0,
+                "message": msg_summary,
+                "details": details
+            }
+            return HTMLResponse(content=json.dumps(res_data, ensure_ascii=False), media_type="application/json")
+            
+        return templates.TemplateResponse(request=request, name="edit_variants.html", context={
+            "request": request,
+            "error": None if success_count > 0 else msg_summary,
+            "success_message": msg_summary if success_count > 0 else None
+        })
+    except Exception as e:
+        if is_ajax_request(request):
+            import json
+            return HTMLResponse(content=json.dumps({"success": False, "message": str(e)}, ensure_ascii=False), media_type="application/json")
+        return templates.TemplateResponse(request=request, name="edit_variants.html", context={"request": request, "error": str(e), "success_message": None})
 
 @app.post("/edit-meta-info")
 async def edit_meta_info(request: Request):

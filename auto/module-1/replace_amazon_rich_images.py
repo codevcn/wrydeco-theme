@@ -113,7 +113,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 # EVERY <img src="..."> will be replaced by this URL.
 # ------------------------------------------------------------
 
-IMAGE_PLACEHOLDER_URL = ""
+IMAGE_PLACEHOLDER_URL = "https://via.placeholder.com/800"
 
 
 # ------------------------------------------------------------

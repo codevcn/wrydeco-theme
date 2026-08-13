@@ -344,7 +344,7 @@ Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết
 
 ### 9. Cập nhật đăng lên các channel bán hàng
 
-- Cập nhật sản phẩm được đăng lên các channel bán hàng: {{product_channels}}.
+- Cập nhật sản phẩm phải được đăng lên các channel bán hàng (bật các channel): {{product_channels}}.
 
 ### 10. Cập nhật product type
 
