@@ -1,0 +1,73 @@
+{% doc %}
+  Renders a maker card from a product_author metaobject.
+
+  @param {object} author - Product author metaobject.
+
+  @example
+  {% render 'maker-card', author: author %}
+{% enddoc %}
+
+{%- liquid
+  assign maker_name = author.author_name.value | default: 'WRYDECO Maker'
+  assign maker_image = author.author_image_url.value
+  assign maker_slogan = author.author_slogan.value
+  assign maker_link = author.system.url
+  assign maker_role = author.role.value | default: 'Master Craftsperson'
+  assign display_features = author.display_features.value
+-%}
+
+<div class="maker-card">
+  <div class="maker-card__body">
+    <div class="maker-card__image-col">
+      {%- if maker_link != blank -%}
+        <a
+          href="{{ maker_link }}"
+          class="maker-card__img-link"
+          aria-label="View {{ maker_name | escape }}'s profile"
+          draggable="false"
+        >
+      {%- endif -%}
+
+      {%- if maker_image != blank -%}
+        <img
+          src="{{ maker_image | escape }}"
+          alt="{{ maker_name | escape }}"
+          class="maker-card__img"
+          loading="lazy"
+          decoding="async"
+          fetchpriority="low"
+          draggable="false"
+          width="720"
+          height="900"
+        >
+      {%- else -%}
+        {{ 'image' | placeholder_svg_tag: 'maker-card__img placeholder-svg' }}
+      {%- endif -%}
+
+      {%- if maker_link != blank -%}
+        </a>
+      {%- endif -%}
+    </div>
+
+    <div class="maker-card__text-col">
+      <h3 class="maker-card__name">{{ maker_name | escape }}</h3>
+      <p class="maker-card__role">{{ maker_role | upcase }}</p>
+
+      {%- if maker_slogan != blank -%}
+        <p class="maker-card__slogan">{{ maker_slogan | escape }}</p>
+      {%- endif -%}
+
+      {%- if display_features.features != blank -%}
+        <div class="maker-card__features">
+          {%- for feature in display_features.features -%}
+            <div class="maker-feature{% if forloop.index0 > 0 %} maker-feature--border{% endif %}">
+              <span>{{ feature.value }}<br>{{ feature.label }}</span>
+            </div>
+          {%- endfor -%}
+        </div>
+      {%- elsif display_features != blank -%}
+        <div class="maker-card__features" data-maker-features="{{ display_features | escape }}"></div>
+      {%- endif -%}
+    </div>
+  </div>
+</div>

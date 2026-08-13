@@ -7,7 +7,7 @@
   <div class="meet-makers__header">
     <h2 class="meet-makers__heading">{{ section.settings.heading | escape }}</h2>
     <p class="meet-makers__subtitle">
-      Each maker brings a lifetime of dedication to every curve, grain, and detail.
+      {{ section.settings.subtitle | default: 'Each maker brings a lifetime of dedication to every curve, grain, and detail.' | escape }}
     </p>
   </div>
 
@@ -20,93 +20,21 @@
 
     <div class="meet-makers__track">
       <div class="meet-makers__slider" data-maker-slider>
-        {%- for author in makers_authors -%}
-          {%- assign maker_name = author.author_name.value | default: 'WRYDECO Maker' -%}
-          {%- assign maker_bio = author.author_bio.value -%}
-          {%- assign maker_image = author.author_image_url.value -%}
-          {%- assign maker_slogan = author.author_slogan.value -%}
-          {%- assign maker_link = author.system.url -%}
-          {%- assign maker_exp = author.exp_years.value | default: '20' -%}
-          {%- assign maker_role = author.role.value | default: 'Master Craftsperson' -%}
-          <div class="maker-card">
-            <div class="maker-card__body">
-              <div class="maker-card__image-col">
-                {%- if maker_link != blank -%}
-                  <a href="{{ maker_link }}" class="maker-card__img-link" aria-label="View {{ maker_name | escape }}'s profile">
-                {%- endif -%}
-                {%- if maker_image != blank -%}
-                  <img
-                    src="{{ maker_image }}"
-                    alt="{{ maker_name | escape }}"
-                    class="maker-card__img"
-                    loading="lazy"
-                    draggable="false"
-                    width="600"
-                    height="600"
-                  >
-                {%- else -%}
-                  {{ 'image' | placeholder_svg_tag: 'maker-card__img' }}
-                {%- endif -%}
-                {%- if maker_link != blank -%}
-                  </a>
-                {%- endif -%}
-              </div>
-              <div class="maker-card__text-col">
-                <h3 class="maker-card__name">{{ maker_name | escape }}</h3>
-                <p class="maker-card__role">{{ maker_role | upcase }}</p>
-                {%- if maker_slogan != blank -%}
-                  <p class="maker-card__slogan">{{ maker_slogan | escape }}</p>
-                {%- endif -%}
-
-                {%- assign display_features = author.display_features.value -%}
-                {%- if display_features.features != blank -%}
-                  <div class="maker-card__features">
-                    {%- for feature in display_features.features -%}
-                      <div class="maker-feature{% if forloop.index0 > 0 %} maker-feature--border{% endif %}">
-                        <span>{{ feature.value }}<br>{{ feature.label }}</span>
-                      </div>
-                    {%- endfor -%}
-                  </div>
-                {%- elsif display_features != blank -%}
-                  <div class="maker-card__features" data-raw-features="{{ display_features | escape }}"></div>
-                  <script>
-                    (function(){
-                      try {
-                        var rawStr = decodeURIComponent("{{ display_features | url_encode }}".replace(/\+/g, '%20'));
-                        var data = JSON.parse(rawStr);
-                        var features = data.features || data;
-                        if (Array.isArray(features)) {
-                          var html = '';
-                          features.forEach(function(f, i) {
-                            html += '<div class="maker-feature' + (i > 0 ? ' maker-feature--border' : '') + '"><span>' + f.value + '<br>' + f.label + '</span></div>';
-                          });
-                          document.currentScript.previousElementSibling.innerHTML = html;
-                        }
-                      } catch(e) {
-                        console.error("Error parsing display_features JSON:", e);
-                      }
-                    })();
-                  </script>
-                {%- endif -%}
-              </div>
-            </div>
-          </div>
+        {%- for author in makers_authors limit: 6 -%}
+          {% render 'maker-card', author: author %}
         {%- endfor -%}
       </div>
 
       <div class="meet-makers__dots" aria-label="Maker slides">
-        {%- for author in makers_authors -%}
-          {%- assign dot_remainder = forloop.index0 | modulo: 2 -%}
-          {%- if dot_remainder == 0 -%}
-            <button
-              class="meet-makers__dot{% if forloop.first %} is-active{% endif %}"
-              type="button"
-              aria-label="Go to maker slide {{ forloop.index0 | divided_by: 2 | plus: 1 }}"
-              aria-pressed="{% if forloop.first %}true{% else %}false{% endif %}"
-              data-maker-dot
-              data-maker-frame="{{ forloop.index0 | divided_by: 2 }}"
-            ></button>
-          {%- endif -%}
+        {%- for author in makers_authors limit: 6 -%}
+          <button
+            class="meet-makers__dot{% if forloop.first %} is-active{% endif %}"
+            type="button"
+            aria-label="Go to maker {{ forloop.index }}"
+            aria-pressed="{% if forloop.first %}true{% else %}false{% endif %}"
+            data-maker-dot
+            data-maker-frame="{{ forloop.index0 }}"
+          ></button>
         {%- endfor -%}
       </div>
     </div>
@@ -130,673 +58,17 @@
 </div>
 
 {% stylesheet %}
-  @font-face {
-    font-family: 'Fraunces';
-    src: url('Fraunces.woff2') format('woff2');
-    font-weight: 100 900;
-    font-style: normal;
-    font-display: swap;
-  }
-
-  .meet-makers {
-    padding-top: var(--sp-12, 64px);
-    padding-bottom: var(--sp-12, 64px);
-    background-color: var(--bg-primary, #f5f1ed);
-    color: var(--text-primary, #1a1815);
-    margin-top: var(--sp-6, 64px);
-    margin-bottom: var(--sp-5, 64px);
-    overflow: clip;
-  }
-
-  .meet-makers__header {
-    text-align: center;
-    margin-bottom: var(--sp-10, 48px);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .meet-makers__icon {
-    color: var(--text-secondary, #6b5d52);
-    margin-bottom: var(--sp-4, 16px);
-  }
-
-  .meet-makers__leaf-icon {
-    color: var(--text-secondary, #6b5d52);
-    margin-top: var(--sp-4, 16px);
-  }
-
-  .meet-makers__heading {
-    font-family: var(--font-display);
-    font-size: clamp(36px, 4vw, 52px);
-    font-weight: var(--font-weight-regular, 400);
-    color: var(--text-primary, #1a1815);
-    margin-bottom: var(--sp-3, 12px);
-    letter-spacing: var(--letter-spacing-tight, -0.04em);
-  }
-
-  .meet-makers__subtitle {
-    font-family: var(--font-body);
-    font-size: var(--font-size-body-md, 16px);
-    color: var(--text-secondary, #6b5d52);
-    line-height: var(--line-height-relaxed, 1.5);
-    max-width: 600px;
-    margin: 0 auto;
-  }
-
-  /* Slider Container */
-  .meet-makers__slider {
-    display: flex;
-    gap: var(--sp-5, 20px);
-    overflow-x: auto;
-    padding-bottom: var(--sp-6, 24px);
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none; /* Firefox */
-    cursor: grab;
-  }
-
-  .meet-makers__slider.is-dragging {
-    cursor: grabbing;
-  }
-
-  .meet-makers__slider.is-dragging .maker-card {
-    user-select: none;
-    pointer-events: none; /* Prevents text selection & hover states while dragging */
-  }
-
-  .meet-makers__slider::-webkit-scrollbar {
-    display: none; /* Chrome, Safari */
-  }
-
-  .meet-makers__carousel {
-    position: relative;
-    overflow: clip;
-  }
-
-  .meet-makers__track {
-    position: relative;
-  }
-
-  .meet-makers__nav,
-  .meet-makers__dots {
-    display: none;
-  }
-
-  /* Maker Card */
-  .maker-card {
-    display: flex;
-    flex-direction: column;
-    flex: 0 0 90%; /* Mobile view shows 90% of card */
-    max-width: 750px;
-    background-color: #f4efea; /* Slightly lighter than bg */
-    border-radius: var(--radius-md, 8px);
-    border: 1px solid rgba(107, 93, 82, 0.15);
-    overflow: hidden;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
-  }
-
-  @media screen and (min-width: 768px) {
-    .maker-card {
-      flex: 0 0 80%;
-    }
-  }
-
-  @media screen and (min-width: 1024px) {
-    .maker-card {
-      flex: 0 0 45vw;
-    }
-  }
-
-  .maker-card__body {
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1;
-  }
-
-  @media screen and (min-width: 600px) {
-    .maker-card__body {
-      flex-direction: row;
-    }
-  }
-
-  .maker-card__image-col {
-    width: 100%;
-    position: relative;
-    background-color: #e8e3df; /* placeholder color */
-    overflow: hidden;
-    height: 440px; /* Default height for mobile */
-  }
-
-  @media screen and (min-width: 600px) {
-    .maker-card__image-col {
-      width: 45%;
-      height: 460px;
-      flex-shrink: 0;
-    }
-  }
-
-  .maker-card__img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-    min-height: 300px;
-    -webkit-user-drag: none; /* Disable image dragging */
-    user-select: none;
-    transition: transform var(--timing-long, 0.4s) var(--ease-out, ease-out);
-    border-radius: 8px;
-  }
-
-  .maker-card__img-link {
-    display: block;
-    width: 100%;
-    height: 100%;
-    text-decoration: none;
-    outline: none;
-  }
-  
-  .maker-card__img-link:hover .maker-card__img,
-  .maker-card__img-link:focus .maker-card__img {
-    transform: scale(1.05);
-  }
-
-  .maker-card__text-col {
-    padding: var(--sp-6, 24px) var(--sp-5, 20px);
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1;
-  }
-
-  .maker-card__role {
-    font-family: var(--font-body);
-    font-size: 11px;
-    letter-spacing: 0.1em;
-    color: var(--text-secondary, #6b5d52);
-    margin-bottom: 8px;
-    font-weight: 600;
-  }
-
-  .maker-card__name {
-    font-family: var(--font-display);
-    font-size: clamp(24px, 3vw, 32px);
-    font-weight: var(--font-weight-regular, 400);
-    margin-bottom: 8px;
-    color: var(--text-primary, #1a1815);
-  }
-
-  .maker-card__tags {
-    font-family: var(--font-body);
-    font-size: 13px;
-    color: var(--text-secondary, #6b5d52);
-    margin-bottom: 16px;
-  }
-
-  .maker-card__slogan {
-    font-family: var(--font-display-light, var(--font-display));
-    font-style: italic;
-    font-size: clamp(15px, 1.1vw, 18px);
-    line-height: 1.35;
-    color: var(--color-earth-brown, #4a2c18);
-    margin-bottom: 14px;
-  }
-
-  .maker-card__quote {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 24px;
-  }
-
-  .maker-card__quote-mark {
-    font-family: var(--font-display);
-    font-size: 36px;
-    color: var(--text-secondary, #6b5d52);
-    line-height: 0.8;
-  }
-
-  .maker-card__quote p {
-    font-family: var(--font-body);
-    font-size: 14px;
-    color: var(--text-secondary, #6b5d52);
-    line-height: 1.6;
-    margin: 0;
-  }
-
-  /* Features */
-  .maker-card__features {
-    display: flex;
-    border-top: 1px solid rgba(107, 93, 82, 0.15);
-    padding-top: 16px;
-    margin-top: auto;
-  }
-
-  .maker-feature {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    flex: 1;
-    gap: 8px;
-    color: var(--text-secondary, #6b5d52);
-  }
-
-  .maker-feature--border {
-    border-left: 1px solid rgba(107, 93, 82, 0.15);
-  }
-
-  .maker-feature svg {
-    opacity: 0.8;
-  }
-
-  .maker-feature span {
-    font-family: var(--font-body);
-    font-size: 9px;
-    letter-spacing: 0.05em;
-    font-weight: 500;
-    line-height: 1.3;
-  }
-
-  /* Card Footer Button */
-  .maker-card__btn {
-    display: block;
-    width: 100%;
-    text-align: center;
-    padding: 14px;
-    background-color: var(--color-earth-brown, #442c1a);
-    color: #fff;
-    font-family: var(--font-body);
-    font-size: 12px;
-    letter-spacing: 0.1em;
-    font-weight: 500;
-    text-decoration: none;
-    transition: background-color 0.2s;
-  }
-
-  .maker-card__btn:hover {
-    background-color: #2c1c11;
-  }
-
-  @media screen and (min-width: 1200px) {
-    .meet-makers {
-      width: 100%;
-      max-width: none;
-      min-height: auto;
-      height: auto;
-      padding: clamp(72px, 6vw, 104px) clamp(64px, 5vw, 94px);
-      overflow: clip;
-    }
-
-    .meet-makers__header {
-      margin-bottom: clamp(28px, 3.5svh, 34px);
-    }
-
-    .meet-makers__icon {
-      margin-bottom: clamp(10px, 1.3svh, 12px);
-    }
-
-    .meet-makers__icon svg {
-      width: 36px;
-      height: 36px;
-      opacity: 0.58;
-    }
-
-    .meet-makers__heading {
-      margin-bottom: clamp(14px, 1.8svh, 16px);
-      font-size: clamp(64px, 4.7vw, 78px);
-      font-weight: 300;
-      letter-spacing: -0.055em;
-      line-height: 0.96;
-    }
-
-    .meet-makers__subtitle {
-      max-width: 580px;
-      font-size: clamp(15px, 0.95vw, 17px);
-      line-height: 1.5;
-    }
-
-    .meet-makers__leaf-icon {
-      position: relative;
-      display: flex;
-      align-items: center;
-      gap: var(--sp-4);
-      margin-top: clamp(18px, 2.4svh, 24px);
-      color: var(--color-bark, #6b5d52);
-    }
-
-    .meet-makers__leaf-icon::before,
-    .meet-makers__leaf-icon::after {
-      width: 80px;
-      height: 1px;
-      background: rgba(107, 93, 82, 0.3);
-      content: '';
-    }
-
-    .meet-makers__leaf-icon svg {
-      width: 20px;
-      height: 20px;
-    }
-
-    .meet-makers__carousel {
-      min-height: auto;
-    }
-
-    .meet-makers__slider {
-      display: flex;
-      gap: clamp(14px, 0.95vw, 16px);
-      min-height: 0;
-      padding-bottom: 0;
-      overflow-x: auto;
-      scroll-behavior: smooth;
-      scroll-snap-type: x mandatory;
-      cursor: default;
-    }
-
-    .maker-card {
-      display: grid;
-      grid-template-rows: minmax(0, 1fr) 48px;
-      flex: 0 0 calc((100% - clamp(14px, 0.95vw, 16px)) / 2);
-      max-width: none;
-      min-width: 0;
-      height: auto;
-      min-height: 520px;
-      border-color: rgba(107, 93, 82, 0.18);
-      border-radius: var(--radius-lg, 8px);
-      background: color-mix(in srgb, var(--bg-primary, #f5f1ed) 92%, #ffffff);
-      box-shadow: none;
-      scroll-snap-align: start;
-    }
-
-    .maker-card__body {
-      display: grid;
-      grid-template-columns: minmax(0, 49.5%) minmax(0, 50.5%);
-      min-height: 0;
-    }
-
-    .maker-card__image-col {
-      width: auto;
-      min-height: 0;
-    }
-
-    .maker-card__img {
-      min-height: 0;
-      height: 100%;
-      object-position: center center;
-    }
-
-    .maker-card__text-col {
-      min-height: 0;
-      padding: clamp(32px, 3.9svh, 38px) clamp(36px, 3vw, 44px) clamp(22px, 2.5svh, 26px);
-    }
-
-    .maker-card__role {
-      margin-bottom: clamp(16px, 2svh, 20px);
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: 0.18em;
-      color: var(--color-bark, #6b5d52);
-    }
-
-    .maker-card__name {
-      margin-bottom: clamp(12px, 1.5svh, 14px);
-      font-size: clamp(40px, 2.7vw, 46px);
-      font-weight: 300;
-      letter-spacing: -0.055em;
-      line-height: 0.98;
-    }
-
-    .maker-card__tags {
-      margin-bottom: clamp(22px, 2.9svh, 28px);
-      font-size: 15px;
-      line-height: 1.45;
-    }
-
-    .maker-card__quote {
-      gap: var(--sp-2);
-      margin-bottom: clamp(20px, 2.8svh, 28px);
-    }
-
-    .maker-card__quote-mark {
-      font-size: 44px;
-      color: var(--color-earth-brown, #4a2c18);
-    }
-
-    .maker-card__quote p {
-      font-family: var(--font-display);
-      font-size: clamp(16px, 1.08vw, 18px);
-      line-height: 1.35;
-      color: var(--color-earth-brown, #4a2c18);
-    }
-
-    .maker-card__features {
-      padding-top: 0;
-      border-top: 0;
-      margin-top: auto;
-    }
-
-    .maker-feature {
-      gap: var(--sp-2);
-    }
-
-    .maker-feature--border {
-      border-left-color: rgba(107, 93, 82, 0.32);
-    }
-
-    .maker-feature svg {
-      width: 28px;
-      height: 28px;
-      color: var(--color-bark, #6b5d52);
-    }
-
-    .maker-feature span {
-      font-size: 10px;
-      font-weight: 600;
-      letter-spacing: 0.06em;
-      line-height: 1.32;
-      color: var(--color-earth-brown, #4a2c18);
-    }
-
-    .maker-card__btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 48px;
-      padding: 0;
-      background: var(--color-earth-brown, #4a2c18);
-      color: var(--text-inverse, #f5f1ed);
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.18em;
-    }
-
-    .meet-makers__nav {
-      position: absolute;
-      z-index: 3;
-      top: 50%;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 44px;
-      height: 44px;
-      border: 1px solid rgba(107, 93, 82, 0.36);
-      border-radius: var(--radius-full);
-      background: color-mix(in srgb, var(--bg-primary, #f5f1ed) 82%, white);
-      color: var(--color-earth-brown, #4a2c18);
-      cursor: pointer;
-      transform: translateY(-50%);
-      transition: background-color var(--timing-short) var(--ease-standard),
-        border-color var(--timing-short) var(--ease-standard), opacity var(--timing-short) var(--ease-standard),
-        transform var(--timing-short) var(--ease-standard);
-    }
-
-    .meet-makers__nav:hover {
-      border-color: rgba(74, 44, 24, 0.65);
-      background: var(--color-milk, #f7f2ec);
-      transform: translateY(-50%) scale(1.04);
-    }
-
-    .meet-makers__nav:focus-visible,
-    .meet-makers__dot:focus-visible {
-      outline: 2px solid var(--color-sage);
-      outline-offset: var(--sp-1);
-    }
-
-    .meet-makers__nav[disabled] {
-      opacity: 0.34;
-      cursor: default;
-      pointer-events: none;
-    }
-
-    .meet-makers__nav--prev {
-      left: var(--sp-3);
-    }
-
-    .meet-makers__nav--next {
-      right: var(--sp-3);
-    }
-
-    .meet-makers__dots {
-      position: static;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: var(--sp-2);
-      margin-top: var(--sp-5);
-      margin-bottom: var(--sp-4);
-      transform: none;
-    }
-
-    .meet-makers__dot {
-      width: 8px;
-      height: 8px;
-      padding: 0;
-      border: 1px solid rgba(107, 93, 82, 0.46);
-      border-radius: var(--radius-full);
-      background: transparent;
-      cursor: pointer;
-      transition: width var(--timing-short) var(--ease-standard),
-        background-color var(--timing-short) var(--ease-standard), border-color var(--timing-short) var(--ease-standard);
-    }
-
-    .meet-makers__dot.is-active {
-      width: 24px;
-      background: var(--color-earth-brown, #4a2c18);
-      border-color: var(--color-earth-brown, #4a2c18);
-    }
-  }
-
-  @media screen and (min-width: 1200px) and (max-height: 820px) {
-    .meet-makers {
-      padding: 18px clamp(56px, 5vw, 74px) 22px;
-      min-height: fit-content;
-      max-height: max-content;
-    }
-
-    .meet-makers__header {
-      margin-bottom: 18px;
-    }
-
-    .meet-makers__icon {
-      margin-bottom: 6px;
-    }
-
-    .meet-makers__icon svg {
-      width: 28px;
-      height: 28px;
-    }
-
-    .meet-makers__heading {
-      margin-bottom: 8px;
-      font-size: clamp(44px, 4vw, 58px);
-    }
-
-    .meet-makers__subtitle {
-      font-size: 13px;
-      line-height: 1.42;
-    }
-
-    .meet-makers__leaf-icon {
-      margin-top: 10px;
-    }
-
-    .meet-makers__slider {
-      gap: 14px;
-    }
-
-    .maker-card {
-      grid-template-rows: minmax(0, 1fr) 42px;
-      flex-basis: calc((100% - 14px) / 2);
-    }
-
-    .maker-card__text-col {
-      padding: 24px 32px 18px;
-    }
-
-    .maker-card__role {
-      margin-bottom: 10px;
-      font-size: 10px;
-    }
-
-    .maker-card__name {
-      margin-bottom: 8px;
-      font-size: clamp(32px, 2.7vw, 38px);
-    }
-
-    .maker-card__tags {
-      margin-bottom: 14px;
-      font-size: 13px;
-    }
-
-    .maker-card__quote {
-      margin-bottom: 14px;
-    }
-
-    .maker-card__quote-mark {
-      font-size: 34px;
-    }
-
-    .maker-card__quote p {
-      font-size: 14px;
-      line-height: 1.28;
-    }
-
-    .maker-feature svg {
-      width: 22px;
-      height: 22px;
-    }
-
-    .maker-feature span {
-      font-size: 8px;
-    }
-
-    .maker-card__btn {
-      min-height: 42px;
-      font-size: 10px;
-    }
-
-    .meet-makers__nav {
-      width: 38px;
-      height: 38px;
-    }
-
-    .meet-makers__nav--prev {
-      left: -48px;
-    }
-
-    .meet-makers__nav--next {
-      right: -48px;
-    }
-  }
-
   .meet-makers {
     position: relative;
     isolation: isolate;
     margin: 0;
     padding: var(--section-padding-y, 80px) var(--container-padding-x, 48px);
+    overflow: hidden;
     background:
       radial-gradient(circle at 16% 12%, rgba(255, 255, 255, 0.84), transparent 34%),
       radial-gradient(circle at 88% 26%, rgba(184, 180, 175, 0.13), transparent 30%),
       linear-gradient(180deg, #f8f3ed 0%, #f3ece5 100%);
     color: var(--color-earth-brown, #4a2c18);
-    overflow: hidden;
   }
 
   .meet-makers::before {
@@ -821,11 +93,16 @@
   }
 
   .meet-makers__header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     margin-bottom: clamp(32px, 3.5vw, 48px);
+    text-align: center;
   }
 
   .meet-makers__heading {
-    margin-bottom: 18px;
+    max-width: 820px;
+    margin: 0 0 18px;
     color: var(--color-text, #2b1a11);
     font-family: var(--font-heading);
     font-size: var(--section-heading-size, 48px);
@@ -836,82 +113,141 @@
   }
 
   .meet-makers__subtitle {
-    max-width: 720px;
+    max-width: 690px;
+    margin: 0 auto;
     color: var(--color-muted, #5f5852);
+    font-family: var(--font-body);
     font-size: var(--section-subtitle-size, 16px);
     line-height: 1.6;
     text-wrap: balance;
   }
 
-  .meet-makers__carousel {
-    overflow: visible;
+  .meet-makers__carousel,
+  .meet-makers__track {
+    position: relative;
   }
 
   .meet-makers__slider {
+    display: flex;
     gap: clamp(20px, 4vw, 56px);
+    overflow-x: auto;
     padding-bottom: 8px;
+    scroll-behavior: smooth;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    cursor: grab;
+  }
+
+  .meet-makers__slider::-webkit-scrollbar {
+    display: none;
+  }
+
+  .meet-makers__slider.is-dragging {
+    cursor: grabbing;
+  }
+
+  .meet-makers__slider.is-dragging .maker-card {
+    user-select: none;
+    pointer-events: none;
   }
 
   .maker-card {
     flex: 0 0 min(88vw, 720px);
-    max-width: none;
-    background: transparent;
-    border: 0;
-    border-radius: 0;
-    box-shadow: none;
-    overflow: visible;
+    min-width: 0;
+    scroll-snap-align: start;
   }
 
   .maker-card__body {
-    column-gap: clamp(22px, 3vw, 42px);
+    display: flex;
+    flex-direction: column;
+    gap: clamp(22px, 3vw, 42px);
   }
 
   .maker-card__image-col {
+    overflow: hidden;
     background: transparent;
   }
 
+  .maker-card__img-link {
+    display: block;
+    height: 100%;
+    color: inherit;
+    text-decoration: none;
+  }
+
   .maker-card__img {
-    aspect-ratio: 0.76;
-    min-height: 0;
+    display: block;
+    width: 100%;
     height: auto;
+    aspect-ratio: 0.76;
     object-fit: cover;
+    border-radius: var(--radius-md, 8px);
+    user-select: none;
+    -webkit-user-drag: none;
+    transition: transform var(--timing-long, 0.4s) var(--ease-out, ease-out);
+  }
+
+  .maker-card__img-link:hover .maker-card__img,
+  .maker-card__img-link:focus-visible .maker-card__img {
+    transform: scale(1.04);
   }
 
   .maker-card__text-col {
+    display: flex;
+    flex-direction: column;
     color: var(--color-earth-brown, #4a2c18);
   }
 
   .maker-card__name {
+    margin: 0 0 clamp(14px, 1.7svh, 18px);
     color: var(--color-earth-brown, #4a2c18);
     font-family: var(--font-display-light, var(--font-display));
+    font-size: clamp(31px, 2.35vw, 44px);
     font-weight: 300;
     line-height: 0.98;
     letter-spacing: -0.055em;
   }
 
   .maker-card__role {
+    margin: 0 0 clamp(20px, 2.8svh, 34px);
     color: var(--color-earth-brown, #4a2c18);
+    font-family: var(--font-body);
+    font-size: clamp(11px, 0.8vw, 14px);
+    font-weight: 600;
     letter-spacing: 0.1em;
     word-spacing: 0.2em;
+  }
+
+  .maker-card__slogan {
+    margin: 0 0 clamp(16px, 2svh, 22px);
+    color: var(--color-earth-brown, #4a2c18);
+    font-family: var(--font-display-light, var(--font-display));
+    font-size: clamp(15px, 1.1vw, 18px);
+    font-style: italic;
+    line-height: 1.35;
   }
 
   .maker-card__features {
     display: grid;
     gap: clamp(18px, 2.3svh, 24px);
+    margin-top: auto;
+    padding-top: clamp(20px, 3svh, 32px);
     border-top: 1px solid rgba(74, 44, 24, 0.2);
   }
 
   .maker-feature {
-    flex-direction: row;
+    display: flex;
     align-items: center;
     justify-content: flex-start;
     gap: 16px;
-    text-align: left;
     color: var(--color-earth-brown, #4a2c18);
+    text-align: left;
   }
 
   .maker-feature span {
     color: var(--color-earth-brown, #4a2c18);
+    font-family: var(--font-body);
     font-size: clamp(12px, 0.88vw, 15px);
     font-weight: 400;
     letter-spacing: 0;
@@ -922,7 +258,13 @@
     font-weight: 600;
   }
 
+  .meet-makers__nav,
+  .meet-makers__dots {
+    display: none;
+  }
+
   .meet-makers__footer {
+    display: flex;
     flex-direction: column;
     align-items: center;
     margin-top: clamp(16px, 3svh, 24px);
@@ -964,72 +306,21 @@
     content: '- ';
   }
 
-  @media screen and (min-width: 1200px) {
-    .meet-makers {
-      margin: 0;
-      padding: var(--section-padding-y, 80px) var(--container-padding-x, 48px);
-    }
-
-    .meet-makers__header {
-      margin-bottom: clamp(32px, 3.5vw, 48px);
-    }
-
-    .meet-makers__heading {
-      max-width: 820px;
-      margin-left: auto;
-      margin-right: auto;
-      font-size: var(--section-heading-size, 48px);
-    }
-
-    .meet-makers__subtitle {
-      max-width: 690px;
-      font-size: var(--section-subtitle-size, 16px);
-      line-height: 1.6;
-    }
-
-    .meet-makers__slider {
-      display: flex;
-      gap: clamp(26px, 4vw, 72px);
-      overflow-x: auto;
-      scroll-snap-type: x mandatory;
-      scroll-behavior: smooth;
-    }
-
-    .maker-card {
-      display: block;
-      flex: 0 0 calc((100% - clamp(26px, 4vw, 72px)) / 2);
-      min-width: 0;
-      min-height: 0;
-      height: auto;
-      background: transparent;
-      border: 0;
-      scroll-snap-align: start;
-    }
-
+  @media screen and (min-width: 700px) {
     .maker-card__body {
       display: grid;
       grid-template-columns: minmax(230px, 0.98fr) minmax(230px, 0.75fr);
-      column-gap: clamp(28px, 3vw, 46px);
       align-items: stretch;
       min-height: clamp(300px, 39svh, 485px);
     }
 
-    .maker-card:nth-child(2) .maker-card__body {
-      grid-template-columns: minmax(230px, 0.98fr) minmax(230px, 0.72fr);
-    }
-
-    .maker-card__image-col {
-      width: auto;
-      min-height: 0;
+    .maker-card__img-link,
+    .maker-card__img {
+      height: 100%;
     }
 
     .maker-card__img {
-      width: 100%;
-      height: 100%;
       aspect-ratio: auto;
-      min-height: 0;
-      object-fit: cover;
-      object-position: center;
     }
 
     .maker-card__text-col {
@@ -1037,30 +328,90 @@
       min-height: 0;
       padding: clamp(16px, 2.5svh, 30px) 0;
     }
+  }
 
-    .maker-card__name {
-      margin-bottom: clamp(14px, 1.7svh, 18px);
-      font-size: clamp(31px, 2.35vw, 44px);
+  @media screen and (min-width: 1200px) {
+    .meet-makers__slider {
+      gap: clamp(26px, 4vw, 72px);
+      cursor: default;
     }
 
-    .maker-card__role {
-      margin-bottom: clamp(20px, 2.8svh, 34px);
-      font-size: clamp(11px, 0.8vw, 14px);
+    .maker-card {
+      flex-basis: calc((100% - clamp(26px, 4vw, 72px)) / 2);
     }
 
-    .maker-card__features {
-      padding-top: clamp(20px, 3svh, 32px);
-      margin-top: 0;
+    .meet-makers__nav {
+      position: absolute;
+      z-index: 3;
+      top: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      border: 1px solid rgba(107, 93, 82, 0.36);
+      border-radius: var(--radius-full);
+      background: color-mix(in srgb, var(--bg-primary, #f5f1ed) 82%, white);
+      color: var(--color-earth-brown, #4a2c18);
+      cursor: pointer;
+      transform: translateY(-50%);
+      transition: background-color var(--timing-short) var(--ease-standard),
+        border-color var(--timing-short) var(--ease-standard), opacity var(--timing-short) var(--ease-standard),
+        transform var(--timing-short) var(--ease-standard);
     }
 
-    .maker-feature svg {
-      width: clamp(20px, 1.45vw, 25px);
-      height: clamp(20px, 1.45vw, 25px);
-      flex: 0 0 auto;
+    .meet-makers__nav:hover {
+      border-color: rgba(74, 44, 24, 0.65);
+      background: var(--color-milk, #f7f2ec);
+      transform: translateY(-50%) scale(1.04);
     }
 
-    .maker-feature--border {
-      border-left: 0;
+    .meet-makers__nav[disabled] {
+      opacity: 0.34;
+      cursor: default;
+      pointer-events: none;
+    }
+
+    .meet-makers__nav--prev {
+      left: var(--sp-3);
+    }
+
+    .meet-makers__nav--next {
+      right: var(--sp-3);
+    }
+
+    .meet-makers__dots {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--sp-2);
+      margin-top: var(--sp-5);
+      margin-bottom: var(--sp-4);
+    }
+
+    .meet-makers__dot {
+      width: 8px;
+      height: 8px;
+      padding: 0;
+      border: 1px solid rgba(107, 93, 82, 0.46);
+      border-radius: var(--radius-full);
+      background: transparent;
+      cursor: pointer;
+      transition: width var(--timing-short) var(--ease-standard),
+        background-color var(--timing-short) var(--ease-standard), border-color var(--timing-short) var(--ease-standard);
+    }
+
+    .meet-makers__dot.is-active {
+      width: 24px;
+      background: var(--color-earth-brown, #4a2c18);
+      border-color: var(--color-earth-brown, #4a2c18);
+    }
+
+    .meet-makers__nav:focus-visible,
+    .meet-makers__dot:focus-visible {
+      outline: 2px solid var(--color-sage);
+      outline-offset: var(--sp-1);
     }
   }
 
@@ -1073,15 +424,20 @@
       font-size: 15px;
     }
 
-    .maker-card__text-col {
-      flex-direction: column;
-      padding: 0 0 0;
-    }
-
     .maker-card__features {
       display: flex;
       margin-top: 8px;
-      padding-top: 20px;
+    }
+
+    .maker-feature {
+      flex: 1 1 0;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .maker-feature--border {
+      border-left: 1px solid rgba(74, 44, 24, 0.2);
+      padding-left: 12px;
     }
 
     .meet-makers__quote {
@@ -1093,127 +449,237 @@
       margin-bottom: 32px;
     }
   }
+
+  @media (prefers-reduced-motion: reduce) {
+    .meet-makers__slider {
+      scroll-behavior: auto;
+    }
+
+    .maker-card__img,
+    .meet-makers__nav,
+    .meet-makers__dot {
+      transition: none;
+    }
+  }
 {% endstylesheet %}
 
 {% javascript %}
-  document.addEventListener('DOMContentLoaded', () => {
-    const sliders = document.querySelectorAll('.meet-makers__slider');
-    sliders.forEach((slider) => {
-      const carousel = slider.closest('[data-maker-carousel]');
-      const prevButton = carousel ? carousel.querySelector('[data-maker-prev]') : null;
-      const nextButton = carousel ? carousel.querySelector('[data-maker-next]') : null;
-      const dots = carousel ? Array.from(carousel.querySelectorAll('[data-maker-dot]')) : [];
-      const cards = Array.from(slider.querySelectorAll('.maker-card'));
-      const desktopQuery = window.matchMedia('(min-width: 1200px)');
-      let activeFrame = 0;
+  (function () {
+    function renderFallbackFeatures(root) {
+      root.querySelectorAll('[data-maker-features]').forEach(function (container) {
+        if (container.dataset.makerFeaturesInit === 'true') return;
+        container.dataset.makerFeaturesInit = 'true';
 
-      const getCardsPerFrame = () => (desktopQuery.matches ? 2 : 1);
-      const getFrameCount = () => Math.max(1, Math.ceil(cards.length / getCardsPerFrame()));
+        try {
+          var data = JSON.parse(container.getAttribute('data-maker-features') || '[]');
+          if (typeof data === 'string') data = JSON.parse(data);
+          var features = Array.isArray(data) ? data : data.features;
+          if (!Array.isArray(features)) return;
 
-      const getFrameLeft = (frame) => {
-        const targetCard = cards[Math.min(frame * getCardsPerFrame(), cards.length - 1)];
-        if (!targetCard) return 0;
-        return targetCard.offsetLeft - slider.offsetLeft;
-      };
+          features.forEach(function (feature, index) {
+            var item = document.createElement('div');
+            item.className = 'maker-feature' + (index > 0 ? ' maker-feature--border' : '');
 
-      const updateCarouselState = () => {
-        const frameCount = getFrameCount();
+            var label = document.createElement('span');
+            label.append(document.createTextNode(feature.value || ''));
+            label.append(document.createElement('br'));
+            label.append(document.createTextNode(feature.label || ''));
+            item.append(label);
+            container.append(item);
+          });
+        } catch (error) {
+          container.hidden = true;
+        }
+      });
+    }
+
+    function initCarousel(carousel) {
+      if (!carousel || carousel.dataset.makerInit === 'true') return;
+      carousel.dataset.makerInit = 'true';
+      renderFallbackFeatures(carousel);
+
+      var slider = carousel.querySelector('[data-maker-slider]');
+      if (!slider) return;
+
+      var prevButton = carousel.querySelector('[data-maker-prev]');
+      var nextButton = carousel.querySelector('[data-maker-next]');
+      var dots = Array.prototype.slice.call(carousel.querySelectorAll('[data-maker-dot]'));
+      var cards = Array.prototype.slice.call(slider.querySelectorAll('.maker-card'));
+      var activeFrame = 0;
+      var scrollFrame = null;
+      var resizeTimer = null;
+      var lockedActiveFrame = null;
+
+      function getFrameCount() {
+        return Math.max(1, cards.length);
+      }
+
+      function getFrameLeft(frame) {
+        var targetCard = cards[Math.min(frame, cards.length - 1)];
+        var maxLeft = Math.max(0, slider.scrollWidth - slider.clientWidth);
+        var targetLeft = targetCard ? targetCard.offsetLeft - slider.offsetLeft : 0;
+        return Math.min(Math.max(0, targetLeft), maxLeft);
+      }
+
+      function updateCarouselState() {
+        var frameCount = getFrameCount();
         activeFrame = Math.min(Math.max(activeFrame, 0), frameCount - 1);
 
         if (prevButton) prevButton.disabled = activeFrame === 0;
         if (nextButton) nextButton.disabled = activeFrame >= frameCount - 1;
 
-        dots.forEach((dot, index) => {
-          const isActive = index === activeFrame;
+        dots.forEach(function (dot, index) {
+          var isActive = index === activeFrame;
           dot.classList.toggle('is-active', isActive);
           dot.setAttribute('aria-pressed', isActive ? 'true' : 'false');
           dot.hidden = index >= frameCount;
         });
-      };
+      }
 
-      const goToFrame = (frame, behavior = 'smooth') => {
+      function goToFrame(frame, behavior) {
         activeFrame = Math.min(Math.max(frame, 0), getFrameCount() - 1);
-        slider.scrollTo({ left: getFrameLeft(activeFrame), behavior });
+        lockedActiveFrame = activeFrame;
+        slider.scrollTo({ left: getFrameLeft(activeFrame), behavior: behavior || 'smooth' });
         updateCarouselState();
-      };
+        window.setTimeout(function () {
+          lockedActiveFrame = null;
+          syncActiveFrameFromScroll();
+        }, behavior === 'auto' ? 0 : 700);
+      }
 
-      prevButton?.addEventListener('click', () => goToFrame(activeFrame - 1));
-      nextButton?.addEventListener('click', () => goToFrame(activeFrame + 1));
-      dots.forEach((dot) => {
-        dot.addEventListener('click', () => {
-          const frame = Number(dot.dataset.makerFrame || 0);
-          goToFrame(frame);
-        });
+      function syncActiveFrameFromScroll() {
+        scrollFrame = null;
+        if (lockedActiveFrame !== null) return;
+
+        var frameCount = getFrameCount();
+        var closestFrame = 0;
+        var closestDistance = Infinity;
+        for (var frame = 0; frame < frameCount; frame += 1) {
+          var distance = Math.abs(slider.scrollLeft - getFrameLeft(frame));
+          if (distance <= closestDistance) {
+            closestDistance = distance;
+            closestFrame = frame;
+          }
+        }
+        activeFrame = closestFrame;
+        updateCarouselState();
+      }
+
+      carousel.addEventListener('click', function (event) {
+        var dot = event.target.closest('[data-maker-dot]');
+        if (dot) {
+          goToFrame(Number(dot.dataset.makerFrame || 0));
+          return;
+        }
+
+        if (event.target.closest('[data-maker-prev]')) {
+          goToFrame(activeFrame - 1);
+          return;
+        }
+
+        if (event.target.closest('[data-maker-next]')) {
+          goToFrame(activeFrame + 1);
+        }
       });
 
       slider.addEventListener(
         'scroll',
-        () => {
-          if (!desktopQuery.matches) return;
-          const frameCount = getFrameCount();
-          let closestFrame = 0;
-          let closestDistance = Infinity;
-          for (let frame = 0; frame < frameCount; frame += 1) {
-            const distance = Math.abs(slider.scrollLeft - getFrameLeft(frame));
-            if (distance < closestDistance) {
-              closestDistance = distance;
-              closestFrame = frame;
-            }
-          }
-          activeFrame = closestFrame;
-          updateCarouselState();
+        function () {
+          if (scrollFrame !== null) return;
+          scrollFrame = window.requestAnimationFrame(syncActiveFrameFromScroll);
         },
         { passive: true }
       );
 
-      const handleResize = () => goToFrame(activeFrame, 'auto');
+      function handleResize() {
+        window.clearTimeout(resizeTimer);
+        resizeTimer = window.setTimeout(function () {
+          goToFrame(activeFrame, 'auto');
+        }, 120);
+      }
+
       window.addEventListener('resize', handleResize);
-      desktopQuery.addEventListener?.('change', handleResize);
-      updateCarouselState();
+      carousel.addEventListener('dragstart', function (event) {
+        if (event.target.closest('.maker-card__img-link, .maker-card__img')) event.preventDefault();
+      });
 
-      let isDown = false;
-      let startX;
-      let scrollLeft;
-      let isDragging = false;
-      const DRAG_THRESHOLD = 5;
+      var isDown = false;
+      var startX = 0;
+      var scrollLeft = 0;
+      var isDragging = false;
+      var dragThreshold = 5;
 
-      slider.addEventListener('mousedown', (e) => {
+      slider.addEventListener('mousedown', function (event) {
         isDown = true;
         isDragging = false;
-        startX = e.pageX - slider.offsetLeft;
+        startX = event.pageX - slider.offsetLeft;
         scrollLeft = slider.scrollLeft;
       });
 
-      const endDrag = () => {
+      function endDrag() {
         isDown = false;
         slider.classList.remove('is-dragging');
-      };
+      }
+
       slider.addEventListener('mouseleave', endDrag);
       slider.addEventListener('mouseup', endDrag);
 
-      slider.addEventListener('mousemove', (e) => {
+      slider.addEventListener('mousemove', function (event) {
         if (!isDown) return;
-        const x = e.pageX - slider.offsetLeft;
-        // Only treat this as a drag once the pointer moves past the threshold.
-        // Previously `is-dragging` (which sets `pointer-events: none` on the
-        // cards) was added on every mousedown, so a plain click released over
-        // the slider instead of the button and "VIEW PROFILE" never navigated.
-        if (!isDragging && Math.abs(x - startX) > DRAG_THRESHOLD) {
+        var x = event.pageX - slider.offsetLeft;
+        if (!isDragging && Math.abs(x - startX) > dragThreshold) {
           isDragging = true;
           slider.classList.add('is-dragging');
         }
         if (!isDragging) return;
-        e.preventDefault();
-        const walk = (x - startX) * 2; // scroll-fast
-        slider.scrollLeft = scrollLeft - walk;
+        event.preventDefault();
+        slider.scrollLeft = scrollLeft - (x - startX) * 2;
       });
 
-      // Suppress the click that follows a real drag so links don't navigate.
-      slider.addEventListener('click', (e) => {
-        if (isDragging) e.preventDefault();
+      slider.addEventListener('click', function (event) {
+        if (isDragging) event.preventDefault();
       });
+
+      updateCarouselState();
+    }
+
+    function scheduleCarousel(carousel) {
+      if (!('IntersectionObserver' in window)) {
+        initCarousel(carousel);
+        return;
+      }
+
+      var observer = new IntersectionObserver(
+        function (entries) {
+          entries.forEach(function (entry) {
+            if (!entry.isIntersecting) return;
+            observer.unobserve(entry.target);
+            initCarousel(entry.target);
+          });
+        },
+        { rootMargin: '400px 0px' }
+      );
+
+      observer.observe(carousel);
+    }
+
+    function initMeetMakers(scope) {
+      var root = scope || document;
+      root.querySelectorAll('[data-maker-carousel]').forEach(scheduleCarousel);
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function () {
+        initMeetMakers(document);
+      });
+    } else {
+      initMeetMakers(document);
+    }
+
+    document.addEventListener('shopify:section:load', function (event) {
+      initMeetMakers(event.target);
     });
-  });
+  })();
 {% endjavascript %}
 
 {% schema %}
