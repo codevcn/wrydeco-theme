@@ -390,7 +390,7 @@
 
   .lead-capture-reminder {
     position: fixed;
-    z-index: calc(var(--z-drawer) + 9);
+    z-index: calc(var(--z-drawer) + 12);
     bottom: 50%;
     left: calc(clamp(4.25rem, 4.8vw, 9rem) * -0.18);
     display: flex;
@@ -486,7 +486,7 @@
   .lead-capture {
     position: fixed;
     inset: var(--sp-0);
-    z-index: calc(var(--z-drawer) + 10);
+    z-index: 999;
     display: grid;
     place-items: center;
     overflow-y: auto;
@@ -1178,10 +1178,7 @@
 
     function showReminder() {
       if (!reminder) return;
-      if (isSubscribed || hasSubscribed()) {
-        hideReminder();
-        return;
-      }
+      if (getReminderState() === 'dismissed') return;
       reminder.hidden = false;
       window.requestAnimationFrame(function () {
         reminder.classList.add('is-visible');
@@ -1273,8 +1270,7 @@
       if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') {
         lastFocusedElement.focus({ preventScroll: true });
       }
-      if (!isSubscribed && getReminderState() !== 'dismissed') {
-        setReminderState('active');
+      if (getReminderState() !== 'dismissed') {
         showReminder();
       }
     }
@@ -1285,8 +1281,12 @@
       form.reset();
       isSubscribed = true;
       rememberSubscription();
-      setReminderState('dismissed');
-      hideReminder();
+      if (window.WrydecoDiscountAutoApply) {
+        window.WrydecoDiscountAutoApply.unlockAndSync();
+      } else {
+        document.dispatchEvent(new CustomEvent('wry:newsletter-signup-success'));
+      }
+      showReminder();
       formState.hidden = true;
       successState.hidden = false;
       dialog.setAttribute('aria-labelledby', 'LeadCaptureSuccessTitle');
@@ -1457,7 +1457,6 @@
 
     if (reminderOpenButton) {
       reminderOpenButton.addEventListener('click', function () {
-        hideReminder();
         openPopup(true);
       });
     }
@@ -1495,6 +1494,10 @@
       Boolean(root.querySelector('[data-lead-capture-response-success]')) || redirectedSuccessfully;
     var serverError = root.querySelector('[data-lead-capture-response-error]');
 
+    if (getReminderState() !== 'dismissed') {
+      showReminder();
+    }
+
     if (postedSuccessfully) {
       showSuccess();
       openPopup(true);
@@ -1505,7 +1508,7 @@
       var navigationElapsed =
         window.performance && typeof window.performance.now === 'function' ? window.performance.now() : 0;
       window.setTimeout(openPopup, Math.max(0, 2000 - navigationElapsed));
-    } else if (getReminderState() === 'active') {
+    } else if (getReminderState() !== 'dismissed') {
       showReminder();
     }
   })();

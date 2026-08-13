@@ -2,6 +2,7 @@
   Renders the WRYDECO welcome story video component with custom controls.
 
   @param {string} video_url - The MP4 video URL to render.
+  @param {string} [poster_url] - The poster image URL shown before the video loads.
   @param {string} [story_label] - The story badge label shown on the video.
   @param {string} [intro] - Supporting copy shown above the video frame.
   @param {string} [eyebrow] - Eyebrow text shown above the video frame.
@@ -16,9 +17,10 @@
 
 {%- liquid
   assign story_label = story_label | default: 'Behind the Craft'
-  assign intro = intro | default: 'Discover the people, process, and artistry that shape our handcrafted wooden furniture.'
+  assign poster_url = poster_url | default: blank
+  assign intro = intro | default: 'Discover how nature, craftsmanship, and thoughtful design come together to shape every Wrydeco piece.'
   assign eyebrow = eyebrow | default: 'The WRYDECO Story'
-  assign heading = heading | default: 'Our Story in Craftsmanship'
+  assign heading = heading | default: 'From Nature to Artful Living'
   assign video_label = video_label | default: 'WRYDECO craftsmanship story video'
   assign play_label = play_label | default: 'Play WRYDECO craftsmanship story video'
   assign component_id = id | default: 'welcome-video'
@@ -43,8 +45,11 @@
       <div class="welcome-video__frame">
         <video
           class="welcome-video__media"
-          preload="metadata"
+          preload="none"
           playsinline
+          {% if poster_url != blank %}
+            poster="{{ poster_url | escape }}"
+          {% endif %}
           aria-label="{{ video_label | escape }}"
           data-welcome-video-media
         >
@@ -165,12 +170,47 @@
   .welcome-video {
     position: relative;
     display: block;
+    isolation: isolate;
     background:
       radial-gradient(circle at 50% 18%, rgba(255, 255, 255, 0.9), transparent 34%),
       linear-gradient(180deg, #fbf7f0 0%, #f6eee4 100%);
     color: var(--color-charcoal, #2a2622);
     padding: clamp(18px, 1.5vw, 28px) clamp(28px, 3.8vw, 72px) clamp(36px, 3.4vw, 64px);
     overflow: hidden;
+  }
+
+  .welcome-video::before,
+  .welcome-video::after {
+    position: absolute;
+    z-index: 0;
+    width: clamp(210px, 16vw, 286px);
+    height: clamp(270px, 22vw, 382px);
+    border-radius: 44% 56% 58% 42%;
+    background: repeating-radial-gradient(
+      ellipse at center,
+      transparent 0,
+      transparent 14px,
+      color-mix(in srgb, var(--color-clay, #8a5d37) 18%, transparent) 14px,
+      color-mix(in srgb, var(--color-clay, #8a5d37) 18%, transparent) 17px
+    );
+    content: '';
+    opacity: 0.58;
+    pointer-events: none;
+  }
+
+  .welcome-video::before {
+    top: clamp(86px, 8vw, 138px);
+    left: clamp(-128px, -7.5vw, -78px);
+    opacity: 0.58;
+    transform: rotate(-14deg);
+  }
+
+  .welcome-video::after {
+    right: clamp(-132px, -7.8vw, -82px);
+    bottom: clamp(42px, 4.8vw, 88px);
+    border-radius: 57% 43% 39% 61%;
+    opacity: 0.46;
+    transform: rotate(17deg);
   }
 
   .welcome-video__sr-title {
@@ -233,7 +273,7 @@
   }
 
   .welcome-video__intro {
-    max-width: 820px;
+    max-width: 920px;
     margin: 14px auto 0;
     color: rgba(42, 38, 34, 0.78);
     font-family: var(--font-body);
@@ -244,11 +284,14 @@
   .welcome-video__frame {
     position: relative;
     isolation: isolate;
-    width: 100%;
-    aspect-ratio: 170 / 71;
+    max-width: 100%;
+    max-height: calc(100vh - 60px);
+    height: auto;
+    margin-inline: auto;
+    aspect-ratio: 16 / 9;
     overflow: hidden;
     border: 1px solid rgba(93, 62, 38, 0.12);
-    border-radius: 16px;
+    border-radius: 8px;
     background-color: var(--color-ebony, #1a1815);
     box-shadow: 0 26px 62px rgba(63, 39, 23, 0.2);
   }
@@ -341,7 +384,7 @@
     border: 2px solid rgba(255, 250, 242, 0.96);
     border-radius: 50%;
     background:
-      radial-gradient(circle, rgba(255, 252, 247, 0.96) 0%, rgba(247, 239, 229, 0.88) 100%);
+      radial-gradient(circle, rgba(255, 252, 247, 0.86) 0%, rgba(247, 239, 229, 0.78) 100%);
     color: var(--color-dark-clay, #4b2c1d);
     box-shadow:
       0 0 0 5px rgba(129, 84, 48, 0.34),
@@ -354,10 +397,6 @@
 
   .welcome-video__center-play:hover {
     transform: translate(-50%, -50%) scale(1.035);
-  }
-
-  .welcome-video__center-play .welcome-video__icon--play {
-    transform: translateX(4px);
   }
 
   .welcome-video__controls {
@@ -565,8 +604,26 @@
       padding: 22px 24px 46px;
     }
 
+    .welcome-video::before,
+    .welcome-video::after {
+      width: 220px;
+      height: 292px;
+    }
+
+    .welcome-video::before {
+      top: 112px;
+      left: -118px;
+      opacity: 0.46;
+    }
+
+    .welcome-video::after {
+      right: -120px;
+      bottom: 44px;
+      opacity: 0.38;
+    }
+
     .welcome-video__frame {
-      aspect-ratio: 170 / 71;
+      aspect-ratio: 16 / 9;
     }
 
     .welcome-video__eyebrow {
@@ -615,8 +672,26 @@
       padding: 18px var(--layout-padding-mobile, 16px) 34px;
     }
 
+    .welcome-video::before,
+    .welcome-video::after {
+      width: 174px;
+      height: 230px;
+    }
+
+    .welcome-video::before {
+      top: 86px;
+      left: -104px;
+      opacity: 0.38;
+    }
+
+    .welcome-video::after {
+      right: -106px;
+      bottom: 24px;
+      opacity: 0.32;
+    }
+
     .welcome-video__frame {
-      aspect-ratio: 170 / 91;
+      aspect-ratio: 16 / 9;
     }
 
     .welcome-video__header {
@@ -839,21 +914,25 @@
       if (!frame || !video || section.dataset.welcomeVideoInit === 'true') return;
       section.dataset.welcomeVideoInit = 'true';
 
+      const isCompactViewport = () => window.matchMedia('(max-width: 1024px)').matches;
+
       const showControls = () => {
         window.clearTimeout(hideControlsTimer);
         section.classList.remove('are-controls-hidden');
       };
 
-      const hideControls = () => {
-        if (settingsPanel && !settingsPanel.hidden) return;
-        if (section.matches(':focus-within')) return;
+      const hideControls = (force = false) => {
+        if (!force) {
+          if (settingsPanel && !settingsPanel.hidden) return;
+          if (section.matches(':focus-within')) return;
+        }
 
         section.classList.add('are-controls-hidden');
       };
 
       const queueControlsHide = () => {
         window.clearTimeout(hideControlsTimer);
-        hideControlsTimer = window.setTimeout(hideControls, 1200);
+        hideControlsTimer = window.setTimeout(hideControls, 500);
       };
 
       const updatePlayState = () => {
@@ -895,12 +974,27 @@
         setRangeFill(progressRange, progress);
       };
 
-      const togglePlayback = async () => {
+      const togglePlayback = async (event) => {
+        const toggleButton = event ? event.currentTarget : null;
+        const shouldHideCompactControls =
+          toggleButton &&
+          toggleButton.closest('[data-welcome-video-controls]') &&
+          isCompactViewport() &&
+          (video.paused || video.ended);
+
         if (video.paused || video.ended) {
           try {
-            await video.play();
+            const playPromise = video.play();
+            if (shouldHideCompactControls) {
+              toggleButton.blur();
+              hideControls(true);
+            }
+            await playPromise;
           } catch (error) {
             section.classList.remove('is-playing');
+            if (shouldHideCompactControls) {
+              showControls();
+            }
           }
         } else {
           video.pause();
@@ -910,7 +1004,13 @@
       };
 
       toggleButtons.forEach((button) => {
-        button.addEventListener('click', togglePlayback);
+        button.addEventListener('click', (event) => {
+          if (button.closest('[data-welcome-video-controls]') && isCompactViewport()) {
+            event.stopPropagation();
+          }
+
+          togglePlayback(event);
+        });
       });
 
       frame.addEventListener('mouseenter', showControls);

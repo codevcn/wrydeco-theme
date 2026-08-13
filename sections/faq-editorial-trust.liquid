@@ -6,7 +6,7 @@
       <span class="trust-statistics__rule" aria-hidden="true"></span>
     </div>
 
-    <ul class="trust-statistics__list" role="list">
+    <ul class="trust-statistics__list custom-scrollbar" role="list">
       {%- for stat_index in (1..5) -%}
         {%- liquid
           assign value_setting = 'stat_' | append: stat_index | append: '_value'
@@ -70,9 +70,8 @@
   .trust-statistics__list {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
-    min-block-size: 92px;
     margin: var(--sp-0);
-    padding: var(--sp-0);
+    padding: var(--sp-2) var(--sp-0) var(--sp-4);
     border-block-end: var(--border-width) solid var(--color-border);
     list-style: none;
   }
@@ -162,24 +161,26 @@
     }
 
     .trust-statistics__list {
-      display: block;
-      min-block-size: var(--sp-0);
+      display: flex;
+      overflow-x: scroll;
+      overflow-y: hidden;
+      overscroll-behavior-x: contain;
+      scroll-snap-type: x proximity;
+      -webkit-overflow-scrolling: touch;
     }
 
     .trust-statistics__item {
-      flex-direction: row;
-      justify-content: flex-start;
-      min-block-size: var(--sp-7);
-      border-block-end: var(--border-width) solid var(--color-border);
-      text-align: start;
+      flex: 0 0 clamp(132px, 42vw, 176px);
+      padding-inline: var(--sp-2);
+      scroll-snap-align: start;
+      text-align: center;
     }
 
-    .trust-statistics__item:last-child {
-      border-block-end: var(--sp-0);
+    .trust-statistics__item + .trust-statistics__item {
+      border-inline-start: var(--border-width) solid var(--color-border);
     }
 
     .trust-statistics__value {
-      flex: 0 0 calc(var(--sp-12));
       font-size: var(--font-size-display-md);
       text-align: center;
       transform: translateY(2px);
@@ -190,11 +191,13 @@
       inset-block-end: auto;
       margin-block-start: var(--sp-0);
       font-size: calc(var(--font-size-caption) - (var(--border-width) * 2));
+      text-align: center;
     }
 
     .trust-statistics__item--artisan::before {
-      inset-inline-start: var(--sp-0);
+      inset-inline-start: 50%;
       inline-size: calc(var(--sp-12) + var(--sp-5));
+      transform: translateX(-50%);
     }
   }
 {% endstylesheet %}

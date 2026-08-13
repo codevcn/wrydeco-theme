@@ -886,19 +886,42 @@
 
       fetch(action, { method: 'POST', body: data, redirect: 'follow' })
         .then(function (res) {
-          var success = res.ok && (res.redirected || /customer_posted=true/.test(res.url));
-          if (success) {
-            setLoading(false);
-            form.reset();
-            toast('Thanks for subscribing.', 'success');
-            return;
+          if (!res.ok) {
+            form.submit();
+            return null;
           }
-          if (res.ok) {
+
+          return res.text().then(function (html) {
+            return {
+              url: res.url,
+              redirected: res.redirected,
+              html: html,
+            };
+          });
+        })
+        .then(function (result) {
+          if (!result) return;
+
+          var success =
+            result.redirected ||
+            /customer_posted=true/.test(result.url) ||
+            /customer_posted=true/.test(result.html) ||
+            /posted_successfully\?/.test(result.html);
+
+          if (!success) {
             setLoading(false);
             toast('We could not subscribe that email. Please try again.', 'error');
             return;
           }
-          form.submit();
+
+          setLoading(false);
+          form.reset();
+          if (window.WrydecoDiscountAutoApply) {
+            window.WrydecoDiscountAutoApply.unlockAndSync();
+          } else {
+            document.dispatchEvent(new CustomEvent('wry:newsletter-signup-success'));
+          }
+          toast('Thanks for subscribing.', 'success');
         })
         .catch(function () {
           form.submit();

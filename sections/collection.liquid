@@ -556,57 +556,6 @@
                     <p class="pcard__artist">Crafted By {{ artist | escape }}</p>
                   {% endif %}
 
-                  {%- comment -%}
-                    Loox rating summary rendered from product metafields so it appears
-                    in the initial server-rendered HTML. Loox-specific metafields are
-                    preferred, with Shopify standard review metafields as the fallback.
-                  {%- endcomment -%}
-                  {%- liquid
-                    assign loox_average_rating = product.metafields.loox.avg_rating.value | default: product.metafields.loox.avg_rating | plus: 0
-                    assign loox_review_count = product.metafields.loox.num_reviews.value | default: product.metafields.loox.num_reviews | plus: 0
-                    if loox_average_rating <= 0
-                      assign loox_average_rating = product.metafields.reviews.rating.value.rating | default: product.metafields.reviews.rating.value | default: product.metafields.reviews.rating | plus: 0
-                    endif
-                    if loox_review_count <= 0
-                      assign loox_review_count = product.metafields.reviews.rating_count.value | default: product.metafields.reviews.rating_count | plus: 0
-                    endif
-                    assign loox_average_rating = loox_average_rating | round: 1
-                    assign loox_rating_fill_percent = loox_average_rating | times: 20 | at_most: 100 | at_least: 0
-                    assign loox_review_label = 'reviews'
-                    if loox_review_count == 1
-                      assign loox_review_label = 'review'
-                    endif
-                  -%}
-                  {%- if loox_review_count > 0 and loox_average_rating > 0 -%}
-                    <div
-                      class="pcard__rating"
-                      aria-label="{{ loox_average_rating }} out of 5 stars from {{ loox_review_count }} {{ loox_review_label }}"
-                    >
-                      <span
-                        class="pcard__rating-stars"
-                        style="--rating-fill: {{ loox_rating_fill_percent }}%;"
-                        aria-hidden="true"
-                      >
-                        <span class="pcard__rating-stars-base">
-                          {%- for star_index in (1..5) -%}
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" focusable="false">
-                              <path fill="currentColor" d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.62L12 2L9.19 8.62L2 9.24l5.45 4.73L5.82 21z"/>
-                            </svg>
-                          {%- endfor -%}
-                        </span>
-                        <span class="pcard__rating-stars-fill">
-                          {%- for star_index in (1..5) -%}
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" focusable="false">
-                              <path fill="currentColor" d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.62L12 2L9.19 8.62L2 9.24l5.45 4.73L5.82 21z"/>
-                            </svg>
-                          {%- endfor -%}
-                        </span>
-                      </span>
-                      <span class="pcard__rating-score">{{ loox_average_rating }}</span>
-                      <span class="pcard__rating-count">({{ loox_review_count }} {{ loox_review_label }})</span>
-                    </div>
-                  {%- endif -%}
-
                   <p class="pcard__price">
                     <span style="font-weight: var(--font-weight-light);">From</span> {{ product.price | money }}
                   </p>
@@ -1387,57 +1336,6 @@
     border: 0;
     background: transparent;
     color: currentColor;
-  }
-
-  .pcard__rating {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    margin: var(--sp-2) 0 0;
-    font-family: var(--font-body);
-    font-size: 13px;
-    line-height: 1;
-    color: var(--color-muted, #6a625c);
-  }
-  .pcard__rating-stars {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    flex: none;
-    color: rgba(138, 93, 55, 0.22);
-  }
-
-  .pcard__rating-stars-base,
-  .pcard__rating-stars-fill {
-    display: inline-flex;
-    gap: 1px;
-  }
-
-  .pcard__rating-stars-fill {
-    position: absolute;
-    inset-block-start: 0;
-    inset-inline-start: 0;
-    overflow: hidden;
-    width: var(--rating-fill);
-    color: var(--color-star-rating, #8a5d37);
-    white-space: nowrap;
-  }
-
-  .pcard__rating-stars svg {
-    flex: none;
-    width: 18px;
-    height: 18px;
-  }
-
-  .pcard__rating-score {
-    font-size: 14px;
-    font-weight: var(--font-weight-semibold);
-    color: #352117;
-  }
-
-  .pcard__rating-count {
-    font-size: 14px;
-    color: var(--color-muted, #6a625c);
   }
 
   .pcard__info {
