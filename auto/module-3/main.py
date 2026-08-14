@@ -1044,7 +1044,7 @@ def get_products_by_review_status(has_reviews: bool, sort_by="created_desc"):
             reviews_count: metafield(namespace: "reviews", key: "rating_count") {
               value
             }
-            judgeme_data: metafield(namespace: "judgeme", key: "review_widget_data") {
+            loox_reviews: metafield(namespace: "loox", key: "num_reviews") {
               value
             }
             media(first: 50) {
@@ -1101,11 +1101,10 @@ def get_products_by_review_status(has_reviews: bool, sort_by="created_desc"):
                     pass
                     
             if count == 0:
-                jdgm = node.get("judgeme_data")
-                if jdgm and jdgm.get("value"):
+                loox = node.get("loox_reviews")
+                if loox and loox.get("value"):
                     try:
-                        jdgm_data = json.loads(jdgm["value"])
-                        count = int(jdgm_data.get("number_of_reviews", 0))
+                        count = int(loox["value"])
                     except:
                         pass
                         
@@ -1255,6 +1254,126 @@ def get_products_by_rich_description_status(has_rich: bool, sort_by="created_des
         "productsCount": {"count": len(all_matched_edges)}
     }
 
+def get_products_by_duplicate_asin(sort_by="created_desc"):
+    query = """
+    query getProducts($after: String) {
+      products(first: 50, after: $after) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        edges {
+          node {
+            id
+            handle
+            title
+            descriptionHtml
+            createdAt
+            productType
+            category {
+              name
+            }
+            priceRangeV2 {
+              minVariantPrice {
+                amount
+              }
+            }
+            options {
+              name
+            }
+            collections(first: 20) {
+              edges {
+                node {
+                  title
+                }
+              }
+            }
+            amazon_link: metafield(namespace: "custom", key: "amazon_link") {
+              value
+            }
+            media(first: 50) {
+              edges {
+                node {
+                  ... on MediaImage {
+                    id
+                    image {
+                      url
+                    }
+                  }
+                  ... on Video {
+                    id
+                    preview {
+                      image {
+                        url
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    """
+    all_edges = []
+    has_next = True
+    cursor = None
+    
+    while has_next:
+        variables = {}
+        if cursor:
+            variables["after"] = cursor
+            
+        res = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=HEADERS)
+        res.raise_for_status()
+        data = res.json()
+        if "errors" in data:
+            print("GraphQL Errors:", data["errors"])
+            break
+            
+        products_data = data["data"]["products"]
+        all_edges.extend(products_data["edges"])
+                
+        page_info = products_data.get("pageInfo", {})
+        has_next = page_info.get("hasNextPage", False)
+        cursor = page_info.get("endCursor")
+        
+    asin_counts = {}
+    for edge in all_edges:
+        mf = edge["node"].get("amazon_link")
+        if mf and mf.get("value"):
+            asin = mf["value"].strip().upper()
+            if asin:
+                asin_counts[asin] = asin_counts.get(asin, 0) + 1
+                
+    duplicate_edges = []
+    for edge in all_edges:
+        mf = edge["node"].get("amazon_link")
+        if mf and mf.get("value"):
+            asin = mf["value"].strip().upper()
+            if asin and asin_counts.get(asin, 0) > 1:
+                duplicate_edges.append(edge)
+
+    def get_sort_key(edge):
+        if sort_by in ["price_asc", "price_desc"]:
+            price_data = edge["node"].get("priceRangeV2")
+            if price_data and price_data.get("minVariantPrice"):
+                return float(price_data["minVariantPrice"].get("amount", 0))
+            return 0.0
+        return edge["node"].get("createdAt", "")
+        
+    reverse_sort = sort_by in ["created_desc", "price_desc"]
+    duplicate_edges.sort(key=get_sort_key, reverse=reverse_sort)
+        
+    return {
+        "products": {
+            "edges": duplicate_edges,
+            "pageInfo": {"hasNextPage": False, "hasPreviousPage": False}
+        },
+        "productsCount": {"count": len(duplicate_edges)}
+    }
+
 @app.post("/update-token")
 async def update_token(request: Request, access_token: str = Form(...)):
     global SHOPIFY_ADMIN_TOKEN, HEADERS
@@ -1336,6 +1455,8 @@ async def read_root(request: Request, after: str = None, before: str = None, fil
             data = get_products_by_review_status(special_filter == "has_reviews", sort_by=sort_by)
         elif special_filter and special_filter in ["has_rich", "no_rich"]:
             data = get_products_by_rich_description_status(special_filter == "has_rich", sort_by=sort_by)
+        elif special_filter and special_filter == "duplicate_asin":
+            data = get_products_by_duplicate_asin(sort_by=sort_by)
         elif filter_value and filter_type == "metafield_amazon_link":
             data = get_products_by_metafield_amazon_link(filter_value, sort_by=sort_by)
         elif filter_value and filter_type == "metafield_amazon_link_list":
@@ -2863,6 +2984,33 @@ async def internal_edit_product(request: Request):
                     "productType": new_value
                 }
             }
+        elif target_field == "amazonLink":
+            mutation = '''
+            mutation productUpdate($input: ProductInput!) {
+              productUpdate(input: $input) {
+                product {
+                  id
+                }
+                userErrors {
+                  field
+                  message
+                }
+              }
+            }
+            '''
+            variables = {
+                "input": {
+                    "id": product_id,
+                    "metafields": [
+                        {
+                            "namespace": "custom",
+                            "key": "amazon_link",
+                            "value": new_value,
+                            "type": "url"
+                        }
+                    ]
+                }
+            }
         else:
             return HTMLResponse(content=json.dumps({"success": False, "message": f"Trường '{target_field}' chưa được hỗ trợ cập nhật"}), media_type="application/json")
 
@@ -2881,4 +3029,170 @@ async def internal_edit_product(request: Request):
             
     except Exception as e:
         import json
+        return HTMLResponse(content=json.dumps({"success": False, "message": str(e)}), media_type="application/json")
+
+CONFIG_FILE = "config.json"
+
+def get_config():
+    if not os.path.exists(CONFIG_FILE):
+        default_config = {"DELETE_PASSWORD": "abc123"}
+        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+            import json
+            json.dump(default_config, f, indent=4)
+        return default_config
+    try:
+        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+            import json
+            return json.load(f)
+    except:
+        return {"DELETE_PASSWORD": "abc123"}
+
+def save_config(config_data):
+    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+        import json
+        json.dump(config_data, f, indent=4)
+
+@app.get("/settings", response_class=HTMLResponse)
+async def settings_page(request: Request):
+    return templates.TemplateResponse(request=request, name="settings.html", context={"request": request})
+
+@app.post("/update-settings")
+async def update_settings(request: Request, current_password: str = Form(...), new_password: str = Form(...)):
+    config_data = get_config()
+    import json
+    if current_password != config_data.get("DELETE_PASSWORD"):
+        return HTMLResponse(content=json.dumps({"success": False, "message": "Mật khẩu hiện tại không chính xác!"}), media_type="application/json")
+        
+    config_data["DELETE_PASSWORD"] = new_password
+    save_config(config_data)
+    return HTMLResponse(content=json.dumps({"success": True, "message": "Cập nhật mật khẩu thành công"}), media_type="application/json")
+
+@app.post("/reset-token")
+async def reset_token(request: Request):
+    import json
+    try:
+        client_id = os.getenv("SHOPIFY_CLIENT_ID")
+        client_secret = os.getenv("SHOPIFY_CLIENT_SECRET")
+        if not client_id or not client_secret:
+            return HTMLResponse(content=json.dumps({"success": False, "message": "Thiếu CLIENT_ID hoặc CLIENT_SECRET trong .env"}), media_type="application/json")
+        
+        url = f"https://{SHOPIFY_SHOP}.myshopify.com/admin/oauth/access_token"
+        response = requests.post(
+            url,
+            data={
+                "grant_type": "client_credentials",
+                "client_id": client_id,
+                "client_secret": client_secret,
+            },
+            headers={
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Accept": "application/json",
+            },
+            timeout=30,
+        )
+        if not response.ok:
+            return HTMLResponse(content=json.dumps({"success": False, "message": f"Lỗi từ Shopify: {response.text}"}), media_type="application/json")
+            
+        token_data = response.json()
+        access_token = token_data.get("access_token")
+        if not access_token:
+            return HTMLResponse(content=json.dumps({"success": False, "message": "Không nhận được access_token"}), media_type="application/json")
+            
+        # Hot update
+        global SHOPIFY_ADMIN_TOKEN
+        SHOPIFY_ADMIN_TOKEN = access_token
+        HEADERS["X-Shopify-Access-Token"] = access_token
+        
+        # Save to .env
+        env_path = ".env"
+        if os.path.exists(env_path):
+            with open(env_path, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+            
+            with open(env_path, "w", encoding="utf-8") as f:
+                for line in lines:
+                    if line.startswith("SHOPIFY_ADMIN_TOKEN="):
+                        f.write(f"SHOPIFY_ADMIN_TOKEN={access_token}\n")
+                    else:
+                        f.write(line)
+        else:
+            with open(env_path, "a", encoding="utf-8") as f:
+                f.write(f"\\nSHOPIFY_ADMIN_TOKEN={access_token}\\n")
+                
+        return HTMLResponse(content=json.dumps({"success": True, "message": "Reset Token thành công!"}), media_type="application/json")
+    except Exception as e:
+        return HTMLResponse(content=json.dumps({"success": False, "message": f"Lỗi nội bộ: {str(e)}"}), media_type="application/json")
+
+@app.post("/delete-product")
+async def delete_product(request: Request, product_id: str = Form(...), password: str = Form(...)):
+    import json
+    config_data = get_config()
+    if password != config_data.get("DELETE_PASSWORD"):
+        return HTMLResponse(content=json.dumps({"success": False, "message": "Mật khẩu không chính xác!"}), media_type="application/json")
+        
+    if not product_id.startswith("gid://"):
+        product_id = f"gid://shopify/Product/{product_id}"
+        
+    try:
+        # Fetch media IDs first to delete them
+        media_query = """
+        query getProductMedia($id: ID!) {
+          product(id: $id) {
+            media(first: 50) {
+              edges {
+                node {
+                  id
+                }
+              }
+            }
+          }
+        }
+        """
+        res_media = requests.post(GRAPHQL_URL, json={"query": media_query, "variables": {"id": product_id}}, headers=HEADERS)
+        media_data = res_media.json()
+        media_ids = []
+        if "data" in media_data and media_data["data"]["product"] and media_data["data"]["product"]["media"]["edges"]:
+            for edge in media_data["data"]["product"]["media"]["edges"]:
+                media_ids.append(edge["node"]["id"])
+                
+        if media_ids:
+            del_media_query = """
+            mutation productDeleteMedia($mediaIds: [ID!]!, $productId: ID!) {
+              productDeleteMedia(mediaIds: $mediaIds, productId: $productId) {
+                deletedMediaIds
+                userErrors {
+                  field
+                  message
+                }
+              }
+            }
+            """
+            requests.post(GRAPHQL_URL, json={"query": del_media_query, "variables": {"mediaIds": media_ids, "productId": product_id}}, headers=HEADERS)
+
+        # Delete the product
+        query = """
+        mutation productDelete($input: ProductDeleteInput!) {
+          productDelete(input: $input) {
+            deletedProductId
+            userErrors {
+              field
+              message
+            }
+          }
+        }
+        """
+        variables = {"input": {"id": product_id}}
+        res = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=HEADERS)
+        res.raise_for_status()
+        data = res.json()
+        
+        if "errors" in data:
+            return HTMLResponse(content=json.dumps({"success": False, "message": "GraphQL Error: " + str(data["errors"])}), media_type="application/json")
+            
+        delete_res = data.get("data", {}).get("productDelete", {})
+        if delete_res and delete_res.get("userErrors"):
+            return HTMLResponse(content=json.dumps({"success": False, "message": delete_res["userErrors"][0]["message"]}), media_type="application/json")
+            
+        return HTMLResponse(content=json.dumps({"success": True, "message": "Sản phẩm đã được xóa thành công."}), media_type="application/json")
+    except Exception as e:
         return HTMLResponse(content=json.dumps({"success": False, "message": str(e)}), media_type="application/json")

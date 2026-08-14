@@ -20,7 +20,7 @@
                 <div class="flex-shrink-0 flex items-center gap-3">
                     <a target="_blank" rel="noopener noreferrer" href="/" class="flex items-center gap-2 text-indigo-600 font-bold text-xl hover:text-indigo-700 transition-colors">
                         <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-                        <span>LocalAdmin</span>
+                        <span>Shopify Admin Manager</span>
                     </a>
                 </div>
                 <!-- Nav Links -->
@@ -31,6 +31,8 @@
                     <a target="_blank" rel="noopener noreferrer" href="/edit-variants" class="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">Sửa hàng loạt</a>
                     <a target="_blank" rel="noopener noreferrer" href="/notes" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Ghi chú</a>
                     <a target="_blank" rel="noopener noreferrer" href="/reviews" class="text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 pb-0.5">Reviews</a>
+                
+                    <a target="_blank" rel="noopener noreferrer" href="/settings" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>Settings</a>
                 </nav>
             </div>
         </div>
@@ -133,7 +135,7 @@
                             const parsedImages = [];
                             let currentRowId = 0;
 
-                            data.forEach(row => {
+                            data.forEach((row, rowIndex) => {
                                 const rawUrl = row[colName];
                                 const pid = row[pidColName] || '';
                                 const phandle = row[phColName] || '';
@@ -147,7 +149,7 @@
                                         urls.forEach(url => {
                                             validImages++;
                                             totalValidImages++;
-                                            parsedImages.push({ url, pid, phandle, rowId: currentRowId });
+                                            parsedImages.push({ url, pid, phandle, rowId: currentRowId, rowIndex: rowIndex });
                                         });
                                     }
                                 }
@@ -206,6 +208,9 @@
                                     badge.textContent = imgData.rowId;
 
                                     imgContainer.onclick = function() {
+                                        window.currentCsvData = data;
+                                        window.currentColName = colName;
+                                        window.currentFileGallery = fileGallery;
                                         openPreviewModal(parsedImages, parsedImages.indexOf(imgData));
                                     };
                                     
@@ -343,6 +348,104 @@
                     closePreviewModal();
                 }
             });
+            window.deletePreviewImage = function() {
+                document.getElementById('confirmDeleteModal').classList.remove('hidden');
+                document.getElementById('confirmDeleteModal').classList.add('flex');
+            };
+            
+            window.closeConfirmDelete = function() {
+                document.getElementById('confirmDeleteModal').classList.add('hidden');
+                document.getElementById('confirmDeleteModal').classList.remove('flex');
+            };
+            
+            window.executeDeleteImage = function() {
+                window.closeConfirmDelete();
+                
+                const imgData = window.currentPreviewImages[window.currentPreviewIndex];
+                const rowIndex = imgData.rowIndex;
+                
+                // Xóa URL trong file CSV
+                const row = window.currentCsvData[rowIndex];
+                let cellStr = row[window.currentColName];
+                let cleanedStr = cellStr.replace(/^["']|["']$/g, '').trim();
+                let urls = cleanedStr.split(',').map(u => u.trim());
+                let urlIndex = urls.indexOf(imgData.url);
+                if (urlIndex !== -1) {
+                    urls.splice(urlIndex, 1);
+                    row[window.currentColName] = urls.join(', ');
+                }
+                
+                // Xóa trên giao diện
+                window.currentFileGallery.removeChild(window.currentFileGallery.children[window.currentPreviewIndex]);
+                window.currentPreviewImages.splice(window.currentPreviewIndex, 1);
+                
+                if (window.currentPreviewImages.length > 0) {
+                    let nextIndex = window.currentPreviewIndex;
+                    if (nextIndex >= window.currentPreviewImages.length) {
+                        nextIndex = window.currentPreviewImages.length - 1;
+                    }
+                    window.openPreviewModal(window.currentPreviewImages, nextIndex);
+                } else {
+                    window.closePreviewModal();
+                }
+            };
+
+            window.editPreviewImage = function() {
+                const imgData = window.currentPreviewImages[window.currentPreviewIndex];
+                document.getElementById('editUrlInput').value = imgData.url;
+                document.getElementById('editUrlModal').classList.remove('hidden');
+                document.getElementById('editUrlModal').classList.add('flex');
+            };
+            
+            window.closeEditUrl = function() {
+                document.getElementById('editUrlModal').classList.add('hidden');
+                document.getElementById('editUrlModal').classList.remove('flex');
+            };
+            
+            window.executeEditUrl = function() {
+                const newUrl = document.getElementById('editUrlInput').value.trim();
+                if (!newUrl) {
+                    alert('Vui lòng nhập URL hợp lệ!');
+                    return;
+                }
+                
+                const imgData = window.currentPreviewImages[window.currentPreviewIndex];
+                const rowIndex = imgData.rowIndex;
+                
+                // Thay URL trong file CSV
+                const row = window.currentCsvData[rowIndex];
+                let cellStr = row[window.currentColName];
+                let cleanedStr = cellStr.replace(/^["']|["']$/g, '').trim();
+                let urls = cleanedStr.split(',').map(u => u.trim());
+                let urlIndex = urls.indexOf(imgData.url);
+                if (urlIndex !== -1) {
+                    urls[urlIndex] = newUrl;
+                    row[window.currentColName] = urls.join(', ');
+                }
+                
+                imgData.url = newUrl;
+                
+                const imgEl = window.currentFileGallery.children[window.currentPreviewIndex].querySelector('img');
+                if (imgEl) imgEl.src = newUrl;
+                
+                window.openPreviewModal(window.currentPreviewImages, window.currentPreviewIndex);
+                window.closeEditUrl();
+            };
+
+            const confirmDeleteModal = document.getElementById('confirmDeleteModal');
+            confirmDeleteModal.addEventListener('click', function(e) {
+                if (e.target === confirmDeleteModal) {
+                    closeConfirmDelete();
+                }
+            });
+
+            const editUrlModal = document.getElementById('editUrlModal');
+            editUrlModal.addEventListener('click', function(e) {
+                if (e.target === editUrlModal) {
+                    closeEditUrl();
+                }
+            });
+
         });
     </script>
     
@@ -358,6 +461,11 @@
         <button onclick="closePreviewModal()" class="absolute top-4 right-4 z-10 text-white hover:text-gray-300 bg-white/10 hover:bg-white/20 rounded-full p-2 backdrop-blur-md transition-all">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
+        <div class="absolute bottom-6 right-6 z-10 flex flex-col gap-4 pointer-events-auto">
+            <button onclick="editPreviewImage()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-md shadow-md font-medium transition-colors text-sm w-full">Sửa URL ảnh</button>
+            <button onclick="deletePreviewImage()" class="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-md shadow-md font-medium transition-colors text-sm w-full">Xóa ảnh</button>
+        </div>
+        
         <div class="flex items-center justify-center w-full h-full gap-2 relative pointer-events-none">
             <button onclick="navigatePreview(-1, event)" class="text-white hover:text-gray-300 bg-white/10 hover:bg-white/20 rounded-full p-4 backdrop-blur-md transition-all flex-shrink-0 z-10 pointer-events-auto" title="Previous">
                 <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
@@ -366,6 +474,36 @@
             <button onclick="navigatePreview(1, event)" class="text-white hover:text-gray-300 bg-white/10 hover:bg-white/20 rounded-full p-4 backdrop-blur-md transition-all flex-shrink-0 z-10 pointer-events-auto" title="Next">
                 <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
             </button>
+        </div>
+    </div>
+
+    <!-- Confirm Delete Modal -->
+    <div id="confirmDeleteModal" class="hidden fixed inset-0 z-[200] bg-black/60 items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-sm w-full p-6 relative">
+            <button onclick="closeConfirmDelete()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            <h3 class="text-lg font-bold text-gray-900 mb-2">Xác nhận xóa</h3>
+            <p class="text-gray-600 mb-6">Bạn có chắc chắn muốn xóa ảnh này không?</p>
+            <div class="flex justify-end gap-3">
+                <button onclick="closeConfirmDelete()" class="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md font-medium transition-colors">Hủy</button>
+                <button onclick="executeDeleteImage()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md font-medium transition-colors">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit URL Modal -->
+    <div id="editUrlModal" class="hidden fixed inset-0 z-[200] bg-black/60 items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6 relative">
+            <button onclick="closeEditUrl()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            <h3 class="text-lg font-bold text-gray-900 mb-4">Sửa URL ảnh</h3>
+            <input type="text" id="editUrlInput" class="w-full border border-gray-300 rounded-md p-2 focus:ring-indigo-500 focus:border-indigo-500 mb-6" placeholder="Nhập URL mới">
+            <div class="flex justify-end gap-3">
+                <button onclick="closeEditUrl()" class="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md font-medium transition-colors">Hủy</button>
+                <button onclick="executeEditUrl()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md font-medium transition-colors">OK</button>
+            </div>
         </div>
     </div>
 </body>
