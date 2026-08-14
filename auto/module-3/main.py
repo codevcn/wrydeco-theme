@@ -1286,6 +1286,10 @@ async def update_token(request: Request, access_token: str = Form(...)):
 
     return RedirectResponse(url="/", status_code=303)
 
+@app.get("/reviews", response_class=HTMLResponse)
+async def get_reviews(request: Request):
+    return templates.TemplateResponse(request=request, name="reviews.html", context={"request": request})
+
 @app.get("/notes", response_class=HTMLResponse)
 async def get_notes(request: Request):
     note_content = ""

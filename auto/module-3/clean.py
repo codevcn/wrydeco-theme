@@ -15,6 +15,17 @@ KEEP_CONTENT = [
     ".gitignore",
     ".vps.env",
     "scratch_ssh_test.py",
+    "deploy_runner.py",
+    "deploy_to_vps.py",
+    "fix_main.py",
+    "fix_ssl_nginx.py",
+    "get_logs.py",
+    "scratch_query.py",
+    "shopify-admin-app.conf",
+    "shopify-admin-app.service",
+    "update_nginx.py",
+    "update_vps_env.py",
+    "favicon.zip",
 ]
 
 

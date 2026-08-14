@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reviews Playground - Shopify Local Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+    </style>
+</head>
+<body class="text-gray-900 min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo -->
+                <div class="flex-shrink-0 flex items-center gap-3">
+                    <a target="_blank" rel="noopener noreferrer" href="/" class="flex items-center gap-2 text-indigo-600 font-bold text-xl hover:text-indigo-700 transition-colors">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                        <span>LocalAdmin</span>
+                    </a>
+                </div>
+                <!-- Nav Links -->
+                <nav class="flex items-center gap-6">
+                    <a target="_blank" rel="noopener noreferrer" href="/" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Sản phẩm</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/collections" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Collections</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/create" class="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">Tạo sản phẩm</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/edit-variants" class="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">Sửa hàng loạt</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/notes" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Ghi chú</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/reviews" class="text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 pb-0.5">Reviews</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto p-4 sm:p-8 flex-1 w-full">
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-800 tracking-tight">Reviews Playground</h1>
+            <p class="text-gray-500 mt-2 text-sm">Upload file CSV để thao tác với hình ảnh đánh giá sản phẩm.</p>
+        </div>
+        
+        <!-- Controls Section -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-end">
+                <div class="w-full">
+                    <label for="csvFileInput" class="block text-sm font-medium text-gray-700 mb-1">Upload CSV File</label>
+                    <input type="file" id="csvFileInput" accept=".csv" multiple class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 transition-colors border border-gray-300 rounded-md p-1 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                
+                <div class="w-full">
+                    <label for="photoUrlCol" class="block text-sm font-medium text-gray-700 mb-1">Photo URL Column Name</label>
+                    <input type="text" id="photoUrlCol" value="photo_url" class="block w-full text-sm text-gray-900 border border-gray-300 rounded-md py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 shadow-sm" placeholder="e.g. photo_url">
+                </div>
+
+                <div class="w-full">
+                    <label for="productIdCol" class="block text-sm font-medium text-gray-700 mb-1">Product ID Column Name</label>
+                    <input type="text" id="productIdCol" value="product_Id" class="block w-full text-sm text-gray-900 border border-gray-300 rounded-md py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 shadow-sm">
+                </div>
+
+                <div class="w-full">
+                    <label for="productHandleCol" class="block text-sm font-medium text-gray-700 mb-1">Product Handle Column Name</label>
+                    <input type="text" id="productHandleCol" value="product_handle" class="block w-full text-sm text-gray-900 border border-gray-300 rounded-md py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 shadow-sm">
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end">
+                <button id="processBtn" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-8 rounded-md transition-colors shadow-sm">
+                    Process CSV
+                </button>
+            </div>
+        </div>
+
+        <!-- Image Gallery Section -->
+        <div id="gallerySection" class="hidden">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-bold text-gray-800">Gallery Preview</h2>
+                <span id="rowCount" class="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full">0 images</span>
+            </div>
+            
+            <div id="galleryContainer" class="flex flex-col gap-6">
+                <!-- File sections will be injected here -->
+            </div>
+        </div>
+    </main>
+
+    <!-- PapaParse for easy CSV parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const csvFileInput = document.getElementById('csvFileInput');
+            const photoUrlColInput = document.getElementById('photoUrlCol');
+            const productIdColInput = document.getElementById('productIdCol');
+            const productHandleColInput = document.getElementById('productHandleCol');
+            const processBtn = document.getElementById('processBtn');
+            const gallerySection = document.getElementById('gallerySection');
+            const galleryContainer = document.getElementById('galleryContainer');
+            const rowCountEl = document.getElementById('rowCount');
+
+            processBtn.addEventListener('click', () => {
+                const files = csvFileInput.files;
+                if (!files || files.length === 0) {
+                    alert('Vui lòng chọn ít nhất 1 file CSV!');
+                    return;
+                }
+
+                const colName = photoUrlColInput.value.trim();
+                const pidColName = productIdColInput.value.trim();
+                const phColName = productHandleColInput.value.trim();
+                
+                if (!colName) {
+                    alert('Vui lòng nhập tên cột chứa URL ảnh!');
+                    return;
+                }
+
+                galleryContainer.innerHTML = '';
+                gallerySection.classList.remove('hidden');
+                rowCountEl.textContent = 'Đang xử lý...';
+                
+                let totalValidImages = 0;
+
+                Array.from(files).forEach(file => {
+                    Papa.parse(file, {
+                        header: true,
+                        skipEmptyLines: true,
+                        complete: function(results) {
+                            const data = results.data;
+                            let validImages = 0;
+
+                            const fileSection = document.createElement('div');
+                            fileSection.className = 'bg-white rounded-xl shadow-sm border border-gray-200 p-6';
+                            
+                            const fileHeader = document.createElement('div');
+                            fileHeader.className = 'flex items-center justify-between mb-4 border-b border-gray-100 pb-3';
+                            fileHeader.innerHTML = `<h3 class="text-lg font-semibold text-gray-800 break-all">${file.name}</h3><span class="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full file-count">0 images</span>`;
+                            fileSection.appendChild(fileHeader);
+                            
+                            const fileGallery = document.createElement('div');
+                            fileGallery.className = 'flex flex-wrap';
+                            fileGallery.style.gap = '10px';
+                            fileSection.appendChild(fileGallery);
+
+                            data.forEach(row => {
+                                const rawUrl = row[colName];
+                                const pid = row[pidColName] || '';
+                                const phandle = row[phColName] || '';
+
+                                if (rawUrl && typeof rawUrl === 'string' && rawUrl.trim() !== '') {
+                                    const cleanedRawUrl = rawUrl.replace(/^["']|["']$/g, '').trim();
+                                    const urls = cleanedRawUrl.split(',').map(u => u.trim()).filter(u => u !== '');
+                                    
+                                    urls.forEach(url => {
+                                        validImages++;
+                                        totalValidImages++;
+                                        
+                                        const imgContainer = document.createElement('div');
+                                        imgContainer.className = 'w-32 h-32 flex-shrink-0 border border-gray-200 rounded-md overflow-hidden shadow-sm bg-gray-50 cursor-pointer';
+                                        
+                                        const img = document.createElement('img');
+                                        img.src = url;
+                                        img.className = 'w-full h-full object-cover hover:scale-110 transition-transform duration-200 ease-out will-change-transform';
+                                        img.loading = 'lazy';
+                                        img.alt = 'Review Photo';
+                                        img.onerror = function() {
+                                            this.onerror = null;
+                                            this.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="%23cbd5e1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>';
+                                        };
+                                        
+                                        imgContainer.onclick = function() {
+                                            showPreviewModal(url, pid, phandle);
+                                        };
+                                        
+                                        imgContainer.appendChild(img);
+                                        fileGallery.appendChild(imgContainer);
+                                    });
+                                }
+                            });
+
+                            fileHeader.querySelector('.file-count').textContent = `${validImages} images`;
+                            galleryContainer.appendChild(fileSection);
+                            
+                            rowCountEl.textContent = `Total: ${totalValidImages} images`;
+                        },
+                        error: function(err) {
+                            alert(`Lỗi khi đọc file ${file.name}: ${err.message}`);
+                        }
+                    });
+                });
+            });
+        });
+
+        // Image Preview Modal Logic
+        document.addEventListener('DOMContentLoaded', () => {
+            const previewModal = document.getElementById('previewModal');
+            const previewImage = document.getElementById('previewImage');
+            const previewProductId = document.getElementById('previewProductId');
+            const previewProductHandle = document.getElementById('previewProductHandle');
+            
+            window.showPreviewModal = function(url, pid, phandle) {
+                // Tạm ẩn và xóa src ảnh cũ
+                previewImage.src = '';
+                previewImage.classList.add('hidden');
+                
+                if (pid) {
+                    previewProductId.textContent = `Product ID: ${pid}`;
+                    previewProductId.classList.remove('hidden');
+                } else {
+                    previewProductId.classList.add('hidden');
+                }
+                
+                if (phandle) {
+                    previewProductHandle.textContent = `Product Handle: ${phandle}`;
+                    previewProductHandle.classList.remove('hidden');
+                } else {
+                    previewProductHandle.classList.add('hidden');
+                }
+
+                // Hiện khung popup nền đen trước
+                previewModal.classList.remove('hidden');
+                previewModal.classList.add('flex');
+
+                // Delay 2 frames rồi mới gán src ảnh để tránh lag lúc mở popup
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        previewImage.src = url;
+                        previewImage.classList.remove('hidden');
+                    });
+                });
+            };
+            
+            window.closePreviewModal = function() {
+                previewModal.classList.add('hidden');
+                previewModal.classList.remove('flex');
+                previewImage.src = '';
+            };
+            
+            previewModal.addEventListener('click', function(e) {
+                if (e.target === previewModal) {
+                    closePreviewModal();
+                }
+            });
+        });
+    </script>
+    
+    <!-- Image Preview Modal -->
+    <div id="previewModal" class="hidden fixed inset-0 z-[100] bg-black/90 items-center justify-center p-[12px]">
+        <!-- Info boxes -->
+        <div class="absolute top-4 left-4 z-10 flex flex-col gap-2">
+            <div id="previewProductId" class="bg-white text-black px-3 py-1.5 rounded-md shadow-md text-sm font-semibold hidden max-w-[200px] truncate transition-all duration-300 ease-in-out hover:max-w-2xl cursor-default" title="Hover to expand"></div>
+            <div id="previewProductHandle" class="bg-white text-black px-3 py-1.5 rounded-md shadow-md text-sm font-semibold hidden max-w-[200px] truncate transition-all duration-300 ease-in-out hover:max-w-2xl cursor-default" title="Hover to expand"></div>
+        </div>
+        
+        <button onclick="closePreviewModal()" class="absolute top-4 right-4 z-10 text-white hover:text-gray-300 bg-white/10 hover:bg-white/20 rounded-full p-2 backdrop-blur-md transition-all">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+        <img id="previewImage" src="" class="max-w-full object-contain rounded-lg shadow-2xl" style="width: auto; height: 100%;" alt="Preview">
+    </div>
+</body>
+</html>
