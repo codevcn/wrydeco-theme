@@ -2,6 +2,8 @@
   Renders a maker card from a product_author metaobject.
 
   @param {object} author - Product author metaobject.
+  @param {string} [image_loading] - Native image loading strategy.
+  @param {string} [image_priority] - Native image fetch priority.
 
   @example
   {% render 'maker-card', author: author %}
@@ -14,6 +16,8 @@
   assign maker_link = author.system.url
   assign maker_role = author.role.value | default: 'Master Craftsperson'
   assign display_features = author.display_features.value
+  assign maker_image_loading = image_loading | default: 'lazy'
+  assign maker_image_priority = image_priority | default: 'low'
 -%}
 
 <div class="maker-card">
@@ -33,12 +37,12 @@
           src="{{ maker_image | escape }}"
           alt="{{ maker_name | escape }}"
           class="maker-card__img"
-          loading="lazy"
+          loading="{{ maker_image_loading }}"
           decoding="async"
-          fetchpriority="low"
+          fetchpriority="{{ maker_image_priority }}"
           draggable="false"
           width="720"
-          height="900"
+          height="947"
         >
       {%- else -%}
         {{ 'image' | placeholder_svg_tag: 'maker-card__img placeholder-svg' }}

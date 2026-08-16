@@ -1,3 +1,16 @@
+{%- liquid
+  assign hero_image_alt = section.settings.hero_image.alt | default: 'Handcrafted natural wood furniture styled in a refined interior'
+  assign hero_image_loading = 'lazy'
+  assign hero_image_priority = 'low'
+
+  if section.index != blank
+    if section.index <= 2
+      assign hero_image_loading = 'eager'
+      assign hero_image_priority = 'high'
+    endif
+  endif
+-%}
+
 <section class="mc" aria-labelledby="MaterialsCraftHeading-{{ section.id }}">
   <div class="mc__inner">
     <div class="mc__content">
@@ -24,9 +37,11 @@
                   <img
                     class="mc__wood-swatch mc__wood-swatch--{{ block.settings.name | handleize }}"
                     alt=""
+                    decoding="async"
+                    fetchpriority="low"
                     loading="lazy"
-                    width="48"
-                    height="48"
+                    width="160"
+                    height="80"
                     src="{{ 'ic-wood-type-' | append: image_index | append: '.png' | file_url }}"
                   >
                   <span>{{ block.settings.name | escape }}</span>
@@ -42,45 +57,53 @@
                 <img
                   class="mc__wood-swatch"
                   alt=""
+                  decoding="async"
+                  fetchpriority="low"
                   loading="lazy"
-                  width="48"
-                  height="48"
+                  width="160"
+                  height="80"
                   src="{{ 'ic-footer-your-finish-1.png' | file_url }}"
-
-                ><span>Natural Oil</span>
+                >
+                <span>Natural Oil</span>
               </li>
               <li>
                 <img
                   class="mc__wood-swatch"
                   alt=""
+                  decoding="async"
+                  fetchpriority="low"
                   loading="lazy"
-                  width="48"
-                  height="48"
+                  width="160"
+                  height="80"
                   src="{{ 'ic-footer-your-finish-2.png' | file_url }}"
-
-                ><span>Smoked</span>
+                >
+                <span>Smoked</span>
               </li>
               <li>
                 <img
                   class="mc__wood-swatch"
                   alt=""
+                  decoding="async"
+                  fetchpriority="low"
                   loading="lazy"
-                  width="48"
-                  height="48"
+                  width="160"
+                  height="80"
                   src="{{ 'ic-footer-your-finish-3.png' | file_url }}"
-
-                ><span>Dark Brown</span>
+                >
+                <span>Dark Brown</span>
               </li>
               <li>
                 <img
                   class="mc__wood-swatch"
                   alt=""
+                  decoding="async"
+                  fetchpriority="low"
                   loading="lazy"
-                  width="48"
-                  height="48"
+                  width="160"
+                  height="80"
                   src="{{ 'ic-footer-your-finish-4.png' | file_url }}"
-
-                ><span>Matte Black</span>
+                >
+                <span>Matte Black</span>
               </li>
             </ul>
           </div>
@@ -89,19 +112,51 @@
             <h3 class="mc__option-heading">{{ section.settings.details_heading | escape }}</h3>
             <ul class="mc__detail-list" aria-label="{{ section.settings.details_heading | escape }}">
               <li>
-                <img src="{{ 'ic-your-style-room-1.png' | file_url }}" alt="" loading="lazy" width="180" height="120">
+                <img
+                  src="{{ 'ic-your-style-room-1.png' | file_url }}"
+                  alt=""
+                  decoding="async"
+                  fetchpriority="low"
+                  loading="lazy"
+                  width="180"
+                  height="120"
+                >
                 <span>Live Edge</span>
               </li>
               <li>
-                <img src="{{ 'ic-your-style-room-2.png' | file_url }}" alt="" loading="lazy" width="180" height="120">
+                <img
+                  src="{{ 'ic-your-style-room-2.png' | file_url }}"
+                  alt=""
+                  decoding="async"
+                  fetchpriority="low"
+                  loading="lazy"
+                  width="180"
+                  height="120"
+                >
                 <span>Curved Edge</span>
               </li>
               <li>
-                <img src="{{ 'ic-your-style-room-3.png' | file_url }}" alt="" loading="lazy" width="180" height="120">
+                <img
+                  src="{{ 'ic-your-style-room-3.png' | file_url }}"
+                  alt=""
+                  decoding="async"
+                  fetchpriority="low"
+                  loading="lazy"
+                  width="180"
+                  height="120"
+                >
                 <span>Carved Detail</span>
               </li>
               <li>
-                <img src="{{ 'ic-your-style-room-4.png' | file_url }}" alt="" loading="lazy" width="180" height="120">
+                <img
+                  src="{{ 'ic-your-style-room-4.png' | file_url }}"
+                  alt=""
+                  decoding="async"
+                  fetchpriority="low"
+                  loading="lazy"
+                  width="180"
+                  height="120"
+                >
                 <span>Brass Inlay</span>
               </li>
             </ul>
@@ -120,16 +175,17 @@
     </div>
 
     <figure class="mc__visual">
-      {%- assign hero_image_alt = section.settings.hero_image.alt | default: section.settings.heading | default: 'Warm handcrafted wood furniture with natural light' -%}
       {%- if section.settings.hero_image != blank -%}
         {{
           section.settings.hero_image
-          | image_url: width: 1100
+          | image_url: width: 1440
           | image_tag:
             class: 'mc__visual-img',
-            loading: 'lazy',
-            widths: '520, 760, 940, 1100',
-            sizes: '(min-width: 64rem) 42vw, 100vw',
+            loading: hero_image_loading,
+            fetchpriority: hero_image_priority,
+            decoding: 'async',
+            widths: '480, 640, 800, 960, 1200, 1440',
+            sizes: '(min-width: 82rem) 44vw, (min-width: 48rem) calc(100vw - 64px), calc(100vw - 36px)',
             alt: hero_image_alt
         }}
       {%- else -%}
@@ -137,7 +193,9 @@
           class="mc__visual-img"
           src="{{ 'curated-collections-img-3.png' | file_url }}"
           alt="{{ hero_image_alt | escape }}"
-          loading="lazy"
+          decoding="async"
+          fetchpriority="{{ hero_image_priority }}"
+          loading="{{ hero_image_loading }}"
           width="1100"
           height="1320"
         >
@@ -329,14 +387,16 @@
   .mc__detail-list img {
     display: block;
     width: 100%;
+    aspect-ratio: 2 / 1;
     border: 1px solid rgba(74, 44, 24, 0.1);
     border-radius: var(--card-radius, 6px);
     margin-bottom: var(--sp-2);
+    object-fit: cover;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
   }
 
   .mc__wood-swatch {
-    height: clamp(var(--sp-8), 4.4vw, var(--sp-10));
+    height: auto;
     background: linear-gradient(90deg, rgba(255, 255, 255, 0.08), transparent 22%, rgba(0, 0, 0, 0.08) 62%, transparent),
       repeating-linear-gradient(96deg, rgba(255, 255, 255, 0.08) 0 2px, transparent 2px 9px),
       linear-gradient(105deg, #4d2d17, #1f1209 40%, #7b4d2b 72%, #2a170d);
@@ -380,8 +440,7 @@
   }
 
   .mc__detail-list img {
-    height: clamp(var(--sp-7), 3.8vw, var(--sp-9));
-    object-fit: cover;
+    height: auto;
   }
 
   .mc__button {
@@ -514,16 +573,6 @@
     .mc__detail-list {
       grid-template-columns: repeat(4, minmax(0, 108px));
       justify-content: start;
-    }
-
-    .mc__wood-swatch {
-      height: var(--sp-8);
-      aspect-ratio: auto;
-    }
-
-    .mc__detail-list img {
-      height: var(--sp-7);
-      aspect-ratio: auto;
     }
 
     .mc__button {

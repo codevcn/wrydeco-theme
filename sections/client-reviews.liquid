@@ -54,6 +54,16 @@
             {%- assign review_image_url = testimonial.review_image_url.value -%}
             {%- assign product_type = testimonial.product_type_to_review.value -%}
             {%- assign review_image_alt = 'WRYDECO customer testimonial' -%}
+            {%- assign review_image_loading = 'lazy' -%}
+            {%- assign review_image_priority = 'low' -%}
+            {%- if section.index != blank -%}
+              {%- if section.index <= 2 -%}
+                {%- if forloop.index <= 2 -%}
+                  {%- assign review_image_loading = 'eager' -%}
+                  {%- assign review_image_priority = 'high' -%}
+                {%- endif -%}
+              {%- endif -%}
+            {%- endif -%}
             {%- if product_type != blank -%}
               {%- capture review_image_alt -%}{{ product_type }} reviewed by {{ customer_name }}{%- endcapture -%}
             {%- elsif customer_name != blank -%}
@@ -71,10 +81,12 @@
                   src="{{ review_image_url | escape }}"
                   alt="{{ review_image_alt | escape }}"
                   class="client-reviews__img"
-                  loading="lazy"
+                  loading="{{ review_image_loading }}"
+                  decoding="async"
+                  fetchpriority="{{ review_image_priority }}"
                   draggable="false"
                   width="900"
-                  height="1100"
+                  height="1200"
                 >
               {%- endif -%}
             </div>
@@ -243,6 +255,7 @@
     overflow: hidden;
     position: relative;
     aspect-ratio: 3 / 4; /* Tall portrait images like the screenshot */
+    background: color-mix(in srgb, var(--bg-secondary, #e8e4df) 72%, white);
     opacity: 1;
   }
 
@@ -263,10 +276,12 @@
   }
 
   .client-reviews__img {
+    display: block;
     width: 100%;
     height: 100%;
+    aspect-ratio: 3 / 4;
     object-fit: cover;
-    display: block;
+    object-position: center;
     -webkit-user-drag: none;
     user-select: none;
   }

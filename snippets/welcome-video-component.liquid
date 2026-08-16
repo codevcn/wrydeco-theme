@@ -2,6 +2,7 @@
   Renders the WRYDECO welcome story video component with custom controls.
 
   @param {string} video_url - The MP4 video URL to render.
+  @param {string} [mobile_video_url] - The MP4 video URL to render on phone viewports.
   @param {string} [poster_url] - The poster image URL shown before the video loads.
   @param {string} [story_label] - The story badge label shown on the video.
   @param {string} [intro] - Supporting copy shown above the video frame.
@@ -17,6 +18,7 @@
 
 {%- liquid
   assign story_label = story_label | default: 'Behind the Craft'
+  assign mobile_video_url = mobile_video_url | default: blank
   assign poster_url = poster_url | default: blank
   assign intro = intro | default: 'Discover how nature, craftsmanship, and thoughtful design come together to shape every Wrydeco piece.'
   assign eyebrow = eyebrow | default: 'The WRYDECO Story'
@@ -27,7 +29,7 @@
   assign title_id = 'welcome-video-title-' | append: component_id
 -%}
 
-{%- if video_url != blank -%}
+{%- if video_url != blank or mobile_video_url != blank -%}
   <section class="welcome-video" aria-labelledby="{{ title_id }}">
     <div class="welcome-video__inner">
       <header class="welcome-video__header">
@@ -54,7 +56,14 @@
           aria-label="{{ video_label | escape }}"
           data-welcome-video-media
         >
-          <source src="{{ video_url | append: '#t=0.001' | escape }}" type="video/mp4">
+          {%- if mobile_video_url != blank -%}
+            <source src="{{ mobile_video_url | append: '#t=0.001' | escape }}" type="video/mp4" media="(max-width: 640px)">
+          {%- endif -%}
+          {%- if video_url != blank -%}
+            <source src="{{ video_url | append: '#t=0.001' | escape }}" type="video/mp4">
+          {%- elsif mobile_video_url != blank -%}
+            <source src="{{ mobile_video_url | append: '#t=0.001' | escape }}" type="video/mp4">
+          {%- endif -%}
         </video>
 
         <div class="welcome-video__shade" aria-hidden="true"></div>
@@ -425,6 +434,13 @@
   }
 
   .welcome-video.are-controls-hidden .welcome-video__controls {
+    opacity: 0;
+    transform: translateY(12px);
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .welcome-video.is-center-playback .welcome-video__controls {
     opacity: 0;
     transform: translateY(12px);
     visibility: hidden;
@@ -986,6 +1002,9 @@
       const updatePlayState = () => {
         const isPlaying = !video.paused && !video.ended;
         section.classList.toggle('is-playing', isPlaying);
+        if (!isPlaying) {
+          section.classList.remove('is-center-playback');
+        }
 
         toggleButtons.forEach((button) => {
           button.setAttribute('aria-label', isPlaying ? 'Pause video' : 'Play video');
@@ -1024,25 +1043,27 @@
 
       const togglePlayback = async (event) => {
         const toggleButton = event ? event.currentTarget : null;
-        const shouldHideCompactControls =
+        const shouldConcealCenterControls =
           toggleButton &&
-          toggleButton.closest('[data-welcome-video-controls]') &&
           isCompactViewport() &&
+          toggleButton.classList.contains('welcome-video__center-play') &&
           (video.paused || video.ended);
 
         if (video.paused || video.ended) {
           try {
             clearNativePoster();
             const playPromise = video.play();
-            if (shouldHideCompactControls) {
+            if (shouldConcealCenterControls) {
               toggleButton.blur();
+              section.classList.add('is-center-playback');
               hideControls(true);
             }
             await playPromise;
           } catch (error) {
+            section.classList.remove('is-center-playback');
             section.classList.remove('is-playing');
             restoreNativePoster();
-            if (shouldHideCompactControls) {
+            if (shouldConcealCenterControls) {
               showControls();
             }
           }
@@ -1206,7 +1227,11 @@
       updateProgress();
       updateMutedState();
       updatePlayState();
-      showControls();
+      if (isCompactViewport()) {
+        hideControls(true);
+      } else {
+        showControls();
+      }
     });
   });
 {% endjavascript %}

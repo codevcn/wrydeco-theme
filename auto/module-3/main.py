@@ -1432,7 +1432,7 @@ async def save_notes(request: Request, note_content: str = Form(default="")):
 
 
 @app.get("/", response_class=HTMLResponse)
-async def read_root(request: Request, after: str = None, before: str = None, filter_type: str = "id_list", filter_value: str = None, sort_by: str = "created_desc", special_filter: str = ""):
+async def read_root(request: Request, after: str = None, before: str = None, filter_type: str = "handle_list", filter_value: str = None, sort_by: str = "created_desc", special_filter: str = ""):
     try:
         filter_query = None
         data = None
@@ -1493,6 +1493,10 @@ async def read_root(request: Request, after: str = None, before: str = None, fil
                     handles = [h.strip() for h in filter_value.split(",") if h.strip()]
                     if handles:
                         filter_query = " OR ".join([f"handle:{h}" for h in handles])
+                elif filter_type == "not_handle_list":
+                    handles = [h.strip() for h in filter_value.split(",") if h.strip()]
+                    if handles:
+                        filter_query = " ".join([f"-handle:{h}" for h in handles])
                 elif filter_type == "product_type":
                     filter_query = f"product_type:'{filter_value}'"
                     
@@ -1663,15 +1667,16 @@ async def read_product(request: Request, product_handle: str):
         product_data = get_product_by_handle(product_handle)
         
         if not product_data:
-            return HTMLResponse(content="Product not found", status_code=404)
+            return templates.TemplateResponse(request=request, name="404.html", context={"request": request}, status_code=404)
             
-        media_urls = []
+        media_list = []
         for media_edge in product_data.get("media", {}).get("edges", []):
             media_node = media_edge["node"]
+            media_id = media_node.get("id")
             if "image" in media_node and media_node["image"]:
-                media_urls.append(media_node["image"]["url"])
+                media_list.append({"id": media_id, "url": media_node["image"]["url"]})
             elif "preview" in media_node and media_node["preview"] and media_node["preview"]["image"]:
-                media_urls.append(media_node["preview"]["image"]["url"])
+                media_list.append({"id": media_id, "url": media_node["preview"]["image"]["url"]})
                 
         # Extract unique prices
         prices = set()
@@ -1706,7 +1711,7 @@ async def read_product(request: Request, product_handle: str):
             "description": product_data.get("descriptionHtml", ""),
             "seo": product_data.get("seo", {}),
             "options": product_data.get("options", []),
-            "media": media_urls,
+            "media": media_list,
             "prices": sorted_prices,
             "metafields": metafields
         }
@@ -2927,6 +2932,54 @@ async def edit_meta_info(request: Request):
             return HTMLResponse(content=json.dumps({"success": False, "message": str(e)}, ensure_ascii=False), media_type="application/json")
         return templates.TemplateResponse(request=request, name="edit_variants.html", context={"request": request, "error": str(e), "success_message": None})
 
+@app.post("/internal-reorder-media")
+async def internal_reorder_media(request: Request):
+    try:
+        import json
+        data = await request.json()
+        product_id = data.get("product_id")
+        moves = data.get("moves")
+        
+        if not product_id or not moves:
+            return HTMLResponse(content=json.dumps({"success": False, "message": "Thiếu dữ liệu"}), media_type="application/json")
+            
+        if not str(product_id).startswith("gid://"):
+            product_id = f"gid://shopify/Product/{product_id}"
+            
+        mutation = '''
+        mutation productReorderMedia($id: ID!, $moves: [MoveInput!]!) {
+          productReorderMedia(id: $id, moves: $moves) {
+            userErrors {
+              field
+              message
+            }
+          }
+        }
+        '''
+        variables = {
+            "id": product_id,
+            "moves": moves
+        }
+        
+        response = requests.post(GRAPHQL_URL, json={"query": mutation, "variables": variables}, headers=HEADERS)
+        response.raise_for_status()
+        result = response.json()
+        
+        if "errors" in result:
+            return HTMLResponse(content=json.dumps({"success": False, "message": str(result["errors"])}), media_type="application/json")
+            
+        user_errors = result.get("data", {}).get("productReorderMedia", {}).get("userErrors", [])
+        if user_errors:
+            msg = ", ".join([e.get("message", "") for e in user_errors])
+            return HTMLResponse(content=json.dumps({"success": False, "message": msg}), media_type="application/json")
+            
+        return HTMLResponse(content=json.dumps({"success": True}), media_type="application/json")
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        import json
+        return HTMLResponse(content=json.dumps({"success": False, "message": str(e)}), media_type="application/json")
+
 @app.post("/internal-edit-product")
 async def internal_edit_product(request: Request):
     try:
@@ -2938,7 +2991,7 @@ async def internal_edit_product(request: Request):
 
         if not product_id or not target_field or not new_value:
             return HTMLResponse(content=json.dumps({"success": False, "message": "Thiếu dữ liệu"}), media_type="application/json")
-
+            
         if not str(product_id).startswith("gid://"):
             product_id = f"gid://shopify/Product/{product_id}"
 
@@ -2961,6 +3014,27 @@ async def internal_edit_product(request: Request):
                 "input": {
                     "id": product_id,
                     "title": new_value
+                }
+            }
+        elif target_field == "productHandle":
+            mutation = '''
+            mutation productUpdate($input: ProductInput!) {
+              productUpdate(input: $input) {
+                product {
+                  id
+                  handle
+                }
+                userErrors {
+                  field
+                  message
+                }
+              }
+            }
+            '''
+            variables = {
+                "input": {
+                    "id": product_id,
+                    "handle": new_value
                 }
             }
         elif target_field == "productType":
@@ -3006,7 +3080,82 @@ async def internal_edit_product(request: Request):
                             "namespace": "custom",
                             "key": "amazon_link",
                             "value": new_value,
-                            "type": "url"
+                            "type": "single_line_text_field"
+                        }
+                    ]
+                }
+            }
+        elif target_field == "descriptionHtml":
+            mutation = '''
+            mutation productUpdate($input: ProductInput!) {
+              productUpdate(input: $input) {
+                product { id }
+                userErrors { field message }
+              }
+            }
+            '''
+            variables = {
+                "input": {
+                    "id": product_id,
+                    "descriptionHtml": new_value
+                }
+            }
+        elif target_field == "seoTitle":
+            mutation = '''
+            mutation productUpdate($input: ProductInput!) {
+              productUpdate(input: $input) {
+                product { id }
+                userErrors { field message }
+              }
+            }
+            '''
+            variables = {
+                "input": {
+                    "id": product_id,
+                    "seo": { "title": new_value }
+                }
+            }
+        elif target_field == "seoDescription":
+            mutation = '''
+            mutation productUpdate($input: ProductInput!) {
+              productUpdate(input: $input) {
+                product { id }
+                userErrors { field message }
+              }
+            }
+            '''
+            variables = {
+                "input": {
+                    "id": product_id,
+                    "seo": { "description": new_value }
+                }
+            }
+        elif target_field.startswith("metafield:"):
+            parts = target_field.split(":")
+            if len(parts) >= 4:
+                mf_namespace = parts[1]
+                mf_key = parts[2]
+                mf_type = parts[3]
+            else:
+                return HTMLResponse(content=json.dumps({"success": False, "message": "Sai định dạng metafield"}), media_type="application/json")
+                
+            mutation = '''
+            mutation productUpdate($input: ProductInput!) {
+              productUpdate(input: $input) {
+                product { id }
+                userErrors { field message }
+              }
+            }
+            '''
+            variables = {
+                "input": {
+                    "id": product_id,
+                    "metafields": [
+                        {
+                            "namespace": mf_namespace,
+                            "key": mf_key,
+                            "value": new_value,
+                            "type": mf_type
                         }
                     ]
                 }
@@ -3025,7 +3174,8 @@ async def internal_edit_product(request: Request):
         if user_errs:
             return HTMLResponse(content=json.dumps({"success": False, "message": f"Lỗi từ Shopify: {user_errs[0]['message']}"}), media_type="application/json")
             
-        return HTMLResponse(content=json.dumps({"success": True, "message": "Thành công"}), media_type="application/json")
+        new_handle = data.get("data", {}).get("productUpdate", {}).get("product", {}).get("handle")
+        return HTMLResponse(content=json.dumps({"success": True, "message": "Thành công", "newHandle": new_handle}), media_type="application/json")
             
     except Exception as e:
         import json

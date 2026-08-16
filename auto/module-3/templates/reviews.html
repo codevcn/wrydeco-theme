@@ -341,6 +341,7 @@
                 previewModal.classList.add('hidden');
                 previewModal.classList.remove('flex');
                 previewImage.src = '';
+                if(typeof window.closeReviewCommentPopover === 'function') window.closeReviewCommentPopover();
             };
             
             previewModal.addEventListener('click', function(e) {
@@ -388,6 +389,45 @@
                 } else {
                     window.closePreviewModal();
                 }
+            };
+
+            window.openReviewCommentPopover = function(btn) {
+                const popover = document.getElementById('reviewCommentPopover');
+                const imgData = window.currentPreviewImages[window.currentPreviewIndex];
+                const rowIndex = imgData.rowIndex;
+                const row = window.currentCsvData[rowIndex];
+                
+                // Read from body (or any other appropriate column)
+                document.getElementById('reviewCommentInput').value = row['body'] || '';
+                
+                popover.classList.remove('hidden');
+                
+                const btnRect = btn.getBoundingClientRect();
+                const popoverRect = popover.getBoundingClientRect();
+                
+                let top = btnRect.top - popoverRect.height - 8;
+                let left = btnRect.left - popoverRect.width + btnRect.width;
+                
+                if (top < 12) top = btnRect.bottom + 8;
+                if (top + popoverRect.height > window.innerHeight - 12) top = window.innerHeight - popoverRect.height - 12;
+                if (left < 12) left = 12;
+                if (left + popoverRect.width > window.innerWidth - 12) left = window.innerWidth - popoverRect.width - 12;
+                
+                popover.style.top = `${top}px`;
+                popover.style.left = `${left}px`;
+            };
+            
+            window.closeReviewCommentPopover = function() {
+                document.getElementById('reviewCommentPopover').classList.add('hidden');
+            };
+            
+            window.saveReviewComment = function() {
+                const imgData = window.currentPreviewImages[window.currentPreviewIndex];
+                const rowIndex = imgData.rowIndex;
+                const newComment = document.getElementById('reviewCommentInput').value;
+                
+                window.currentCsvData[rowIndex]['body'] = newComment;
+                window.closeReviewCommentPopover();
             };
 
             window.editPreviewImage = function() {
@@ -462,6 +502,7 @@
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
         <div class="absolute bottom-6 right-6 z-10 flex flex-col gap-4 pointer-events-auto">
+            <button onclick="openReviewCommentPopover(this)" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-md shadow-md font-medium transition-colors text-sm w-full">Sửa Comment</button>
             <button onclick="editPreviewImage()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-md shadow-md font-medium transition-colors text-sm w-full">Sửa URL ảnh</button>
             <button onclick="deletePreviewImage()" class="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-md shadow-md font-medium transition-colors text-sm w-full">Xóa ảnh</button>
         </div>
@@ -475,6 +516,18 @@
                 <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
             </button>
         </div>
+    </div>
+
+    <!-- Review Comment Popover -->
+    <div id="reviewCommentPopover" class="fixed z-[150] hidden bg-white rounded-lg shadow-xl p-4 w-[350px] border border-gray-200">
+        <div class="flex justify-between items-center mb-2">
+            <h4 class="font-bold text-gray-800">Sửa Comment</h4>
+            <button onclick="closeReviewCommentPopover()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        <textarea id="reviewCommentInput" class="w-full h-32 border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:border-indigo-500 resize-none"></textarea>
+        <button onclick="saveReviewComment()" class="mt-3 w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-md text-sm font-bold transition-colors">Lưu thay đổi</button>
     </div>
 
     <!-- Confirm Delete Modal -->

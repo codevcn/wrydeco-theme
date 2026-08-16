@@ -45,6 +45,8 @@
                   | image_tag:
                     class: 'pairs-card__image',
                     loading: 'lazy',
+                    decoding: 'async',
+                    fetchpriority: 'low',
                     draggable: 'false',
                     widths: '240, 360, 480, 640',
                     sizes: '(min-width: 1024px) 24vw, (min-width: 720px) 33vw, 78vw',
@@ -381,6 +383,7 @@
       if (!slider) return;
       var prev = carousel.querySelector('[data-pairs-prev]');
       var next = carousel.querySelector('[data-pairs-next]');
+      var navFrame = null;
 
       function pageWidth() {
         var card = slider.querySelector('.pairs-card');
@@ -392,6 +395,44 @@
         return cardWidth * perView;
       }
 
+      function framePositions() {
+        var maxScroll = Math.max(0, slider.scrollWidth - slider.clientWidth);
+        var step = pageWidth();
+        var positions = [0];
+
+        if (maxScroll <= 1) return positions;
+        if (step <= 1) return [0, maxScroll];
+
+        for (var left = step; left < maxScroll - 1; left += step) {
+          positions.push(left);
+        }
+
+        if (maxScroll - positions[positions.length - 1] > 1) {
+          positions.push(maxScroll);
+        }
+
+        return positions;
+      }
+
+      function targetFrame(direction) {
+        var positions = framePositions();
+        var scrollLeft = slider.scrollLeft;
+
+        if (direction > 0) {
+          for (var nextIndex = 0; nextIndex < positions.length; nextIndex += 1) {
+            if (positions[nextIndex] > scrollLeft + 1) return positions[nextIndex];
+          }
+
+          return positions[positions.length - 1];
+        }
+
+        for (var prevIndex = positions.length - 1; prevIndex >= 0; prevIndex -= 1) {
+          if (positions[prevIndex] < scrollLeft - 1) return positions[prevIndex];
+        }
+
+        return positions[0];
+      }
+
       function updateNav() {
         var maxScroll = slider.scrollWidth - slider.clientWidth;
         carousel.classList.toggle('has-overflow', maxScroll > 1);
@@ -399,15 +440,23 @@
         if (next) next.disabled = slider.scrollLeft >= maxScroll - 1;
       }
 
+      function scheduleNavUpdate() {
+        if (navFrame !== null) return;
+        navFrame = window.requestAnimationFrame(function () {
+          navFrame = null;
+          updateNav();
+        });
+      }
+
       if (prev) prev.addEventListener('click', function () {
-        slider.scrollBy({ left: -pageWidth(), behavior: 'smooth' });
+        slider.scrollTo({ left: targetFrame(-1), behavior: 'smooth' });
       });
       if (next) next.addEventListener('click', function () {
-        slider.scrollBy({ left: pageWidth(), behavior: 'smooth' });
+        slider.scrollTo({ left: targetFrame(1), behavior: 'smooth' });
       });
 
-      slider.addEventListener('scroll', updateNav, { passive: true });
-      window.addEventListener('resize', updateNav);
+      slider.addEventListener('scroll', scheduleNavUpdate, { passive: true });
+      window.addEventListener('resize', scheduleNavUpdate);
       updateNav();
 
       // Press-and-drag to scroll (mouse). Uses a small threshold so a plain
