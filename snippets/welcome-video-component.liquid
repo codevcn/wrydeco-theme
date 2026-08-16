@@ -440,13 +440,6 @@
     pointer-events: none;
   }
 
-  .welcome-video.is-center-playback .welcome-video__controls {
-    opacity: 0;
-    transform: translateY(12px);
-    visibility: hidden;
-    pointer-events: none;
-  }
-
   .welcome-video__control-button {
     display: inline-flex;
     align-items: center;
@@ -980,8 +973,16 @@
         video.setAttribute('poster', video.dataset.welcomeVideoPoster);
       };
 
+      const shouldKeepControlsHidden = () =>
+        section.dataset.mobileCenterPlayback === 'true' &&
+        isCompactViewport();
+
       const showControls = () => {
         window.clearTimeout(hideControlsTimer);
+        if (shouldKeepControlsHidden()) {
+          section.classList.add('are-controls-hidden');
+          return;
+        }
         section.classList.remove('are-controls-hidden');
       };
 
@@ -1003,7 +1004,7 @@
         const isPlaying = !video.paused && !video.ended;
         section.classList.toggle('is-playing', isPlaying);
         if (!isPlaying) {
-          section.classList.remove('is-center-playback');
+          delete section.dataset.mobileCenterPlayback;
         }
 
         toggleButtons.forEach((button) => {
@@ -1041,29 +1042,33 @@
         setRangeFill(progressRange, progress);
       };
 
-      const togglePlayback = async (event) => {
+      const togglePlayback = async (event, forceHiddenPlayback = false) => {
         const toggleButton = event ? event.currentTarget : null;
-        const shouldConcealCenterControls =
+        const isPlayToggleButton =
           toggleButton &&
+          (toggleButton.classList.contains('welcome-video__center-play') || toggleButton.querySelector('.welcome-video__icon--play'));
+        const shouldStartHiddenPlayback =
           isCompactViewport() &&
-          toggleButton.classList.contains('welcome-video__center-play') &&
+          (forceHiddenPlayback || isPlayToggleButton) &&
           (video.paused || video.ended);
 
         if (video.paused || video.ended) {
           try {
+            if (shouldStartHiddenPlayback) {
+              section.dataset.mobileCenterPlayback = 'true';
+              section.classList.add('are-controls-hidden');
+              if (toggleButton) {
+                toggleButton.blur();
+              }
+            }
             clearNativePoster();
             const playPromise = video.play();
-            if (shouldConcealCenterControls) {
-              toggleButton.blur();
-              section.classList.add('is-center-playback');
-              hideControls(true);
-            }
             await playPromise;
           } catch (error) {
-            section.classList.remove('is-center-playback');
+            delete section.dataset.mobileCenterPlayback;
             section.classList.remove('is-playing');
             restoreNativePoster();
-            if (shouldConcealCenterControls) {
+            if (shouldStartHiddenPlayback) {
               showControls();
             }
           }
@@ -1076,7 +1081,7 @@
 
       toggleButtons.forEach((button) => {
         button.addEventListener('click', (event) => {
-          if (button.closest('[data-welcome-video-controls]') && isCompactViewport()) {
+          if (isCompactViewport()) {
             event.stopPropagation();
           }
 
@@ -1097,8 +1102,11 @@
         if (event.target.closest('.welcome-video__badge')) return;
         if (event.target.closest('.welcome-video__duration')) return;
 
-        showControls();
-        togglePlayback();
+        const shouldStartHiddenPlayback = isCompactViewport() && (video.paused || video.ended);
+        if (!shouldStartHiddenPlayback) {
+          showControls();
+        }
+        togglePlayback(null, shouldStartHiddenPlayback);
       });
 
       document.addEventListener('click', (event) => {
