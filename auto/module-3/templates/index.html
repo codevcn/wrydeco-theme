@@ -232,9 +232,25 @@
                     <thead class="bg-gray-50/50">
                         <tr>
                             <th scope="col" class="px-6 py-4 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">STT</th>
-                            <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">ID</th>
+                            <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                <div class="flex items-center gap-2">
+                                    ID
+                                    <button type="button" onclick="openCopyModal(event, 'id')" class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded transition-colors" title="Copy (Alt+Q)">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                        <span class="text-[10px] font-bold">COPY</span>
+                                    </button>
+                                </div>
+                            </th>
                             <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Hình ảnh</th>
-                            <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Sản phẩm</th>
+                            <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                <div class="flex items-center gap-2">
+                                    Sản phẩm
+                                    <button type="button" onclick="openCopyModal(event, 'handle')" class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded transition-colors" title="Copy Handle">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                        <span class="text-[10px] font-bold">COPY</span>
+                                    </button>
+                                </div>
+                            </th>
                             <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Product Type</th>
                             <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">CATEGORY</th>
                             <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Giá</th>
@@ -391,6 +407,50 @@
                 </button>
             </div>
             <p class="text-xs text-gray-500 mt-3">Nhấn <kbd class="bg-gray-100 border border-gray-300 rounded px-1 font-mono text-gray-700">Esc</kbd> để đóng.</p>
+        </div>
+    </div>
+
+    <!-- Copy IDs Modal -->
+    <div id="copyModal" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 p-4 hidden">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm relative" onclick="event.stopPropagation()">
+            <button id="copyCloseBtn" class="absolute top-4 right-4 text-gray-400 hover:text-gray-700 transition-colors focus:outline-none" title="Đóng">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            <h3 class="text-lg font-bold text-gray-800 mb-4 pr-6">Tính năng Copy</h3>
+            
+            <div class="flex p-1 space-x-1 bg-gray-100 rounded-xl mb-4">
+                <button id="tabCopyId" type="button" class="w-full py-1.5 text-sm font-medium leading-5 text-indigo-700 bg-white rounded-lg shadow ring-1 ring-black/5 focus:outline-none transition-all" onclick="switchCopyTab('id')">
+                    Copy ID
+                </button>
+                <button id="tabCopyHandle" type="button" class="w-full py-1.5 text-sm font-medium leading-5 text-gray-500 hover:text-gray-700 hover:bg-white/[0.12] rounded-lg focus:outline-none transition-all" onclick="switchCopyTab('handle')">
+                    Copy Handle
+                </button>
+            </div>
+
+            <div class="flex flex-col gap-4">
+                <div>
+                    <label id="copyModalLabel" class="block text-sm font-medium text-gray-700 mb-1">Số lượng ID muốn copy:</label>
+                    <input type="number" id="copyCountInput" class="bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5 outline-none transition-colors" placeholder="Nhập số lượng (VD: 10)" min="1">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Định dạng copy:</label>
+                    <div class="flex flex-col gap-2">
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="radio" name="copy_format" value="comma" class="form-radio h-4 w-4 text-indigo-600 focus:ring-indigo-500" checked>
+                            <span class="ml-2 text-sm text-gray-700">Copy cách nhau bởi dấu phẩy</span>
+                        </label>
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="radio" name="copy_format" value="newline" class="form-radio h-4 w-4 text-indigo-600 focus:ring-indigo-500">
+                            <span class="ml-2 text-sm text-gray-700">Copy cách nhau bởi xuống dòng</span>
+                        </label>
+                    </div>
+                </div>
+                <button id="copySubmitBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-sm px-5 py-2.5 transition-colors shadow-sm focus:ring-4 focus:ring-indigo-300 flex justify-center items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                    Tiến hành Copy
+                </button>
+            </div>
+            <p class="text-xs text-gray-500 mt-4">Nhấn <kbd class="bg-gray-100 border border-gray-300 rounded px-1 font-mono text-gray-700">Esc</kbd> để đóng.</p>
         </div>
     </div>
 
@@ -683,6 +743,151 @@
         }
 
         const shortcuts = new KeyboardShortcuts();
+
+        // Logic cho Copy Modal
+        const copyModal = document.getElementById('copyModal');
+        const copyCountInput = document.getElementById('copyCountInput');
+        const copySubmitBtn = document.getElementById('copySubmitBtn');
+        const copyCloseBtn = document.getElementById('copyCloseBtn');
+
+        let currentCopyType = 'id';
+
+        function switchCopyTab(type) {
+            currentCopyType = type;
+            const tabId = document.getElementById('tabCopyId');
+            const tabHandle = document.getElementById('tabCopyHandle');
+            const labelEl = document.getElementById('copyModalLabel');
+            
+            if (type === 'handle') {
+                if (tabHandle) {
+                    tabHandle.classList.add('bg-white', 'shadow', 'ring-1', 'ring-black/5', 'text-indigo-700');
+                    tabHandle.classList.remove('text-gray-500', 'hover:text-gray-700', 'hover:bg-white/[0.12]');
+                }
+                if (tabId) {
+                    tabId.classList.remove('bg-white', 'shadow', 'ring-1', 'ring-black/5', 'text-indigo-700');
+                    tabId.classList.add('text-gray-500', 'hover:text-gray-700', 'hover:bg-white/[0.12]');
+                }
+                
+                if (labelEl) labelEl.textContent = 'Số lượng Handle muốn copy:';
+            } else {
+                if (tabId) {
+                    tabId.classList.add('bg-white', 'shadow', 'ring-1', 'ring-black/5', 'text-indigo-700');
+                    tabId.classList.remove('text-gray-500', 'hover:text-gray-700', 'hover:bg-white/[0.12]');
+                }
+                if (tabHandle) {
+                    tabHandle.classList.remove('bg-white', 'shadow', 'ring-1', 'ring-black/5', 'text-indigo-700');
+                    tabHandle.classList.add('text-gray-500', 'hover:text-gray-700', 'hover:bg-white/[0.12]');
+                }
+                
+                if (labelEl) labelEl.textContent = 'Số lượng ID muốn copy:';
+            }
+        }
+
+        function openCopyModal(e, type = 'id') {
+            if(e) e.stopPropagation();
+            switchCopyTab(type);
+            copyModal.classList.remove('hidden');
+            copyCountInput.value = '';
+            setTimeout(() => copyCountInput.focus(), 50);
+        }
+
+        function closeCopyModal() {
+            copyModal.classList.add('hidden');
+            copyCountInput.blur();
+        }
+
+        function performCopy() {
+            const count = parseInt(copyCountInput.value);
+            if (isNaN(count) || count <= 0) {
+                alert("Vui lòng nhập số lượng hợp lệ.");
+                return;
+            }
+
+            const format = document.querySelector('input[name="copy_format"]:checked').value;
+            
+            const tbody = document.querySelector('table tbody');
+            const rows = tbody.querySelectorAll('tr');
+            const idsToCopy = [];
+            
+            const limit = Math.min(count, rows.length);
+            for (let i = 0; i < limit; i++) {
+                if (currentCopyType === 'handle') {
+                    const handleCell = rows[i].querySelector('td:nth-child(4) div.text-gray-500');
+                    if (handleCell) {
+                        idsToCopy.push(handleCell.textContent.trim());
+                    }
+                } else {
+                    const idCell = rows[i].querySelector('td:nth-child(2)');
+                    if (idCell) {
+                        idsToCopy.push(idCell.textContent.trim());
+                    }
+                }
+            }
+
+            if (idsToCopy.length === 0) {
+                alert(`Không tìm thấy ${currentCopyType === 'handle' ? 'Handle' : 'ID'} nào để copy.`);
+                return;
+            }
+
+            const textToCopy = format === 'comma' ? idsToCopy.join(',') : idsToCopy.join('\n');
+            
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                const originalText = copySubmitBtn.innerHTML;
+                copySubmitBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Đã Copy!';
+                copySubmitBtn.classList.replace('bg-indigo-600', 'bg-green-600');
+                copySubmitBtn.classList.replace('hover:bg-indigo-700', 'hover:bg-green-700');
+                
+                setTimeout(() => {
+                    copySubmitBtn.innerHTML = originalText;
+                    copySubmitBtn.classList.replace('bg-green-600', 'bg-indigo-600');
+                    copySubmitBtn.classList.replace('hover:bg-green-700', 'hover:bg-indigo-700');
+                    closeCopyModal();
+                }, 1500);
+            }).catch(err => {
+                alert("Lỗi khi copy: " + err);
+            });
+        }
+
+        if (copyCloseBtn) {
+            copyCloseBtn.addEventListener('click', closeCopyModal);
+        }
+        
+        if (copyModal) {
+            copyModal.addEventListener('click', closeCopyModal);
+            copyModal.querySelector('div').addEventListener('click', (e) => e.stopPropagation());
+        }
+
+        if (copyCountInput) {
+            copyCountInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    performCopy();
+                }
+            });
+        }
+
+        if (copySubmitBtn) {
+            copySubmitBtn.addEventListener('click', performCopy);
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (!copyModal.classList.contains('hidden')) {
+                if (['ArrowLeft', 'ArrowUp'].includes(e.key)) {
+                    e.preventDefault();
+                    switchCopyTab('id');
+                } else if (['ArrowRight', 'ArrowDown'].includes(e.key)) {
+                    e.preventDefault();
+                    switchCopyTab('handle');
+                } else if (e.key === "Escape") {
+                    closeCopyModal();
+                }
+            } else {
+                if (e.altKey && e.key.toLowerCase() === 'q') {
+                    e.preventDefault();
+                    openCopyModal();
+                }
+            }
+        });
     </script>
 </body>
 </html>
