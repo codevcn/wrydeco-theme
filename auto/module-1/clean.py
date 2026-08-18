@@ -39,7 +39,8 @@ KEEP_CONTENT = [
     "prompts.txt",
     "config.update-product.json",
     "script.fixed.js",
-    "module-1.zip"
+    "module-1.zip",
+    "saved.txt"
 ]
 
 

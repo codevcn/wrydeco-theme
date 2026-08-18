@@ -61,6 +61,8 @@
                     <a target="_blank" rel="noopener noreferrer" href="/notes" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Ghi chú</a>
                     <a target="_blank" rel="noopener noreferrer" href="/reviews" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Reviews</a>
                 
+                    <!-- Các nút nav button phải nằm bên trái nav button Settings -->
+                    <a target="_blank" rel="noopener noreferrer" href="/blogs" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path></svg>Blog</a>
                     <a target="_blank" rel="noopener noreferrer" href="/settings" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>Settings</a>
                 </nav>
             </div>
@@ -207,7 +209,10 @@
                     <div class="space-y-4">
                         <div>
                             <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Category (Danh mục chuẩn)</p>
-                            <p class="text-sm font-medium text-gray-800 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg inline-block border border-blue-100">{{ product.category }}</p>
+                            <div class="group cursor-pointer inline-flex items-center gap-2 hover:bg-gray-100 p-1.5 -ml-1.5 rounded-lg transition-colors" onclick="openCategoryPopup()">
+                                <p id="display-category" class="text-sm font-medium text-gray-800 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg border border-blue-100 group-hover:bg-white group-hover:border-indigo-300 transition-colors">{{ product.category | default("Chưa phân loại") }}</p>
+                                <iconify-icon icon="mdi:pencil-outline" class="text-gray-400 group-hover:text-indigo-600 transition-colors text-lg opacity-0 group-hover:opacity-100"></iconify-icon>
+                            </div>
                         </div>
                         <div>
                             <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Product Type (Loại sản phẩm)</p>
@@ -216,12 +221,36 @@
                                 <iconify-icon icon="mdi:pencil-outline" class="text-gray-400 group-hover:text-indigo-600 transition-colors text-lg opacity-0 group-hover:opacity-100"></iconify-icon>
                             </div>
                         </div>
-                        <div>
-                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Tags (Thẻ)</p>
-                            <div class="flex flex-wrap gap-2">
-                                {% for tag in product.tags %}
-                                <span class="text-xs font-semibold text-gray-600 bg-gray-100 px-2.5 py-1 rounded-full">{{ tag }}</span>
-                                {% endfor %}
+                        <div id="tags-wrapper" class="relative">
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 flex justify-between items-center">
+                                <span>Tags (Thẻ)</span>
+                                <button onclick="enableTagEdit()" id="btn-edit-tags" class="flex items-center gap-x-1 text-indigo-600 hover:text-indigo-800 hidden text-xs font-medium bg-indigo-50 px-2 py-1 rounded transition-colors"><iconify-icon icon="mdi:pencil" class="inline align-middle"></iconify-icon> Chỉnh sửa</button>
+                            </p>
+                            
+                            <!-- Display UI -->
+                            <div id="tags-display" class="flex flex-wrap gap-2 cursor-pointer group p-2 -ml-2 rounded-lg hover:bg-gray-50 transition-colors" onclick="enableTagEdit()">
+                                {% if product.tags %}
+                                    {% for tag in product.tags %}
+                                    <span class="text-xs font-semibold text-gray-600 bg-gray-100 px-2.5 py-1 rounded-full border border-gray-200 group-hover:bg-white transition-colors">{{ tag }}</span>
+                                    {% endfor %}
+                                {% else %}
+                                    <span class="text-xs text-gray-400 italic">Không có thẻ nào. Bấm để thêm.</span>
+                                {% endif %}
+                                <iconify-icon icon="mdi:pencil-outline" class="text-gray-400 group-hover:text-indigo-600 transition-colors text-lg opacity-0 group-hover:opacity-100 mt-0.5 ml-1"></iconify-icon>
+                            </div>
+                            
+                            <!-- Editor UI -->
+                            <div id="tags-editor" class="hidden flex-col gap-3">
+                                <div class="bg-white border border-indigo-300 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 rounded-lg p-2 flex flex-wrap gap-2 items-center min-h-[42px] transition-all shadow-sm">
+                                    <div id="tags-pill-container" class="flex flex-wrap gap-2">
+                                        <!-- Pills will be injected here by JS -->
+                                    </div>
+                                    <input type="text" id="tag-input" class="flex-grow outline-none bg-transparent text-sm min-w-[100px]" placeholder="Thêm tag và nhấn Enter...">
+                                </div>
+                                <div class="flex items-center gap-2 justify-end">
+                                    <button onclick="cancelTagEdit()" class="px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">Hủy</button>
+                                    <button onclick="saveTags()" id="btn-save-tags" class="px-3 py-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-colors flex items-center gap-1">Lưu tags</button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -231,13 +260,40 @@
                 <div class="bg-white rounded-xl shadow-sm border border-red-100 p-6 mt-8">
                     <h2 class="text-lg font-bold text-red-600 mb-4 border-b border-red-50 pb-3 flex items-center gap-2">
                         <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                        Remove This Product
+                        Xóa sản phẩm
                     </h2>
                     <div class="space-y-4">
                         <button onclick="openDeletePopup()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg flex justify-center items-center gap-2 transition-colors">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                            Remove This Product
+                            Xóa sản phẩm
                         </button>
+                    </div>
+                </div>
+
+                <!-- Kênh bán hàng -->
+                <div class="bg-white rounded-xl shadow-sm border border-indigo-100 p-6 mt-8">
+                    <h2 class="text-lg font-bold text-indigo-800 mb-4 border-b border-indigo-50 pb-3 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                            Kênh bán hàng
+                        </div>
+                        <button id="btn-save-publications" onclick="savePublications()" class="hidden px-4 py-2 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-colors flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            Lưu thay đổi
+                        </button>
+                    </h2>
+                    <div class="space-y-3">
+                        {% for pub in product.publications %}
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100 hover:border-indigo-200 transition-colors">
+                            <span class="text-sm font-medium text-gray-700">{{ pub.channel_name }}</span>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" class="sr-only peer pub-toggle" data-pub-id="{{ pub.channel_id }}" data-original="{{ 'true' if pub.is_published else 'false' }}" {% if pub.is_published %}checked{% endif %} onchange="checkPublicationChanges()">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                            </label>
+                        </div>
+                        {% else %}
+                        <p class="text-sm text-gray-500 italic">Không có kênh bán hàng nào.</p>
+                        {% endfor %}
                     </div>
                 </div>
 
@@ -730,6 +786,70 @@
         }
     </script>
 
+    <!-- Category Selection Modal -->
+    <div id="categoryModal" class="fixed inset-0 z-[100] hidden">
+        <div class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity" onclick="closeCategoryPopup()"></div>
+        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+            <div class="relative bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:max-w-3xl w-full ring-1 ring-gray-900/5 flex flex-col max-h-[85vh]">
+                <!-- Header -->
+                <div class="bg-white px-6 py-4 border-b border-gray-100 flex justify-between items-center shrink-0">
+                    <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                        <iconify-icon icon="mdi:shape-outline" class="text-indigo-500"></iconify-icon> Chọn danh mục chuẩn (Category)
+                    </h3>
+                    <button onclick="closeCategoryPopup()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                        <iconify-icon icon="mdi:close" class="text-xl"></iconify-icon>
+                    </button>
+                </div>
+                
+                <!-- Search & Filters -->
+                <div class="px-6 py-3 border-b border-gray-100 bg-gray-50 shrink-0">
+                    <div class="relative">
+                        <iconify-icon icon="mdi:magnify" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></iconify-icon>
+                        <input type="text" id="categorySearchInput" placeholder="Tìm kiếm danh mục..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm shadow-sm transition-shadow" onkeypress="if(event.key === 'Enter') searchCategories()">
+                    </div>
+                </div>
+
+                <!-- Content Area -->
+                <div class="flex-1 overflow-y-auto p-0 bg-white min-h-[300px] relative">
+                    <div id="categoryLoading" class="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 hidden items-center justify-center">
+                        <div class="flex flex-col items-center gap-2 text-indigo-600">
+                            <iconify-icon icon="mdi:loading" class="text-3xl animate-spin"></iconify-icon>
+                            <span class="text-sm font-medium">Đang tải dữ liệu...</span>
+                        </div>
+                    </div>
+                    
+                    <div id="categoryList" class="divide-y divide-gray-100">
+                        <!-- Items will be injected here -->
+                    </div>
+                </div>
+
+                <!-- Footer (Pagination & Submit) -->
+                <div class="bg-gray-50 px-6 py-4 border-t border-gray-100 flex items-center justify-between shrink-0">
+                    <!-- Pagination -->
+                    <div class="flex items-center gap-2">
+                        <button id="btnCatPrev" onclick="loadPrevCategoryPage()" disabled class="p-1.5 rounded text-gray-500 hover:bg-gray-200 disabled:opacity-50 disabled:hover:bg-transparent transition-colors">
+                            <iconify-icon icon="mdi:chevron-left" class="text-xl"></iconify-icon>
+                        </button>
+                        <span id="catPageIndicator" class="text-sm font-medium text-gray-600">Trang 1</span>
+                        <button id="btnCatNext" onclick="loadNextCategoryPage()" disabled class="p-1.5 rounded text-gray-500 hover:bg-gray-200 disabled:opacity-50 disabled:hover:bg-transparent transition-colors">
+                            <iconify-icon icon="mdi:chevron-right" class="text-xl"></iconify-icon>
+                        </button>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="flex items-center gap-3">
+                        <button type="button" onclick="closeCategoryPopup()" class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm">
+                            Hủy
+                        </button>
+                        <button type="button" id="btnSubmitCategory" onclick="submitCategoryUpdate()" disabled class="px-4 py-2 bg-indigo-600 border border-transparent rounded-lg text-sm font-bold text-white hover:bg-indigo-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                            Lưu danh mục
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Delete Product Modal -->
     <div id="deleteModal" class="fixed inset-0 z-[100] hidden">
         <div class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity" onclick="closeDeletePopup()"></div>
@@ -832,6 +952,371 @@
                 }
             } catch (e) {
                 alert('Lỗi hệ thống: ' + e);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // TAGS EDITOR LOGIC
+        let originalTags = [
+            {% if product and product.tags %}
+                {% for tag in product.tags %}
+                "{{ tag | replace('\"', '\\\"') | safe }}"{% if not loop.last %},{% endif %}
+                {% endfor %}
+            {% endif %}
+        ];
+        let currentTags = [...originalTags];
+
+        function renderTagPills() {
+            const container = document.getElementById('tags-pill-container');
+            container.innerHTML = '';
+            currentTags.forEach((tag, index) => {
+                const span = document.createElement('span');
+                span.className = 'inline-flex items-center gap-1 text-xs font-medium text-indigo-700 bg-indigo-50 px-2 py-1 rounded-full border border-indigo-100';
+                span.innerHTML = `
+                    ${tag}
+                    <button type="button" onclick="removeTag(${index})" class="hover:bg-indigo-200 text-indigo-500 hover:text-indigo-700 rounded-full p-0.5 transition-colors focus:outline-none">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                `;
+                container.appendChild(span);
+            });
+        }
+
+        function enableTagEdit() {
+            document.getElementById('tags-display').classList.add('hidden');
+            document.getElementById('tags-editor').classList.remove('hidden');
+            document.getElementById('tags-editor').classList.add('flex');
+            document.getElementById('btn-edit-tags').classList.add('hidden');
+            currentTags = [...originalTags];
+            renderTagPills();
+            setTimeout(() => document.getElementById('tag-input').focus(), 50);
+        }
+
+        function cancelTagEdit() {
+            document.getElementById('tags-editor').classList.add('hidden');
+            document.getElementById('tags-editor').classList.remove('flex');
+            document.getElementById('tags-display').classList.remove('hidden');
+            document.getElementById('btn-edit-tags').classList.remove('hidden');
+            document.getElementById('tag-input').value = '';
+        }
+
+        function removeTag(index) {
+            currentTags.splice(index, 1);
+            renderTagPills();
+            document.getElementById('tag-input').focus();
+        }
+
+        function addTag(tag) {
+            tag = tag.trim();
+            if (tag && !currentTags.includes(tag)) {
+                currentTags.push(tag);
+                renderTagPills();
+            }
+        }
+
+        document.getElementById('tag-input').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ',') {
+                e.preventDefault();
+                addTag(this.value);
+                this.value = '';
+            } else if (e.key === 'Backspace' && this.value === '' && currentTags.length > 0) {
+                currentTags.pop();
+                renderTagPills();
+            } else if (e.key === 'Escape') {
+                cancelTagEdit();
+            }
+        });
+        
+        document.getElementById('tag-input').addEventListener('blur', function() {
+            if (this.value.trim() !== '') {
+                addTag(this.value);
+                this.value = '';
+            }
+        });
+
+        async function saveTags() {
+            const btnSave = document.getElementById('btn-save-tags');
+            btnSave.disabled = true;
+            btnSave.innerHTML = `<iconify-icon icon="mdi:loading" class="animate-spin"></iconify-icon> Đang lưu...`;
+            
+            // Allow empty string to clear all tags
+            const tagsString = currentTags.join(',');
+            
+            const formData = new FormData();
+            formData.append('product_id', '{{ product.id }}');
+            formData.append('target_field', 'tags');
+            formData.append('new_value', tagsString);
+            
+            try {
+                const response = await fetch('/internal-edit-product', {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json' },
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    originalTags = [...currentTags];
+                    const displayContainer = document.getElementById('tags-display');
+                    if (originalTags.length > 0) {
+                        displayContainer.innerHTML = originalTags.map(tag => `<span class="text-xs font-semibold text-gray-600 bg-gray-100 px-2.5 py-1 rounded-full border border-gray-200 group-hover:bg-white transition-colors">${tag}</span>`).join('') + '<iconify-icon icon="mdi:pencil-outline" class="text-gray-400 group-hover:text-indigo-600 transition-colors text-lg opacity-0 group-hover:opacity-100 mt-0.5 ml-1"></iconify-icon>';
+                    } else {
+                        displayContainer.innerHTML = '<span class="text-xs text-gray-400 italic">Không có thẻ nào. Bấm để thêm.</span><iconify-icon icon="mdi:pencil-outline" class="text-gray-400 group-hover:text-indigo-600 transition-colors text-lg opacity-0 group-hover:opacity-100 mt-0.5 ml-1"></iconify-icon>';
+                    }
+                    cancelTagEdit();
+                } else {
+                    alert('Lỗi: ' + (data.message || 'Không rõ nguyên nhân'));
+                }
+            } catch (error) {
+                console.error("Error updating tags:", error);
+                alert("Lỗi kết nối khi cập nhật tags!");
+            } finally {
+                btnSave.disabled = false;
+                btnSave.innerHTML = `Lưu tags`;
+            }
+        }
+        // CATEGORY MODAL LOGIC
+        let currentCategoryPage = 1;
+        let categoryCursors = [null]; // Array to store cursors for each page. Index 0 is null (page 1)
+        let selectedCategoryId = null;
+        let selectedCategoryName = null;
+
+        function openCategoryPopup() {
+            document.getElementById('categoryModal').classList.remove('hidden');
+            if (categoryCursors.length === 1 && document.getElementById('categoryList').innerHTML.trim() === '') {
+                fetchCategories(null);
+            }
+        }
+
+        function closeCategoryPopup() {
+            document.getElementById('categoryModal').classList.add('hidden');
+        }
+
+        function searchCategories() {
+            const query = document.getElementById('categorySearchInput').value.trim();
+            categoryCursors = [null];
+            currentCategoryPage = 1;
+            fetchCategories(null, query);
+        }
+
+        async function fetchCategories(cursor = null, search = "") {
+            const listEl = document.getElementById('categoryList');
+            const loader = document.getElementById('categoryLoading');
+            loader.classList.remove('hidden');
+            loader.classList.add('flex');
+            
+            try {
+                const url = new URL(window.location.origin + '/api/taxonomy');
+                if (cursor) url.searchParams.append('cursor', cursor);
+                if (search) url.searchParams.append('search', search);
+                
+                const res = await fetch(url);
+                const result = await res.json();
+                
+                if (result.success && result.data && result.data.edges) {
+                    renderCategoryList(result.data.edges);
+                    
+                    // Update pagination state
+                    const pageInfo = result.data.pageInfo;
+                    
+                    // If we have a next page and it's not already in our cursors array for the next page index
+                    if (pageInfo.hasNextPage) {
+                        if (categoryCursors.length <= currentCategoryPage) {
+                            categoryCursors.push(pageInfo.endCursor);
+                        } else {
+                            categoryCursors[currentCategoryPage] = pageInfo.endCursor;
+                        }
+                    } else if (categoryCursors.length > currentCategoryPage) {
+                        // Truncate array if no more pages
+                        categoryCursors.length = currentCategoryPage;
+                    }
+                    
+                    document.getElementById('btnCatPrev').disabled = currentCategoryPage <= 1;
+                    document.getElementById('btnCatNext').disabled = !pageInfo.hasNextPage;
+                    document.getElementById('catPageIndicator').innerText = `Trang ${currentCategoryPage}`;
+                } else {
+                    listEl.innerHTML = `<div class="p-6 text-center text-red-500 text-sm">${result.message || 'Lỗi khi tải danh mục.'}</div>`;
+                }
+            } catch (err) {
+                listEl.innerHTML = `<div class="p-6 text-center text-red-500 text-sm">Lỗi kết nối: ${err.message}</div>`;
+            } finally {
+                loader.classList.add('hidden');
+                loader.classList.remove('flex');
+            }
+        }
+
+        function renderCategoryList(edges) {
+            const listEl = document.getElementById('categoryList');
+            if (edges.length === 0) {
+                listEl.innerHTML = `<div class="p-6 text-center text-gray-500 text-sm">Không tìm thấy danh mục nào.</div>`;
+                return;
+            }
+            
+            listEl.innerHTML = edges.map(edge => {
+                const node = edge.node;
+                const isSelected = selectedCategoryId === node.id;
+                const bgClass = isSelected ? 'bg-indigo-50 border-l-2 border-indigo-500' : 'hover:bg-gray-50 border-l-2 border-transparent';
+                
+                return `
+                <div class="px-6 py-3 cursor-pointer ${bgClass} transition-colors flex items-center justify-between" onclick="selectCategory('${node.id}', '${node.fullName.replace(/'/g, "\\'")}')">
+                    <div>
+                        <div class="text-sm font-semibold text-gray-900">${node.name}</div>
+                        <div class="text-xs text-gray-500 mt-0.5">${node.fullName}</div>
+                    </div>
+                    ${isSelected ? '<iconify-icon icon="mdi:check-circle" class="text-indigo-600 text-xl"></iconify-icon>' : ''}
+                </div>`;
+            }).join('');
+            
+            document.getElementById('btnSubmitCategory').disabled = !selectedCategoryId;
+        }
+
+        function selectCategory(id, fullName) {
+            selectedCategoryId = id;
+            selectedCategoryName = fullName;
+            document.getElementById('btnSubmitCategory').disabled = false;
+            // Re-render to show selection styling
+            const items = document.getElementById('categoryList').children;
+            for(let i = 0; i < items.length; i++) {
+                const item = items[i];
+                const onclickAttr = item.getAttribute('onclick');
+                if (onclickAttr && onclickAttr.includes(id)) {
+                    item.className = "px-6 py-3 cursor-pointer bg-indigo-50 border-l-2 border-indigo-500 transition-colors flex items-center justify-between";
+                    if (!item.querySelector('.text-indigo-600')) {
+                        item.innerHTML += '<iconify-icon icon="mdi:check-circle" class="text-indigo-600 text-xl"></iconify-icon>';
+                    }
+                } else {
+                    item.className = "px-6 py-3 cursor-pointer hover:bg-gray-50 border-l-2 border-transparent transition-colors flex items-center justify-between";
+                    const checkIcon = item.querySelector('.text-indigo-600');
+                    if (checkIcon) checkIcon.remove();
+                }
+            }
+        }
+
+        function loadPrevCategoryPage() {
+            if (currentCategoryPage > 1) {
+                currentCategoryPage--;
+                const cursor = categoryCursors[currentCategoryPage - 1];
+                const query = document.getElementById('categorySearchInput').value.trim();
+                fetchCategories(cursor, query);
+            }
+        }
+
+        function loadNextCategoryPage() {
+            const cursor = categoryCursors[currentCategoryPage];
+            if (cursor) {
+                currentCategoryPage++;
+                const query = document.getElementById('categorySearchInput').value.trim();
+                fetchCategories(cursor, query);
+            }
+        }
+
+        async function submitCategoryUpdate() {
+            if (!selectedCategoryId) return;
+            
+            const btnSubmit = document.getElementById('btnSubmitCategory');
+            const originalText = btnSubmit.innerHTML;
+            btnSubmit.disabled = true;
+            btnSubmit.innerHTML = `<iconify-icon icon="mdi:loading" class="animate-spin"></iconify-icon> Đang lưu...`;
+            
+            const formData = new FormData();
+            formData.append('product_id', '{{ product.id }}');
+            formData.append('target_field', 'productCategory');
+            formData.append('new_value', selectedCategoryId);
+            
+            try {
+                const response = await fetch('/internal-edit-product', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('display-category').innerText = selectedCategoryName;
+                    closeCategoryPopup();
+                } else {
+                    alert('Lỗi: ' + data.message);
+                }
+            } catch (error) {
+                alert('Lỗi kết nối khi cập nhật danh mục!');
+            } finally {
+                btnSubmit.disabled = false;
+                btnSubmit.innerHTML = originalText;
+            }
+        }
+
+        function checkPublicationChanges() {
+            const toggles = document.querySelectorAll('.pub-toggle');
+            let hasChanges = false;
+            toggles.forEach(toggle => {
+                const isChecked = toggle.checked;
+                const original = toggle.getAttribute('data-original') === 'true';
+                if (isChecked !== original) {
+                    hasChanges = true;
+                }
+            });
+            const btn = document.getElementById('btn-save-publications');
+            if (hasChanges) {
+                btn.classList.remove('hidden');
+            } else {
+                btn.classList.add('hidden');
+            }
+        }
+
+        async function savePublications() {
+            const toggles = document.querySelectorAll('.pub-toggle');
+            const publishIds = [];
+            const unpublishIds = [];
+            
+            toggles.forEach(toggle => {
+                const isChecked = toggle.checked;
+                const original = toggle.getAttribute('data-original') === 'true';
+                const pubId = toggle.getAttribute('data-pub-id');
+                
+                if (isChecked && !original) {
+                    publishIds.push(pubId);
+                } else if (!isChecked && original) {
+                    unpublishIds.push(pubId);
+                }
+            });
+            
+            if (publishIds.length === 0 && unpublishIds.length === 0) return;
+            
+            const btn = document.getElementById('btn-save-publications');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<svg class="animate-spin w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Đang lưu...';
+            btn.disabled = true;
+            
+            try {
+                const response = await fetch('/api/products/publications', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        product_id: '{{ product.id }}',
+                        publish_ids: publishIds,
+                        unpublish_ids: unpublishIds
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    showToast('Thành công', data.message, 'success');
+                    // Update original state
+                    toggles.forEach(toggle => {
+                        const isChecked = toggle.checked;
+                        toggle.setAttribute('data-original', isChecked ? 'true' : 'false');
+                    });
+                    btn.classList.add('hidden');
+                } else {
+                    showToast('Lỗi', data.message, 'error');
+                }
+            } catch (error) {
+                console.error('Error saving publications:', error);
+                showToast('Lỗi', 'Có lỗi xảy ra khi gọi API', 'error');
+            } finally {
                 btn.innerHTML = originalText;
                 btn.disabled = false;
             }

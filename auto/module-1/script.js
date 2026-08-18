@@ -290,7 +290,6 @@ async function copyToClipboard(text) {
     }
 
     const wholeText = priceElement.querySelector(".a-price-whole")?.textContent;
-
     const fractionText = priceElement.querySelector(".a-price-fraction")?.textContent;
 
     const whole = String(wholeText ?? "").replace(/[^\d]/g, "");
@@ -460,51 +459,352 @@ async function copyToClipboard(text) {
   };
 
   /**
-   * Lấy A+ Content và ghép các thẻ img vào description-root.
+   * ============================================================
+   * A+ CONTENT V2
+   * ============================================================
    *
-   * Nếu không tìm thấy A+ Content hoặc không có ảnh,
-   * trả về description-root rỗng.
+   * Mục tiêu:
    *
-   * @returns {string}
+   * - Không phụ thuộc vào một cấu trúc DOM cố định.
+   * - Hỗ trợ nhiều kiểu A+ Content khác nhau.
+   * - Chờ Amazon render/lazy-load A+.
+   * - Không lấy ảnh poster / ảnh thuộc video module.
+   * - Deduplicate ảnh.
+   * - Có fallback nếu Amazon thay đổi A+ container.
+   *
+   * @returns {Promise<string>}
    */
-  const extractProductRichDescription = () => {
+  const extractProductRichDescription = async () => {
     const emptyRichDescription = '<div class="description-root"></div>';
 
-    const aplusFeature = document.getElementById("aplus_feature_div");
+    /**
+     * Lấy URL ảnh tốt nhất từ các attribute Amazon thường dùng.
+     *
+     * @param {Element | null} image
+     * @returns {string | null}
+     */
+    const getBestImageUrl = (image) => {
+      if (!image) {
+        return null;
+      }
 
-    if (!aplusFeature) {
+      const directCandidates = [
+        image.getAttribute("data-src"),
+        image.getAttribute("data-a-hires"),
+        image.getAttribute("src"),
+        image.currentSrc,
+      ];
+
+      for (const candidate of directCandidates) {
+        const url = normalizeText(candidate);
+
+        if (url && !url.startsWith("data:")) {
+          return url;
+        }
+      }
+
+      const srcset = image.getAttribute("data-srcset") || image.getAttribute("srcset");
+
+      if (srcset) {
+        const candidates = srcset
+          .split(",")
+          .map((item) => normalizeText(item))
+          .filter(Boolean);
+
+        for (let index = candidates.length - 1; index >= 0; index--) {
+          const candidate = candidates[index];
+          const url = normalizeText(candidate.split(/\s+/)[0]);
+
+          if (url && !url.startsWith("data:")) {
+            return url;
+          }
+        }
+      }
+
+      return null;
+    };
+
+    /**
+     * Loại toàn bộ ảnh nằm trong A+ video module.
+     * Không lấy poster/thumbnail/video-related images.
+     *
+     * @param {Element} image
+     * @returns {boolean}
+     */
+    const isInsideVideoModule = (image) =>
+      Boolean(
+        image.closest(
+          [
+            ".premium-module-8-hero-video",
+            '[cel_widget_id*="video"]',
+            ".premium-aplus-module-8-video",
+            ".video-container",
+            ".video-placeholder",
+            ".vse-player-container",
+            '[data-csa-c-component="aplus-vse-video-widget"]',
+          ].join(","),
+        ),
+      );
+
+    /**
+     * Kiểm tra URL có đặc trưng của Amazon A+ Media Library hay không.
+     *
+     * @param {string | null} url
+     * @returns {boolean}
+     */
+    const isAplusMediaUrl = (url) => {
+      if (!url) {
+        return false;
+      }
+
+      return url.includes("aplus-media-library-service-media") || url.includes("/aplus-media/");
+    };
+
+    /**
+     * Kiểm tra ảnh có nằm trong vùng/module A+ hay không.
+     *
+     * @param {Element} image
+     * @returns {boolean}
+     */
+    const isInsideAplusModule = (image) =>
+      Boolean(
+        image.closest(
+          [
+            ".aplus-module",
+            ".aplus-content-wrapper",
+            '[cel_widget_id^="aplus-"]',
+            "#aplus",
+            "#aplus_feature_div",
+          ].join(","),
+        ),
+      );
+
+    /**
+     * Chờ Amazon render A+ Content.
+     *
+     * Không bắt buộc phải tồn tại đúng một selector cố định.
+     */
+    await waitFor(
+      () =>
+        document.querySelector(
+          [".aplus-content-wrapper", "#aplus_feature_div", "#aplus", ".aplus-module"].join(","),
+        ),
+      7000,
+      150,
+    );
+
+    /**
+     * ==========================================================
+     * TÌM CÁC A+ ROOT
+     * ==========================================================
+     */
+    const roots = [];
+
+    const addRoot = (element) => {
+      if (element && !roots.includes(element)) {
+        roots.push(element);
+      }
+    };
+
+    /*
+     * Ưu tiên wrapper cụ thể.
+     */
+    document.querySelectorAll(".aplus-content-wrapper").forEach(addRoot);
+
+    addRoot(document.getElementById("aplus_feature_div"));
+    addRoot(document.getElementById("aplus"));
+
+    /**
+     * Nếu Amazon thay đổi wrapper,
+     * thử suy ra A+ root từ các module.
+     */
+    if (roots.length === 0) {
+      document.querySelectorAll('.aplus-module, [cel_widget_id^="aplus-"]').forEach((module) => {
+        addRoot(module.closest(".aplus-content-wrapper") || module.parentElement);
+      });
+    }
+
+    /**
+     * ==========================================================
+     * THU THẬP CANDIDATE IMAGES
+     * ==========================================================
+     */
+    const candidateImages = [];
+
+    const addCandidate = (image) => {
+      if (image && !candidateImages.includes(image)) {
+        candidateImages.push(image);
+      }
+    };
+
+    for (const root of roots) {
+      root.querySelectorAll("img").forEach(addCandidate);
+    }
+
+    /**
+     * ==========================================================
+     * FALLBACK TOÀN DOCUMENT
+     * ==========================================================
+     *
+     * Nếu Amazon đổi container A+,
+     * tìm ảnh dựa vào URL đặc trưng của A+ Media Library.
+     */
+    if (candidateImages.length === 0) {
+      document
+        .querySelectorAll(
+          [
+            'img[src*="aplus-media-library-service-media"]',
+            'img[data-src*="aplus-media-library-service-media"]',
+            'img[data-a-hires*="aplus-media-library-service-media"]',
+          ].join(","),
+        )
+        .forEach(addCandidate);
+    }
+
+    /**
+     * ==========================================================
+     * FILTER + NORMALIZE + DEDUPLICATE
+     * ==========================================================
+     */
+    const imageMap = new Map();
+
+    for (const image of candidateImages) {
+      /*
+       * Không lấy bất kỳ ảnh nào thuộc module video.
+       */
+      if (isInsideVideoModule(image)) {
+        continue;
+      }
+
+      const imageUrl = getBestImageUrl(image);
+
+      if (!imageUrl) {
+        continue;
+      }
+
+      /*
+       * Ảnh được chấp nhận khi:
+       *
+       * - nằm trong A+ module
+       *
+       * HOẶC
+       *
+       * - URL có đặc trưng A+ Media Library.
+       */
+      const validAplusImage = isInsideAplusModule(image) || isAplusMediaUrl(imageUrl);
+
+      if (!validAplusImage) {
+        continue;
+      }
+
+      /**
+       * Loại icon / tracking pixel nhỏ
+       * nếu browser đã load và biết kích thước thực.
+       */
+      if (
+        image.complete &&
+        image.naturalWidth > 0 &&
+        image.naturalHeight > 0 &&
+        image.naturalWidth <= 50 &&
+        image.naturalHeight <= 50
+      ) {
+        continue;
+      }
+
+      /*
+       * Deduplicate theo URL.
+       */
+      if (imageMap.has(imageUrl)) {
+        continue;
+      }
+
+      /**
+       * Clone riêng IMG.
+       *
+       * Không mang DOM Amazon xung quanh.
+       */
+      const clonedImage = image.cloneNode(false);
+
+      /**
+       * Chuẩn hóa src để ảnh có thể load
+       * độc lập khỏi lazy-loading của Amazon.
+       */
+      clonedImage.setAttribute("src", imageUrl);
+
+      clonedImage.removeAttribute("data-src");
+      clonedImage.removeAttribute("data-a-hires");
+      clonedImage.removeAttribute("data-srcset");
+      clonedImage.removeAttribute("srcset");
+      clonedImage.removeAttribute("loading");
+      clonedImage.removeAttribute("decoding");
+
+      imageMap.set(imageUrl, clonedImage.outerHTML);
+    }
+
+    /**
+     * ==========================================================
+     * FALLBACK LẦN CUỐI
+     * ==========================================================
+     *
+     * Nếu đã tìm thấy A+ container nhưng candidate
+     * ban đầu bị filter hết, tìm trực tiếp A+ Media Library.
+     */
+    if (imageMap.size === 0) {
+      const fallbackImages = document.querySelectorAll(
+        [
+          'img[src*="aplus-media-library-service-media"]',
+          'img[data-src*="aplus-media-library-service-media"]',
+          'img[data-a-hires*="aplus-media-library-service-media"]',
+        ].join(","),
+      );
+
+      for (const image of fallbackImages) {
+        /*
+         * Không lấy ảnh video.
+         */
+        if (isInsideVideoModule(image)) {
+          continue;
+        }
+
+        const imageUrl = getBestImageUrl(image);
+
+        if (!imageUrl || !isAplusMediaUrl(imageUrl) || imageMap.has(imageUrl)) {
+          continue;
+        }
+
+        const clonedImage = image.cloneNode(false);
+
+        clonedImage.setAttribute("src", imageUrl);
+
+        clonedImage.removeAttribute("data-src");
+        clonedImage.removeAttribute("data-a-hires");
+        clonedImage.removeAttribute("data-srcset");
+        clonedImage.removeAttribute("srcset");
+        clonedImage.removeAttribute("loading");
+        clonedImage.removeAttribute("decoding");
+
+        imageMap.set(imageUrl, clonedImage.outerHTML);
+      }
+    }
+
+    /**
+     * ==========================================================
+     * OUTPUT
+     * ==========================================================
+     */
+    const images = Array.from(imageMap.values());
+
+    if (images.length === 0) {
       console.warn(
-        '>>> Không tìm thấy element "#aplus_feature_div". ' + "Đang sử dụng rich description rỗng.",
+        ">>> Không tìm thấy ảnh A+ Content hợp lệ. " + "Đang sử dụng rich description rỗng.",
       );
 
       return emptyRichDescription;
     }
 
-    const contentWrapper = aplusFeature.querySelector(".aplus-v2 .aplus-content-wrapper");
+    console.log(`>>> A+ Content: lấy được ${images.length} ảnh.`);
 
-    if (!contentWrapper) {
-      console.warn(
-        ">>> Không tìm thấy A+ Content wrapper. " + "Đang sử dụng rich description rỗng.",
-      );
-
-      return emptyRichDescription;
-    }
-
-    const aplusImages = contentWrapper.querySelectorAll(".aplus-module-wrapper img");
-
-    if (aplusImages.length === 0) {
-      console.warn(
-        ">>> Không tìm thấy ảnh trong A+ Content. " + "Đang sử dụng rich description rỗng.",
-      );
-
-      return emptyRichDescription;
-    }
-
-    const htmlString = Array.from(aplusImages)
-      .map((image) => image.outerHTML)
-      .join(" ");
-
-    return `<div class="description-root">` + `${htmlString}` + `</div>`;
+    return `<div class="description-root">` + `${images.join(" ")}` + `</div>`;
   };
 
   /**
@@ -1199,7 +1499,7 @@ async function copyToClipboard(text) {
    * Lấy product rich description.
    */
   try {
-    product.product_rich_description = extractProductRichDescription();
+    product.product_rich_description = await extractProductRichDescription();
   } catch (error) {
     console.warn(">>> Có lỗi khi lấy A+ Content. " + "Đang sử dụng rich description rỗng.", error);
 

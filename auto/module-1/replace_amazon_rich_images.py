@@ -17,11 +17,18 @@ FLOW:
    - other attributes inside <img>
    - src
 
-3. Real Amazon images are downloaded and uploaded through:
+3. Real Amazon images are downloaded and uploaded to Shopify Content > Files
+   using Admin GraphQL:
 
-       POST https://vnote.io.vn/api/upload-image
+       stagedUploadsCreate -> staged binary upload -> fileCreate
 
-4. Amazon URLs are replaced with the returned Vnote `image_url`.
+   Credentials/store settings are read ONLY from `.media.env` next to
+   this script. If Shopify returns HTTP 401, the script uses the client ID
+   and client secret from that file to request a fresh access token, saves it
+   back to STORE_ADMIN_ACCESS_TOKEN, and retries the GraphQL call once.
+
+4. Amazon URLs are replaced with the final Shopify CDN image URL after
+   Shopify reports fileStatus=READY.
 
 5. The `src` attribute of EVERY <img> is always replaced with:
 
@@ -35,7 +42,7 @@ FLOW:
    then after upload it becomes:
 
        src="IMAGE_PLACEHOLDER_URL"
-       data-src="VNOTE_IMAGE_URL"
+       data-src="SHOPIFY_CDN_IMAGE_URL"
 
 7. Amazon placeholder images such as grey-pixel.gif are not uploaded when
    the real image already exists in data-src or another source attribute.
@@ -46,7 +53,7 @@ FLOW:
    - config is NOT modified
    - remaining URLs are appended to amazon-links-left.txt
 
-9. If upload to Vnote fails:
+9. If upload to Shopify Files fails:
    - config is NOT modified
    - failed Amazon URLs are appended to amazon-links-left.txt
 
@@ -64,33 +71,38 @@ Usage:
 Optional:
 
     python replace_amazon_rich_images.py --no-backup
-
-    python replace_amazon_rich_images.py \
-        --upload-url http://localhost:8000/api/upload-image
 """
 
 from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 import logging
 import mimetypes
+import os
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import Any, MutableMapping
+from typing import Any, Mapping, MutableMapping
 from urllib.parse import urlparse
 
 import requests
 
 from handle_images import (
     AppError,
+    EncodedImage,
+    ShopifyClient,
+    ShopifySettings,
     atomic_write_json,
     create_backup,
     create_http_session,
     download_image,
     first_nonempty,
+    load_env_file,
     load_json,
+    normalize_store_domain,
+    parse_positive_int,
     safe_filename,
 )
 
@@ -117,22 +129,24 @@ IMAGE_PLACEHOLDER_URL = "https://via.placeholder.com/800"
 
 
 # ------------------------------------------------------------
-# Vnote upload API
+# Shopify Content > Files
 # ------------------------------------------------------------
 
-DEFAULT_UPLOAD_IMAGE_URL = (
-    "https://vnote.io.vn/api/upload-image"
-)
+MEDIA_ENV_PATH = SCRIPT_DIR / ".media.env"
+DEFAULT_SHOPIFY_API_VERSION = "2026-07"
+DEFAULT_SHOPIFY_READY_TIMEOUT_SECONDS = 180
+DEFAULT_SHOPIFY_HTTP_TIMEOUT_SECONDS = 60
 
-UPLOAD_TIMEOUT_SECONDS = 60
-
-MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+# Shopify image files are limited to 20 MB. Resolution limits are
+# enforced by Shopify during processing (currently max 20 MP).
+MAX_UPLOAD_BYTES = 20 * 1024 * 1024
 
 SUPPORTED_UPLOAD_MIME_TYPES = {
     "image/jpeg",
     "image/png",
     "image/webp",
     "image/gif",
+    "image/heic",
 }
 
 
@@ -194,6 +208,7 @@ _KNOWN_IMAGE_SUFFIXES = {
     ".png",
     ".webp",
     ".gif",
+    ".heic",
 }
 
 
@@ -206,8 +221,9 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
             "Upload Amazon images found inside <img> tags "
-            "to Vnote, replace Amazon URLs with Vnote URLs, "
-            "and force every img src to IMAGE_PLACEHOLDER_URL."
+            "to Shopify Content > Files, replace Amazon URLs with "
+            "Shopify CDN URLs, and force every img src to "
+            "IMAGE_PLACEHOLDER_URL."
         )
     )
 
@@ -218,15 +234,6 @@ def parse_args() -> argparse.Namespace:
         help=(
             "Config JSON path. Default: "
             "config.prepare.json next to this script."
-        ),
-    )
-
-    parser.add_argument(
-        "--upload-url",
-        default=DEFAULT_UPLOAD_IMAGE_URL,
-        help=(
-            "Image upload API endpoint. Default: "
-            f"{DEFAULT_UPLOAD_IMAGE_URL}"
         ),
     )
 
@@ -427,7 +434,7 @@ def source_amazon_urls(
 
         the real image only existed in src
 
-    therefore its new Vnote URL must be placed into data-src
+    therefore its new Shopify CDN URL must be placed into data-src
     before src becomes IMAGE_PLACEHOLDER_URL.
     """
 
@@ -480,7 +487,7 @@ def source_amazon_urls(
     # Example:
     #
     # src = Amazon grey-pixel.gif
-    # data-src = already Vnote URL
+    # data-src = already Shopify CDN URL
     #
     # Do NOT upload Amazon src.
 
@@ -826,8 +833,7 @@ def guess_extension_and_mime(
     url: str,
 ) -> tuple[str, str]:
     """
-    Determine image extension and MIME type accepted
-    by /api/upload-image.
+    Determine an image extension and MIME type accepted by Shopify Files.
     """
 
     normalized_type = (
@@ -844,6 +850,7 @@ def guess_extension_and_mime(
         "image/png": ".png",
         "image/webp": ".webp",
         "image/gif": ".gif",
+        "image/heic": ".heic",
     }
 
     extension = (
@@ -900,7 +907,7 @@ def guess_extension_and_mime(
         raise AppError(
             (
                 "Downloaded image format is not supported "
-                "by /api/upload-image. "
+                "by Shopify Files. "
                 f"Content-Type={content_type!r}, "
                 f"URL={url}"
             )
@@ -914,8 +921,8 @@ def guess_extension_and_mime(
         raise AppError(
             (
                 "Downloaded image format is not supported "
-                "by /api/upload-image. "
-                "Supported: JPG, PNG, WEBP, GIF. "
+                "by Shopify Files. "
+                "Supported: JPG, PNG, WEBP, GIF, HEIC. "
                 f"Content-Type={content_type!r}, "
                 f"URL={url}"
             )
@@ -986,133 +993,337 @@ def get_rich_description(
 
 
 # ============================================================
-# VNOTE UPLOAD
+# SHOPIFY SETTINGS
 # ============================================================
 
 
-def upload_image_via_api(
+def load_shopify_settings(
+    env_path: Path = MEDIA_ENV_PATH,
+) -> ShopifySettings:
+    """
+    Read Shopify upload settings ONLY from `.media.env` next to this script.
+
+    Required for normal API calls:
+        STORE_ADMIN_ACCESS_TOKEN
+        SHOPIFY_STORE_DOMAIN
+
+    Required for automatic token renewal after HTTP 401:
+        STORE_ADMIN_CLIENT_ID
+        STORE_ADMIN_CLIENT_SECRET
+
+    Optional:
+        SHOPIFY_API_VERSION
+        SHOPIFY_FILE_READY_TIMEOUT_SECONDS
+
+    Client-credentials access tokens are short-lived. If Shopify returns
+    HTTP 401, this script requests a new access token using the client ID and
+    client secret, writes the new token back to `.media.env`, then retries the
+    failed GraphQL request once.
+    """
+
+    env_values = load_env_file(env_path)
+
+    access_token = first_nonempty(
+        env_values.get("STORE_ADMIN_ACCESS_TOKEN")
+    )
+    if not access_token:
+        raise AppError(
+            "STORE_ADMIN_ACCESS_TOKEN is missing from "
+            f"{env_path.name}."
+        )
+
+    store_domain = first_nonempty(
+        env_values.get("SHOPIFY_STORE_DOMAIN")
+    )
+    if not store_domain:
+        raise AppError(
+            "SHOPIFY_STORE_DOMAIN is missing from "
+            f"{env_path.name}."
+        )
+
+    api_version = first_nonempty(
+        env_values.get("SHOPIFY_API_VERSION"),
+        DEFAULT_SHOPIFY_API_VERSION,
+    )
+
+    ready_timeout_raw = first_nonempty(
+        env_values.get("SHOPIFY_FILE_READY_TIMEOUT_SECONDS")
+    )
+    ready_timeout = (
+        parse_positive_int(
+            ready_timeout_raw,
+            "SHOPIFY_FILE_READY_TIMEOUT_SECONDS",
+        )
+        if ready_timeout_raw
+        else DEFAULT_SHOPIFY_READY_TIMEOUT_SECONDS
+    )
+
+    return ShopifySettings(
+        store_domain=normalize_store_domain(store_domain),
+        access_token=access_token,
+        api_version=api_version or DEFAULT_SHOPIFY_API_VERSION,
+        ready_timeout_seconds=ready_timeout,
+    )
+
+
+
+
+# ============================================================
+# SHOPIFY ACCESS TOKEN AUTO-RENEWAL
+# ============================================================
+
+
+def load_shopify_client_credentials(
+    env_path: Path = MEDIA_ENV_PATH,
+) -> tuple[str | None, str | None]:
+    """Read client ID/secret used only when a token must be renewed."""
+
+    env_values = load_env_file(env_path)
+
+    return (
+        first_nonempty(env_values.get("STORE_ADMIN_CLIENT_ID")),
+        first_nonempty(env_values.get("STORE_ADMIN_CLIENT_SECRET")),
+    )
+
+
+def update_env_access_token(
+    env_path: Path,
+    new_access_token: str,
+) -> None:
+    """
+    Atomically replace STORE_ADMIN_ACCESS_TOKEN in `.media.env`.
+
+    Existing comments/order are preserved. If the key doesn't exist, it is
+    appended. The previous quote style (' or ") is preserved when possible.
+    """
+
+    if not env_path.exists():
+        raise AppError(f"Env file not found while saving refreshed token: {env_path}")
+
+    try:
+        original = env_path.read_text(encoding="utf-8-sig")
+    except OSError as exc:
+        raise AppError(f"Could not read {env_path} to save refreshed token: {exc}") from exc
+
+    lines = original.splitlines(keepends=True)
+    key = "STORE_ADMIN_ACCESS_TOKEN"
+    key_re = re.compile(
+        rf"^(?P<prefix>\s*(?:export\s+)?{re.escape(key)}\s*=\s*)(?P<value>.*?)(?P<newline>\r?\n)?$"
+    )
+
+    replaced = False
+    output: list[str] = []
+
+    for line in lines:
+        match = key_re.match(line)
+        if not match:
+            output.append(line)
+            continue
+
+        old_value = (match.group("value") or "").strip()
+        quote = ""
+        if len(old_value) >= 2 and old_value[0] == old_value[-1] and old_value[0] in {"'", '"'}:
+            quote = old_value[0]
+
+        newline = match.group("newline") or ""
+        output.append(
+            f"{match.group('prefix')}{quote}{new_access_token}{quote}{newline}"
+        )
+        replaced = True
+
+    if not replaced:
+        if original and not original.endswith(("\n", "\r")):
+            output.append("\n")
+        output.append(f"{key}='{new_access_token}'\n")
+
+    updated = "".join(output)
+    temp_path = env_path.with_name(env_path.name + ".tmp")
+
+    try:
+        temp_path.write_text(updated, encoding="utf-8", newline="")
+        os.replace(temp_path, env_path)
+    except OSError as exc:
+        try:
+            temp_path.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise AppError(f"Could not persist refreshed Shopify token to {env_path}: {exc}") from exc
+
+
+def request_new_shopify_access_token(
     session: requests.Session,
-    upload_url: str,
-    content: bytes,
-    filename: str,
-    mime_type: str,
-    tag: str,
-) -> str:
-    """
-    Upload one image through Vnote API.
+    *,
+    store_domain: str,
+    client_id: str,
+    client_secret: str,
+) -> tuple[str, int | None, str | None]:
+    """Request a fresh Shopify Admin API token via Client Credentials Grant."""
 
-    POST /api/upload-image
+    token_url = f"https://{store_domain}/admin/oauth/access_token"
 
-    multipart/form-data:
+    try:
+        response = session.post(
+            token_url,
+            headers={
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Accept": "application/json",
+            },
+            data={
+                "grant_type": "client_credentials",
+                "client_id": client_id,
+                "client_secret": client_secret,
+            },
+            timeout=DEFAULT_SHOPIFY_HTTP_TIMEOUT_SECONDS,
+        )
+    except requests.RequestException as exc:
+        raise AppError(f"Could not request a new Shopify access token: {exc}") from exc
 
-        image = file
-        tag   = string
-
-    Expected JSON:
-
-        {
-            "image_url": "https://..."
-        }
-    """
-
-    if len(content) > MAX_UPLOAD_BYTES:
-
+    if response.status_code < 200 or response.status_code >= 300:
+        body = (response.text or "").strip().replace("\n", " ")[:500]
         raise AppError(
-            (
-                "Image exceeds the API 10MB limit: "
-                f"{filename} "
-                f"("
-                f"{len(content) / (1024 * 1024):.2f} MB"
-                f")"
-            )
+            "Shopify access-token renewal failed with HTTP "
+            f"{response.status_code}: {body or '<empty response>'}"
         )
 
-    response = session.post(
-        upload_url,
-        files={
-            "image": (
-                filename,
-                content,
-                mime_type,
-            )
-        },
-        data={
-            "tag": tag,
-        },
-        headers={
-            "Accept": "application/json",
-        },
-        timeout=UPLOAD_TIMEOUT_SECONDS,
-    )
-
     try:
-
-        response.raise_for_status()
-
-    except requests.HTTPError as exc:
-
-        body = response.text.strip()
-
-        if len(body) > 1000:
-            body = (
-                body[:1000]
-                + "..."
-            )
-
-        raise AppError(
-            (
-                "Upload API returned HTTP "
-                f"{response.status_code}: "
-                f"{body or '<empty response>'}"
-            )
-        ) from exc
-
-    try:
-
         payload = response.json()
-
     except ValueError as exc:
-
         raise AppError(
-            (
-                "Upload API did not return valid JSON: "
-                f"{response.text[:1000]!r}"
-            )
+            "Shopify access-token endpoint returned non-JSON data: "
+            f"{response.text[:500]}"
         ) from exc
 
-    image_url = (
-        payload.get("image_url")
-        if isinstance(payload, dict)
-        else None
-    )
+    access_token = first_nonempty(payload.get("access_token"))
+    if not access_token:
+        raise AppError("Shopify access-token response did not contain access_token.")
 
-    if (
-        not isinstance(
-            image_url,
-            str,
-        )
-        or not image_url.strip()
-    ):
-        raise AppError(
-            (
-                "Upload API response is missing "
-                "a non-empty 'image_url'."
+    expires_in_raw = payload.get("expires_in")
+    expires_in: int | None = None
+    if expires_in_raw is not None:
+        try:
+            expires_in = int(expires_in_raw)
+        except (TypeError, ValueError):
+            expires_in = None
+
+    scope = first_nonempty(payload.get("scope"))
+    return access_token, expires_in, scope
+
+
+class AutoRenewShopifyClient(ShopifyClient):
+    """
+    Shopify Files client that renews an expired/invalid token once on HTTP 401.
+
+    The renewal request uses STORE_ADMIN_CLIENT_ID and
+    STORE_ADMIN_CLIENT_SECRET from `.media.env`. After renewal, the new token
+    is persisted back to STORE_ADMIN_ACCESS_TOKEN and used for the retry.
+    """
+
+    def __init__(
+        self,
+        settings: ShopifySettings,
+        session: requests.Session,
+        *,
+        env_path: Path,
+        client_id: str | None,
+        client_secret: str | None,
+    ) -> None:
+        super().__init__(settings, session)
+        self.env_path = env_path
+        self.client_id = client_id
+        self.client_secret = client_secret
+
+    def _renew_access_token(self) -> None:
+        if not self.client_id or not self.client_secret:
+            raise AppError(
+                "Shopify returned HTTP 401, but automatic token renewal cannot run because "
+                "STORE_ADMIN_CLIENT_ID and/or STORE_ADMIN_CLIENT_SECRET is missing from "
+                f"{self.env_path.name}."
             )
+
+        LOGGER.warning(
+            "Shopify Admin API returned HTTP 401. Requesting a new access token via client credentials."
         )
 
-    image_url = (
-        image_url.strip()
-    )
+        new_token, expires_in, scope = request_new_shopify_access_token(
+            self.session,
+            store_domain=self.settings.store_domain,
+            client_id=self.client_id,
+            client_secret=self.client_secret,
+        )
 
-    normalize_http_url(
-        image_url,
-        (
-            "image_url returned "
-            "by upload API"
-        ),
-    )
+        # Persist first so the next process starts with the fresh token.
+        update_env_access_token(self.env_path, new_token)
 
-    return image_url
+        self.settings = ShopifySettings(
+            store_domain=self.settings.store_domain,
+            access_token=new_token,
+            api_version=self.settings.api_version,
+            ready_timeout_seconds=self.settings.ready_timeout_seconds,
+        )
+
+        details: list[str] = []
+        if expires_in is not None:
+            details.append(f"expires_in={expires_in}s")
+        if scope:
+            details.append(f"scope={scope}")
+
+        LOGGER.info(
+            "Shopify access token renewed and saved to %s%s.",
+            self.env_path.name,
+            f" ({', '.join(details)})" if details else "",
+        )
+
+    def graphql(
+        self,
+        query: str,
+        variables: Mapping[str, Any],
+    ) -> dict[str, Any]:
+        """Execute GraphQL, renew on the first HTTP 401, then retry once."""
+
+        for attempt in range(2):
+            response = self.session.post(
+                self.endpoint,
+                headers={
+                    "Content-Type": "application/json",
+                    "X-Shopify-Access-Token": self.settings.access_token,
+                },
+                json={"query": query, "variables": variables},
+                timeout=DEFAULT_SHOPIFY_HTTP_TIMEOUT_SECONDS,
+            )
+
+            if response.status_code == 401 and attempt == 0:
+                self._renew_access_token()
+                continue
+
+            try:
+                response.raise_for_status()
+            except requests.HTTPError as exc:
+                body = (response.text or "").strip().replace("\n", " ")[:500]
+                raise AppError(
+                    "Shopify Admin GraphQL request failed with HTTP "
+                    f"{response.status_code}: {body or '<empty response>'}"
+                ) from exc
+
+            try:
+                payload = response.json()
+            except ValueError as exc:
+                raise AppError(
+                    f"Shopify returned a non-JSON response: {response.text[:500]}"
+                ) from exc
+
+            if payload.get("errors"):
+                raise AppError(
+                    "Shopify GraphQL error: "
+                    + json.dumps(payload["errors"], ensure_ascii=False)
+                )
+
+            data = payload.get("data")
+            if not isinstance(data, dict):
+                raise AppError("Shopify GraphQL response does not contain a data object.")
+
+            return data
+
+        raise AppError("Shopify authentication failed after renewing the access token once.")
 
 
 # ============================================================
@@ -1147,12 +1358,11 @@ def main() -> int:
             args.config.resolve()
         )
 
-        upload_url = (
-            normalize_http_url(
-                args.upload_url,
-                "--upload-url",
-            )
-        )
+        shopify_settings = load_shopify_settings()
+        (
+            shopify_client_id,
+            shopify_client_secret,
+        ) = load_shopify_client_credentials()
 
         # IMAGE_PLACEHOLDER_URL is mandatory.
 
@@ -1274,8 +1484,13 @@ def main() -> int:
         )
 
         LOGGER.info(
-            "Upload API: %s",
-            upload_url,
+            "Shopify store: %s",
+            shopify_settings.store_domain,
+        )
+
+        LOGGER.info(
+            "Shopify Admin API version: %s",
+            shopify_settings.api_version,
         )
 
         LOGGER.info(
@@ -1326,11 +1541,20 @@ def main() -> int:
             "image/jpeg,"
             "image/png,"
             "image/webp,"
-            "image/gif;q=0.9,"
+            "image/gif,"
+            "image/heic;q=0.9,"
             "*/*;q=0.1"
         )
 
-        # Amazon URL -> Vnote URL
+        shopify_client = AutoRenewShopifyClient(
+            shopify_settings,
+            session,
+            env_path=MEDIA_ENV_PATH,
+            client_id=shopify_client_id,
+            client_secret=shopify_client_secret,
+        )
+
+        # Amazon URL -> Shopify CDN URL
 
         url_to_public: dict[
             str,
@@ -1392,23 +1616,36 @@ def main() -> int:
                     f"{extension}"
                 )
 
-                tag_value = (
-                    safe_filename(
-                        f"{identifier}"
-                        f"-rich-"
-                        f"{display_index:03d}"
+                if len(content) > MAX_UPLOAD_BYTES:
+                    raise AppError(
+                        "Image exceeds Shopify's 20 MB image-file limit: "
+                        f"{filename} "
+                        f"({len(content) / (1024 * 1024):.2f} MB)"
                     )
+
+                product_title = first_nonempty(
+                    product.get("product_title")
+                )
+                alt_text = (
+                    f"{product_title} rich description image {display_index}"
+                    if product_title
+                    else filename
                 )
 
-                public_url = (
-                    upload_image_via_api(
-                        session=session,
-                        upload_url=upload_url,
+                public_url = shopify_client.upload_image(
+                    EncodedImage(
                         content=content,
                         filename=filename,
                         mime_type=mime_type,
-                        tag=tag_value,
-                    )
+                        width=0,
+                        height=0,
+                    ),
+                    alt_text=alt_text,
+                )
+
+                normalize_http_url(
+                    public_url,
+                    "Shopify CDN URL returned after file upload",
                 )
 
                 url_to_public[
@@ -1458,7 +1695,7 @@ def main() -> int:
                 failed_urls,
                 config_path=config_path,
                 reason=(
-                    "Upload to Vnote failed; "
+                    "Upload to Shopify Files failed; "
                     "config was not modified, "
                     "so these Amazon URL(s) "
                     "remain in the rich description."
@@ -1517,7 +1754,7 @@ def main() -> int:
             #
             # <img
             #   src="PLACEHOLDER"
-            #   data-src="VNOTE_REAL.jpg"
+            #   data-src="SHOPIFY_CDN_REAL.jpg"
             # >
             # -----------------------------------------------
 

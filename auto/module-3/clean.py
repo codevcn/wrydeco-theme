@@ -26,6 +26,7 @@ KEEP_CONTENT = [
     "update_nginx.py",
     "update_vps_env.py",
     "favicon.zip",
+    "check_vps.py"
 ]
 
 

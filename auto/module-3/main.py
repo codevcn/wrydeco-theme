@@ -1343,7 +1343,11 @@ def get_products_by_duplicate_asin(sort_by="created_desc"):
     for edge in all_edges:
         mf = edge["node"].get("amazon_link")
         if mf and mf.get("value"):
-            asin = mf["value"].strip().upper()
+            val = mf["value"]
+            asin = val.strip().upper()
+            match = re.search(r'(?:/dp/|/gp/product/)([a-zA-Z0-9]+)', val)
+            if match:
+                asin = match.group(1).upper()
             if asin:
                 asin_counts[asin] = asin_counts.get(asin, 0) + 1
                 
@@ -1351,7 +1355,11 @@ def get_products_by_duplicate_asin(sort_by="created_desc"):
     for edge in all_edges:
         mf = edge["node"].get("amazon_link")
         if mf and mf.get("value"):
-            asin = mf["value"].strip().upper()
+            val = mf["value"]
+            asin = val.strip().upper()
+            match = re.search(r'(?:/dp/|/gp/product/)([a-zA-Z0-9]+)', val)
+            if match:
+                asin = match.group(1).upper()
             if asin and asin_counts.get(asin, 0) > 1:
                 duplicate_edges.append(edge)
 
@@ -1648,6 +1656,17 @@ def get_product_by_handle(handle: str):
             }
           }
         }
+        productPublications(first: 20) {
+          edges {
+            node {
+              channel {
+                id
+                name
+              }
+              isPublished
+            }
+          }
+        }
       }
     }
     """
@@ -1700,6 +1719,16 @@ async def read_product(request: Request, product_handle: str):
             except Exception:
                 pass
                 
+        # Extract publications
+        publications = []
+        for pub_edge in product_data.get("productPublications", {}).get("edges", []):
+            pub_node = pub_edge["node"]
+            publications.append({
+                "channel_id": pub_node.get("channel", {}).get("id"),
+                "channel_name": pub_node.get("channel", {}).get("name"),
+                "is_published": pub_node.get("isPublished", False)
+            })
+            
         product = {
             "id": product_data["id"].split("/")[-1],
             "title": product_data["title"],
@@ -1713,7 +1742,8 @@ async def read_product(request: Request, product_handle: str):
             "options": product_data.get("options", []),
             "media": media_list,
             "prices": sorted_prices,
-            "metafields": metafields
+            "metafields": metafields,
+            "publications": publications
         }
         
         return templates.TemplateResponse(request=request, name="product.html", context={
@@ -2623,6 +2653,84 @@ async def delete_option_submit(request: Request):
             return HTMLResponse(content=json.dumps({"success": False, "message": str(e)}, ensure_ascii=False), media_type="application/json")
         return templates.TemplateResponse(request=request, name="edit_variants.html", context={"request": request, "error": str(e), "success_message": None})
 
+@app.get("/api/taxonomy")
+async def api_taxonomy(request: Request, search: str = "", cursor: str = None):
+    try:
+        import json
+        query_args = "$first: Int!, $after: String"
+        taxonomy_args = "first: $first, after: $after"
+        
+        if search:
+            query_args += ", $search: String"
+            taxonomy_args += ", search: $search"
+            # Keep query_vars mapping 'query' to search if that's what taxonomyNodes used,
+            # but wait, the variable in query_vars is "query": "B", let's change it to "search"
+            
+        # We need to make sure query_vars matches the declared variables
+        query_vars = {"first": 50}
+        if cursor:
+            query_vars["after"] = cursor
+        if search:
+            query_vars["search"] = search
+            
+        query = f'''
+        query getTaxonomyNodes({query_args}) {{
+          taxonomyNodes({taxonomy_args}) {{
+            pageInfo {{
+              hasNextPage
+              endCursor
+            }}
+            edges {{
+              node {{
+                id
+                name
+                fullName
+              }}
+            }}
+          }}
+        }}
+        '''
+        
+        res = requests.post(GRAPHQL_URL, json={"query": query, "variables": query_vars}, headers=HEADERS)
+        if res.status_code == 200 and "errors" not in res.json():
+            return HTMLResponse(content=json.dumps({"success": True, "data": res.json().get("data", {}).get("taxonomyNodes", {})}), media_type="application/json")
+            
+        error_msg_1 = str(res.json().get("errors", []))
+            
+        # Fallback to taxonomy if taxonomyNodes is not available
+        query_fallback = f'''
+        query getTaxonomyNodes({query_args}) {{
+          taxonomy {{
+            categories({taxonomy_args}) {{
+              pageInfo {{
+                hasNextPage
+                endCursor
+              }}
+              edges {{
+                node {{
+                  id
+                  name
+                  fullName
+                }}
+              }}
+            }}
+          }}
+        }}
+        '''
+        res2 = requests.post(GRAPHQL_URL, json={"query": query_fallback, "variables": query_vars}, headers=HEADERS)
+        res2.raise_for_status()
+        data = res2.json()
+        if "errors" in data:
+            error2_str = str(data["errors"])
+            return HTMLResponse(content=json.dumps({"success": False, "message": f"Query 1: {error_msg_1} | Query 2: {error2_str}"}), media_type="application/json")
+            
+        return HTMLResponse(content=json.dumps({"success": True, "data": data.get("data", {}).get("taxonomy", {}).get("categories", {})}), media_type="application/json")
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        import json
+        return HTMLResponse(content=json.dumps({"success": False, "message": str(e)}), media_type="application/json")
+
 def add_tags_to_product(product_id: str, tags: list):
     mutation = """
     mutation tagsAdd($id: ID!, $tags: [String!]!) {
@@ -3058,6 +3166,49 @@ async def internal_edit_product(request: Request):
                     "productType": new_value
                 }
             }
+        elif target_field == "tags":
+            mutation = '''
+            mutation productUpdate($input: ProductInput!) {
+              productUpdate(input: $input) {
+                product {
+                  id
+                  tags
+                }
+                userErrors {
+                  field
+                  message
+                }
+              }
+            }
+            '''
+            variables = {
+                "input": {
+                    "id": product_id,
+                    "tags": [t.strip() for t in new_value.split(",") if t.strip()]
+                }
+            }
+        elif target_field == "productCategory":
+            mutation = '''
+            mutation productUpdate($input: ProductInput!) {
+              productUpdate(input: $input) {
+                product {
+                  id
+                }
+                userErrors {
+                  field
+                  message
+                }
+              }
+            }
+            '''
+            variables = {
+                "input": {
+                    "id": product_id,
+                    "productCategory": {
+                        "productTaxonomyNodeId": new_value
+                    }
+                }
+            }
         elif target_field == "amazonLink":
             mutation = '''
             mutation productUpdate($input: ProductInput!) {
@@ -3202,6 +3353,89 @@ def save_config(config_data):
         import json
         json.dump(config_data, f, indent=4)
 
+def get_articles(sort_key="ID", reverse=True, first=50):
+    query = """
+    query getArticles($first: Int!, $sortKey: ArticleSortKeys, $reverse: Boolean) {
+      articles(first: $first, sortKey: $sortKey, reverse: $reverse) {
+        edges {
+          node {
+            id
+            title
+            isPublished
+            publishedAt
+            createdAt
+            updatedAt
+            image {
+              url
+            }
+            blog {
+              title
+            }
+          }
+        }
+      }
+    }
+    """
+    variables = {
+        "first": first,
+        "sortKey": sort_key,
+        "reverse": reverse
+    }
+    try:
+        res = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=HEADERS)
+        res.raise_for_status()
+        data = res.json()
+        if "errors" in data:
+            print("GraphQL Errors fetching articles:", data["errors"])
+            return []
+        return [edge["node"] for edge in data.get("data", {}).get("articles", {}).get("edges", [])]
+    except Exception as e:
+        print("Error fetching articles:", e)
+        return []
+
+@app.get("/blogs", response_class=HTMLResponse)
+async def blogs_page(request: Request, sort: str = "created_desc"):
+    # sort can be: created_desc, created_asc, updated_desc, updated_asc, title_asc, title_desc
+    sort_key = "ID"
+    reverse = True
+    
+    if sort == "created_asc":
+        sort_key = "ID"
+        reverse = False
+    elif sort == "updated_desc":
+        sort_key = "UPDATED_AT"
+        reverse = True
+    elif sort == "updated_asc":
+        sort_key = "UPDATED_AT"
+        reverse = False
+    elif sort == "title_asc":
+        sort_key = "TITLE"
+        reverse = False
+    elif sort == "title_desc":
+        sort_key = "TITLE"
+        reverse = True
+        
+    articles = get_articles(sort_key=sort_key, reverse=reverse)
+    
+    # Format dates
+    from datetime import datetime
+    for article in articles:
+        for date_field in ["createdAt", "updatedAt", "publishedAt"]:
+            if article.get(date_field):
+                try:
+                    dt = datetime.fromisoformat(article[date_field].replace("Z", "+00:00"))
+                    article[f"{date_field}_fmt"] = dt.strftime("%d/%m/%Y %H:%M")
+                except Exception:
+                    article[f"{date_field}_fmt"] = article[date_field]
+            else:
+                article[f"{date_field}_fmt"] = ""
+                
+    return templates.TemplateResponse(request=request, name="blogs.html", context={
+        "request": request,
+        "articles": articles,
+        "current_sort": sort
+    })
+
 @app.get("/settings", response_class=HTMLResponse)
 async def settings_page(request: Request):
     return templates.TemplateResponse(request=request, name="settings.html", context={"request": request})
@@ -3345,4 +3579,78 @@ async def delete_product(request: Request, product_id: str = Form(...), password
             
         return HTMLResponse(content=json.dumps({"success": True, "message": "Sản phẩm đã được xóa thành công."}), media_type="application/json")
     except Exception as e:
+        return HTMLResponse(content=json.dumps({"success": False, "message": str(e)}), media_type="application/json")
+
+@app.post("/api/products/publications")
+async def api_product_publications(request: Request):
+    try:
+        import json
+        data = await request.json()
+        product_id = data.get("product_id")
+        publish_ids = data.get("publish_ids", [])
+        unpublish_ids = data.get("unpublish_ids", [])
+        
+        if not product_id:
+            return HTMLResponse(content=json.dumps({"success": False, "message": "Missing product ID"}), media_type="application/json")
+            
+        full_product_id = f"gid://shopify/Product/{product_id}" if not str(product_id).startswith("gid://") else product_id
+        
+        errors = []
+        
+        # Publish
+        if publish_ids:
+            publish_input = [{"publicationId": pub_id} for pub_id in publish_ids]
+            query_publish = '''
+            mutation publishablePublish($id: ID!, $input: [PublicationInput!]!) {
+              publishablePublish(id: $id, input: $input) {
+                userErrors {
+                  field
+                  message
+                }
+              }
+            }
+            '''
+            variables = {"id": full_product_id, "input": publish_input}
+            res = requests.post(GRAPHQL_URL, json={"query": query_publish, "variables": variables}, headers=HEADERS)
+            res.raise_for_status()
+            res_data = res.json()
+            if "errors" in res_data:
+                errors.append(f"Publish errors: {res_data['errors']}")
+            else:
+                user_errors = res_data.get("data", {}).get("publishablePublish", {}).get("userErrors", [])
+                if user_errors:
+                    errors.append(f"Publish user errors: {user_errors}")
+                    
+        # Unpublish
+        if unpublish_ids:
+            unpublish_input = [{"publicationId": pub_id} for pub_id in unpublish_ids]
+            query_unpublish = '''
+            mutation publishableUnpublish($id: ID!, $input: [PublicationInput!]!) {
+              publishableUnpublish(id: $id, input: $input) {
+                userErrors {
+                  field
+                  message
+                }
+              }
+            }
+            '''
+            variables = {"id": full_product_id, "input": unpublish_input}
+            res = requests.post(GRAPHQL_URL, json={"query": query_unpublish, "variables": variables}, headers=HEADERS)
+            res.raise_for_status()
+            res_data = res.json()
+            if "errors" in res_data:
+                errors.append(f"Unpublish errors: {res_data['errors']}")
+            else:
+                user_errors = res_data.get("data", {}).get("publishableUnpublish", {}).get("userErrors", [])
+                if user_errors:
+                    errors.append(f"Unpublish user errors: {user_errors}")
+                    
+        if errors:
+            return HTMLResponse(content=json.dumps({"success": False, "message": " | ".join(errors)}), media_type="application/json")
+            
+        return HTMLResponse(content=json.dumps({"success": True, "message": "Đã cập nhật trạng thái kênh bán hàng thành công"}), media_type="application/json")
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
         return HTMLResponse(content=json.dumps({"success": False, "message": str(e)}), media_type="application/json")
