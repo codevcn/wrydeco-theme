@@ -3532,7 +3532,7 @@ def get_articles(sort_key="ID", reverse=True, first=50, after=None, before=None,
         return [], {}
 
 @app.get("/blogs")
-async def blogs_page(request: Request, sort: str = "created_desc", search: str = "", after: str = None, before: str = None):
+async def blogs_page(request: Request, sort: str = "created_desc", search: str = "", after: str = None, before: str = None, date_type: str = "created_at", date_from: str = None, date_to: str = None):
     sort_key = "ID"
     reverse = True
     
@@ -3552,9 +3552,15 @@ async def blogs_page(request: Request, sort: str = "created_desc", search: str =
         sort_key = "TITLE"
         reverse = True
         
-    search_query = None
+    query_parts = []
     if search:
-        search_query = f"*{search}*"
+        query_parts.append(f"*{search}*")
+    if date_from:
+        query_parts.append(f"{date_type}:>={date_from}:00Z")
+    if date_to:
+        query_parts.append(f"{date_type}:<={date_to}:00Z")
+        
+    search_query = " ".join(query_parts) if query_parts else None
         
     articles, page_info = get_articles(sort_key=sort_key, reverse=reverse, after=after, before=before, search_query=search_query)
     
@@ -3615,7 +3621,10 @@ async def blogs_page(request: Request, sort: str = "created_desc", search: str =
         "current_sort": sort,
         "search": search,
         "total_store_count": total_store_count,
-        "total_search_count": total_search_count
+        "total_search_count": total_search_count,
+        "date_type": date_type,
+        "date_from": date_from,
+        "date_to": date_to
     })
 
 @app.get("/settings", response_class=HTMLResponse)

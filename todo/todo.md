@@ -253,6 +253,26 @@ chỉ là 1 lưu ý, ko phải vấn đề cần fix.
 Sửa sau theo yêu cầu. Khi quay lại point này, hướng an toàn là dùng media thật hiện có như workshop/process evidence của WRYDECO, không gọi là case study hoàn chỉnh của một đơn hàng cụ thể nếu media đến từ nhiều sản phẩm khác nhau. Không dùng ảnh artisan, ảnh gỗ thô, ảnh biến thể gỗ hoặc media kỹ thuật nếu chưa có dữ liệu thật.
 ```
 
+### Kết quả fix point 1:
+```text
+Đã triển khai section mới "Workshop Evidence" trên PDP, đặt bên dưới Product Author và bên trên "No Two Pieces Are Ever Truly Alike".
+
+Data media lấy từ first entry của metaobject `store_media_info`:
+- Video handcrafting: field `proof_handcratf_video_url`.
+- Video assembly: field `proof_assembly_video_url`.
+- Packaging fanned cards: parse field `proof_packaging_image_urls`, các URL cách nhau bởi dấu phẩy.
+
+Đã tạo `sections/workshop-evidence.liquid` với nội dung SSR-first: heading, subheading, 2 video proof cards, fanned packaging cards, labels Handcrafting / Assembly / Packaging. Section chỉ render khi có ít nhất một media thật.
+
+Cập nhật follow-up: đã bỏ CTA "Explore Craftsmanship" khỏi section. Packaging fan được thay bằng carousel ảnh trong card theo design mới, có nút Previous/Next nằm trên mép khối và slider dots ở đáy khối. User bấm vào ảnh packaging sẽ mở lightbox ảnh đơn; đã bỏ preview modal carousel cũ.
+
+Đã thêm section vào `templates/product.json` theo đúng vị trí yêu cầu: sau `product_artist`, trước `no_two_pieces_alike`.
+
+Đã dùng Iconify tool trong `my-tools/iconify` để lấy inline SVG icon mới theo CODING_RULES.md.
+
+Đã validate `templates/product.json` và schema `sections/workshop-evidence.liquid`. Không chạy shopify theme check theo yêu cầu. Đã dùng Playwright kiểm tra PDP local ở desktop 1520x900, tablet 820x1180 và mobile 390x844: HTTP 200, section render đúng, có 2 video không còn native controls/fullscreen button, packaging carousel có 5 slides/5 dots/2 nav buttons, lightbox mở và đóng đúng, không horizontal overflow.
+```
+
 ## 2. Artisan Info
 
 - Toàn bộ thông tin về artisan như "Tên artisan muốn public", "Vai trò", "Số năm kinh nghiệm", "avatar" đều lấy từ data thật trong metaobject trên store.

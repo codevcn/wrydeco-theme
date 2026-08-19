@@ -57,7 +57,7 @@
 
         <div class="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <!-- Search -->
-            <div class="flex gap-2 w-full max-w-lg">
+            <div class="flex gap-2 w-full max-w-2xl">
                 <div class="relative flex-grow">
                     <input type="text" id="searchInput" placeholder="Tìm kiếm title, handle, tags, author, blog..." class="w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm py-2 px-3 pl-10 border" value="{{ search }}">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -66,6 +66,16 @@
                 </div>
                 <button type="button" id="searchSubmitBtn" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
                     Tìm kiếm
+                </button>
+                {% set active_filters = 0 %}
+                {% if date_from %}{% set active_filters = active_filters + 1 %}{% endif %}
+                {% if date_to %}{% set active_filters = active_filters + 1 %}{% endif %}
+                <button type="button" id="toggleFilterBtn" style="margin-left: 12px;" class="{% if date_from or date_to %}bg-indigo-50 border-indigo-300 text-indigo-700{% else %}bg-white{% endif %} inline-flex items-center gap-2 px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors" title="Bộ lọc nâng cao">
+                    <iconify-icon icon="mdi:filter-variant" class="text-lg"></iconify-icon>
+                    <span>Filter</span>
+                    <span id="filterCountBadge" class="{% if active_filters > 0 %}inline-flex{% else %}hidden{% endif %} ml-1 items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                        {{ active_filters }}
+                    </span>
                 </button>
             </div>
             
@@ -80,6 +90,35 @@
                     <option value="title_asc" {% if current_sort == 'title_asc' %}selected{% endif %}>Tên (A-Z)</option>
                     <option value="title_desc" {% if current_sort == 'title_desc' %}selected{% endif %}>Tên (Z-A)</option>
                 </select>
+            </div>
+        </div>
+
+        <!-- Advanced Filters Section -->
+        <div id="advancedFilters" class="{% if date_from or date_to %}{% else %}hidden{% endif %} mb-4 p-4 bg-white rounded-lg border border-gray-200 shadow-sm transition-all">
+            <h3 class="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                <iconify-icon icon="mdi:filter-outline"></iconify-icon> Bộ lọc nâng cao
+            </h3>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Loại thời gian</label>
+                    <select id="filterDateType" class="w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm py-2 px-3 border">
+                        <option value="created_at" {% if date_type == 'created_at' %}selected{% endif %}>Ngày tạo (Created At)</option>
+                        <option value="updated_at" {% if date_type == 'updated_at' %}selected{% endif %}>Ngày cập nhật (Updated At)</option>
+                        <option value="published_at" {% if date_type == 'published_at' %}selected{% endif %}>Ngày xuất bản (Published At)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Từ ngày & giờ</label>
+                    <input type="datetime-local" id="filterDateFrom" value="{{ date_from or '' }}" class="w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm py-2 px-3 border">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Đến ngày & giờ</label>
+                    <input type="datetime-local" id="filterDateTo" value="{{ date_to or '' }}" class="w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm py-2 px-3 border">
+                </div>
+            </div>
+            <div class="mt-4 flex justify-end">
+                <button type="button" id="clearFilterBtn" class="mr-2 inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 transition-colors">Xóa bộ lọc</button>
+                <button type="button" id="applyFilterBtn" class="inline-flex items-center px-3 py-1.5 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 transition-colors">Áp dụng lọc</button>
             </div>
         </div>
 
@@ -173,6 +212,29 @@
         document.getElementById('searchSubmitBtn').addEventListener('click', function() {
             loadData();
         });
+        
+        document.getElementById('toggleFilterBtn').addEventListener('click', function() {
+            const filterDiv = document.getElementById('advancedFilters');
+            if (filterDiv.classList.contains('hidden')) {
+                filterDiv.classList.remove('hidden');
+                this.classList.remove('bg-white');
+                this.classList.add('bg-indigo-50', 'border-indigo-300', 'text-indigo-700');
+            } else {
+                filterDiv.classList.add('hidden');
+                this.classList.remove('bg-indigo-50', 'border-indigo-300', 'text-indigo-700');
+                this.classList.add('bg-white');
+            }
+        });
+
+        document.getElementById('applyFilterBtn').addEventListener('click', function() {
+            loadData();
+        });
+
+        document.getElementById('clearFilterBtn').addEventListener('click', function() {
+            document.getElementById('filterDateFrom').value = '';
+            document.getElementById('filterDateTo').value = '';
+            loadData();
+        });
 
         document.getElementById('searchInput').addEventListener('keydown', function(e) {
             if (e.key === 'Enter') {
@@ -197,7 +259,28 @@
             const btnNext = document.getElementById('btn-next');
             const btnPrev = document.getElementById('btn-prev');
 
+            const dateType = document.getElementById('filterDateType').value;
+            const dateFrom = document.getElementById('filterDateFrom').value;
+            const dateTo = document.getElementById('filterDateTo').value;
+
+            let filterCount = 0;
+            if (dateFrom) filterCount++;
+            if (dateTo) filterCount++;
+
+            const badge = document.getElementById('filterCountBadge');
+            if (filterCount > 0) {
+                badge.textContent = filterCount;
+                badge.classList.remove('hidden');
+                badge.classList.add('inline-flex');
+            } else {
+                badge.classList.remove('inline-flex');
+                badge.classList.add('hidden');
+            }
+
             let url = `/blogs?sort=${sortVal}&search=${encodeURIComponent(searchInput)}`;
+            if (dateFrom) url += `&date_type=${dateType}&date_from=${dateFrom}`;
+            if (dateTo) url += `&date_to=${dateTo}`;
+            
             if (direction === 'next' && currentCursors.end) {
                 url += `&after=${currentCursors.end}`;
             } else if (direction === 'prev' && currentCursors.start) {

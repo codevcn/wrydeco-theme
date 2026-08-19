@@ -1,0 +1,744 @@
+{% comment %}
+  PDP workshop proof section sourced from the first store_media_info metaobject.
+{% endcomment %}
+
+{%- liquid
+  assign store_media_info = metaobjects.store_media_info.values | first
+  assign handcraft_video_url = store_media_info.proof_handcratf_video_url.value | default: store_media_info.proof_handcratf_video_url
+  assign assembly_video_url = store_media_info.proof_assembly_video_url.value | default: store_media_info.proof_assembly_video_url
+  assign packaging_image_urls_value = store_media_info.proof_packaging_image_urls.value | default: store_media_info.proof_packaging_image_urls
+  assign packaging_image_urls = packaging_image_urls_value | split: ','
+  assign packaging_image_count = 0
+
+  for packaging_image_url in packaging_image_urls
+    assign normalized_packaging_image_url = packaging_image_url | strip
+    if normalized_packaging_image_url != blank
+      assign packaging_image_count = packaging_image_count | plus: 1
+    endif
+  endfor
+
+  assign has_workshop_media = false
+  if handcraft_video_url != blank or assembly_video_url != blank or packaging_image_count > 0
+    assign has_workshop_media = true
+  endif
+-%}
+
+{% if has_workshop_media %}
+  <section class="workshop-evidence" aria-labelledby="WorkshopEvidenceHeading-{{ section.id }}">
+    <div class="workshop-evidence__inner">
+      <header class="workshop-evidence__header">
+        {% if section.settings.eyebrow != blank %}
+          <p class="workshop-evidence__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+        {% endif %}
+        <h2 class="workshop-evidence__heading" id="WorkshopEvidenceHeading-{{ section.id }}">
+          {{ section.settings.heading | escape }}
+        </h2>
+        <span class="workshop-evidence__ornament" aria-hidden="true">
+          <span></span>
+          <i></i>
+        </span>
+        {% if section.settings.subheading != blank %}
+          <p class="workshop-evidence__subheading">{{ section.settings.subheading | escape }}</p>
+        {% endif %}
+      </header>
+
+      <div class="workshop-evidence__media-grid">
+        {% if handcraft_video_url != blank %}
+          <article class="workshop-evidence__video-card" data-workshop-video-card>
+            <div class="workshop-evidence__video-frame">
+              <video
+                class="workshop-evidence__video"
+                src="{{ handcraft_video_url | escape }}"
+                preload="metadata"
+                playsinline
+              ></video>
+              <button class="workshop-evidence__play" type="button" aria-label="Play handcrafting video" data-workshop-play>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg>
+              </button>
+            </div>
+            <footer class="workshop-evidence__caption">
+              <span class="workshop-evidence__caption-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4M14 13.12c0 2.38 0 6.38-1 8.88m4.29-.98c.12-.6.43-2.3.5-3.02M2 12a10 10 0 0 1 18-6M2 16h.01m19.79 0c.2-2 .131-5.354 0-6"/><path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2m2.31 12c.21-.66.45-1.32.57-2M9 6.8a6 6 0 0 1 9 5.2v2"/></g></svg>
+              </span>
+              <span>{{ section.settings.handcraft_label | escape }}</span>
+            </footer>
+          </article>
+        {% endif %}
+
+        {% if assembly_video_url != blank %}
+          <article class="workshop-evidence__video-card" data-workshop-video-card>
+            <div class="workshop-evidence__video-frame">
+              <video
+                class="workshop-evidence__video"
+                src="{{ assembly_video_url | escape }}"
+                preload="metadata"
+                playsinline
+              ></video>
+              <button class="workshop-evidence__play" type="button" aria-label="Play assembly video" data-workshop-play>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg>
+              </button>
+            </div>
+            <footer class="workshop-evidence__caption">
+              <span class="workshop-evidence__caption-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m5.196-9L6.804 15m0-6l10.392 6"/></svg>
+              </span>
+              <span>{{ section.settings.assembly_label | escape }}</span>
+            </footer>
+          </article>
+        {% endif %}
+
+        {% if packaging_image_count > 0 %}
+          <article class="workshop-evidence__packaging" data-workshop-packaging>
+            <div class="workshop-evidence__package-frame">
+              <div class="workshop-evidence__package-track" data-workshop-package-track>
+                {%- assign packaging_rendered_count = 0 -%}
+                {%- for packaging_image_url in packaging_image_urls -%}
+                  {%- assign normalized_packaging_image_url = packaging_image_url | strip -%}
+                  {%- if normalized_packaging_image_url != blank -%}
+                    {%- assign packaging_rendered_count = packaging_rendered_count | plus: 1 -%}
+                    <button
+                      class="workshop-evidence__package-slide{% if packaging_rendered_count == 1 %} is-active{% endif %}"
+                      type="button"
+                      aria-label="Open packaging image {{ packaging_rendered_count }}"
+                      data-workshop-lightbox-open
+                      data-workshop-lightbox-src="{{ normalized_packaging_image_url | escape }}"
+                    >
+                      <img
+                        src="{{ normalized_packaging_image_url | escape }}"
+                        alt="{{ section.settings.packaging_alt | escape }} {{ packaging_rendered_count }}"
+                        width="900"
+                        height="1080"
+                        loading="lazy"
+                        decoding="async"
+                      >
+                    </button>
+                  {%- endif -%}
+                {%- endfor -%}
+              </div>
+
+              {% if packaging_image_count > 1 %}
+                <button class="workshop-evidence__package-nav workshop-evidence__package-nav--prev" type="button" aria-label="Previous packaging image" data-workshop-package-prev>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m15 18l-6-6l6-6"/></svg>
+                </button>
+                <button class="workshop-evidence__package-nav workshop-evidence__package-nav--next" type="button" aria-label="Next packaging image" data-workshop-package-next>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 18l6-6l-6-6"/></svg>
+                </button>
+                <div class="workshop-evidence__package-dots" aria-label="Packaging image slides">
+                  {%- assign packaging_dot_count = 0 -%}
+                  {%- for packaging_image_url in packaging_image_urls -%}
+                    {%- assign normalized_packaging_image_url = packaging_image_url | strip -%}
+                    {%- if normalized_packaging_image_url != blank -%}
+                      {%- assign packaging_dot_count = packaging_dot_count | plus: 1 -%}
+                      <button
+                        class="workshop-evidence__package-dot{% if packaging_dot_count == 1 %} is-active{% endif %}"
+                        type="button"
+                        aria-label="Show packaging image {{ packaging_dot_count }}"
+                        data-workshop-package-dot
+                        data-workshop-package-index="{{ packaging_dot_count | minus: 1 }}"
+                      ></button>
+                    {%- endif -%}
+                  {%- endfor -%}
+                </div>
+              {% endif %}
+            </div>
+            <footer class="workshop-evidence__caption workshop-evidence__caption--packaging">
+              <span class="workshop-evidence__caption-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M12 22V12m4 5l2 2l4-4"/><path d="M21 11.127V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.729l7 4a2 2 0 0 0 2 .001l1.32-.753"/><path d="M3.29 7L12 12l8.71-5M7.5 4.27l8.997 5.148"/></g></svg>
+              </span>
+              <span>{{ section.settings.packaging_label | escape }}</span>
+            </footer>
+          </article>
+        {% endif %}
+      </div>
+
+      {% if packaging_image_count > 0 %}
+        <div class="workshop-evidence__lightbox" data-workshop-lightbox aria-hidden="true">
+          <div class="workshop-evidence__lightbox-backdrop" data-workshop-lightbox-close></div>
+          <div
+            class="workshop-evidence__lightbox-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Packaging image preview"
+          >
+            <button class="workshop-evidence__lightbox-close" type="button" aria-label="Close packaging image preview" data-workshop-lightbox-close>
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+            <img class="workshop-evidence__lightbox-image" src="" alt="{{ section.settings.packaging_alt | escape }}" data-workshop-lightbox-image>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </section>
+{% endif %}
+
+{% stylesheet %}
+  .workshop-evidence {
+    display: block;
+    padding: var(--sp-8) var(--layout-padding-desktop);
+    overflow: clip;
+    background:
+      radial-gradient(circle at 50% 18%, color-mix(in srgb, var(--color-clay) 16%, transparent), transparent 34%),
+      linear-gradient(180deg, var(--color-white-cream), var(--color-bg));
+    color: var(--text-primary);
+  }
+
+  .workshop-evidence__inner {
+    width: 100%;
+    max-width: calc(var(--layout-max-width) + var(--sp-12));
+    margin-inline: auto;
+  }
+
+  .workshop-evidence__header {
+    display: grid;
+    justify-items: center;
+    margin-block-end: clamp(var(--sp-5), 4vw, var(--sp-7));
+    text-align: center;
+  }
+
+  .workshop-evidence__eyebrow {
+    margin: var(--sp-0) var(--sp-0) var(--sp-3);
+    color: var(--color-earth-brown);
+    font-family: var(--font-body);
+    font-size: clamp(var(--font-size-body-sm), 1.15vw, var(--font-size-body-lg));
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.32em;
+    line-height: var(--line-height-tight);
+    text-transform: uppercase;
+  }
+
+  .workshop-evidence__heading {
+    margin: var(--sp-0);
+    color: var(--color-earth-brown);
+    font-family: var(--font-display-light);
+    font-size: var(--section-heading-size);
+    font-weight: var(--font-weight-light);
+    letter-spacing: var(--letter-spacing-normal);
+    line-height: var(--line-height-display);
+  }
+
+  .workshop-evidence__ornament {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    margin-block: var(--sp-3);
+    color: var(--color-earth-brown);
+  }
+
+  .workshop-evidence__ornament span {
+    display: block;
+    width: var(--sp-9);
+    height: var(--border-width);
+    background: currentColor;
+  }
+
+  .workshop-evidence__ornament i {
+    width: var(--sp-1);
+    height: var(--sp-1);
+    border-radius: var(--radius-full);
+    background: currentColor;
+  }
+
+  .workshop-evidence__subheading {
+    max-width: 760px;
+    margin: var(--sp-0);
+    color: var(--text-secondary);
+    font-family: var(--font-body);
+    font-size: clamp(var(--font-size-body-lg), 1.45vw, var(--font-size-body-xl));
+    line-height: var(--line-height-relaxed);
+  }
+
+  .workshop-evidence__media-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: start;
+    gap: clamp(var(--sp-4), 2.2vw, var(--sp-6));
+  }
+
+  .workshop-evidence__video-card,
+  .workshop-evidence__packaging {
+    min-width: var(--sp-0);
+  }
+
+  .workshop-evidence__video-frame,
+  .workshop-evidence__package-frame {
+    position: relative;
+    aspect-ratio: 4 / 5;
+    overflow: hidden;
+    border-radius: var(--radius-xl);
+    background: var(--color-earth-brown);
+    box-shadow: 0 24px 42px color-mix(in srgb, var(--color-earth-brown) 20%, transparent);
+  }
+
+  .workshop-evidence__video-frame {
+    cursor: pointer;
+  }
+
+  .workshop-evidence__video-frame::after,
+  .workshop-evidence__package-frame::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(180deg, transparent 55%, color-mix(in srgb, var(--color-black) 18%, transparent));
+  }
+
+  .workshop-evidence__video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .workshop-evidence__play {
+    position: absolute;
+    inset: 50% auto auto 50%;
+    z-index: 2;
+    display: inline-grid;
+    place-items: center;
+    width: clamp(var(--sp-9), 5.2vw, var(--sp-11));
+    min-width: var(--touch-target-min);
+    aspect-ratio: 1;
+    border: var(--border-width) solid color-mix(in srgb, var(--color-earth-brown) 22%, transparent);
+    border-radius: var(--radius-full);
+    background: color-mix(in srgb, var(--color-white-cream) 92%, transparent);
+    color: var(--color-earth-brown);
+    box-shadow: 0 14px 34px color-mix(in srgb, var(--color-black) 18%, transparent);
+    cursor: pointer;
+    transform: translate(-50%, -50%);
+    transition:
+      opacity var(--duration-default) var(--ease-out),
+      transform var(--duration-default) var(--ease-out);
+  }
+
+  .workshop-evidence__video-card.is-playing .workshop-evidence__play {
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, -50%) scale(0.92);
+  }
+
+  .workshop-evidence__play svg {
+    width: 38%;
+    height: 38%;
+    margin-inline-start: 4%;
+  }
+
+  .workshop-evidence__package-track {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+  }
+
+  .workshop-evidence__package-slide {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    padding: var(--sp-0);
+    border: 0;
+    background: transparent;
+    cursor: zoom-in;
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+    transition:
+      opacity var(--duration-default) var(--ease-out),
+      visibility var(--duration-default) var(--ease-out);
+  }
+
+  .workshop-evidence__package-slide.is-active {
+    opacity: 1;
+    pointer-events: auto;
+    visibility: visible;
+  }
+
+  .workshop-evidence__package-slide img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .workshop-evidence__package-nav {
+    position: absolute;
+    top: 50%;
+    z-index: 3;
+    display: inline-grid;
+    place-items: center;
+    width: clamp(var(--sp-6), 3.3vw, var(--sp-7));
+    min-width: var(--touch-target-min);
+    aspect-ratio: 1;
+    border: var(--border-width) solid color-mix(in srgb, var(--color-earth-brown) 12%, transparent);
+    border-radius: var(--radius-full);
+    background: color-mix(in srgb, var(--color-white-cream) 94%, transparent);
+    color: var(--color-earth-brown);
+    box-shadow: 0 10px 22px color-mix(in srgb, var(--color-black) 16%, transparent);
+    cursor: pointer;
+    transform: translateY(-50%);
+  }
+
+  .workshop-evidence__package-nav--prev {
+    left: var(--sp-3);
+  }
+
+  .workshop-evidence__package-nav--next {
+    right: var(--sp-3);
+  }
+
+  .workshop-evidence__package-nav svg {
+    width: 54%;
+    height: 54%;
+  }
+
+  .workshop-evidence__package-dots {
+    position: absolute;
+    right: var(--sp-4);
+    bottom: var(--sp-4);
+    left: var(--sp-4);
+    z-index: 3;
+    display: flex;
+    justify-content: center;
+    gap: var(--sp-2);
+  }
+
+  .workshop-evidence__package-dot {
+    width: var(--sp-2);
+    min-width: var(--sp-2);
+    height: var(--sp-2);
+    padding: var(--sp-0);
+    border: var(--border-width) solid color-mix(in srgb, var(--color-white-cream) 78%, transparent);
+    border-radius: var(--radius-full);
+    background: color-mix(in srgb, var(--color-white-cream) 46%, transparent);
+    cursor: pointer;
+  }
+
+  .workshop-evidence__package-dot.is-active {
+    width: var(--sp-5);
+    background: var(--color-white-cream);
+  }
+
+  .workshop-evidence__caption {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-3);
+    margin-block-start: var(--sp-6);
+    color: var(--color-earth-brown);
+    font-family: var(--font-body);
+    font-size: clamp(var(--font-size-body-lg), 1.5vw, var(--font-size-body-xl));
+    font-weight: var(--font-weight-semibold);
+    line-height: var(--line-height-tight);
+  }
+
+  .workshop-evidence__caption-icon {
+    display: inline-grid;
+    flex: 0 0 auto;
+    place-items: center;
+    width: var(--sp-8);
+    aspect-ratio: 1;
+    border: var(--border-width) solid currentColor;
+    border-radius: var(--radius-full);
+    background: color-mix(in srgb, var(--color-white-cream) 84%, transparent);
+  }
+
+  .workshop-evidence__caption-icon svg {
+    width: 50%;
+    height: 50%;
+  }
+
+  .workshop-evidence__lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: none;
+    place-items: center;
+    padding: var(--sp-6);
+  }
+
+  html.workshop-evidence-lightbox-open {
+    overflow: hidden;
+  }
+
+  .workshop-evidence__lightbox.is-open {
+    display: grid;
+  }
+
+  .workshop-evidence__lightbox-backdrop {
+    position: absolute;
+    inset: 0;
+    background: color-mix(in srgb, var(--color-earth-brown) 76%, transparent);
+    backdrop-filter: blur(8px);
+  }
+
+  .workshop-evidence__lightbox-dialog {
+    position: relative;
+    z-index: 1;
+    width: min(100%, 980px);
+  }
+
+  .workshop-evidence__lightbox-image {
+    display: block;
+    width: 100%;
+    max-height: calc(100vh - var(--sp-12));
+    object-fit: contain;
+    border-radius: var(--radius-lg);
+    background: var(--color-white-cream);
+    box-shadow: 0 24px 60px color-mix(in srgb, var(--color-black) 42%, transparent);
+  }
+
+  .workshop-evidence__lightbox-close {
+    position: absolute;
+    top: var(--sp-3);
+    right: var(--sp-3);
+    z-index: 2;
+    display: inline-grid;
+    place-items: center;
+    width: var(--sp-8);
+    aspect-ratio: 1;
+    border: var(--border-width) solid color-mix(in srgb, var(--color-white-cream) 45%, transparent);
+    border-radius: var(--radius-full);
+    background: color-mix(in srgb, var(--color-white-cream) 94%, transparent);
+    color: var(--color-earth-brown);
+    cursor: pointer;
+    box-shadow: 0 14px 32px color-mix(in srgb, var(--color-black) 24%, transparent);
+  }
+
+  .workshop-evidence__lightbox-close svg {
+    width: 58%;
+    height: 58%;
+  }
+
+  @media screen and (max-width: 1180px) {
+    .workshop-evidence {
+      padding-inline: var(--layout-padding-tablet);
+    }
+
+    .workshop-evidence__media-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .workshop-evidence__packaging {
+      grid-column: 1 / -1;
+      max-width: 560px;
+      width: 100%;
+      margin-inline: auto;
+    }
+  }
+
+  @media screen and (max-width: 720px) {
+    .workshop-evidence {
+      padding: var(--sp-7) var(--layout-padding-mobile) var(--sp-6);
+    }
+
+    .workshop-evidence__media-grid {
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--sp-6);
+    }
+
+    .workshop-evidence__video-frame,
+    .workshop-evidence__package-frame {
+      aspect-ratio: 4 / 5;
+      border-radius: var(--radius-lg);
+    }
+
+    .workshop-evidence__caption {
+      justify-content: flex-start;
+      margin-inline: auto;
+      max-width: 360px;
+    }
+
+    .workshop-evidence__package-nav--prev {
+      left: var(--sp-2);
+    }
+
+    .workshop-evidence__package-nav--next {
+      right: var(--sp-2);
+    }
+
+    .workshop-evidence__lightbox {
+      padding: var(--sp-4);
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  (function () {
+    var activeLightbox = null;
+
+    function getPackagingSlides(packaging) {
+      return packaging ? packaging.querySelectorAll('.workshop-evidence__package-slide') : [];
+    }
+
+    function setPackageIndex(packaging, index) {
+      var slides = getPackagingSlides(packaging);
+      if (!slides.length) return;
+
+      var nextIndex = (index + slides.length) % slides.length;
+      packaging.dataset.workshopPackageIndex = nextIndex;
+      packaging.style.setProperty('--workshop-package-index', nextIndex);
+
+      slides.forEach(function (slide, slideIndex) {
+        slide.classList.toggle('is-active', slideIndex === nextIndex);
+      });
+
+      packaging.querySelectorAll('[data-workshop-package-dot]').forEach(function (dot, dotIndex) {
+        dot.classList.toggle('is-active', dotIndex === nextIndex);
+      });
+    }
+
+    function openLightbox(section, src) {
+      var lightbox = section ? section.querySelector('[data-workshop-lightbox]') : null;
+      var image = lightbox ? lightbox.querySelector('[data-workshop-lightbox-image]') : null;
+      if (!lightbox || !image || !src) return;
+
+      image.src = src;
+      activeLightbox = lightbox;
+      lightbox.classList.add('is-open');
+      lightbox.setAttribute('aria-hidden', 'false');
+      document.documentElement.classList.add('workshop-evidence-lightbox-open');
+
+      var closeButton = lightbox.querySelector('[data-workshop-lightbox-close]');
+      if (closeButton) closeButton.focus();
+    }
+
+    function closeLightbox(lightbox) {
+      if (!lightbox) return;
+
+      var image = lightbox.querySelector('[data-workshop-lightbox-image]');
+      if (image) image.removeAttribute('src');
+      lightbox.classList.remove('is-open');
+      lightbox.setAttribute('aria-hidden', 'true');
+      document.documentElement.classList.remove('workshop-evidence-lightbox-open');
+
+      if (activeLightbox === lightbox) activeLightbox = null;
+    }
+
+    document.addEventListener('click', function (event) {
+      var videoFrame = event.target.closest('.workshop-evidence__video-frame');
+      if (videoFrame) {
+        var card = videoFrame.closest('[data-workshop-video-card]');
+        var video = card ? card.querySelector('video') : null;
+        if (!video) return;
+
+        if (video.paused) {
+          video.play();
+        } else {
+          video.pause();
+        }
+        return;
+      }
+
+      var prevButton = event.target.closest('[data-workshop-package-prev]');
+      if (prevButton) {
+        var prevPackaging = prevButton.closest('[data-workshop-packaging]');
+        var prevIndex = Number(prevPackaging.dataset.workshopPackageIndex || 0);
+        setPackageIndex(prevPackaging, prevIndex - 1);
+        return;
+      }
+
+      var nextButton = event.target.closest('[data-workshop-package-next]');
+      if (nextButton) {
+        var nextPackaging = nextButton.closest('[data-workshop-packaging]');
+        var nextIndex = Number(nextPackaging.dataset.workshopPackageIndex || 0);
+        setPackageIndex(nextPackaging, nextIndex + 1);
+        return;
+      }
+
+      var dotButton = event.target.closest('[data-workshop-package-dot]');
+      if (dotButton) {
+        var dotPackaging = dotButton.closest('[data-workshop-packaging]');
+        setPackageIndex(dotPackaging, Number(dotButton.dataset.workshopPackageIndex || 0));
+        return;
+      }
+
+      var lightboxButton = event.target.closest('[data-workshop-lightbox-open]');
+      if (lightboxButton) {
+        var section = lightboxButton.closest('.workshop-evidence');
+        openLightbox(section, lightboxButton.dataset.workshopLightboxSrc);
+        return;
+      }
+
+      var closeButton = event.target.closest('[data-workshop-lightbox-close]');
+      if (closeButton) {
+        closeLightbox(closeButton.closest('[data-workshop-lightbox]'));
+      }
+    });
+
+    document.addEventListener('keydown', function (event) {
+      if (!activeLightbox) return;
+
+      if (event.key === 'Escape') {
+        closeLightbox(activeLightbox);
+      }
+    });
+
+    document.querySelectorAll('[data-workshop-video-card] video').forEach(function (video) {
+      video.addEventListener('play', function () {
+        var card = video.closest('[data-workshop-video-card]');
+        if (card) card.classList.add('is-playing');
+      });
+
+      video.addEventListener('pause', function () {
+        var card = video.closest('[data-workshop-video-card]');
+        if (card) card.classList.remove('is-playing');
+      });
+    });
+  })();
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "Workshop Evidence",
+  "tag": "section",
+  "class": "section section-workshop-evidence",
+  "settings": [
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "Eyebrow",
+      "default": "Our Process"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Handcrafted with Purpose."
+    },
+    {
+      "type": "text",
+      "id": "subheading",
+      "label": "Subheading",
+      "default": "Every WRYDECO piece is shaped by hand, assembled with care, and delivered with the attention it deserves."
+    },
+    {
+      "type": "text",
+      "id": "handcraft_label",
+      "label": "Handcraft label",
+      "default": "Handcrafting"
+    },
+    {
+      "type": "text",
+      "id": "assembly_label",
+      "label": "Assembly label",
+      "default": "Assembly"
+    },
+    {
+      "type": "text",
+      "id": "packaging_label",
+      "label": "Packaging label",
+      "default": "Packaging"
+    },
+    {
+      "type": "text",
+      "id": "packaging_alt",
+      "label": "Packaging image alt",
+      "default": "WRYDECO furniture packaging and protection"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Workshop Evidence"
+    }
+  ]
+}
+{% endschema %}
