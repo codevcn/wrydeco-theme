@@ -3125,6 +3125,43 @@ async def internal_reorder_media(request: Request):
         import json
         return HTMLResponse(content=json.dumps({"success": False, "message": str(e)}), media_type="application/json")
 
+
+@app.get("/api/product-authors")
+def get_product_authors():
+    query = """
+    query {
+      metaobjects(type: "product_author", first: 100) {
+        edges {
+          node {
+            id
+            handle
+            fields {
+              key
+              value
+            }
+          }
+        }
+      }
+    }
+    """
+    try:
+        res = requests.post(GRAPHQL_URL, json={"query": query}, headers=HEADERS)
+        res.raise_for_status()
+        data = res.json()
+        
+        authors = []
+        if "data" in data and "metaobjects" in data["data"]:
+            for edge in data["data"]["metaobjects"]["edges"]:
+                node = edge["node"]
+                author = {"id": node["id"], "handle": node["handle"]}
+                for field in node["fields"]:
+                    if field["key"] == "title" or field["key"] == "name":
+                        author["name"] = field["value"]
+                authors.append(author)
+        return JSONResponse(content=authors)
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
 @app.post("/internal-edit-product")
 async def internal_edit_product(request: Request):
     try:

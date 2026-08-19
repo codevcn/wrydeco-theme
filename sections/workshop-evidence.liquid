@@ -35,7 +35,6 @@
         </h2>
         <span class="workshop-evidence__ornament" aria-hidden="true">
           <span></span>
-          <i></i>
         </span>
         {% if section.settings.subheading != blank %}
           <p class="workshop-evidence__subheading">{{ section.settings.subheading | escape }}</p>
@@ -48,8 +47,8 @@
             <div class="workshop-evidence__video-frame">
               <video
                 class="workshop-evidence__video"
-                src="{{ handcraft_video_url | escape }}"
-                preload="metadata"
+                data-workshop-video-src="{{ handcraft_video_url | escape }}"
+                preload="none"
                 playsinline
               ></video>
               <button class="workshop-evidence__play" type="button" aria-label="Play handcrafting video" data-workshop-play>
@@ -70,8 +69,8 @@
             <div class="workshop-evidence__video-frame">
               <video
                 class="workshop-evidence__video"
-                src="{{ assembly_video_url | escape }}"
-                preload="metadata"
+                data-workshop-video-src="{{ assembly_video_url | escape }}"
+                preload="none"
                 playsinline
               ></video>
               <button class="workshop-evidence__play" type="button" aria-label="Play assembly video" data-workshop-play>
@@ -104,7 +103,11 @@
                       data-workshop-lightbox-src="{{ normalized_packaging_image_url | escape }}"
                     >
                       <img
-                        src="{{ normalized_packaging_image_url | escape }}"
+                        {% if packaging_rendered_count == 1 %}
+                          src="{{ normalized_packaging_image_url | escape }}"
+                        {% else %}
+                          data-workshop-image-src="{{ normalized_packaging_image_url | escape }}"
+                        {% endif %}
                         alt="{{ section.settings.packaging_alt | escape }} {{ packaging_rendered_count }}"
                         width="900"
                         height="1080"
@@ -228,13 +231,6 @@
     display: block;
     width: var(--sp-9);
     height: var(--border-width);
-    background: currentColor;
-  }
-
-  .workshop-evidence__ornament i {
-    width: var(--sp-1);
-    height: var(--sp-1);
-    border-radius: var(--radius-full);
     background: currentColor;
   }
 
@@ -569,11 +565,28 @@
       return packaging ? packaging.querySelectorAll('.workshop-evidence__package-slide') : [];
     }
 
+    function loadPackageSlideImage(slide) {
+      var image = slide ? slide.querySelector('img[data-workshop-image-src]') : null;
+      if (!image) return;
+
+      image.src = image.dataset.workshopImageSrc;
+      image.removeAttribute('data-workshop-image-src');
+    }
+
+    function loadWorkshopVideo(video) {
+      if (!video || video.getAttribute('src')) return;
+
+      video.src = video.dataset.workshopVideoSrc;
+      video.removeAttribute('data-workshop-video-src');
+      video.load();
+    }
+
     function setPackageIndex(packaging, index) {
       var slides = getPackagingSlides(packaging);
       if (!slides.length) return;
 
       var nextIndex = (index + slides.length) % slides.length;
+      loadPackageSlideImage(slides[nextIndex]);
       packaging.dataset.workshopPackageIndex = nextIndex;
       packaging.style.setProperty('--workshop-package-index', nextIndex);
 
@@ -619,6 +632,8 @@
         var card = videoFrame.closest('[data-workshop-video-card]');
         var video = card ? card.querySelector('video') : null;
         if (!video) return;
+
+        loadWorkshopVideo(video);
 
         if (video.paused) {
           video.play();
@@ -683,6 +698,21 @@
         if (card) card.classList.remove('is-playing');
       });
     });
+
+    if ('IntersectionObserver' in window) {
+      var videoObserver = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting) return;
+
+          loadWorkshopVideo(entry.target);
+          videoObserver.unobserve(entry.target);
+        });
+      }, { rootMargin: '520px 0px' });
+
+      document.querySelectorAll('.workshop-evidence__video[data-workshop-video-src]').forEach(function (video) {
+        videoObserver.observe(video);
+      });
+    }
   })();
 {% endjavascript %}
 
