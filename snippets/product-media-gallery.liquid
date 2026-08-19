@@ -806,8 +806,11 @@
     </button>
 
     {% assign has_best_seller = false %}
-    {% for coll in product.collections %}
-      {% if coll.handle == 'signature-pieces' %}
+    {% assign best_seller_entry = metaobjects.outstanding_materials.values | first %}
+    {% assign best_seller_handles = best_seller_entry.best_seller_products.value | default: best_seller_entry.best_seller_products | split: ',' %}
+    {% for best_seller_handle in best_seller_handles %}
+      {% assign normalized_best_seller_handle = best_seller_handle | strip %}
+      {% if normalized_best_seller_handle == product.handle %}
         {% assign has_best_seller = true %}
         {% break %}
       {% endif %}

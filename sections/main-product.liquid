@@ -727,29 +727,17 @@
       %}
 
       {%- comment -%}
-        Loox rating summary rendered from product metafields so it appears
-        under the price in the initial server-rendered HTML. Loox-specific
-        metafields are preferred, with Shopify standard review metafields as
-        the fallback.
+        Loox rating summary rendered from the store-level Loox aggregate
+        metafield so it appears under the price in the initial server-rendered
+        HTML and reflects the full store/catalog rather than this product only.
       {%- endcomment -%}
       {%- liquid
-        assign loox_average_rating = product.metafields.loox.avg_rating.value | default: product.metafields.loox.avg_rating | plus: 0
-        assign loox_review_count = product.metafields.loox.num_reviews.value | default: product.metafields.loox.num_reviews | plus: 0
-        if loox_average_rating <= 0
-          assign loox_average_rating = product.metafields.reviews.rating.value.rating | default: product.metafields.reviews.rating.value | default: product.metafields.reviews.rating | plus: 0
-        endif
-        if loox_review_count <= 0
-          assign loox_review_count = product.metafields.reviews.rating_count.value | default: product.metafields.reviews.rating_count | plus: 0
-        endif
-        assign loox_average_rating = loox_average_rating | round: 1
-        assign loox_rating_fill_percent = loox_average_rating | times: 20 | at_most: 100 | at_least: 0
         assign loox_global_stats_metafield = shop.metafields.loox["global_stats"]
         assign loox_global_stats = loox_global_stats_metafield.value | default: loox_global_stats_metafield
         assign loox_global_stats_values = loox_global_stats | split: ','
-        assign store_review_count = loox_global_stats_values[1] | default: loox_review_count | plus: 0
-        if store_review_count <= 0
-          assign store_review_count = loox_review_count
-        endif
+        assign loox_average_rating = loox_global_stats_values[0] | plus: 0 | round: 1
+        assign store_review_count = loox_global_stats_values[1] | plus: 0
+        assign loox_rating_fill_percent = loox_average_rating | times: 20 | at_most: 100 | at_least: 0
         assign store_review_count_text = store_review_count
         if store_review_count >= 1000000
           assign store_review_millions = store_review_count | divided_by: 1000000
@@ -804,7 +792,7 @@
         endif
       -%}
       <div class="main-product__rating">
-        {% if loox_review_count > 0 and loox_average_rating > 0 %}
+        {% if store_review_count > 0 and loox_average_rating > 0 %}
           <a
             href="#ProductReviews"
             class="main-product__loox-summary"
@@ -1258,7 +1246,7 @@
       "type": "text",
       "id": "trust_subheading",
       "label": "Subheading",
-      "default": "Why collectors choose this piece"
+      "default": "Why this piece works well"
     },
     {
       "type": "text",

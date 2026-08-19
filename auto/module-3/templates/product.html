@@ -200,8 +200,38 @@
 
             <!-- Right column: Metadata (SEO, Metafields, Type, Tags) -->
             <div class="space-y-8">
+                <!-- Remove This Product -->
+                <div class="bg-white rounded-xl shadow-sm border border-red-100 p-6">
+                    <h2 class="text-lg font-bold text-red-600 mb-4 border-b border-red-50 pb-3 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        Xóa sản phẩm
+                    </h2>
+                    <div class="space-y-4">
+                        <button onclick="openDeletePopup()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg flex justify-center items-center gap-2 transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            Xóa sản phẩm
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Product Status -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mt-8">
+                    <h2 class="text-lg font-bold text-gray-800 mb-4 border-b border-gray-100 pb-3 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <iconify-icon icon="mdi:toggle-switch-outline" class="text-indigo-500 text-xl"></iconify-icon>
+                            Trạng thái sản phẩm
+                        </div>
+                        <button id="btn-save-status" onclick="saveProductStatus()" class="hidden px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md shadow-sm transition-colors flex items-center gap-1">Lưu</button>
+                    </h2>
+                    <div class="flex bg-gray-100 p-1 rounded-lg" id="status-toggle-group" data-original-status="{{ product.status }}">
+                        <button type="button" data-status="ACTIVE" onclick="selectProductStatus('ACTIVE', this)" class="status-btn flex-1 py-1.5 text-sm font-bold rounded-md transition-colors {% if product.status == 'ACTIVE' %}bg-white text-indigo-600 shadow-sm selected-status{% else %}text-gray-500 hover:text-gray-700{% endif %}">Active</button>
+                        <button type="button" data-status="ARCHIVED" onclick="selectProductStatus('ARCHIVED', this)" class="status-btn flex-1 py-1.5 text-sm font-bold rounded-md transition-colors {% if product.status == 'ARCHIVED' %}bg-white text-indigo-600 shadow-sm selected-status{% else %}text-gray-500 hover:text-gray-700{% endif %}">Unlisted</button>
+                        <button type="button" data-status="DRAFT" onclick="selectProductStatus('DRAFT', this)" class="status-btn flex-1 py-1.5 text-sm font-bold rounded-md transition-colors {% if product.status == 'DRAFT' %}bg-white text-indigo-600 shadow-sm selected-status{% else %}text-gray-500 hover:text-gray-700{% endif %}">Draft</button>
+                    </div>
+                </div>
+
                 <!-- Classification & Tags -->
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mt-8">
                     <h2 class="text-lg font-bold text-gray-800 mb-4 border-b border-gray-100 pb-3 flex items-center gap-2">
                         <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path></svg>
                         Phân loại & Thẻ
@@ -253,20 +283,6 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </div>
-
-                <!-- Remove This Product -->
-                <div class="bg-white rounded-xl shadow-sm border border-red-100 p-6 mt-8">
-                    <h2 class="text-lg font-bold text-red-600 mb-4 border-b border-red-50 pb-3 flex items-center gap-2">
-                        <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                        Xóa sản phẩm
-                    </h2>
-                    <div class="space-y-4">
-                        <button onclick="openDeletePopup()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg flex justify-center items-center gap-2 transition-colors">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                            Xóa sản phẩm
-                        </button>
                     </div>
                 </div>
 
@@ -366,10 +382,15 @@
         {% for mf in product.metafields %}
         {% if mf.namespace == 'custom' and mf.key == 'rich_description' %}
         <div class="mt-8 bg-white rounded-xl shadow-sm border border-gray-100 p-6 sm:p-8">
-            <h2 class="text-xl font-bold text-gray-800 mb-4 border-b border-gray-100 pb-3 flex items-center gap-2">
-                <svg class="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"></path></svg>
-                Rich Description (custom.rich_description)
-            </h2>
+            <div class="mb-4 border-b border-gray-100 pb-3 flex items-center justify-between">
+                <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                    <svg class="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"></path></svg>
+                    Rich Description (custom.rich_description)
+                </h2>
+                <button type="button" data-val="{{ mf.value | escape }}" onclick="openInternalEditor('metafield:{{ mf.namespace }}:{{ mf.key }}:{{ mf.type }}', this.getAttribute('data-val'), 'Metafield {{ mf.namespace }}.{{ mf.key }}')" class="p-2 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-lg transition-colors flex items-center gap-1 text-sm font-medium">
+                    <iconify-icon icon="mdi:pencil"></iconify-icon> Chỉnh sửa
+                </button>
+            </div>
             <div class="prose max-w-none text-gray-700" id="rich-description-content">
                 {{ mf.value | safe }}
             </div>
@@ -991,6 +1012,65 @@
             currentTags = [...originalTags];
             renderTagPills();
             setTimeout(() => document.getElementById('tag-input').focus(), 50);
+        }
+
+        let selectedStatus = '{{ product.status }}';
+        
+        function selectProductStatus(status, btnEl) {
+            selectedStatus = status;
+            
+            // Update button styles
+            const group = document.getElementById('status-toggle-group');
+            const buttons = group.querySelectorAll('.status-btn');
+            buttons.forEach(btn => {
+                btn.classList.remove('bg-white', 'text-indigo-600', 'shadow-sm', 'selected-status');
+                btn.classList.add('text-gray-500', 'hover:text-gray-700');
+            });
+            
+            btnEl.classList.add('bg-white', 'text-indigo-600', 'shadow-sm', 'selected-status');
+            btnEl.classList.remove('text-gray-500', 'hover:text-gray-700');
+            
+            // Show save button if changed
+            const originalStatus = group.getAttribute('data-original-status');
+            const saveBtn = document.getElementById('btn-save-status');
+            if (selectedStatus !== originalStatus) {
+                saveBtn.classList.remove('hidden');
+                saveBtn.classList.add('flex');
+            } else {
+                saveBtn.classList.add('hidden');
+                saveBtn.classList.remove('flex');
+            }
+        }
+
+        async function saveProductStatus() {
+            const saveBtn = document.getElementById('btn-save-status');
+            const originalText = saveBtn.innerHTML;
+            saveBtn.innerHTML = `<iconify-icon icon="mdi:loading" class="animate-spin"></iconify-icon> Lưu`;
+            saveBtn.disabled = true;
+            
+            const formData = new FormData();
+            formData.append('product_id', '{{ product.id }}');
+            formData.append('target_field', 'status');
+            formData.append('new_value', selectedStatus);
+            
+            try {
+                const response = await fetch('/internal-edit-product', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    alert('Lỗi cập nhật trạng thái: ' + data.message);
+                    saveBtn.innerHTML = originalText;
+                    saveBtn.disabled = false;
+                }
+            } catch (e) {
+                alert('Lỗi hệ thống khi cập nhật trạng thái');
+                saveBtn.innerHTML = originalText;
+                saveBtn.disabled = false;
+            }
         }
 
         function cancelTagEdit() {

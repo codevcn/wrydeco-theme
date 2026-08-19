@@ -40,7 +40,7 @@
         </div>
     </header>
 
-    <main class="max-w-6xl mx-auto p-4 sm:p-8 flex-1 w-full">
+    <main class="max-w-[1400px] mx-auto p-4 sm:p-8 flex-1 w-full">
         <div class="mb-8">
             <h1 class="text-3xl font-bold text-gray-800 tracking-tight">Reviews Playground</h1>
             <p class="text-gray-500 mt-2 text-sm">Upload file CSV để thao tác với hình ảnh đánh giá sản phẩm.</p>
@@ -48,7 +48,7 @@
         
         <!-- Controls Section -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-end">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 items-end">
                 <div class="w-full">
                     <label for="csvFileInput" class="block text-sm font-medium text-gray-700 mb-1">Upload Các File CSV</label>
                     <input type="file" id="csvFileInput" accept=".csv" multiple class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 transition-colors border border-gray-300 rounded-md p-1 focus:ring-indigo-500 focus:border-indigo-500">
@@ -68,8 +68,16 @@
                     <label for="productHandleCol" class="block text-sm font-medium text-gray-700 mb-1">Product Handle Column Name</label>
                     <input type="text" id="productHandleCol" value="product_handle" class="block w-full text-sm text-gray-900 border border-gray-300 rounded-md py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 shadow-sm">
                 </div>
+
+                <div class="w-full">
+                    <label for="ratingCol" class="block text-sm font-medium text-gray-700 mb-1">Rating Column Name</label>
+                    <input type="text" id="ratingCol" value="rating" class="block w-full text-sm text-gray-900 border border-gray-300 rounded-md py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 shadow-sm">
+                </div>
             </div>
-            <div class="mt-6 flex justify-end">
+            <div class="mt-6 flex justify-end gap-3">
+                <button id="summaryBtn" class="w-full sm:w-auto bg-transparent border-2 border-indigo-600 text-indigo-600 hover:bg-indigo-50 font-medium py-2 px-6 rounded-md transition-colors">
+                    Đánh giá tổng
+                </button>
                 <button id="processBtn" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-8 rounded-md transition-colors shadow-sm">
                     Process CSV
                 </button>
@@ -97,10 +105,141 @@
             const photoUrlColInput = document.getElementById('photoUrlCol');
             const productIdColInput = document.getElementById('productIdCol');
             const productHandleColInput = document.getElementById('productHandleCol');
+            const ratingColInput = document.getElementById('ratingCol');
+            const summaryBtn = document.getElementById('summaryBtn');
             const processBtn = document.getElementById('processBtn');
             const gallerySection = document.getElementById('gallerySection');
             const galleryContainer = document.getElementById('galleryContainer');
             const rowCountEl = document.getElementById('rowCount');
+            
+            const summaryModal = document.getElementById('summaryModal');
+            window.closeSummaryModal = function() {
+                summaryModal.classList.add('hidden');
+                summaryModal.classList.remove('flex');
+            };
+
+            summaryBtn.addEventListener('click', () => {
+                const files = csvFileInput.files;
+                if (!files || files.length === 0) {
+                    alert('Vui lòng chọn ít nhất 1 file CSV!');
+                    return;
+                }
+                
+                const colName = photoUrlColInput.value.trim() || 'photo_url';
+                const ratingColName = ratingColInput.value.trim() || 'rating';
+                
+                const indicator = document.getElementById('summaryIndicator');
+                const content = document.getElementById('summaryContent');
+                
+                indicator.textContent = 'Đang tính toán...';
+                indicator.classList.remove('hidden');
+                content.classList.add('hidden');
+                
+                summaryModal.classList.remove('hidden');
+                summaryModal.classList.add('flex');
+                
+                let timeoutId = setTimeout(() => {
+                    if (!indicator.classList.contains('hidden')) {
+                        indicator.textContent = 'Dữ liệu khá lớn nên mất chút thời gian để tính toán hơn nữa... Vui lòng đợi!';
+                    }
+                }, 20000);
+                
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        runOverallAssessment(files, colName, ratingColName, (results) => {
+                            clearTimeout(timeoutId);
+                            indicator.classList.add('hidden');
+                            
+                            document.getElementById('sumTotalReviews').textContent = results.totalReviews;
+                            document.getElementById('sumAverageRating').textContent = isNaN(results.averageRating) ? 'N/A' : results.averageRating.toFixed(2) + ' ★';
+                            document.getElementById('sumWithImages').textContent = results.withImages;
+                            document.getElementById('sumTextOnly').textContent = results.textOnly;
+                            
+                            content.classList.remove('hidden');
+                            content.classList.add('flex');
+                        });
+                    });
+                });
+            });
+            
+            function runOverallAssessment(files, colName, ratingColName, callback) {
+                let totalReviews = 0;
+                let sumRating = 0;
+                let validRatingCount = 0;
+                let withImages = 0;
+                let textOnly = 0;
+                
+                let processedFiles = 0;
+                
+                Array.from(files).forEach(file => {
+                    Papa.parse(file, {
+                        header: true,
+                        skipEmptyLines: true,
+                        complete: function(results) {
+                            const data = results.data;
+                            const fileStats = assessFile(data, colName, ratingColName);
+                            
+                            totalReviews += fileStats.total;
+                            sumRating += fileStats.sumRating;
+                            validRatingCount += fileStats.validRatingCount;
+                            withImages += fileStats.withImages;
+                            textOnly += fileStats.textOnly;
+                            
+                            processedFiles++;
+                            if (processedFiles === files.length) {
+                                const averageRating = validRatingCount > 0 ? (sumRating / validRatingCount) : NaN;
+                                callback({ totalReviews, averageRating, withImages, textOnly });
+                            }
+                        },
+                        error: function() {
+                            processedFiles++;
+                            if (processedFiles === files.length) {
+                                const averageRating = validRatingCount > 0 ? (sumRating / validRatingCount) : NaN;
+                                callback({ totalReviews, averageRating, withImages, textOnly });
+                            }
+                        }
+                    });
+                });
+            }
+            
+            function assessFile(data, colName, ratingColName) {
+                let total = 0;
+                let sumRating = 0;
+                let validRatingCount = 0;
+                let withImages = 0;
+                let textOnly = 0;
+                
+                data.forEach(row => {
+                    total++;
+                    
+                    const rawUrl = row[colName];
+                    let hasImage = false;
+                    if (rawUrl && typeof rawUrl === 'string' && rawUrl.trim() !== '') {
+                        const cleanedRawUrl = rawUrl.replace(/^["']|["']$/g, '').trim();
+                        const urls = cleanedRawUrl.split(',').map(u => u.trim()).filter(u => u !== '');
+                        if (urls.length > 0) {
+                            hasImage = true;
+                        }
+                    }
+                    
+                    if (hasImage) {
+                        withImages++;
+                    } else {
+                        textOnly++;
+                    }
+                    
+                    const ratingStr = row[ratingColName];
+                    if (ratingStr !== undefined && ratingStr !== null && ratingStr.trim() !== '') {
+                        const ratingNum = parseFloat(ratingStr);
+                        if (!isNaN(ratingNum)) {
+                            sumRating += ratingNum;
+                            validRatingCount++;
+                        }
+                    }
+                });
+                
+                return { total, sumRating, validRatingCount, withImages, textOnly };
+            }
 
             processBtn.addEventListener('click', () => {
                 const files = csvFileInput.files;
@@ -112,6 +251,7 @@
                 const colName = photoUrlColInput.value.trim();
                 const pidColName = productIdColInput.value.trim();
                 const phColName = productHandleColInput.value.trim();
+                const ratingColName = ratingColInput.value.trim();
                 
                 if (!colName) {
                     alert('Vui lòng nhập tên cột chứa URL ảnh!');
@@ -141,19 +281,29 @@
                                 const rawUrl = row[colName];
                                 const pid = row[pidColName] || '';
                                 const phandle = row[phColName] || '';
+                                const rating = row[ratingColName] || '';
+                                
+                                currentRowId++;
 
                                 if (rawUrl && typeof rawUrl === 'string' && rawUrl.trim() !== '') {
                                     const cleanedRawUrl = rawUrl.replace(/^["']|["']$/g, '').trim();
                                     const urls = cleanedRawUrl.split(',').map(u => u.trim()).filter(u => u !== '');
                                     
                                     if (urls.length > 0) {
-                                        currentRowId++;
                                         urls.forEach(url => {
                                             validImages++;
                                             totalValidImages++;
-                                            parsedImages.push({ url, pid, phandle, rowId: currentRowId, rowIndex: rowIndex });
+                                            parsedImages.push({ url, pid, phandle, rating, rowId: currentRowId, rowIndex: rowIndex });
                                         });
+                                    } else {
+                                        validImages++;
+                                        totalValidImages++;
+                                        parsedImages.push({ url: '', pid, phandle, rating, rowId: currentRowId, rowIndex: rowIndex });
                                     }
+                                } else {
+                                    validImages++;
+                                    totalValidImages++;
+                                    parsedImages.push({ url: '', pid, phandle, rating, rowId: currentRowId, rowIndex: rowIndex });
                                 }
                             });
 
@@ -196,13 +346,14 @@
                                     imgContainer.className = 'relative w-32 h-32 flex-shrink-0 border border-gray-200 rounded-md overflow-hidden shadow-sm bg-gray-50 cursor-pointer';
                                     
                                     const img = document.createElement('img');
-                                    img.src = imgData.url;
+                                    const emptySvg = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="%23cbd5e1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>';
+                                    img.src = imgData.url ? imgData.url : emptySvg;
                                     img.className = 'w-full h-full object-cover hover:scale-110 transition-transform duration-200 ease-out will-change-transform';
                                     img.loading = 'lazy';
                                     img.alt = 'Review Photo';
                                     img.onerror = function() {
                                         this.onerror = null;
-                                        this.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="%23cbd5e1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>';
+                                        this.src = emptySvg;
                                     };
                                     
                                     const badge = document.createElement('span');
@@ -286,7 +437,7 @@
                 window.currentPreviewImages = images;
                 window.currentPreviewIndex = index;
                 const imgData = images[index];
-                showPreviewModal(imgData.url, imgData.pid, imgData.phandle, imgData.rowId);
+                showPreviewModal(imgData.url, imgData.pid, imgData.phandle, imgData.rowId, imgData.rating);
             };
 
             window.navigatePreview = function(direction, event) {
@@ -300,7 +451,7 @@
                 window.openPreviewModal(window.currentPreviewImages, newIndex);
             };
 
-            window.showPreviewModal = function(url, pid, phandle, rowId) {
+            window.showPreviewModal = function(url, pid, phandle, rowId, rating) {
                 // Tạm ẩn và xóa src ảnh cũ
                 previewImage.src = '';
                 previewImage.classList.add('hidden');
@@ -325,6 +476,15 @@
                 } else {
                     previewRowId.classList.add('hidden');
                 }
+                
+                const editRatingBtn = document.getElementById('editRatingBtn');
+                if (editRatingBtn) {
+                    if (rating !== undefined && rating !== '') {
+                        editRatingBtn.textContent = `Sửa Rating (${rating}★)`;
+                    } else {
+                        editRatingBtn.textContent = `Sửa Rating`;
+                    }
+                }
 
                 // Hiện khung popup nền đen trước
                 previewModal.classList.remove('hidden');
@@ -333,7 +493,8 @@
                 // Delay 2 frames rồi mới gán src ảnh để tránh lag lúc mở popup
                 requestAnimationFrame(() => {
                     requestAnimationFrame(() => {
-                        previewImage.src = url;
+                        const emptySvg = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="%23cbd5e1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>';
+                        previewImage.src = url ? url : emptySvg;
                         previewImage.classList.remove('hidden');
                     });
                 });
@@ -369,28 +530,25 @@
                 
                 // Xóa URL trong file CSV
                 const row = window.currentCsvData[rowIndex];
-                let cellStr = row[window.currentColName];
+                let cellStr = row[window.currentColName] || '';
                 let cleanedStr = cellStr.replace(/^["']|["']$/g, '').trim();
-                let urls = cleanedStr.split(',').map(u => u.trim());
-                let urlIndex = urls.indexOf(imgData.url);
-                if (urlIndex !== -1) {
-                    urls.splice(urlIndex, 1);
-                    row[window.currentColName] = urls.join(', ');
-                }
+                let urls = cleanedStr ? cleanedStr.split(',').map(u => u.trim()).filter(u => u !== '') : [];
                 
-                // Xóa trên giao diện
-                window.currentFileGallery.removeChild(window.currentFileGallery.children[window.currentPreviewIndex]);
-                window.currentPreviewImages.splice(window.currentPreviewIndex, 1);
-                
-                if (window.currentPreviewImages.length > 0) {
-                    let nextIndex = window.currentPreviewIndex;
-                    if (nextIndex >= window.currentPreviewImages.length) {
-                        nextIndex = window.currentPreviewImages.length - 1;
+                if (imgData.url !== '') {
+                    let urlIndex = urls.indexOf(imgData.url);
+                    if (urlIndex !== -1) {
+                        urls.splice(urlIndex, 1);
+                        row[window.currentColName] = urls.join(', ');
                     }
-                    window.openPreviewModal(window.currentPreviewImages, nextIndex);
-                } else {
-                    window.closePreviewModal();
                 }
+                
+                // Cập nhật trên giao diện
+                imgData.url = '';
+                const emptySvg = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="%23cbd5e1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>';
+                const imgEl = window.currentFileGallery.children[window.currentPreviewIndex].querySelector('img');
+                if (imgEl) imgEl.src = emptySvg;
+                
+                window.openPreviewModal(window.currentPreviewImages, window.currentPreviewIndex);
             };
 
             window.openReviewCommentPopover = function(btn) {
@@ -456,14 +614,21 @@
                 
                 // Thay URL trong file CSV
                 const row = window.currentCsvData[rowIndex];
-                let cellStr = row[window.currentColName];
+                let cellStr = row[window.currentColName] || '';
                 let cleanedStr = cellStr.replace(/^["']|["']$/g, '').trim();
-                let urls = cleanedStr.split(',').map(u => u.trim());
-                let urlIndex = urls.indexOf(imgData.url);
-                if (urlIndex !== -1) {
-                    urls[urlIndex] = newUrl;
-                    row[window.currentColName] = urls.join(', ');
+                let urls = cleanedStr ? cleanedStr.split(',').map(u => u.trim()).filter(u => u !== '') : [];
+                
+                if (imgData.url === '') {
+                    urls.push(newUrl);
+                } else {
+                    let urlIndex = urls.indexOf(imgData.url);
+                    if (urlIndex !== -1) {
+                        urls[urlIndex] = newUrl;
+                    } else {
+                        urls.push(newUrl);
+                    }
                 }
+                row[window.currentColName] = urls.join(', ');
                 
                 imgData.url = newUrl;
                 
@@ -472,6 +637,36 @@
                 
                 window.openPreviewModal(window.currentPreviewImages, window.currentPreviewIndex);
                 window.closeEditUrl();
+            };
+
+            window.editPreviewRating = function() {
+                const imgData = window.currentPreviewImages[window.currentPreviewIndex];
+                document.getElementById('editRatingInput').value = imgData.rating || '';
+                document.getElementById('editRatingModal').classList.remove('hidden');
+                document.getElementById('editRatingModal').classList.add('flex');
+            };
+            
+            window.closeEditRating = function() {
+                document.getElementById('editRatingModal').classList.add('hidden');
+                document.getElementById('editRatingModal').classList.remove('flex');
+            };
+            
+            window.executeEditRating = function() {
+                const newRating = document.getElementById('editRatingInput').value.trim();
+                if (!newRating) {
+                    alert('Vui lòng nhập số Rating hợp lệ!');
+                    return;
+                }
+                
+                const imgData = window.currentPreviewImages[window.currentPreviewIndex];
+                const rowIndex = imgData.rowIndex;
+                const ratingColName = document.getElementById('ratingCol').value.trim();
+                
+                window.currentCsvData[rowIndex][ratingColName] = newRating;
+                imgData.rating = newRating;
+                
+                window.openPreviewModal(window.currentPreviewImages, window.currentPreviewIndex);
+                window.closeEditRating();
             };
 
             const confirmDeleteModal = document.getElementById('confirmDeleteModal');
@@ -487,6 +682,24 @@
                     closeEditUrl();
                 }
             });
+
+            const editRatingModal = document.getElementById('editRatingModal');
+            if (editRatingModal) {
+                editRatingModal.addEventListener('click', function(e) {
+                    if (e.target === editRatingModal) {
+                        closeEditRating();
+                    }
+                });
+            }
+
+            const summaryModalEl = document.getElementById('summaryModal');
+            if (summaryModalEl) {
+                summaryModalEl.addEventListener('click', function(e) {
+                    if (e.target === summaryModalEl) {
+                        closeSummaryModal();
+                    }
+                });
+            }
 
         });
     </script>
@@ -504,6 +717,7 @@
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
         <div class="absolute bottom-6 right-6 z-10 flex flex-col gap-4 pointer-events-auto">
+            <button id="editRatingBtn" onclick="editPreviewRating()" class="bg-yellow-500 hover:bg-yellow-600 text-black px-5 py-2 rounded-md shadow-md font-bold transition-colors text-sm w-full">Sửa Rating</button>
             <button onclick="openReviewCommentPopover(this)" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-md shadow-md font-medium transition-colors text-sm w-full">Sửa Comment</button>
             <button onclick="editPreviewImage()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-md shadow-md font-medium transition-colors text-sm w-full">Sửa URL ảnh</button>
             <button onclick="deletePreviewImage()" class="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-md shadow-md font-medium transition-colors text-sm w-full">Xóa ảnh</button>
@@ -558,6 +772,55 @@
             <div class="flex justify-end gap-3">
                 <button onclick="closeEditUrl()" class="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md font-medium transition-colors">Hủy</button>
                 <button onclick="executeEditUrl()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md font-medium transition-colors">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Rating Modal -->
+    <div id="editRatingModal" class="hidden fixed inset-0 z-[200] bg-black/60 items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-sm w-full p-6 relative">
+            <button onclick="closeEditRating()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            <h3 class="text-lg font-bold text-gray-900 mb-4">Sửa Rating</h3>
+            <input type="number" id="editRatingInput" min="1" max="5" step="0.5" class="w-full border border-gray-300 rounded-md p-2 focus:ring-indigo-500 focus:border-indigo-500 mb-6" placeholder="Nhập số rating (VD: 5)">
+            <div class="flex justify-end gap-3">
+                <button onclick="closeEditRating()" class="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md font-medium transition-colors">Hủy</button>
+                <button onclick="executeEditRating()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md font-medium transition-colors">OK</button>
+            </div>
+        </div>
+    </div>
+    <!-- Summary Modal -->
+    <div id="summaryModal" class="hidden fixed inset-0 z-[200] bg-black/60 items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6 relative">
+            <button onclick="closeSummaryModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            <h3 class="text-lg font-bold text-gray-900 mb-4">Đánh giá tổng quan</h3>
+            
+            <div id="summaryIndicator" class="text-sm font-medium text-blue-600 mb-4">Đang tính toán...</div>
+            
+            <div id="summaryContent" class="hidden flex-col gap-3 text-sm text-gray-700">
+                <div class="flex justify-between border-b pb-2">
+                    <span class="font-medium">Tổng số lượng review:</span>
+                    <span id="sumTotalReviews" class="font-bold">0</span>
+                </div>
+                <div class="flex justify-between border-b pb-2">
+                    <span class="font-medium">Rating trung bình:</span>
+                    <span id="sumAverageRating" class="font-bold text-yellow-600">0</span>
+                </div>
+                <div class="flex justify-between border-b pb-2">
+                    <span class="font-medium">Review có ảnh:</span>
+                    <span id="sumWithImages" class="font-bold text-green-600">0</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="font-medium">Review chỉ có text:</span>
+                    <span id="sumTextOnly" class="font-bold text-gray-500">0</span>
+                </div>
+            </div>
+            
+            <div class="mt-6 flex justify-end">
+                <button onclick="closeSummaryModal()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-md font-medium transition-colors">Đóng</button>
             </div>
         </div>
     </div>

@@ -10,20 +10,22 @@
 {% enddoc %}
 
 {%- liquid
-  assign maker_name = author.author_name.value | default: 'WRYDECO Maker'
+  assign maker_name = author.author_name.value
   assign maker_image = author.author_image_url.value
   assign maker_slogan = author.author_slogan.value
   assign maker_link = author.system.url
-  assign maker_role = author.role.value | default: 'Master Craftsperson'
+  assign maker_role = author.role.value
   assign display_features = author.display_features.value
   assign maker_image_loading = image_loading | default: 'lazy'
   assign maker_image_priority = image_priority | default: 'low'
 -%}
 
+{%- if maker_name != blank or maker_image != blank or maker_role != blank or maker_slogan != blank or display_features != blank -%}
 <div class="maker-card">
   <div class="maker-card__body">
-    <div class="maker-card__image-col">
-      {%- if maker_link != blank -%}
+    {%- if maker_image != blank -%}
+      <div class="maker-card__image-col">
+      {%- if maker_link != blank and maker_name != blank -%}
         <a
           href="{{ maker_link }}"
           class="maker-card__img-link"
@@ -32,10 +34,9 @@
         >
       {%- endif -%}
 
-      {%- if maker_image != blank -%}
         <img
           src="{{ maker_image | escape }}"
-          alt="{{ maker_name | escape }}"
+          alt="{% if maker_name != blank %}{{ maker_name | escape }}{% endif %}"
           class="maker-card__img"
           loading="{{ maker_image_loading }}"
           decoding="async"
@@ -44,18 +45,20 @@
           width="720"
           height="947"
         >
-      {%- else -%}
-        {{ 'image' | placeholder_svg_tag: 'maker-card__img placeholder-svg' }}
-      {%- endif -%}
 
-      {%- if maker_link != blank -%}
+      {%- if maker_link != blank and maker_name != blank -%}
         </a>
       {%- endif -%}
-    </div>
+      </div>
+    {%- endif -%}
 
     <div class="maker-card__text-col">
-      <h3 class="maker-card__name">{{ maker_name | escape }}</h3>
-      <p class="maker-card__role">{{ maker_role | upcase }}</p>
+      {%- if maker_name != blank -%}
+        <h3 class="maker-card__name">{{ maker_name | escape }}</h3>
+      {%- endif -%}
+      {%- if maker_role != blank -%}
+        <p class="maker-card__role">{{ maker_role | upcase | escape }}</p>
+      {%- endif -%}
 
       {%- if maker_slogan != blank -%}
         <p class="maker-card__slogan">{{ maker_slogan | escape }}</p>
@@ -65,7 +68,7 @@
         <div class="maker-card__features">
           {%- for feature in display_features.features -%}
             <div class="maker-feature{% if forloop.index0 > 0 %} maker-feature--border{% endif %}">
-              <span>{{ feature.value }}<br>{{ feature.label }}</span>
+              <span>{{ feature.value | escape }}<br>{{ feature.label | escape }}</span>
             </div>
           {%- endfor -%}
         </div>
@@ -75,3 +78,4 @@
     </div>
   </div>
 </div>
+{%- endif -%}

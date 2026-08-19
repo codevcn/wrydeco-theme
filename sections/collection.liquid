@@ -419,22 +419,27 @@
                 assign author = product.metafields.custom.author_info.value
                 if author != blank and author.author_name.value != blank
                   assign artist = author.author_name.value
-                elsif product.vendor != blank
-                  assign artist = product.vendor
                 endif
 
                 assign material = product.metafields.custom.product_material
                 assign ptype = product.type
 
-                # Corner badge: "Best Seller" appears for products in
-                # signature-pieces, matching the homepage Signature Pieces logic.
+                # Corner badge: "Best Seller" appears only for handles listed
+                # in the first outstanding_materials metaobject entry.
                 assign is_new = false
                 assign is_best_seller = false
+                assign best_seller_entry = metaobjects.outstanding_materials.values | first
+                assign best_seller_handles = best_seller_entry.best_seller_products.value | default: best_seller_entry.best_seller_products | split: ','
+                for best_seller_handle in best_seller_handles
+                  assign normalized_best_seller_handle = best_seller_handle | strip
+                  if normalized_best_seller_handle == product.handle
+                    assign is_best_seller = true
+                    break
+                  endif
+                endfor
                 for coll in product.collections
                   if coll.handle == 'new-arrivals'
                     assign is_new = true
-                  elsif coll.handle == 'signature-pieces'
-                    assign is_best_seller = true
                   endif
                 endfor
               %}
@@ -1234,7 +1239,7 @@
     opacity: 0.6;
   }
 
-  /* Corner badge — one per card: "Best Seller" (signature-pieces) or
+  /* Corner badge — one per card: "Best Seller" (approved handles) or
      "New" (new-arrivals), the former winning when a product is in both. */
   .pcard__badge {
     position: absolute;
@@ -1875,7 +1880,7 @@
       "type": "text",
       "id": "best_seller_badge",
       "label": "Best seller badge",
-      "info": "Shown on products in the \"signature-pieces\" collection. Takes precedence over the new arrival badge.",
+      "info": "Shown only for product handles listed in outstanding_materials.best_seller_products. Takes precedence over the new arrival badge.",
       "default": "Best Seller"
     },
     {

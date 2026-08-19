@@ -5,9 +5,9 @@
   section. Author data is sourced ONLY from the new metaobject reference
   (product.metafields.custom.author_info) â€” no legacy metafield fallback.
 
-  The role label, "view profile" link and the recognition list are not part of
-  the author metaobject, so they are exposed as section settings / blocks for
-  merchants to configure in the theme editor.
+  The artist role and experience are sourced from the author metaobject.
+  The "view profile" link and the recognition list remain section settings /
+  blocks for merchants to configure in the theme editor.
 {% endcomment %}
 
 {% liquid
@@ -16,6 +16,7 @@
   assign author_bio = blank
   assign author_image_url = blank
   assign author_exp_years = blank
+  assign author_role = blank
   assign has_author_info = false
 
   if product != blank
@@ -26,6 +27,7 @@
     assign author_name = author.author_name.value
     assign author_bio = author.author_bio.value
     assign author_image_url = author.author_image_url.value
+    assign author_role = author.role.value
 
     # Years of experience come from the author metaobject. `append: ''` coerces a
     # numeric field to a string so it can be inspected; merchants sometimes type
@@ -37,15 +39,15 @@
       endunless
     endif
 
-    if author_name != blank or author_bio != blank or author_image_url != blank
+    if author_name != blank or author_bio != blank or author_image_url != blank or author_role != blank or author_exp_years != blank
       assign has_author_info = true
     endif
   endif
 %}
 
-<div class="product-artist">
-  <div class="product-artist__card">
-    {% if has_author_info %}
+{% if has_author_info %}
+  <div class="product-artist">
+    <div class="product-artist__card">
       <section
         class="product-artist__inner{% if author_image_url == blank %} product-artist__inner--no-media{% endif %}"
         aria-labelledby="ProductArtistHeading-{{ section.id }}"
@@ -56,7 +58,7 @@
             <img
               class="product-artist__portrait"
               src="{{ author_image_url | escape }}"
-              alt="{{ author_name | default: 'Product artist' | escape }}"
+              alt="{% if author_name != blank %}{{ author_name | escape }}{% endif %}"
               width="800"
               height="1200"
               loading="lazy"
@@ -76,14 +78,10 @@
               <h2 class="product-artist__name" id="ProductArtistHeading-{{ section.id }}">
                 {{ author_name | escape }}
               </h2>
-            {% else %}
-              <h2 class="product-artist__name" id="ProductArtistHeading-{{ section.id }}">
-                {{ section.settings.heading | default: 'Product artist' | escape }}
-              </h2>
             {% endif %}
 
-            {% if section.settings.role_label != blank %}
-              <p class="product-artist__role">{{ section.settings.role_label | escape }}</p>
+            {% if author_role != blank %}
+              <p class="product-artist__role">{{ author_role | escape }}</p>
             {% endif %}
 
             {% if author_bio != blank %}
@@ -111,7 +109,6 @@
             {% if final_profile_link != '/pages/product-author/' %}
               <a class="product-artist__profile-link" href="{{ final_profile_link }}">
                 <span>{{ section.settings.view_profile_label | default: 'View profile' | escape }}</span>
-                <span aria-hidden="true">&rarr;</span>
               </a>
             {% endif %}
           {% endif %}
@@ -160,19 +157,17 @@
                 {% if author_name != blank %}
                   <span class="product-artist__summary-signature">{{ author_name | escape }}</span>
                 {% endif %}
-                {% if section.settings.role_label != blank %}
-                  <span class="product-artist__summary-label">{{ section.settings.role_label | escape }}</span>
+                {% if author_role != blank %}
+                  <span class="product-artist__summary-label">{{ author_role | escape }}</span>
                 {% endif %}
               </div>
             </div>
           </div>
         {% endif %}
       </section>
-    {% else %}
-      <p class="product-artist__empty" data-product-author-empty>No author information is available for this product</p>
-    {% endif %}
+    </div>
   </div>
-</div>
+{% endif %}
 
 {% stylesheet %}
   .product-artist {
@@ -670,13 +665,6 @@
       "id": "heading",
       "label": "Eyebrow heading",
       "default": "About artist"
-    },
-    {
-      "type": "text",
-      "id": "role_label",
-      "label": "Artist role label",
-      "info": "Shown under the artist name. Not part of the author metaobject.",
-      "default": "Master Craftsman"
     },
     {
       "type": "header",

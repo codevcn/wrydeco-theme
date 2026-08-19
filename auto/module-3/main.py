@@ -1604,6 +1604,7 @@ def get_product_by_handle(handle: str):
         handle
         createdAt
         productType
+        status
         tags
         category {
           name
@@ -1734,6 +1735,7 @@ async def read_product(request: Request, product_handle: str):
             "title": product_data["title"],
             "handle": product_data["handle"],
             "created_at": created_at_fmt,
+            "status": product_data.get("status", "ACTIVE"),
             "product_type": product_data.get("productType", ""),
             "category": product_data.get("category", {}).get("name", "") if product_data.get("category") else None,
             "tags": product_data.get("tags", []),
@@ -2759,6 +2761,34 @@ def add_tags_to_product(product_id: str, tags: list):
         return False, f"Lỗi từ Shopify: {user_errs[0]['message']}"
     return True, f"Đã thêm tags thành công"
 
+def remove_tags_from_product(product_id: str, tags: list):
+    mutation = """
+    mutation tagsRemove($id: ID!, $tags: [String!]!) {
+      tagsRemove(id: $id, tags: $tags) {
+        node {
+          id
+        }
+        userErrors {
+          field
+          message
+        }
+      }
+    }
+    """
+    variables = {
+        "id": product_id,
+        "tags": tags
+    }
+    res = requests.post(GRAPHQL_URL, json={"query": mutation, "variables": variables}, headers=HEADERS)
+    res.raise_for_status()
+    data = res.json()
+    if "errors" in data:
+        return False, f"GraphQL Error: {data['errors'][0]['message']}"
+    user_errs = data.get("data", {}).get("tagsRemove", {}).get("userErrors", [])
+    if user_errs:
+        return False, f"Lỗi từ Shopify: {user_errs[0]['message']}"
+    return True, f"Đã xóa tags thành công"
+
 @app.post("/add-tags")
 async def add_tags_submit(request: Request):
     try:
@@ -2996,6 +3026,7 @@ async def edit_meta_info(request: Request):
             has_error = False
 
             tags = [t.strip() for t in form_data.get("tags", "").split(",") if t.strip()]
+            tags_to_delete = [t.strip() for t in form_data.get("tags_to_delete", "").split(",") if t.strip()]
 
             if product_type:
                 upd_success, upd_msg = update_product_type(prod_id, product_type)
@@ -3008,8 +3039,14 @@ async def edit_meta_info(request: Request):
                 msgs.append(tag_msg)
                 if not tag_success:
                     has_error = True
+            
+            if tags_to_delete:
+                del_tag_success, del_tag_msg = remove_tags_from_product(prod_id, tags_to_delete)
+                msgs.append(del_tag_msg)
+                if not del_tag_success:
+                    has_error = True
                     
-            if not product_type and not tags:
+            if not product_type and not tags and not tags_to_delete:
                 msgs.append("Không có thông tin nào được cập nhật")
                 has_error = True
 
@@ -3103,7 +3140,29 @@ async def internal_edit_product(request: Request):
         if not str(product_id).startswith("gid://"):
             product_id = f"gid://shopify/Product/{product_id}"
 
-        if target_field == "productTitle":
+        if target_field == "status":
+            mutation = '''
+            mutation productUpdate($input: ProductInput!) {
+              productUpdate(input: $input) {
+                product {
+                  id
+                  status
+                }
+                userErrors {
+                  field
+                  message
+                }
+              }
+            }
+            '''
+            variables = {
+                "input": {
+                    "id": product_id,
+                    "status": new_value.upper()
+                }
+            }
+
+        elif target_field == "productTitle":
             mutation = '''
             mutation productUpdate($input: ProductInput!) {
               productUpdate(input: $input) {

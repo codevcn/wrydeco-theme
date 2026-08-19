@@ -61,18 +61,22 @@
           assign author = product.metafields.custom.author_info.value
           if author != blank and author.author_name.value != blank
             assign artist = author.author_name.value
-          elsif product.vendor != blank and product.vendor != shop.name
-            assign artist = product.vendor
           endif
         -%}
         {%- assign material = product.metafields.custom.product_material.value
           | default: section.settings.material_default
         -%}
         {%- assign finish = product.metafields.custom.finish.value | default: section.settings.finish_default -%}
-        {%- comment -%} Show a "Best Seller" badge for products in the "signature-pieces" collection. {%- endcomment -%}
+        {%- comment -%}
+          Show a "Best Seller" badge only for handles listed in the first
+          outstanding_materials metaobject entry.
+        {%- endcomment -%}
         {%- assign is_best_seller = false -%}
-        {%- for coll in product.collections -%}
-          {%- if coll.handle == 'signature-pieces' -%}
+        {%- assign best_seller_entry = metaobjects.outstanding_materials.values | first -%}
+        {%- assign best_seller_handles = best_seller_entry.best_seller_products.value | default: best_seller_entry.best_seller_products | split: ',' -%}
+        {%- for best_seller_handle in best_seller_handles -%}
+          {%- assign normalized_best_seller_handle = best_seller_handle | strip -%}
+          {%- if normalized_best_seller_handle == product.handle -%}
             {%- assign is_best_seller = true -%}
             {%- break -%}
           {%- endif -%}
@@ -157,18 +161,13 @@
             </a>
 
             {%- comment -%}
-              Every card carries a badge: "Best Seller" for the curated collection,
-              otherwise the "Most Loved" fallback.
+              Only approved best-seller handles carry a badge in this homepage
+              section. Other cards remain unbadged.
             {%- endcomment -%}
             {%- if is_best_seller -%}
               <span class="signature-pieces__badge">
                 <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="m12 17.275l-4.15 2.5q-.275.175-.575.15t-.525-.2t-.35-.437t-.05-.588l1.1-4.725L3.775 10.8q-.25-.225-.312-.513t.037-.562t.3-.45t.55-.225l4.85-.425l1.875-4.45q.125-.3.388-.45t.537-.15t.537.15t.388.45l1.875 4.45l4.85.425q.35.05.55.225t.3.45t.038.563t-.313.512l-3.675 3.175l1.1 4.725q.075.325-.05.588t-.35.437t-.525.2t-.575-.15z"/></svg>
                 {{ section.settings.best_seller_badge | escape }}
-              </span>
-            {%- else -%}
-              <span class="signature-pieces__badge signature-pieces__badge--loved">
-                <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M11.288 20.2q-.363-.125-.638-.4l-1.725-1.575q-2.65-2.425-4.787-4.812T2 8.15Q2 5.8 3.575 4.225T7.5 2.65q1.325 0 2.5.562t2 1.538q.825-.975 2-1.537t2.5-.563q2.35 0 3.925 1.575T22 8.15q0 2.875-2.125 5.275T15.05 18.25l-1.7 1.55q-.275.275-.637.4t-.713.125t-.712-.125"/></svg>
-                {{ section.settings.most_loved_badge | escape }}
               </span>
             {%- endif -%}
 
@@ -222,28 +221,25 @@
         </article>
       {%- else -%}
         {%- for i in (1..4) -%}
-          {%- assign card_badge_loved = false -%}
-          {%- case i -%}
-            {%- when 1 -%}
-              {%- assign card_title = 'Walnut Lounge Chair' -%}
-              {%- assign card_artist = 'Huan Ngo' -%}
-              {%- assign card_price = '$2,650' -%}
-              {%- assign card_badge = section.settings.best_seller_badge -%}
-            {%- when 2 -%}
-              {%- assign card_title = 'Live Edge Dining Table' -%}
-              {%- assign card_artist = 'Trung Le' -%}
-              {%- assign card_price = '$5,900' -%}
-              {%- assign card_badge = section.settings.made_to_order_badge -%}
-            {%- when 3 -%}
-              {%- assign card_title = 'Sculpted Console Table' -%}
-              {%- assign card_artist = 'Alex Nguyen' -%}
-              {%- assign card_price = '$3,250' -%}
-              {%- assign card_badge = section.settings.most_loved_badge -%}
-              {%- assign card_badge_loved = true -%}
-            {%- else -%}
-              {%- assign card_title = 'Treeform Bookshelf' -%}
-              {%- assign card_artist = 'Dien Luc' -%}
-              {%- assign card_price = '$3,850' -%}
+              {%- assign card_badge = blank -%}
+              {%- case i -%}
+                {%- when 1 -%}
+                  {%- assign card_title = 'Walnut Lounge Chair' -%}
+                  {%- assign card_artist = blank -%}
+                  {%- assign card_price = '$2,650' -%}
+                  {%- assign card_badge = section.settings.best_seller_badge -%}
+                {%- when 2 -%}
+                  {%- assign card_title = 'Live Edge Dining Table' -%}
+                  {%- assign card_artist = blank -%}
+                  {%- assign card_price = '$5,900' -%}
+                {%- when 3 -%}
+                  {%- assign card_title = 'Sculpted Console Table' -%}
+                  {%- assign card_artist = blank -%}
+                  {%- assign card_price = '$3,250' -%}
+                {%- else -%}
+                  {%- assign card_title = 'Treeform Bookshelf' -%}
+                  {%- assign card_artist = blank -%}
+                  {%- assign card_price = '$3,850' -%}
               {%- assign card_badge = section.settings.best_seller_badge -%}
           {%- endcase -%}
 
@@ -272,17 +268,10 @@
               </span>
 
               {%- if card_badge != blank -%}
-                {%- if card_badge_loved -%}
-                  <span class="signature-pieces__badge signature-pieces__badge--loved">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M11.288 20.2q-.363-.125-.638-.4l-1.725-1.575q-2.65-2.425-4.787-4.812T2 8.15Q2 5.8 3.575 4.225T7.5 2.65q1.325 0 2.5.562t2 1.538q.825-.975 2-1.537t2.5-.563q2.35 0 3.925 1.575T22 8.15q0 2.875-2.125 5.275T15.05 18.25l-1.7 1.55q-.275.275-.637.4t-.713.125t-.712-.125"/></svg>
-                    {{ card_badge | escape }}
-                  </span>
-                {%- else -%}
-                  <span class="signature-pieces__badge">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="m12 17.275l-4.15 2.5q-.275.175-.575.15t-.525-.2t-.35-.437t-.05-.588l1.1-4.725L3.775 10.8q-.25-.225-.312-.513t.037-.562t.3-.45t.55-.225l4.85-.425l1.875-4.45q.125-.3.388-.45t.537-.15t.537.15t.388.45l1.875 4.45l4.85.425q.35.05.55.225t.3.45t.038.563t-.313.512l-3.675 3.175l1.1 4.725q.075.325-.05.588t-.35.437t-.525.2t-.575-.15z"/></svg>
-                    {{ card_badge | escape }}
-                  </span>
-                {%- endif -%}
+                <span class="signature-pieces__badge">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="m12 17.275l-4.15 2.5q-.275.175-.575.15t-.525-.2t-.35-.437t-.05-.588l1.1-4.725L3.775 10.8q-.25-.225-.312-.513t.037-.562t.3-.45t.55-.225l4.85-.425l1.875-4.45q.125-.3.388-.45t.537-.15t.537.15t.388.45l1.875 4.45l4.85.425q.35.05.55.225t.3.45t.038.563t-.313.512l-3.675 3.175l1.1 4.725q.075.325-.05.588t-.35.437t-.525.2t-.575-.15z"/></svg>
+                  {{ card_badge | escape }}
+                </span>
               {%- endif -%}
 
               <span class="signature-pieces__quick signature-pieces__wishlist" aria-hidden="true">
@@ -1113,7 +1102,7 @@
       "type": "text",
       "id": "eyebrow",
       "label": "Eyebrow Text",
-      "default": "Crafted to last generations"
+      "default": "Crafted for lasting use"
     },
     {
       "type": "text",
@@ -1125,7 +1114,7 @@
       "type": "textarea",
       "id": "subtitle",
       "label": "Subtitle",
-      "default": "Timeless designs, masterfully handcrafted in solid wood.\nEach piece is made to your specifications and built to be lived with."
+      "default": "Thoughtfully handcrafted solid-wood designs.\nEach piece is made to your specifications and built to be lived with."
     },
     {
       "type": "collection",

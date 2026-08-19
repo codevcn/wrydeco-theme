@@ -1,4 +1,12 @@
 <div class="trust-statistics-host">
+  {%- liquid
+    assign loox_global_stats_metafield = shop.metafields.loox["global_stats"]
+    assign loox_global_stats = loox_global_stats_metafield.value | default: loox_global_stats_metafield
+    assign loox_global_stats_values = loox_global_stats | split: ','
+    assign loox_global_rating = loox_global_stats_values[0] | plus: 0 | round: 1
+    assign loox_global_review_count = loox_global_stats_values[1] | plus: 0
+  -%}
+
   <section class="trust-statistics" aria-labelledby="trust-statistics-title-{{ section.id }}">
     <div class="trust-statistics__header">
       <span class="trust-statistics__rule" aria-hidden="true"></span>
@@ -12,13 +20,23 @@
           assign value_setting = 'stat_' | append: stat_index | append: '_value'
           assign label_setting = 'stat_' | append: stat_index | append: '_label'
           assign stat_value = section.settings[value_setting]
+          if stat_index == 2
+            if loox_global_review_count > 0
+              assign stat_value = loox_global_review_count
+            endif
+          elsif stat_index == 3
+            if loox_global_rating > 0
+              assign stat_value = loox_global_rating
+            endif
+          endif
+          assign stat_value_text = stat_value | append: ''
         -%}
         <li class="trust-statistics__item{% if forloop.last %} trust-statistics__item--artisan{% endif %}">
           <strong class="trust-statistics__value">
-            {%- if stat_value contains '+' -%}
-              {{- stat_value | remove: '+' | escape -}}<sup>+</sup>
+            {%- if stat_value_text contains '+' -%}
+              {{- stat_value_text | remove: '+' | escape -}}<sup>+</sup>
             {%- else -%}
-              {{- stat_value | escape -}}
+              {{- stat_value_text | escape -}}
             {%- endif -%}
           </strong>
           <span class="trust-statistics__label">{{ section.settings[label_setting] | escape }}</span>
@@ -211,13 +229,13 @@
       "type": "text",
       "id": "stat_1_value",
       "label": "Statistic 1 value",
-      "default": "50+"
+      "default": "500+"
     },
     {
       "type": "text",
       "id": "stat_1_label",
       "label": "Statistic 1 label",
-      "default": "Handcrafted Pieces"
+      "default": "Homes Styled"
     },
     {
       "type": "text",
@@ -247,13 +265,13 @@
       "type": "text",
       "id": "stat_4_value",
       "label": "Statistic 4 value",
-      "default": "100%"
+      "default": "99%"
     },
     {
       "type": "text",
       "id": "stat_4_label",
       "label": "Statistic 4 label",
-      "default": "PREVIEWED & APPROVED"
+      "default": "Client Satisfaction"
     },
     {
       "type": "text",

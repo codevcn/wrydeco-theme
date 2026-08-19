@@ -7,17 +7,25 @@
   Craft stats (.ap__stats) are driven by the `display_features` field of the
   metaobject — same source/logic as `.maker-card__features` in the
   "Meet the Makers" homepage section.
-  The masthead and role line are brand scaffolding.
+  Role, experience, profile copy, image, slogan, and stats come from the
+  product_author metaobject.
 
   https://shopify.dev/docs/storefronts/themes/architecture/templates/metaobject
 {% endcomment %}
 
 {% liquid
   assign author = metaobject
-  assign a_name = author.author_name.value | default: 'Our Artist'
+  assign a_name = author.author_name.value
+  assign a_role = author.role.value
   assign a_bio = author.author_bio.value
   assign a_img = author.author_image_url.value
   assign a_quote = author.author_slogan.value
+  assign a_exp_years = author.exp_years.value | append: '' | strip
+  if a_exp_years != blank
+    unless a_exp_years contains '+'
+      assign a_exp_years = a_exp_years | append: '+'
+    endunless
+  endif
 %}
 
 {%- capture ap_fingerprint -%}
@@ -37,37 +45,45 @@
   </header>
 
   <div class="ap__body">
+    {% if a_img != blank %}
     <div class="ap__left">
       <figure class="ap__card">
         <div class="ap__photo">
-          {% if a_img != blank %}
-            <img
-              class="ap__photo-img"
-              src="{{ a_img }}"
-              alt="{{ a_name | escape }}"
-              width="1000"
-              height="1200"
-              loading="eager"
-              fetchpriority="high"
-            >
-          {% else %}
-            {{ 'image' | placeholder_svg_tag: 'ap__photo-img ap__photo-img--placeholder' }}
-          {% endif %}
+          <img
+            class="ap__photo-img"
+            src="{{ a_img }}"
+            alt="{% if a_name != blank %}{{ a_name | escape }}{% endif %}"
+            width="1000"
+            height="1200"
+            loading="eager"
+            fetchpriority="high"
+          >
         </div>
-        <figcaption class="ap__card-meta">
-          <span class="ap__card-mark">{{ ap_fingerprint }}</span>
-          <span class="ap__card-text">
-            <span class="ap__card-role">Lead Artist &amp; Craftsman</span>
-            <span class="ap__card-tag">20+ Years of Dedication to Wood</span>
-          </span>
-        </figcaption>
+        {% if a_role != blank or a_exp_years != blank %}
+          <figcaption class="ap__card-meta">
+            <span class="ap__card-mark">{{ ap_fingerprint }}</span>
+            <span class="ap__card-text">
+              {% if a_role != blank %}
+                <span class="ap__card-role">{{ a_role | escape }}</span>
+              {% endif %}
+              {% if a_exp_years != blank %}
+                <span class="ap__card-tag">{{ a_exp_years | escape }} Years of Experience</span>
+              {% endif %}
+            </span>
+          </figcaption>
+        {% endif %}
       </figure>
     </div>
+    {% endif %}
 
     <div class="ap__right">
       <p class="ap__eyebrow ap__eyebrow--rule">Artist Profile</p>
-      <h1 class="ap__name">{{ a_name | escape }}</h1>
-      <p class="ap__role">Lead Artist &nbsp;&bull;&nbsp; Sculptural Wood Forms</p>
+      {% if a_name != blank %}
+        <h1 class="ap__name">{{ a_name | escape }}</h1>
+      {% endif %}
+      {% if a_role != blank %}
+        <p class="ap__role">{{ a_role | escape }}</p>
+      {% endif %}
 
       {% if a_quote != blank %}
         <blockquote class="ap__quote">{{ a_quote | escape }}</blockquote>
@@ -86,8 +102,8 @@
         <ul class="ap__stats" style="--stat-count: {{ display_features.features.size }}">
           {%- for feature in display_features.features -%}
             <li class="ap__stat">
-              <span class="ap__stat-label">{{ feature.value }}</span>
-              <span class="ap__stat-desc">{{ feature.label }}</span>
+              <span class="ap__stat-label">{{ feature.value | escape }}</span>
+              <span class="ap__stat-desc">{{ feature.label | escape }}</span>
             </li>
           {%- endfor -%}
         </ul>
@@ -100,16 +116,20 @@
               var data = JSON.parse(rawStr);
               var features = data.features || data;
               if (Array.isArray(features)) {
-                var html = '';
-                features.forEach(function (f) {
-                  html +=
-                    '<li class="ap__stat">' +
-                    '<span class="ap__stat-label">' + f.value + '</span>' +
-                    '<span class="ap__stat-desc">' + f.label + '</span>' +
-                    '</li>';
-                });
                 var ul = document.currentScript.previousElementSibling;
-                ul.innerHTML = html;
+                features.forEach(function (f) {
+                  var item = document.createElement('li');
+                  var value = document.createElement('span');
+                  var label = document.createElement('span');
+                  item.className = 'ap__stat';
+                  value.className = 'ap__stat-label';
+                  label.className = 'ap__stat-desc';
+                  value.textContent = f.value || '';
+                  label.textContent = f.label || '';
+                  item.append(value);
+                  item.append(label);
+                  ul.append(item);
+                });
                 ul.style.setProperty('--stat-count', features.length);
               }
             } catch (e) {
