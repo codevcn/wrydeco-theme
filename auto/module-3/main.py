@@ -3412,49 +3412,127 @@ def save_config(config_data):
         import json
         json.dump(config_data, f, indent=4)
 
-def get_articles(sort_key="ID", reverse=True, first=50):
-    query = """
-    query getArticles($first: Int!, $sortKey: ArticleSortKeys, $reverse: Boolean) {
-      articles(first: $first, sortKey: $sortKey, reverse: $reverse) {
-        edges {
-          node {
+def get_articles_count(search_query=None):
+    count = 0
+    has_next = True
+    cursor = None
+    
+    while has_next:
+        query = """
+        query getArticlesCount($first: Int!, $query: String, $after: String) {
+          articles(first: $first, query: $query, after: $after) {
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+            edges {
+              node {
+                id
+              }
+            }
+          }
+        }
+        """
+        variables = {"first": 250}
+        if search_query:
+            variables["query"] = search_query
+        if cursor:
+            variables["after"] = cursor
+            
+        try:
+            res = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=HEADERS)
+            res.raise_for_status()
+            data = res.json()
+            if "errors" in data:
+                print("GraphQL Errors fetching articles count:", data["errors"])
+                break
+                
+            articles_data = data.get("data", {}).get("articles", {})
+            edges = articles_data.get("edges", [])
+            count += len(edges)
+            
+            page_info = articles_data.get("pageInfo", {})
+            has_next = page_info.get("hasNextPage", False)
+            cursor = page_info.get("endCursor")
+        except Exception as e:
+            print("Error fetching articles count:", e)
+            break
+            
+    return count
+
+def get_articles(sort_key="ID", reverse=True, first=50, after=None, before=None, search_query=None):
+    args = "$first: Int, $sortKey: ArticleSortKeys, $reverse: Boolean, $query: String, $after: String, $before: String"
+    articles_args = "first: $first, sortKey: $sortKey, reverse: $reverse, query: $query, after: $after, before: $before"
+    
+    # If going backwards, use last instead of first
+    if before:
+        args = "$last: Int, $sortKey: ArticleSortKeys, $reverse: Boolean, $query: String, $after: String, $before: String"
+        articles_args = "last: $last, sortKey: $sortKey, reverse: $reverse, query: $query, after: $after, before: $before"
+
+    query = f"""
+    query getArticles({args}) {{
+      articles({articles_args}) {{
+        pageInfo {{
+          hasNextPage
+          hasPreviousPage
+          startCursor
+          endCursor
+        }}
+        edges {{
+          node {{
             id
             title
             isPublished
             publishedAt
             createdAt
             updatedAt
-            image {
+            image {{
               url
-            }
-            blog {
+            }}
+            blog {{
               title
-            }
-          }
-        }
-      }
-    }
+            }}
+          }}
+        }}
+      }}
+    }}
     """
+    
     variables = {
-        "first": first,
         "sortKey": sort_key,
         "reverse": reverse
     }
+    
+    if before:
+        variables["last"] = first
+        variables["before"] = before
+    else:
+        variables["first"] = first
+        if after:
+            variables["after"] = after
+            
+    if search_query:
+        variables["query"] = search_query
+
     try:
         res = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=HEADERS)
         res.raise_for_status()
         data = res.json()
         if "errors" in data:
             print("GraphQL Errors fetching articles:", data["errors"])
-            return []
-        return [edge["node"] for edge in data.get("data", {}).get("articles", {}).get("edges", [])]
+            return [], {}
+        
+        articles_data = data.get("data", {}).get("articles", {})
+        edges = articles_data.get("edges", [])
+        page_info = articles_data.get("pageInfo", {})
+        
+        return [edge["node"] for edge in edges], page_info
     except Exception as e:
         print("Error fetching articles:", e)
-        return []
+        return [], {}
 
-@app.get("/blogs", response_class=HTMLResponse)
-async def blogs_page(request: Request, sort: str = "created_desc"):
-    # sort can be: created_desc, created_asc, updated_desc, updated_asc, title_asc, title_desc
+@app.get("/blogs")
+async def blogs_page(request: Request, sort: str = "created_desc", search: str = "", after: str = None, before: str = None):
     sort_key = "ID"
     reverse = True
     
@@ -3474,8 +3552,40 @@ async def blogs_page(request: Request, sort: str = "created_desc"):
         sort_key = "TITLE"
         reverse = True
         
-    articles = get_articles(sort_key=sort_key, reverse=reverse)
+    search_query = None
+    if search:
+        search_query = f"*{search}*"
+        
+    articles, page_info = get_articles(sort_key=sort_key, reverse=reverse, after=after, before=before, search_query=search_query)
     
+    total_store_count = get_articles_count()
+    total_search_count = get_articles_count(search_query) if search_query else total_store_count
+    
+    # If we are searching and there is a keyword, we can also perform a local fallback filter for summary/content
+    if search:
+        search_lower = search.lower()
+        
+        def get_relevance_score(a):
+            score = 0
+            title = a.get('title', '') or ''
+            if title.lower() == search_lower:
+                score += 100
+            elif search_lower in title.lower():
+                score += 50
+                if title.lower().startswith(search_lower):
+                    score += 10
+                    
+            blog_title = (a.get('blog') or {}).get('title', '') or ''
+            if blog_title.lower() == search_lower:
+                score += 30
+            elif search_lower in blog_title.lower():
+                score += 20
+                
+            return score
+            
+        # Sort so that higher scores (matches in title/blog) appear at the top
+        articles.sort(key=get_relevance_score, reverse=True)
+
     # Format dates
     from datetime import datetime
     for article in articles:
@@ -3489,10 +3599,23 @@ async def blogs_page(request: Request, sort: str = "created_desc"):
             else:
                 article[f"{date_field}_fmt"] = ""
                 
+    if is_ajax_request(request):
+        import json
+        return HTMLResponse(content=json.dumps({
+            "articles": articles,
+            "pageInfo": page_info,
+            "totalStoreCount": total_store_count,
+            "totalSearchCount": total_search_count
+        }), media_type="application/json")
+                
     return templates.TemplateResponse(request=request, name="blogs.html", context={
         "request": request,
         "articles": articles,
-        "current_sort": sort
+        "pageInfo": page_info,
+        "current_sort": sort,
+        "search": search,
+        "total_store_count": total_store_count,
+        "total_search_count": total_search_count
     })
 
 @app.get("/settings", response_class=HTMLResponse)

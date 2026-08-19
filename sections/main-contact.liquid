@@ -3,7 +3,7 @@
 
   Hero (eyebrow + display heading + ornament + intro on the left, a full-bleed
   lifestyle image on the right), then a two-card body: a contact-details card
-  (email / phone / showroom / hours) and a server-rendered Shopify contact form
+  (email / phone / registered business address / online support) and a server-rendered Shopify contact form
   (name, email, phone, subject, message) that surfaces success/error via the
   global toast.
 {% endcomment %}
@@ -79,7 +79,10 @@
       {% assign phone_value = legal_info.phone_number.value | default: section.settings.phone_number %}
       {% assign address_value = legal_info.business_address.value | default: section.settings.address_text %}
       {% assign hours_value = legal_info.online_store_hours.value | default: section.settings.hours_text %}
-      {% assign consultation_value = legal_info.consultation_hours.value %}
+      {% if hours_value == '24/7' %}
+        {% assign hours_value = '24/7 online support, Central Time (CT)' %}
+      {% endif %}
+      {% assign consultation_value = 'Online by appointment. No retail showroom or walk-in visits.' %}
 
       <ul class="contact-info__list" role="list">
         <li class="contact-info__origin">
@@ -198,7 +201,7 @@
               </svg>
             </span>
             <span class="contact-info__text">
-              <span class="contact-info__label">PRIVATE CONSULTATION HOURS</span>
+              <span class="contact-info__label">{{ section.settings.consultation_label | escape }}</span>
               <span class="contact-info__value">{{ consultation_value | escape | newline_to_br }}</span>
             </span>
           </li>
@@ -924,20 +927,20 @@
     { "type": "text", "id": "email_address", "label": "Email address", "default": "support@wrydeco.com" },
     { "type": "text", "id": "phone_label", "label": "Phone label", "default": "Phone" },
     { "type": "text", "id": "phone_number", "label": "Phone number", "default": "+1 (801) 340-6671" },
-    { "type": "text", "id": "address_label", "label": "Address label", "default": "Business Address" },
-    { "type": "text", "id": "consultation_label", "label": "Consultation label", "default": "Consultation Address" },
+    { "type": "text", "id": "address_label", "label": "Address label", "default": "Registered Business Address" },
+    { "type": "text", "id": "consultation_label", "label": "Consultation label", "default": "Consultation" },
     {
       "type": "textarea",
       "id": "address_text",
       "label": "Address text",
-      "default": "Private showroom visits by appointment"
+      "default": "Registered business address only. WRYDECO does not operate a retail showroom or accept walk-in visits."
     },
-    { "type": "text", "id": "hours_label", "label": "Hours label", "default": "Online Store's Hours" },
+    { "type": "text", "id": "hours_label", "label": "Hours label", "default": "Online Support" },
     {
       "type": "textarea",
       "id": "hours_text",
       "label": "Hours text",
-      "default": "Mon - Sat 9:00 AM - 5:00 PM"
+      "default": "24/7 online support, Central Time (CT)"
     },
     { "type": "header", "content": "Form" },
     { "type": "text", "id": "name_label", "label": "Name label", "default": "Name" },

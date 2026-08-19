@@ -279,8 +279,24 @@ Sửa sau theo yêu cầu. Khi quay lại point này, hướng an toàn là dùn
 
 ## 3. Thông Tin Kết Cấu / Độ Bền
 
-- các thông tin như "Tải trọng khuyến nghị cho từng dòng chính", "Loại mối nối/khung/bracket/hardware đang dùng", "Dòng nào cần wall mounting, dòng nào free-standing"
+- các thông tin như "Tải trọng khuyến nghị cho từng dòng chính", "Loại mối nối/khung/bracket/hardware đang dùng", "Dòng nào cần wall mounting, dòng nào free-standing" sẽ được bao gồm trong tài liệu hướng dẫn sử dụng khi nhận hàng
 - tùy sản phẩm có dịch vụ lắp đặt, tùy sản phẩm ko có
+
+### Kết quả fix point 3:
+
+```text
+Đã cập nhật nội dung construction/durability/installation theo quyết định mới: không public thông số tải trọng, bracket, hardware, hoặc wall/free-standing cụ thể trên website khi chưa có data thật; các thông tin này được nói là nằm trong product-specific guidance đi kèm khi nhận hàng, nếu applicable.
+
+Các thay đổi đã làm:
+- PDP accordion Dimensions: thêm note rằng use, placement, mounting, hardware, and recommended load guidance được cung cấp cùng sản phẩm khi applicable và dựa trên final design.
+- PDP accordion Delivery & Refunds: thêm item "Installation guidance", làm rõ một số sản phẩm freestanding, một số có thể cần wall mounting/anchoring/professional installation; standard shipping không bao gồm installation nếu chưa được confirm in writing.
+- PDP accordion Care Guide: thêm ý delivered piece includes product-specific use, placement, and care guidance where applicable.
+- PDP product comparison feature "Hand-shaped joinery": giảm claim quá cụ thể, chuyển sang wording an toàn về hand-shaped/assembled for long-term residential use và guidance theo từng sản phẩm.
+- PDP Order Process & Delivery: cập nhật bước packing/shipping/lead delivery để nói product-specific use or installation guidance được included where applicable, còn specialized installation/placement service phải confirmed separately in writing.
+- FAQ page (/pages/faq): cập nhật shipping, care/restoration, và warranty answers để đồng bộ: installation/specialized services confirmed in writing; product-specific mounting/hardware/recommended load guidance đi kèm khi applicable; warranty không cover misuse, incorrect installation, unsuitable environments, excessive load, hoặc post-delivery alterations.
+
+Không ghi note vào `todo/point sửa sau.md` theo yêu cầu. Đã validate JSON/section schema cơ bản cho templates/product.json, templates/page.faq.json, sections/order-process-delivery.liquid, snippets/product-detail-tab-content.liquid. Không chạy shopify theme check theo yêu cầu. Không chạy Playwright vì đây là copy/content sync minor trong UI hiện có, không tạo UI mới hoặc sửa layout đáng kể.
+```
 
 ## 4. Quy Trình Custom Order
 
@@ -324,6 +340,22 @@ Giao hàng
 - Response time: trong 24-48 giờ (business day).
 - CTA chính muốn dùng: Book Consultation.
 
+### Kết quả fix point 4:
+```text
+Đã đồng bộ custom order / consultation flow theo quyết định mới:
+
+- Customization page (/pages/customization): cập nhật process thành Book Consultation -> Review Scope & Quote -> Approve, Pay & Produce; nêu rõ request được review, trao đổi qua email/phone/WhatsApp khi cần, gửi scope/spec/quote, secure payment link, proof approval, production, final confirmation và delivery coordination.
+- Customization hero và guidance card (/pages/customization): đổi CTA cũ "Request a consultation" / "Schedule a consultation" sang "Book Consultation".
+- Customization consultation form (/pages/customization): đổi CTA thành "Book Consultation"; request label/placeholder tập trung vào project, room, dimensions, finish direction, budget range, timeline, references; thêm response time "24-48 business hours" trong security text và success message; không nêu duration cố định.
+- PDP consultation CTA/popup (/products/...): đổi CTA thành "Book Consultation"; copy nhấn mạnh complimentary consultation before ordering, response within 24-48 business hours; bỏ claim 30 minutes và bỏ timezone label khỏi selected consultation result.
+- Homepage (/): cập nhật made-to-order steps, materials/custom CTA, styling consultation, và FAQ snapshot để đồng bộ flow: request, scope & quote, secure payment link, proof/production, final confirmation, packing/shipping; không dùng response 24 hours hoặc duration cố định.
+- FAQ page (/pages/faq): cập nhật answers về custom request, consultation, full bespoke commission, cancellation/change theo đúng policy: change/cancellation chỉ có thể được xem xét trước khi production/preparation/fulfillment bắt đầu; custom/made-to-order không thể cancel/change/return/refund sau đó trừ trường hợp luật yêu cầu hoặc issue damage/defect/fulfillment được duyệt.
+- Product Order Process & Delivery (/products/...): đã revert về wording cũ theo yêu cầu vì quy trình custom order đã được mô tả rõ ở trang Customization.
+- Đồng bộ CTA default "Book Consultation" ở các section phụ liên quan để tránh merchant thêm section mới mà kéo lại wording cũ.
+
+Đã validate JSON/JSONC và section schemas cho các file liên quan. Không chạy shopify theme check theo yêu cầu. Đã chạy Playwright sau khi sửa để kiểm tra UI customization/PDP/homepage/FAQ ở local Shopify theme dev.
+```
+
 ## 5. Support Timezone / Địa Chỉ
 
 - Public support timezone muốn dùng: Central Time (CT)
@@ -332,8 +364,34 @@ Giao hàng
 - Địa chỉ Mỹ hiện tại là loại "registered business address"
 - ko có showroom cho khách ghé thăm
 
+### Kết quả fix point 5:
+```text
+Đã đồng bộ support timezone / địa chỉ theo quyết định mới:
+
+- Footer toàn site: đổi label địa chỉ thành "Registered Business Address"; support hours fallback thành "24/7 online support, Central Time (CT)".
+- Footer group JSON: đổi support hours cũ "Daily: 9AM - 8:30PM (Asia/Saigon)" thành "24/7 online support, Central Time (CT)"; thêm note rõ không có retail showroom hoặc walk-in visits.
+- Homepage FAQ/support sidebar (/): đổi support hours thành "24/7 online support, Central Time (CT)".
+- Contact page (/pages/contact): đổi address label default thành "Registered Business Address"; đổi online support default thành "24/7 online support, Central Time (CT)"; không còn wording "Private showroom visits by appointment"; consultation info hiển thị "Online by appointment. No retail showroom or walk-in visits."
+- FAQ contact CTA (/pages/faq): đổi response time default thành "We respond within 24-48 business hours."
+- Shopify metaobject store_legal_info: cập nhật online_store_hours thành "24/7 online support, Central Time (CT)" và consultation_hours thành "Online by appointment. No retail showroom or walk-in visits." để tránh dữ liệu store override theme fallback.
+
+Đã validate JSON/JSONC và section schemas cho các file liên quan. Không chạy shopify theme check theo yêu cầu. Đã dùng Playwright kiểm tra homepage, contact page và FAQ page ở desktop 1520x900 và mobile 390x844: HTTP 200, không horizontal overflow, text mới render đúng, không còn các cụm cũ Asia/Saigon, EST, Mon-Sat, private showroom visits, hoặc response within two business days.
+```
+
 ## 6. External Proof
 
 - ko có Google Business Profile
 - mấy kênh socials của wrydeco có link hết ở footer rồi, và đều là link sống 100% ko cần kiểm tra
 - ko có dấu vết thương hiệu ngoài website
+
+### Kết quả fix point 6:
+```text
+Đã xử lý External Proof theo hướng không overclaim:
+
+- Không thêm Google Business Profile, Trustpilot, Etsy, PR, directory, marketplace, hoặc external proof section vì hiện chưa có nguồn thật để public.
+- Đã rà soát theme files và không thấy claim public kiểu Google Business, Trustpilot, Etsy, "as seen on", "featured on", hoặc "verified by external platform".
+- Giữ nguyên social links hiện có ở footer vì đây là các kênh WRYDECO đã confirm: TikTok, YouTube, Pinterest, Facebook, Instagram, Amazon.
+- Footer toàn site: đổi nhãn social từ "Follow Us" thành "Follow WRYDECO" để rõ đây là kênh theo dõi brand, nhưng không claim "verified" hoặc nguồn xác thực bên ngoài.
+
+Đã validate schema sections/footer.liquid. Không chạy shopify theme check theo yêu cầu. Đã dùng Playwright smoke check homepage footer ở desktop 1520x900 và mobile 390x844.
+```
