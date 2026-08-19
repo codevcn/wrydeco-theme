@@ -43,10 +43,44 @@
 
 - Khu vực giao chính: toàn thế giới
 
+### Kết quả fix point 3:
+
+```text
+Đã đối chiếu Shipping Policy live tại https://wrydeco.com/policies/shipping-policy: WRYDECO offers worldwide shipping to eligible destinations; complimentary standard shipping applies to eligible worldwide orders; standard shipping does not include assembly, installation, wall mounting, furniture placement, packaging removal, or property modification unless expressly confirmed in writing.
+
+Đã đồng bộ các nội dung delivery/installation trong theme:
+- FAQ page (/pages/faq): cập nhật câu timeline từ United States sang eligible destinations worldwide; cập nhật câu "Is shipping included, and who delivers it?" sang eligible addresses worldwide; cập nhật câu "Can you deliver outside the United States?" để nói WRYDECO offers worldwide shipping to eligible destinations.
+- PDP (/products/...): cập nhật drawer Free Delivery từ eligible United States addresses sang eligible addresses worldwide; giữ rõ standard delivery không gồm unpacking/assembly; optional/specialized services phải confirmed separately/in writing.
+- PDP (/products/...): cập nhật default trust delivery title/text thành "Worldwide delivery available" và "Complimentary standard shipping for eligible destinations."
+- Product benefits fallback: đổi "White-glove delivery & setup" thành "Complimentary worldwide standard shipping."
+- Cart drawer: đổi reassurance từ "White-glove delivery details confirmed at checkout" thành "Special delivery services confirmed separately."
+- Wishlist page: đổi assurance từ "White-Glove Delivery / Carefully delivered and placed in your home" sang "Worldwide Standard Shipping / Included for eligible destinations; special services confirmed separately."
+- Homepage/trust/preset copy: đổi "White-Glove Delivery US" hoặc "White-glove service" sang wording an toàn hơn như "Worldwide Standard Shipping" hoặc "Special handling available."
+- Customization process default: đổi "Delivery & installation" sang "Delivery Coordination" và nói rõ specialized delivery, placement, assembly, or installation service must be confirmed separately in writing.
+- Footer config: service area đổi thành eligible destinations worldwide.
+
+Đã kiểm tra không còn các cụm "White-Glove Delivery US", "White-glove delivery", "White glove delivery", "White-glove delivery & setup", "white-glove service", "Carefully delivered and placed", "eligible United States addresses", "United States addresses", hoặc "US & EU" trong templates/sections/snippets. Đã validate JSON/JSONC và section schemas liên quan. Không chạy shopify theme check theo yêu cầu. Không chạy Playwright vì các thay đổi ở point này là minor copy sync, không tạo UI mới hoặc sửa đáng kể layout/UI hiện có.
+```
+
 ## 4. Quy trình giảm rủi ro trước sản xuất
 
 - Có bước gửi video quay sản phẩm cho khách trước khi giao hàng để khách xác nhận, tránh rủi ro khách không hài lòng khi nhận hàng.
 - Khách có được tư vấn miễn phí trước khi order.
+
+### Kết quả fix point 4:
+
+```text
+Đã đồng bộ quy trình giảm rủi ro trước sản xuất/giao hàng vào các nội dung SSR chính:
+- PDP (/products/...): cập nhật Order Process & Delivery để nói rõ có gửi sample photos/video ở giai đoạn duyệt mẫu, gửi final photos/video trước khi đóng gói, chỉ pack sau khi khách final confirmation, và đổi bước shipping sang wording an toàn theo eligible destination.
+- PDP (/products/...): cập nhật card Private design guidance thành complimentary consultation before ordering để khách hiểu có thể hỏi về dimensions, finish, layout, fit trước khi mua.
+- FAQ page (/pages/faq): cập nhật production timeline, consultation và bespoke commission answers để nói rõ consultation miễn phí trước khi order, duyệt specification/quote trước production, và final photos/video trước packing.
+- Homepage (/): cập nhật custom order steps thành "Approve, Craft & Confirm" và "Pack & Ship"; cập nhật Private Styling Consultation để nhấn mạnh complimentary consultation before ordering và final photos/video confirmation before packing.
+- Homepage FAQ snapshot (/): cập nhật câu made-to-order để nói rõ gửi final photos/video trước packing; đồng thời sửa nốt các câu shipping còn sót từ United States sang eligible destinations/address worldwide.
+- Customization page (/pages/customization): cập nhật FAQ pricing/timeline/delivery và default process copy để nói rõ complimentary consultation, final photos/video confirmation, và delivery/specialized services được confirm riêng bằng văn bản.
+- Custom consultation section default: cập nhật description và benefit copy để nêu rõ consultation miễn phí trước khi order và support tới final confirmation.
+
+Đã validate JSON/JSONC cho templates/product.json, templates/index.json, templates/page.faq.json, templates/page.customization.json và section schemas cho sections/customization-process.liquid, sections/customization-consultation.liquid. Không chạy shopify theme check theo yêu cầu. Không chạy Playwright vì point này chỉ là minor copy/content sync, không tạo UI mới hoặc sửa layout/UI đáng kể.
+```
 
 ## 5. Bằng chứng đơn hàng thật / case study
 
