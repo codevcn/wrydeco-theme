@@ -283,6 +283,8 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+    -webkit-user-drag: none;
+    user-drag: none;
   }
 
   .workshop-evidence__play {
@@ -302,8 +304,8 @@
     cursor: pointer;
     transform: translate(-50%, -50%);
     transition:
-      opacity var(--duration-default) var(--ease-out),
-      transform var(--duration-default) var(--ease-out);
+      opacity var(--timing-base) var(--ease-out),
+      transform var(--timing-base) var(--ease-out);
   }
 
   .workshop-evidence__video-card.is-playing .workshop-evidence__play {
@@ -338,8 +340,8 @@
     pointer-events: none;
     visibility: hidden;
     transition:
-      opacity var(--duration-default) var(--ease-out),
-      visibility var(--duration-default) var(--ease-out);
+      opacity var(--timing-base) var(--ease-out),
+      visibility var(--timing-base) var(--ease-out);
   }
 
   .workshop-evidence__package-slide.is-active {
@@ -353,6 +355,8 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+    -webkit-user-drag: none;
+    user-drag: none;
   }
 
   .workshop-evidence__package-nav {
@@ -446,9 +450,13 @@
     position: fixed;
     inset: 0;
     z-index: 9999;
-    display: none;
+    display: grid;
     place-items: center;
     padding: var(--sp-6);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity var(--timing-base) var(--ease-out), visibility var(--timing-base) var(--ease-out);
   }
 
   html.workshop-evidence-lightbox-open {
@@ -456,7 +464,9 @@
   }
 
   .workshop-evidence__lightbox.is-open {
-    display: grid;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
   }
 
   .workshop-evidence__lightbox-backdrop {
@@ -470,6 +480,14 @@
     position: relative;
     z-index: 1;
     width: min(100%, 980px);
+    opacity: 0;
+    transform: scale(0.96) translateY(12px);
+    transition: opacity var(--timing-base) var(--ease-out), transform var(--timing-base) var(--ease-out);
+  }
+  
+  .workshop-evidence__lightbox.is-open .workshop-evidence__lightbox-dialog {
+    opacity: 1;
+    transform: scale(1) translateY(0);
   }
 
   .workshop-evidence__lightbox-image {
@@ -504,43 +522,89 @@
     height: 58%;
   }
 
-  @media screen and (max-width: 1180px) {
+  @media screen and (max-width: 1199px) {
     .workshop-evidence {
       padding-inline: var(--layout-padding-tablet);
     }
 
     .workshop-evidence__media-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: var(--sp-3);
     }
 
-    .workshop-evidence__packaging {
-      grid-column: 1 / -1;
-      max-width: 560px;
-      width: 100%;
-      margin-inline: auto;
+    .workshop-evidence__caption {
+      margin-block-start: var(--sp-3);
+      font-size: clamp(var(--font-size-body-sm), 1.2vw, var(--font-size-body-md));
+      gap: var(--sp-2);
+    }
+
+    .workshop-evidence__caption-icon {
+      width: var(--sp-6);
+    }
+    
+    .workshop-evidence__play {
+      width: clamp(var(--sp-7), 4vw, var(--sp-9));
     }
   }
 
-  @media screen and (max-width: 720px) {
+  @media screen and (max-width: 767px) {
     .workshop-evidence {
-      padding: var(--sp-7) var(--layout-padding-mobile) var(--sp-6);
+      padding: var(--sp-7) 0 var(--sp-6);
     }
 
     .workshop-evidence__media-grid {
-      grid-template-columns: minmax(0, 1fr);
-      gap: var(--sp-6);
+      display: flex;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      scroll-snap-type: x proximity;
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      gap: var(--sp-4);
+      padding-inline: var(--layout-padding-mobile);
+      scroll-padding-inline: var(--layout-padding-mobile);
+      cursor: grab;
+    }
+    
+    .workshop-evidence__media-grid.is-dragging {
+      cursor: grabbing;
+      user-select: none;
+      scroll-snap-type: none;
+      scroll-behavior: auto;
+    }
+
+    .workshop-evidence__media-grid::-webkit-scrollbar {
+      display: none;
+    }
+
+    .workshop-evidence__video-card,
+    .workshop-evidence__packaging {
+      flex: 0 0 auto;
+      width: clamp(270px, 78vw, 360px);
+      scroll-snap-align: start;
     }
 
     .workshop-evidence__video-frame,
     .workshop-evidence__package-frame {
       aspect-ratio: 4 / 5;
-      border-radius: var(--radius-lg);
+      border-radius: 14px;
+    }
+    
+    .workshop-evidence__package-frame {
+      touch-action: pan-y;
     }
 
     .workshop-evidence__caption {
-      justify-content: flex-start;
+      justify-content: center;
       margin-inline: auto;
-      max-width: 360px;
+      max-width: 100%;
+      margin-block-start: 16px;
+      font-size: var(--font-size-body-lg);
+      gap: 12px;
+    }
+
+    .workshop-evidence__caption-icon {
+      width: var(--sp-8);
     }
 
     .workshop-evidence__package-nav--prev {
@@ -618,10 +682,17 @@
       if (!lightbox) return;
 
       var image = lightbox.querySelector('[data-workshop-lightbox-image]');
-      if (image) image.removeAttribute('src');
       lightbox.classList.remove('is-open');
       lightbox.setAttribute('aria-hidden', 'true');
       document.documentElement.classList.remove('workshop-evidence-lightbox-open');
+
+      if (image) {
+        setTimeout(function() {
+          if (!lightbox.classList.contains('is-open')) {
+            image.removeAttribute('src');
+          }
+        }, 300);
+      }
 
       if (activeLightbox === lightbox) activeLightbox = null;
     }
@@ -677,6 +748,69 @@
       if (closeButton) {
         closeLightbox(closeButton.closest('[data-workshop-lightbox]'));
       }
+    });
+
+    var touchStartX = 0;
+    var touchEndX = 0;
+    document.addEventListener('touchstart', function(e) {
+      var track = e.target.closest('[data-workshop-package-track]');
+      if (track && e.changedTouches && e.changedTouches.length > 0) {
+        touchStartX = e.changedTouches[0].screenX;
+      }
+    }, {passive: true});
+
+    document.addEventListener('touchend', function(e) {
+      var packaging = e.target.closest('[data-workshop-packaging]');
+      if (packaging && e.changedTouches && e.changedTouches.length > 0) {
+        touchEndX = e.changedTouches[0].screenX;
+        var diff = touchStartX - touchEndX;
+        if (Math.abs(diff) > 40) {
+          var currentIndex = Number(packaging.dataset.workshopPackageIndex || 0);
+          if (diff > 0) {
+            setPackageIndex(packaging, currentIndex + 1);
+          } else {
+            setPackageIndex(packaging, currentIndex - 1);
+          }
+        }
+      }
+    }, {passive: true});
+
+    document.addEventListener('dragstart', function(e) {
+      if (e.target.closest('.workshop-evidence__video') || e.target.closest('.workshop-evidence__package-slide img')) {
+        e.preventDefault();
+      }
+    });
+
+    document.querySelectorAll('.workshop-evidence__media-grid').forEach(function(slider) {
+      var isDown = false;
+      var startX;
+      var scrollLeft;
+
+      slider.addEventListener('mousedown', function(e) {
+        // Prevent drag on packaging controls
+        if (e.target.closest('.workshop-evidence__package-nav') || e.target.closest('.workshop-evidence__package-dot')) {
+          return;
+        }
+        isDown = true;
+        slider.classList.add('is-dragging');
+        startX = e.pageX - slider.offsetLeft;
+        scrollLeft = slider.scrollLeft;
+      });
+      slider.addEventListener('mouseleave', function() {
+        isDown = false;
+        slider.classList.remove('is-dragging');
+      });
+      slider.addEventListener('mouseup', function() {
+        isDown = false;
+        slider.classList.remove('is-dragging');
+      });
+      slider.addEventListener('mousemove', function(e) {
+        if (!isDown) return;
+        e.preventDefault();
+        var x = e.pageX - slider.offsetLeft;
+        var walk = (x - startX) * 2;
+        slider.scrollLeft = scrollLeft - walk;
+      });
     });
 
     document.addEventListener('keydown', function (event) {

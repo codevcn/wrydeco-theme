@@ -10,8 +10,14 @@
 {% enddoc %}
 
 {% style %}
+  .product-guidance-wrapper {
+    container-type: inline-size;
+    container-name: guidance;
+    width: 100%;
+  }
   .product-guidance {
-    display: flex;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
     gap: var(--sp-4);
     padding: var(--sp-4) var(--sp-5);
@@ -31,7 +37,6 @@
     border: 0;
   }
   .product-guidance__icon {
-    flex: 0 0 auto;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -46,7 +51,6 @@
     height: 26px;
   }
   .product-guidance__content {
-    flex: 1 1 auto;
     min-width: 0;
     display: flex;
     flex-direction: column;
@@ -68,7 +72,6 @@
     color: var(--text-secondary);
   }
   .product-guidance__cta {
-    flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
     gap: var(--sp-2);
@@ -84,7 +87,7 @@
     color: var(--color-clay);
     cursor: pointer;
     transition: color var(--timing-short) var(--ease-standard);
-    margin-left: var(--sp-2);
+    white-space: nowrap;
   }
   .product-guidance__cta:hover {
     color: var(--color-charcoal);
@@ -94,29 +97,43 @@
     height: 16px;
   }
 
-  @media screen and (max-width: 768px) {
+  @container guidance (max-width: 600px) {
     .product-guidance {
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 5px;
+      grid-template-columns: auto minmax(0, 1fr);
+      row-gap: var(--sp-3);
     }
     .product-guidance__cta {
-      width: 100%;
-      justify-content: flex-start;
-      padding-left: calc(48px + var(--sp-4));
+      grid-column: 1 / -1;
+      justify-self: center;
+    }
+  }
+
+  @container guidance (max-width: 480px) {
+    .product-guidance {
+      padding: var(--sp-4);
+      gap: var(--sp-3);
     }
     .product-guidance__content {
-      margin-top: 5px;
+      display: contents;
     }
     .product-guidance__title {
-      text-align: center;
+      grid-column: 2;
+      align-self: center;
     }
     .product-guidance__desc {
-      text-align: center;
+      grid-column: 1 / -1;
+    }
+    .product-guidance__cta {
+      grid-column: 1 / -1;
+      width: 100%;
+      justify-content: space-between;
+      padding-top: var(--sp-3);
+      border-top: 1px solid #33333329;
     }
   }
 {% endstyle %}
 
+<div class="product-guidance-wrapper">
 <div class="product-guidance">
   {% comment %} Hidden field keeps the consultation line-item property on the product form {% endcomment %}
   <input
@@ -165,4 +182,5 @@
       <polyline points="12 5 19 12 12 19"></polyline>
     </svg>
   </a>
+</div>
 </div>
