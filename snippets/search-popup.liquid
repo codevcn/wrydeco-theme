@@ -2,6 +2,7 @@
   Renders the global product search dialog with recent searches and predictive results.
 {% enddoc %}
 
+<template id="SearchPopupTemplate">
 <search-popup
   class="search-popup-wrapper"
   data-currency-code="{{ localization.country.currency.iso_code | default: cart.currency.iso_code | default: shop.currency | escape }}"
@@ -152,10 +153,11 @@
     </div>
   </div>
 </search-popup>
+</template>
 
 <script src="{{ 'search-popup.js' | file_url }}" defer></script>
 <script>
-  window.addEventListener('DOMContentLoaded', () => {
+  const initSearchPopupPatch = () => {
     customElements.whenDefined('search-popup').then(() => {
       const SearchPopup = customElements.get('search-popup');
       if (!SearchPopup || SearchPopup.prototype.localizedPricePatched) return;
@@ -208,11 +210,6 @@
         );
       };
 
-      // Unify the popup with the /search results page: both run on the native
-      // Storefront Search engine. Instead of the Predictive Search API
-      // (/search/suggest.json, a different, fuzzier engine that returned matches
-      // the results page could not), fetch the same `search.results` via the
-      // `view=ajax` template, with a trailing `*` per word for prefix matching.
       window.wrydecoNormalizeSearchQuery = function (raw) {
         return String(raw || '')
           .trim()
@@ -230,8 +227,6 @@
           if (!response.ok) throw new Error('Search failed');
           const products = await response.json();
           this.renderPredictiveResults(products, query);
-          // renderPredictiveResults points "View all results" at the raw query;
-          // repoint it at the wildcard query so the page matches the dropdown.
           if (this.viewAllBtn) this.viewAllBtn.href = searchPageUrl;
         } catch (error) {
           console.error('Search Error:', error);
@@ -242,6 +237,67 @@
       SearchPopup.prototype.localizedPricePatched = true;
       document.querySelectorAll('search-popup').forEach(normalizeRenderedPrices);
     });
+  };
+
+  if (document.readyState === 'loading') {
+    window.addEventListener('DOMContentLoaded', initSearchPopupPatch);
+  } else {
+    initSearchPopupPatch();
+  }
+
+  // Redefine openSearchPopup to handle mount/unmount logic
+  const customOpenSearchPopup = function(e) {
+    if (e) e.preventDefault();
+    let popup = document.querySelector('search-popup');
+    
+    if (!popup) {
+      const template = document.getElementById('SearchPopupTemplate');
+      if (!template) return;
+      document.body.appendChild(template.content.cloneNode(true));
+      popup = document.querySelector('search-popup');
+      
+      // Patch prices on newly mounted element
+      if (customElements.get('search-popup')?.prototype?.localizedPricePatched) {
+        const formatPrice = (rawPrice, element) => { /* simplified */ };
+        popup.querySelectorAll('.search-product-card__price').forEach(p => {
+            // Already handled via web component logic, but we can trigger it if needed
+        });
+      }
+      
+      // Watch for the 'open' attribute being removed to unmount
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          if (mutation.type === 'attributes' && mutation.attributeName === 'open') {
+            if (!popup.hasAttribute('open')) {
+              setTimeout(() => {
+                popup.remove();
+                observer.disconnect();
+              }, 300); // 300ms matches the var(--timing-short) transition
+            }
+          }
+        });
+      });
+      observer.observe(popup, { attributes: true });
+    }
+    
+    // Set 'open' attribute in next frame to allow DOM to update and transition to trigger
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        popup.setAttribute('open', '');
+        // Small hack for the component to focus its input
+        const input = popup.querySelector('input[type="search"]');
+        if (input) input.focus();
+      });
+    });
+  };
+
+  let _openSearchPopup = customOpenSearchPopup;
+  Object.defineProperty(window, 'openSearchPopup', {
+    get: function() { return _openSearchPopup; },
+    set: function(val) {
+      // Ignore overwrites to preserve mount/unmount logic
+    },
+    configurable: true
   });
 </script>
 

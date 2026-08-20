@@ -164,11 +164,22 @@
     if (window.WrydecoLocalizationPicker) return;
 
     var state = {
+      wrapper: null,
       panel: null,
       activeTrigger: null,
       loadingPromise: null,
       initialized: false,
-      searchTimer: null
+      searchTimer: null,
+      items: [],
+      filteredItems: [],
+      scrollContainer: null,
+      listContainer: null,
+      spacer: null,
+      empty: null,
+      itemHeight: 52, // initial guess
+      startIndex: -1,
+      endIndex: -1,
+      buffer: 10
     };
 
     function getPanelUrl() {
@@ -184,24 +195,75 @@
       });
     }
 
+    function buildItemHTML(item, top) {
+      var searchHay = (item.name + ' ' + item.currency_iso + ' ' + item.currency_symbol).toLowerCase();
+      var isSelectedClass = item.is_selected ? ' is-selected' : '';
+      var ariaCurrent = item.is_selected ? ' aria-current="true"' : '';
+      var flagCode = item.iso_code.toLowerCase();
+      
+      return '<li class="loc-picker__item" style="position: absolute; top: ' + top + 'px; left: 0; right: 0;" data-search="' + searchHay + '">' +
+        '<button type="submit" name="country_code" value="' + item.iso_code + '" class="loc-picker__option' + isSelectedClass + '"' + ariaCurrent + '>' +
+          '<span class="loc-picker__flag"><img src="https://flagcdn.com/' + flagCode + '.svg" width="40" height="28" loading="lazy" alt=""></span>' +
+          '<span class="loc-picker__code">' + item.currency_iso + '</span>' +
+          '<span class="loc-picker__symbol">' + item.currency_symbol + '</span>' +
+          '<span class="loc-picker__divider" aria-hidden="true"></span>' +
+          '<span class="loc-picker__name">' + item.name + '</span>' +
+          '<span class="loc-picker__check" aria-hidden="true">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">' +
+              '<polyline points="20 6 9 17 4 12"></polyline>' +
+            '</svg>' +
+          '</span>' +
+        '</button>' +
+      '</li>';
+    }
+
+    function renderVirtualList(force) {
+      if (!state.scrollContainer || !state.listContainer) return;
+      var scrollTop = state.scrollContainer.scrollTop;
+      var containerHeight = state.scrollContainer.clientHeight || 440;
+      var totalHeight = state.filteredItems.length * state.itemHeight;
+      if (state.spacer) state.spacer.style.height = totalHeight + 'px';
+
+      var newStartIndex = Math.floor(scrollTop / state.itemHeight) - state.buffer;
+      var newEndIndex = Math.ceil((scrollTop + containerHeight) / state.itemHeight) + state.buffer;
+
+      newStartIndex = Math.max(0, newStartIndex);
+      newEndIndex = Math.min(state.filteredItems.length - 1, newEndIndex);
+
+      if (!force && newStartIndex === state.startIndex && newEndIndex === state.endIndex) {
+        return;
+      }
+
+      state.startIndex = newStartIndex;
+      state.endIndex = newEndIndex;
+
+      var html = '';
+      for (var i = state.startIndex; i <= state.endIndex; i++) {
+        html += buildItemHTML(state.filteredItems[i], i * state.itemHeight);
+      }
+      state.listContainer.innerHTML = html;
+    }
+
     function filterItems(query) {
-      if (!state.panel) return;
       var q = (query || '').trim().toLowerCase();
-      var anyVisible = false;
-      state.panel.querySelectorAll('[data-loc-item]').forEach(function (item) {
-        var hay = item.getAttribute('data-search') || '';
-        var match = !q || hay.indexOf(q) !== -1;
-        item.hidden = !match;
-        if (match) anyVisible = true;
+      state.filteredItems = state.items.filter(function(item) {
+        var hay = (item.name + ' ' + item.currency_iso + ' ' + item.currency_symbol).toLowerCase();
+        return !q || hay.indexOf(q) !== -1;
       });
 
-      var empty = state.panel.querySelector('[data-loc-empty]');
-      if (empty) empty.hidden = anyVisible;
+      if (state.empty) {
+        state.empty.hidden = state.filteredItems.length > 0;
+      }
+      
+      state.startIndex = -1; // force re-render
+      if (state.scrollContainer) state.scrollContainer.scrollTop = 0;
+      renderVirtualList(true);
     }
 
     function closePanel(restoreFocus) {
-      if (!state.panel) return;
-      state.panel.hidden = true;
+      if (!state.wrapper) return;
+      state.wrapper.remove(); // Unmount from DOM completely
+      if (state.panel) state.panel.hidden = false;
       setTriggersExpanded(false);
 
       if (restoreFocus && state.activeTrigger) state.activeTrigger.focus();
@@ -214,6 +276,25 @@
 
       var closeButtons = state.panel.querySelectorAll('[data-loc-close]');
       var search = state.panel.querySelector('[data-loc-search]');
+
+      var dataScript = state.panel.querySelector('[data-loc-data]');
+      if (dataScript) {
+        try {
+          state.items = JSON.parse(dataScript.textContent);
+        } catch(e) {
+          state.items = [];
+        }
+      }
+      state.scrollContainer = state.panel.querySelector('[data-loc-scroll-container]');
+      state.listContainer = state.panel.querySelector('[data-loc-list]');
+      state.spacer = state.panel.querySelector('[data-loc-spacer]');
+      state.empty = state.panel.querySelector('[data-loc-empty]');
+
+      if (state.scrollContainer) {
+        state.scrollContainer.addEventListener('scroll', function() {
+          renderVirtualList();
+        });
+      }
 
       closeButtons.forEach(function (button) {
         button.addEventListener('click', function () {
@@ -239,7 +320,7 @@
       });
 
       document.addEventListener('keydown', function (event) {
-        if (!state.panel || state.panel.hidden) return;
+        if (!state.wrapper || !state.wrapper.parentNode) return;
         if (event.key === 'Escape') closePanel(true);
       });
     }
@@ -254,12 +335,12 @@
           return response.text();
         })
         .then(function (html) {
-          var wrapper = document.createElement('div');
-          wrapper.setAttribute('data-loc-panel-root', '');
-          wrapper.innerHTML = html;
-          state.panel = wrapper.querySelector('[data-loc-panel]');
+          state.wrapper = document.createElement('div');
+          state.wrapper.setAttribute('data-loc-panel-root', '');
+          state.wrapper.innerHTML = html;
+          state.panel = state.wrapper.querySelector('[data-loc-panel]');
           if (!state.panel) throw new Error('Localization panel markup was not found.');
-          document.body.appendChild(wrapper);
+          document.body.appendChild(state.wrapper);
           initPanel();
           return state.panel;
         })
@@ -275,21 +356,64 @@
       state.activeTrigger = trigger;
       setTriggersExpanded(true);
 
-      loadPanel()
-        .then(function (panel) {
-          var search = panel.querySelector('[data-loc-search]');
-          panel.hidden = false;
-          filterItems('');
-          if (search) {
-            search.value = '';
-            window.requestAnimationFrame(function () {
-              search.focus({ preventScroll: true });
+      if (state.wrapper) {
+        document.body.appendChild(state.wrapper); // Mount back to DOM
+        state.panel.hidden = false;
+        
+        if (state.items.length > 0 && state.listContainer && state.itemHeight === 52) {
+           state.listContainer.innerHTML = buildItemHTML(state.items[0], 0);
+           var firstChild = state.listContainer.children[0];
+           state.itemHeight = (firstChild && firstChild.offsetHeight) ? firstChild.offsetHeight : 52;
+           state.listContainer.innerHTML = '';
+        }
+
+        filterItems('');
+        var search = state.panel.querySelector('[data-loc-search]');
+        if (search) {
+          search.value = '';
+          window.requestAnimationFrame(function () {
+            search.focus({ preventScroll: true });
+          });
+        }
+        return;
+      }
+
+      // Show skeleton loader immediately
+      var skeleton = document.createElement('div');
+      skeleton.setAttribute('data-loc-panel-root', 'skeleton');
+      skeleton.innerHTML = '<div style="position:fixed; inset:0; z-index:1000; display:flex; align-items:center; justify-content:center; padding: 16px; background: rgba(0,0,0,0.44);"><div style="position:relative; width: min(420px, 100vw - 24px); height: 200px; background: var(--color-milk, #fff); border-radius: 32px; display:flex; align-items:center; justify-content:center; box-shadow: 0 4px 20px rgba(0,0,0,0.1);"><svg style="animation: loc-spin 1s linear infinite; width: 32px; height: 32px; color: var(--color-earth-brown, #6D5E50);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle><path d="M12 2a10 10 0 0 1 10 10" stroke-opacity="0.8"></path></svg><style>@keyframes loc-spin { 100% { transform: rotate(360deg); } }</style></div></div>';
+      document.body.appendChild(skeleton);
+
+      // Wait 2 frames before calling API to ensure UI is not blocked
+      window.requestAnimationFrame(function () {
+        window.requestAnimationFrame(function () {
+          loadPanel()
+            .then(function (panel) {
+              skeleton.remove();
+              panel.hidden = false;
+              
+              if (state.items.length > 0 && state.listContainer && state.itemHeight === 52) {
+                 state.listContainer.innerHTML = buildItemHTML(state.items[0], 0);
+                 var firstChild = state.listContainer.children[0];
+                 state.itemHeight = (firstChild && firstChild.offsetHeight) ? firstChild.offsetHeight : 52;
+                 state.listContainer.innerHTML = '';
+              }
+
+              filterItems('');
+              var search = panel.querySelector('[data-loc-search]');
+              if (search) {
+                search.value = '';
+                window.requestAnimationFrame(function () {
+                  search.focus({ preventScroll: true });
+                });
+              }
+            })
+            .catch(function () {
+              skeleton.remove();
+              closePanel(false);
             });
-          }
-        })
-        .catch(function () {
-          closePanel(false);
         });
+      });
     }
 
     function handleTriggerClick(event) {
@@ -297,7 +421,7 @@
       if (!trigger) return;
 
       event.preventDefault();
-      if (state.panel && !state.panel.hidden && state.activeTrigger === trigger) {
+      if (state.wrapper && state.wrapper.parentNode && state.activeTrigger === trigger) {
         closePanel(true);
         return;
       }

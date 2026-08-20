@@ -38,54 +38,25 @@
 
     {% form 'localization', id: 'LocForm-lazy', class: 'loc-picker__form' %}
       <input type="hidden" name="return_to" value="{{ request.path }}">
-      <ul class="loc-picker__list" data-loc-list>
-        {%- for country in localization.available_countries -%}
-          {%- liquid
-            assign is_selected = false
-            if country.iso_code == localization.country.iso_code
-              assign is_selected = true
-            endif
-            assign search_hay = country.name | append: ' ' | append: country.currency.iso_code | append: ' ' | append: country.currency.symbol | downcase
-          -%}
-          <li class="loc-picker__item" data-loc-item data-search="{{ search_hay | escape }}">
-            <button
-              type="submit"
-              name="country_code"
-              value="{{ country.iso_code }}"
-              class="loc-picker__option{% if is_selected %} is-selected{% endif %}"
-              {% if is_selected %}
-                aria-current="true"
-              {% endif %}
-            >
-              <span class="loc-picker__flag">
-                <img
-                  src="https://flagcdn.com/{{ country.iso_code | downcase }}.svg"
-                  width="40"
-                  height="28"
-                  loading="lazy"
-                  alt=""
-                >
-              </span>
-              <span class="loc-picker__code">{{ country.currency.iso_code }}</span>
-              <span class="loc-picker__symbol">{{ country.currency.symbol }}</span>
-              <span class="loc-picker__divider" aria-hidden="true"></span>
-              <span class="loc-picker__name">{{ country.name }}</span>
-              <span class="loc-picker__check" aria-hidden="true">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="3"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <polyline points="20 6 9 17 4 12"></polyline>
-                </svg>
-              </span>
-            </button>
-          </li>
-        {%- endfor -%}
-      </ul>
+      <script type="application/json" data-loc-data>
+        [
+          {%- for country in localization.available_countries -%}
+            {
+              "iso_code": "{{ country.iso_code }}",
+              "name": {{ country.name | json }},
+              "currency_iso": "{{ country.currency.iso_code }}",
+              "currency_symbol": {{ country.currency.symbol | json }},
+              "is_selected": {% if country.iso_code == localization.country.iso_code %}true{% else %}false{% endif %}
+            }{% unless forloop.last %},{% endunless %}
+          {%- endfor -%}
+        ]
+      </script>
+
+      <div class="loc-picker__list-container" data-loc-scroll-container style="position: relative; max-height: min(440px, calc(100dvh - 220px)); overflow-y: auto;">
+        <div data-loc-spacer style="width: 100%; pointer-events: none;"></div>
+        <ul data-loc-list class="loc-picker__list" style="margin: 0; padding: 0; list-style: none; position: absolute; top: 0; left: 0; right: 0; overflow: visible; max-height: none;">
+        </ul>
+      </div>
       <p class="loc-picker__empty" data-loc-empty hidden>{{ 'general.localization.no_results' | t }}</p>
     {% endform %}
   </div>
@@ -200,21 +171,20 @@
     box-shadow: var(--shadow-focus);
   }
 
-  .loc-picker__list {
+  .loc-picker__list-container {
     max-height: min(440px, calc(100dvh - 220px));
     margin: 0;
     padding: 0;
-    list-style: none;
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: var(--color-clay) transparent;
   }
 
-  .loc-picker__list::-webkit-scrollbar {
+  .loc-picker__list-container::-webkit-scrollbar {
     width: 6px;
   }
 
-  .loc-picker__list::-webkit-scrollbar-thumb {
+  .loc-picker__list-container::-webkit-scrollbar-thumb {
     border-radius: var(--radius-full);
     background: var(--color-clay);
   }
