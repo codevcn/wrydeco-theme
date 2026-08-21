@@ -14,8 +14,8 @@
   }
   .product-buy-buttons__primary {
     display: flex;
-    align-items: flex-end;
-    gap: 16px;
+    flex-direction: column;
+    gap: 12px;
     width: 100%;
   }
   .product-buy-buttons__primary [data-add-to-cart-text] {
@@ -27,6 +27,24 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
+  }
+  .product-buy-buttons__quantity-row {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--sp-4);
+    width: 100%;
+  }
+  .product-buy-buttons__price {
+    margin-left: auto;
+    padding-bottom: 2px;
+    font-family: var(--font-roboto);
+    font-size: var(--font-size-body-2xl);
+    font-weight: var(--font-weight-semibold);
+    line-height: var(--line-height-tight);
+    color: var(--text-primary);
+    text-align: right;
+    white-space: nowrap;
   }
   .quantity-label {
     font-size: 11px;
@@ -84,14 +102,21 @@
   .add-to-cart-wrapper {
     width: 100%;
     border-radius: 8px;
+    padding-bottom: 6px;
+    background-image: linear-gradient(
+      to top,
+      rgba(128, 128, 128, 0.9) 0%,
+      rgba(0, 0, 0, 0.5) 28%,
+      rgba(0, 0, 0, 0) 100%
+    );
   }
   .add-to-cart-wrapper .flat-btn {
     width: 100%;
     color: var(--color-cream);
     border: 1px solid var(--color-earth-brown);
-    transition: background-color 0.2s ease, color 0.2s ease;
+    transition: transform 0.2s ease, background-color 0.2s ease, color 0.2s ease;
     background-color: var(--color-earth-brown);
-    font-weight: 700;
+    font-weight: 500;
   }
   .flat-btn {
     flex: 1;
@@ -100,10 +125,10 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    height: 48px;
+    height: 54px;
     font-family: var(--font-body, inherit);
     font-size: 12px;
-    font-weight: 600;
+    font-weight: 500;
     letter-spacing: 0.15em;
     border: none;
     border-radius: 6px;
@@ -111,15 +136,28 @@
     transition: transform 0.2s ease;
     box-sizing: content-box;
   }
-  .add-to-cart-wrapper:hover .flat-btn,
+  .add-to-cart-wrapper:hover .flat-btn {
+    transform: translateY(-3px);
+  }
   .add-to-cart-wrapper:active .flat-btn {
-    background-color: var(--color-clay);
-    border-color: var(--color-clay);
-    color: var(--color-cream);
+    transform: translateY(3px);
   }
   .flat-btn[disabled] {
     opacity: 0.6;
     cursor: not-allowed;
+  }
+  .product-buy-buttons .spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: var(--radius-full);
+    animation: product-add-to-cart-spinner 0.7s linear infinite;
+  }
+  @keyframes product-add-to-cart-spinner {
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   .flat-btn .btn-icon svg {
@@ -133,6 +171,13 @@
   .custom-buy-it-now-wrapper {
     width: 100%;
     border-radius: var(--radius-lg);
+    padding-bottom: 6px;
+    background-image: linear-gradient(
+      to top,
+      rgba(128, 128, 128, 0.9) 0%,
+      rgba(0, 0, 0, 0.5) 28%,
+      rgba(0, 0, 0, 0) 100%
+    );
   }
   .custom-buy-it-now-btn {
     width: 100%;
@@ -143,10 +188,10 @@
     font-weight: 900;
   }
   .custom-buy-it-now-wrapper:hover .custom-buy-it-now-btn {
-    background-color: var(--color-earth-brown);
+    transform: translateY(-3px);
   }
   .custom-buy-it-now-wrapper:active .custom-buy-it-now-btn {
-    transform: translateY(1px);
+    transform: translateY(3px);
   }
   /* In-button loading state: spinner shown + button locked while the express
      checkout is being triggered (page then navigates to checkout). Keep it
@@ -174,6 +219,7 @@
     }
   }
   @media (prefers-reduced-motion: reduce) {
+    .product-buy-buttons .spinner,
     .custom-buy-it-now-btn__spinner svg {
       animation: none;
     }
@@ -181,6 +227,14 @@
   .shopify-payment-button__button {
     border-radius: 3px !important;
     height: 48px !important;
+  }
+  @media screen and (max-width: 480px) {
+    .product-buy-buttons__quantity-row {
+      gap: var(--sp-3);
+    }
+    .product-buy-buttons__price {
+      font-size: var(--font-size-body-xl);
+    }
   }
 {% endstyle %}
 
@@ -195,44 +249,47 @@
 
   <div class="product-buy-buttons">
     <div class="product-buy-buttons__primary">
-      <div class="quantity-wrapper">
-        <label class="quantity-label">QUANTITY</label>
-        <div class="quantity-input-shell" data-quantity-selector>
-          <button type="button" class="quantity-input__btn" aria-label="Decrease quantity" data-action="decrease">
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
+      <div class="product-buy-buttons__quantity-row">
+        <div class="quantity-wrapper">
+          <label class="quantity-label">QUANTITY</label>
+          <div class="quantity-input-shell" data-quantity-selector>
+            <button type="button" class="quantity-input__btn" aria-label="Decrease quantity" data-action="decrease">
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <line x1="4" y1="12" x2="20" y2="12"></line>
+              </svg>
+            </button>
+            <input
+              type="number"
+              name="quantity"
+              class="quantity-input__input"
+              value="1"
+              min="0"
+              aria-label="Quantity"
             >
-              <line x1="4" y1="12" x2="20" y2="12"></line>
-            </svg>
-          </button>
-          <input
-            type="number"
-            name="quantity"
-            class="quantity-input__input"
-            value="1"
-            min="0"
-            aria-label="Quantity"
-          >
-          <button type="button" class="quantity-input__btn" aria-label="Increase quantity" data-action="increase">
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-            >
-              <line x1="12" y1="4" x2="12" y2="20"></line><line x1="4" y1="12" x2="20" y2="12"></line>
-            </svg>
-          </button>
+            <button type="button" class="quantity-input__btn" aria-label="Increase quantity" data-action="increase">
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <line x1="12" y1="4" x2="12" y2="20"></line><line x1="4" y1="12" x2="20" y2="12"></line>
+              </svg>
+            </button>
+          </div>
         </div>
+        <span class="product-buy-buttons__price" data-regular-price>{{ current_variant.price | money }}</span>
       </div>
 
       <div class="add-to-cart-wrapper">

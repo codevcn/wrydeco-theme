@@ -4,6 +4,7 @@
   @param {product} product - The current product.
   @param {variant} current_variant - The currently selected variant.
   @param {string} section_id - The parent section ID, used to generate a stable form ID.
+  @param {string} [form_id_suffix] - Optional suffix used when rendering this snippet more than once.
 
   @example
   {% render 'shop-pay-installments', product: product, current_variant: current_variant, section_id: section.id %}
@@ -18,6 +19,9 @@
     assign installments_variant = product.variants.first
   endif
   assign installment_form_id = 'ProductInstallmentsForm-' | append: section_id
+  if form_id_suffix != blank
+    assign installment_form_id = installment_form_id | append: '-' | append: form_id_suffix
+  endif
 -%}
 
 {%- if installments_variant != blank -%}

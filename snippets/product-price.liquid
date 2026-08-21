@@ -117,7 +117,7 @@
       }
       container.dataset.priceInit = 'true';
 
-      var regularEl = container.querySelector('[data-regular-price]');
+      var regularEls = document.querySelectorAll('[data-regular-price]');
       var compareEl = container.querySelector('[data-compare-price]');
       var savingsEl = container.querySelector('[data-savings-price]');
 
@@ -126,9 +126,11 @@
       // bar's price mirror keeps working).
       window.updateProductPrice = function (variantId) {
         var data = map[String(variantId)];
-        if (!data || !regularEl) return;
+        if (!data || regularEls.length === 0) return;
 
-        regularEl.textContent = data.price;
+        regularEls.forEach(function (regularEl) {
+          regularEl.textContent = data.price;
+        });
 
         if (data.onSale) {
           container.classList.add('product-price--has-sale');
