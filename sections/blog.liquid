@@ -11,6 +11,30 @@
   assign blog_trust_icons = 'sourcing|artisan|made|truck|warranty|support' | split: '|'
   assign blog_trust_titles = 'Ethical Sourcing|Handcrafted by Artisans|Made to Order|Secure & Insured Delivery|5-Year Warranty|Dedicated Support' | split: '|'
   assign blog_trust_subtitles = "Sustainably harvested wood|Decades of experience|Limited, not mass produced|Special handling available|For structural integrity|We're here for you" | split: '|'
+  assign blog_extra_config = null
+  for config_entry in metaobjects.blog_extra_config.values limit: 1
+    assign blog_extra_config = config_entry
+  endfor
+
+  assign all_blog_handles = blog_extra_config.all_blog_handles.value | default: ''
+  assign all_blog_handle_list = all_blog_handles | split: ','
+  assign show_all_store_articles = false
+  assign blog_editorial_articles_count = blog.articles.size
+
+  if blog.handle == 'news' and all_blog_handles != blank
+    assign show_all_store_articles = true
+    assign blog_editorial_articles_count = 0
+
+    for raw_blog_handle in all_blog_handle_list
+      assign listed_blog_handle = raw_blog_handle | strip
+      if listed_blog_handle != blank
+        assign listed_blog = blogs[listed_blog_handle]
+        if listed_blog != blank
+          assign blog_editorial_articles_count = blog_editorial_articles_count | plus: listed_blog.articles.size
+        endif
+      endif
+    endfor
+  endif
 %}
 
 <div class="blog-editorial" id="BlogEditorial-{{ section.id }}">
@@ -52,21 +76,100 @@
     </div>
   </aside>
 
-  {% paginate blog.articles by 50 %}
-    {% if blog.articles.size > 0 %}
-      <section class="blog-editorial__listing" aria-labelledby="BlogEditorialLatest-{{ section.id }}">
-        <header class="blog-editorial__section-header">
-          <div class="blog-editorial__section-copy">
-            <p class="blog-editorial__journal-label">Journal</p>
-            <h2 id="BlogEditorialLatest-{{ section.id }}">Stories in Solid Wood</h2>
-            <span class="blog-editorial__section-rule" aria-hidden="true"></span>
-            <p class="blog-editorial__section-intro">
-              Journal entries on craftsmanship, design inspiration, and the quiet beauty of handcrafted living.
-            </p>
-          </div>
-        </header>
+  {% if blog_editorial_articles_count > 0 %}
+    <section class="blog-editorial__listing" aria-labelledby="BlogEditorialLatest-{{ section.id }}">
+      <header class="blog-editorial__section-header">
+        <div class="blog-editorial__section-copy">
+          <p class="blog-editorial__journal-label">Journal</p>
+          <h2 id="BlogEditorialLatest-{{ section.id }}">Stories in Solid Wood</h2>
+          <span class="blog-editorial__section-rule" aria-hidden="true"></span>
+          <p class="blog-editorial__section-intro">
+            Journal entries on craftsmanship, design inspiration, and the quiet beauty of handcrafted living.
+          </p>
+        </div>
+      </header>
 
-        <div class="blog-editorial__grid" role="list">
+      <div class="blog-editorial__grid" role="list">
+        {% assign rendered_article_count = 0 %}
+
+        {% if show_all_store_articles %}
+          {% for raw_blog_handle in all_blog_handle_list %}
+            {% liquid
+              assign listed_blog_handle = raw_blog_handle | strip
+              assign listed_blog = null
+              if listed_blog_handle != blank
+                assign listed_blog = blogs[listed_blog_handle]
+              endif
+            %}
+
+            {% if listed_blog != blank and listed_blog.articles.size > 0 %}
+              {% for article in listed_blog.articles %}
+                {% liquid
+                  assign article_excerpt = article.excerpt | strip_html | strip
+                  if article_excerpt == blank
+                    assign article_excerpt = article.content | strip_html | strip | truncatewords: 24
+                  endif
+                  assign article_image_alt = article.image.alt | default: article.title
+                  assign article_image_size = '(max-width: 767px) 100vw, (max-width: 1024px) 100vw, 25vw'
+                  assign is_featured_article = false
+                  if rendered_article_count == 0
+                    assign article_image_size = '(max-width: 1024px) 100vw, 50vw'
+                    assign is_featured_article = true
+                  endif
+                %}
+
+                <article
+                  class="blog-editorial__card{% if is_featured_article %} blog-editorial__card--featured{% endif %}"
+                  role="listitem"
+                >
+                  <a class="blog-editorial__card-media" href="{{ article.url }}" aria-label="{{ article.title | escape }}">
+                    {% if article.image %}
+                      {{
+                        article.image
+                        | image_url: width: 1440
+                        | image_tag:
+                          class: 'blog-editorial__card-image',
+                          loading: 'lazy',
+                          widths: '360, 540, 720, 960, 1200, 1440',
+                          sizes: article_image_size,
+                          alt: article_image_alt
+                      }}
+                    {% else %}
+                      <span class="blog-editorial__card-placeholder" aria-hidden="true"></span>
+                    {% endif %}
+                  </a>
+
+                  <div class="blog-editorial__card-body">
+                    {% if is_featured_article %}
+                      <span class="blog-editorial__featured-label">Featured</span>
+                    {% endif %}
+
+                    <div class="blog-editorial__card-meta">
+                      {{ article.published_at | time_tag: format: 'date' }}
+                      <span aria-hidden="true"></span>
+                      <span>{{ article.author | escape }}</span>
+                    </div>
+
+                    <h2 class="blog-editorial__card-title">
+                      <a href="{{ article.url }}">{{ article.title | escape }}</a>
+                    </h2>
+
+                    {% if article_excerpt != blank %}
+                      <p class="blog-editorial__card-excerpt">{{ article_excerpt }}</p>
+                    {% endif %}
+
+                    <a class="blog-editorial__read-more" href="{{ article.url }}">
+                      <span>Read story</span>
+                      {%- render 'blog-link-arrow' -%}
+                    </a>
+                  </div>
+                </article>
+
+                {% assign rendered_article_count = rendered_article_count | plus: 1 %}
+              {% endfor %}
+            {% endif %}
+          {% endfor %}
+        {% else %}
           {% for article in blog.articles %}
             {% liquid
               assign article_excerpt = article.excerpt | strip_html | strip
@@ -75,13 +178,15 @@
               endif
               assign article_image_alt = article.image.alt | default: article.title
               assign article_image_size = '(max-width: 767px) 100vw, (max-width: 1024px) 100vw, 25vw'
-              if forloop.first
+              assign is_featured_article = false
+              if rendered_article_count == 0
                 assign article_image_size = '(max-width: 1024px) 100vw, 50vw'
+                assign is_featured_article = true
               endif
             %}
 
             <article
-              class="blog-editorial__card{% if forloop.first %} blog-editorial__card--featured{% endif %}"
+              class="blog-editorial__card{% if is_featured_article %} blog-editorial__card--featured{% endif %}"
               role="listitem"
             >
               <a class="blog-editorial__card-media" href="{{ article.url }}" aria-label="{{ article.title | escape }}">
@@ -102,7 +207,7 @@
               </a>
 
               <div class="blog-editorial__card-body">
-                {% if forloop.first %}
+                {% if is_featured_article %}
                   <span class="blog-editorial__featured-label">Featured</span>
                 {% endif %}
 
@@ -116,10 +221,8 @@
                   <a href="{{ article.url }}">{{ article.title | escape }}</a>
                 </h2>
 
-                {% if forloop.first %}
-                  {% if article_excerpt != blank %}
-                    <p class="blog-editorial__card-excerpt">{{ article_excerpt }}</p>
-                  {% endif %}
+                {% if article_excerpt != blank %}
+                  <p class="blog-editorial__card-excerpt">{{ article_excerpt }}</p>
                 {% endif %}
 
                 <a class="blog-editorial__read-more" href="{{ article.url }}">
@@ -128,53 +231,49 @@
                 </a>
               </div>
             </article>
+
+            {% assign rendered_article_count = rendered_article_count | plus: 1 %}
           {% endfor %}
-        </div>
-
-        {% if paginate.pages > 1 %}
-          <nav class="blog-editorial__pagination" aria-label="Blog pagination">
-            {{ paginate | default_pagination }}
-          </nav>
         {% endif %}
-      </section>
-    {% else %}
-      <section class="blog-editorial__empty" aria-labelledby="BlogEditorialEmpty-{{ section.id }}">
-        <div class="blog-editorial__empty-copy">
-          <p class="blog-editorial__eyebrow">Coming Soon</p>
-          <h2 id="BlogEditorialEmpty-{{ section.id }}">The journal is being curated.</h2>
-          <p>
-            We are preparing design stories, material guides, and room notes for homes shaped with lasting woodwork.
-            Until the first entry arrives, explore the pieces and consultation paths that inspire the journal.
-          </p>
-        </div>
+      </div>
+    </section>
+  {% else %}
+    <section class="blog-editorial__empty" aria-labelledby="BlogEditorialEmpty-{{ section.id }}">
+      <div class="blog-editorial__empty-copy">
+        <p class="blog-editorial__eyebrow">Coming Soon</p>
+        <h2 id="BlogEditorialEmpty-{{ section.id }}">The journal is being curated.</h2>
+        <p>
+          We are preparing design stories, material guides, and room notes for homes shaped with lasting woodwork.
+          Until the first entry arrives, explore the pieces and consultation paths that inspire the journal.
+        </p>
+      </div>
 
-        <div class="blog-editorial__empty-actions">
-          <a class="blog-editorial__primary" href="{{ routes.collections_url }}">Explore Collections</a>
-          <a class="blog-editorial__secondary" href="{{ pages['customization'].url | default: routes.root_url }}"
-            >Book Design Guidance</a
-          >
-        </div>
+      <div class="blog-editorial__empty-actions">
+        <a class="blog-editorial__primary" href="{{ routes.collections_url }}">Explore Collections</a>
+        <a class="blog-editorial__secondary" href="{{ pages['customization'].url | default: routes.root_url }}"
+          >Book Design Guidance</a
+        >
+      </div>
 
-        <div class="blog-editorial__empty-notes" aria-label="Upcoming journal themes">
-          <article>
-            <span>01</span>
-            <h3>Material Intelligence</h3>
-            <p>Wood species, finishes, grain character, and care rituals for heirloom pieces.</p>
-          </article>
-          <article>
-            <span>02</span>
-            <h3>Room Studies</h3>
-            <p>Warm interiors with sculptural furniture, balanced proportions, and collected details.</p>
-          </article>
-          <article>
-            <span>03</span>
-            <h3>Custom Guidance</h3>
-            <p>How made-to-order dimensions, finishes, and layouts become deeply personal spaces.</p>
-          </article>
-        </div>
-      </section>
-    {% endif %}
-  {% endpaginate %}
+      <div class="blog-editorial__empty-notes" aria-label="Upcoming journal themes">
+        <article>
+          <span>01</span>
+          <h3>Material Intelligence</h3>
+          <p>Wood species, finishes, grain character, and care rituals for heirloom pieces.</p>
+        </article>
+        <article>
+          <span>02</span>
+          <h3>Room Studies</h3>
+          <p>Warm interiors with sculptural furniture, balanced proportions, and collected details.</p>
+        </article>
+        <article>
+          <span>03</span>
+          <h3>Custom Guidance</h3>
+          <p>How made-to-order dimensions, finishes, and layouts become deeply personal spaces.</p>
+        </article>
+      </div>
+    </section>
+  {% endif %}
 </div>
 
 {% stylesheet %}
@@ -384,7 +483,7 @@
   }
 
   .blog-editorial__listing {
-    width: min(100%, var(--page-max-width));
+    width: min(calc(100% - (var(--container-padding-x) * 2)), var(--page-max-width));
     margin-inline: auto;
     padding-block: var(--sp-10);
   }
@@ -455,7 +554,7 @@
 
   .blog-editorial__grid {
     display: grid;
-    grid-template-columns: repeat(4, minmax(var(--sp-0), 1fr));
+    grid-template-columns: repeat(3, minmax(var(--sp-0), 1fr));
     grid-auto-flow: row;
     gap: var(--sp-5);
   }
@@ -475,8 +574,10 @@
   }
 
   .blog-editorial__card--featured {
-    grid-column: span 2;
-    grid-row: span 2;
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: minmax(var(--sp-0), 1.78fr) minmax(22rem, 0.82fr);
+    min-height: clamp(32rem, 45vw, 54rem);
   }
 
   .blog-editorial__card-media {
@@ -489,7 +590,7 @@
   }
 
   .blog-editorial__card--featured .blog-editorial__card-media {
-    height: var(--blog-featured-media-height);
+    height: 100%;
   }
 
   .blog-editorial__card-image,
@@ -517,27 +618,18 @@
   }
 
   .blog-editorial__card--featured .blog-editorial__card-body {
-    gap: var(--sp-3);
-    padding: var(--sp-5);
+    justify-content: center;
+    gap: var(--sp-5);
+    padding: clamp(var(--sp-7), 5vw, var(--sp-10));
+    background: color-mix(in srgb, var(--surface-elevated) 84%, transparent);
   }
 
   .blog-editorial__featured-label {
-    position: absolute;
-    top: var(--sp-4);
-    right: var(--sp-5);
-    padding: var(--sp-2) var(--sp-4);
-    border-radius: var(--radius-sm);
-    background-color: var(--color-earth-brown);
-    color: var(--color-cream);
-    font-size: var(--font-size-caption);
-    font-weight: var(--font-weight-semibold);
-    letter-spacing: calc(var(--letter-spacing-wide) * 2);
-    line-height: var(--line-height-snug);
-    text-transform: uppercase;
+    display: none;
   }
 
   .blog-editorial__card--featured .blog-editorial__card-meta {
-    padding-right: var(--sp-12);
+    padding-right: 0;
   }
 
   .blog-editorial__card-meta {
@@ -572,7 +664,10 @@
   }
 
   .blog-editorial__card--featured .blog-editorial__card-title {
-    font-size: var(--font-size-body-3xl);
+    font-family: var(--font-roboto);
+    font-size: clamp(var(--font-size-body-4xl), 3vw, var(--font-size-display-lg));
+    font-weight: var(--font-weight-bold);
+    line-height: var(--line-height-tight);
   }
 
   .blog-editorial__card-title a:hover,
@@ -585,9 +680,19 @@
     color: var(--text-secondary);
     font-size: var(--font-size-body-sm);
     line-height: var(--line-height-generous);
+    display: -webkit-box;
+    overflow: hidden;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
     line-clamp: 2;
+  }
+
+  .blog-editorial__card--featured .blog-editorial__card-excerpt {
+    color: var(--text-primary);
+    font-size: var(--font-size-body-lg);
+    line-height: var(--line-height-generous);
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
   }
 
   .blog-editorial__read-more {
@@ -726,7 +831,7 @@
     }
 
     .blog-editorial__grid {
-      grid-template-columns: repeat(2, minmax(var(--sp-0), 1fr));
+      grid-template-columns: repeat(3, minmax(var(--sp-0), 1fr));
       grid-auto-rows: auto;
     }
 
@@ -735,12 +840,12 @@
     }
 
     .blog-editorial__card--featured {
-      grid-column: span 2;
-      grid-row: auto;
+      grid-column: 1 / -1;
+      grid-template-columns: minmax(var(--sp-0), 1.25fr) minmax(18rem, 0.75fr);
+      min-height: 30rem;
     }
 
-    .blog-editorial__card-media,
-    .blog-editorial__card--featured .blog-editorial__card-media {
+    .blog-editorial__card-media {
       height: auto;
     }
 
@@ -752,7 +857,16 @@
 
     .blog-editorial__card--featured .blog-editorial__card-image,
     .blog-editorial__card--featured .blog-editorial__card-placeholder {
-      aspect-ratio: var(--blog-featured-image-ratio);
+      height: 100%;
+      aspect-ratio: auto;
+    }
+
+    .blog-editorial__card--featured .blog-editorial__card-body {
+      padding: var(--sp-6);
+    }
+
+    .blog-editorial__card--featured .blog-editorial__card-title {
+      font-size: clamp(var(--font-size-body-2xl), 3.8vw, var(--font-size-display-md));
     }
 
     .blog-editorial__empty {
@@ -829,7 +943,8 @@
     }
 
     .blog-editorial__grid {
-      grid-template-columns: minmax(var(--sp-0), 1fr);
+      grid-template-columns: repeat(2, minmax(var(--sp-0), 1fr));
+      gap: var(--sp-4);
     }
 
     .blog-editorial__empty-notes {
@@ -837,7 +952,35 @@
     }
 
     .blog-editorial__card--featured {
-      grid-column: span 1;
+      grid-column: 1 / -1;
+      grid-template-columns: minmax(var(--sp-0), 1fr);
+      min-height: 0;
+    }
+
+    .blog-editorial__card--featured .blog-editorial__card-media {
+      height: auto;
+    }
+
+    .blog-editorial__card--featured .blog-editorial__card-image,
+    .blog-editorial__card--featured .blog-editorial__card-placeholder {
+      height: auto;
+      aspect-ratio: var(--blog-featured-image-ratio);
+    }
+
+    .blog-editorial__card--featured .blog-editorial__card-body {
+      padding: var(--sp-4);
+    }
+
+    .blog-editorial__card--featured .blog-editorial__card-title {
+      font-family: var(--font-display);
+      font-size: var(--font-size-body-xl);
+      font-weight: var(--font-weight-regular);
+    }
+
+    .blog-editorial__card--featured .blog-editorial__card-excerpt {
+      font-size: var(--font-size-body-sm);
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
     }
 
     .blog-editorial__card-body,
@@ -864,6 +1007,12 @@
     .blog-editorial__trust-item:nth-child(even) {
       padding-left: var(--sp-4);
       border-left: var(--border-width) solid color-mix(in srgb, var(--color-cream) 24%, transparent);
+    }
+  }
+
+  @media screen and (max-width: 479px) {
+    .blog-editorial__grid {
+      grid-template-columns: minmax(var(--sp-0), 1fr);
     }
   }
 {% endstylesheet %}
