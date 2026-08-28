@@ -2059,7 +2059,58 @@ class CollectionUpdate(BaseModel):
     field: str
     value: str
 
+
+@app.post("/api/collections/{collection_id}/update_rules")
+async def update_collection_rules(collection_id: str, request: Request):
+    form_data = await request.form()
+    rule_columns = form_data.getlist("rule_column[]")
+    rule_relations = form_data.getlist("rule_relation[]")
+    rule_conditions = form_data.getlist("rule_condition[]")
+    rule_match = form_data.get("rule_match", "ALL")
+    
+    rules = []
+    for c, r, v in zip(rule_columns, rule_relations, rule_conditions):
+        if c and r and v:
+            rules.append({"column": c, "relation": r, "condition": v})
+            
+    input_data = {
+        "id": f"gid://shopify/Collection/{collection_id}",
+        "ruleSet": {
+            "appliedDisjunctively": rule_match == "ANY",
+            "rules": rules
+        }
+    }
+    
+    query = '''
+    mutation collectionUpdate($input: CollectionInput!) {
+      collectionUpdate(input: $input) {
+        collection {
+          id
+        }
+        userErrors {
+          field
+          message
+        }
+      }
+    }
+    '''
+    try:
+        response = requests.post(GRAPHQL_URL, json={"query": query, "variables": {"input": input_data}}, headers=HEADERS)
+        response.raise_for_status()
+        res_data = response.json()
+        if "errors" in res_data:
+            return JSONResponse(status_code=400, content={"success": False, "message": str(res_data["errors"])})
+            
+        user_errors = res_data["data"]["collectionUpdate"].get("userErrors", [])
+        if user_errors:
+            return JSONResponse(status_code=400, content={"success": False, "message": user_errors[0]["message"]})
+            
+        return JSONResponse(content={"success": True})
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"success": False, "message": str(e)})
+
 @app.post("/api/collections/{collection_id}/update")
+
 async def update_collection(collection_id: str, data: CollectionUpdate):
     field = data.field
     value = data.value

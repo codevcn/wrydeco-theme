@@ -1,0 +1,65 @@
+{% doc %}
+  Renders one article card for the homepage journal section.
+
+  @param {article} article - The article to render.
+  @param {string} article_link_label - The label for the article CTA.
+  @param {string} fallback_label - The label to use when the article has no tags.
+
+  @example
+  {% render 'home-journal-card', article: article, article_link_label: 'Read Article', fallback_label: 'WRYDECO Journal' %}
+{% enddoc %}
+
+{%- liquid
+  assign article_excerpt = article.excerpt | strip_html | strip
+  if article_excerpt == blank
+    assign article_excerpt = article.content | strip_html | strip
+  endif
+  assign article_excerpt = article_excerpt | truncatewords: 22
+  assign article_image_alt = article.image.alt | default: article.title
+  assign article_label = article.tags | first
+  if article_label == blank
+    assign article_label = fallback_label
+  endif
+-%}
+
+<article class="home-journal__card" role="listitem">
+  <a
+    class="home-journal__media"
+    href="{{ article.url }}"
+    aria-label="{{ article.title | escape }}"
+  >
+    {%- if article.image -%}
+      {{
+        article.image
+        | image_url: width: 1200
+        | image_tag:
+          class: 'home-journal__image',
+          loading: 'lazy',
+          widths: '320, 480, 640, 800, 1000, 1200',
+          sizes: '(max-width: 767px) 44vw, 565px',
+          alt: article_image_alt
+      }}
+    {%- else -%}
+      <span class="home-journal__placeholder" aria-hidden="true"></span>
+    {%- endif -%}
+  </a>
+
+  <div class="home-journal__content">
+    <p class="home-journal__article-label">{{ article_label | escape }}</p>
+    <h3 class="home-journal__article-title">
+      <a href="{{ article.url }}">{{ article.title | escape }}</a>
+    </h3>
+    {%- if article_excerpt != blank -%}
+      <p class="home-journal__excerpt">{{ article_excerpt | escape }}</p>
+    {%- endif -%}
+    <a class="home-journal__article-link" href="{{ article.url }}">
+      <span>{{ article_link_label | escape }}</span>
+      <span class="home-journal__arrow" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 1024 1024">
+          <path d="M0 0h1024v1024H0z" fill="none" />
+          <path fill="currentColor" d="M754.8 480H160a32 32 0 1 0 0 64h594.8L521.3 777.3a32 32 0 0 0 45.4 45.4l288-288a32 32 0 0 0 0-45.4l-288-288a32 32 0 1 0-45.4 45.4z" />
+        </svg>
+      </span>
+    </a>
+  </div>
+</article>

@@ -20,10 +20,18 @@
 <link rel="manifest" href="{{ 'manifest.json' | asset_url }}">
 {% # theme-check-enable MissingAsset %}
 {%- liquid
-  assign og_title = page_title | default: shop.name
+  assign seo_page_title = page_title | default: shop.name
+  assign seo_page_description = page_description
+
+  if request.page_type == 'index'
+    assign seo_page_title = 'WRYDECO | Handcrafted Sculptural Solid Wood Furniture'
+    assign seo_page_description = 'Discover WRYDECO handcrafted solid wood furniture, including sculptural bookshelves, organic tables, beds and distinctive made-to-order designs.'
+  endif
+
+  assign og_title = seo_page_title | default: shop.name
   assign og_url = canonical_url | default: request.origin
   assign og_type = 'website'
-  assign og_description = page_description | default: shop.description | default: shop.name
+  assign og_description = seo_page_description | default: shop.description | default: shop.name
 
   if request.page_type == 'product'
     assign og_type = 'product'
@@ -108,11 +116,11 @@
   and the brand was appended a second time ("… | WRYDECO &ndash; Wrydeco").
 {%- endcomment -%}
 {%- liquid
-  assign page_title_compare = page_title | downcase
+  assign page_title_compare = seo_page_title | downcase
   assign shop_name_compare = shop.name | downcase
 -%}
 <title>
-  {{ page_title }}
+  {{ seo_page_title }}
   {%- if current_tags %} &ndash; tagged "{{ current_tags | join: ', ' }}"{% endif -%}
   {%- if current_page != 1 %} &ndash; Page {{ current_page }}{% endif -%}
   {%- unless page_title_compare contains shop_name_compare %} &ndash; {{ shop.name }}{% endunless -%}
@@ -155,9 +163,64 @@
   content="{{ robots_directive }}"
 >
 
-{% if page_description %}
+{% if seo_page_description %}
   <meta
     name="description"
-    content="{{ page_description | escape }}"
+    content="{{ seo_page_description | escape }}"
   >
 {% endif %}
+
+{%- if request.page_type == 'index' -%}
+  {%- liquid
+    assign schema_home_url = 'https://wrydeco.com/'
+    assign schema_organization_id = schema_home_url | append: '#organization'
+    assign schema_website_id = schema_home_url | append: '#website'
+    assign schema_logo_url = 'store-logo-trans.png' | file_url | prepend: 'https:'
+    assign legal_info = metaobjects.legal_business_info.values | first
+    assign schema_phone = legal_info.phone_number.value | default: '+1 (801) 340-6671'
+    assign schema_email = legal_info.support_email.value | default: 'support@wrydeco.com'
+    assign schema_address = legal_info.business_address.value | default: '1209 MOUNTAIN ROAD PL NE STE R, Albuquerque, NM 87110, United States'
+  -%}
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": {{ schema_organization_id | json }},
+          "name": {{ shop.name | json }},
+          "url": {{ schema_home_url | json }},
+          "logo": {
+            "@type": "ImageObject",
+            "url": {{ schema_logo_url | json }}
+          },
+          "email": {{ schema_email | json }},
+          "telephone": {{ schema_phone | json }},
+          "address": {{ schema_address | json }},
+          "sameAs": [
+            "https://www.pinterest.com/wrydecovip",
+            "https://www.facebook.com/profile.php?id=61591715281987",
+            "https://www.instagram.com/wrydeco/"
+          ]
+        },
+        {
+          "@type": "WebSite",
+          "@id": {{ schema_website_id | json }},
+          "url": {{ schema_home_url | json }},
+          "name": {{ shop.name | json }},
+          "publisher": {
+            "@id": {{ schema_organization_id | json }}
+          },
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": {
+              "@type": "EntryPoint",
+              "urlTemplate": "https://wrydeco.com/search?q={search_term_string}"
+            },
+            "query-input": "required name=search_term_string"
+          }
+        }
+      ]
+    }
+  </script>
+{%- endif -%}

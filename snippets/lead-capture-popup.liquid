@@ -47,6 +47,9 @@
   data-reminder-key="wrydeco_lead_capture_reminder_v1"
   data-subscribed-key="wrydeco_lead_capture_subscribed_v1"
   data-auto-open="{% if request.page_type == 'index' %}true{% else %}false{% endif %}"
+  data-desktop-scroll-threshold="35"
+  data-mobile-scroll-threshold="40"
+  data-dismissed-days="3"
   aria-hidden="true"
   hidden
 >
@@ -1130,6 +1133,10 @@
     var reminderKey = root.dataset.reminderKey;
     var subscribedKey = root.dataset.subscribedKey;
     var autoOpen = root.dataset.autoOpen === 'true';
+    var desktopScrollThreshold = Number(root.dataset.desktopScrollThreshold) || 35;
+    var mobileScrollThreshold = Number(root.dataset.mobileScrollThreshold) || 40;
+    var dismissedDays = Number(root.dataset.dismissedDays) || 3;
+    var dismissalCooldownMs = dismissedDays * 24 * 60 * 60 * 1000;
     var reminder = document.querySelector('[data-lead-capture-reminder]');
     var reminderOpenButton = reminder ? reminder.querySelector('[data-lead-capture-reminder-open]') : null;
     var reminderCloseButton = reminder ? reminder.querySelector('[data-lead-capture-reminder-close]') : null;
@@ -1140,6 +1147,7 @@
     var isSubscribed = false;
     var lastFocusedElement = null;
     var closeTimer = null;
+    var hasQueuedAutoOpen = false;
     var copyResetTimers = new WeakMap();
 
     function getReminderState() {
@@ -1193,15 +1201,19 @@
 
     function hasBeenSeen() {
       try {
-        return window.localStorage.getItem(storageKey) === 'true';
+        var storedValue = window.localStorage.getItem(storageKey);
+        if (!storedValue) return false;
+        var storedTimestamp = Number(storedValue);
+        if (!Number.isFinite(storedTimestamp)) return false;
+        return Date.now() - storedTimestamp < dismissalCooldownMs;
       } catch (error) {
         return false;
       }
     }
 
-    function rememberVisit() {
+    function rememberDismissal() {
       try {
-        window.localStorage.setItem(storageKey, 'true');
+        window.localStorage.setItem(storageKey, String(Date.now()));
       } catch (error) {
         return;
       }
@@ -1238,9 +1250,9 @@
     }
 
     function openPopup(forceOpen) {
+      if (!forceOpen && hasSubscribed()) return;
       if ((!forceOpen && hasBeenSeen()) || isOpen) return;
       window.clearTimeout(closeTimer);
-      rememberVisit();
       isOpen = true;
       if (testToggle) testToggle.setAttribute('aria-expanded', 'true');
       lastFocusedElement = document.activeElement;
@@ -1270,9 +1282,7 @@
       if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') {
         lastFocusedElement.focus({ preventScroll: true });
       }
-      if (getReminderState() !== 'dismissed') {
-        showReminder();
-      }
+      rememberDismissal();
     }
 
     function showSuccess() {
@@ -1494,8 +1504,23 @@
       Boolean(root.querySelector('[data-lead-capture-response-success]')) || redirectedSuccessfully;
     var serverError = root.querySelector('[data-lead-capture-response-error]');
 
-    if (getReminderState() !== 'dismissed') {
-      showReminder();
+    function getScrollThreshold() {
+      return window.matchMedia('(max-width: 48rem)').matches ? mobileScrollThreshold : desktopScrollThreshold;
+    }
+
+    function getScrollProgress() {
+      var scrollable = document.documentElement.scrollHeight - window.innerHeight;
+      if (scrollable <= 0) return 100;
+      return Math.max(0, Math.min(100, (window.scrollY / scrollable) * 100));
+    }
+
+    function maybeOpenFromScroll() {
+      if (!autoOpen || hasQueuedAutoOpen || hasBeenSeen() || hasSubscribed()) return;
+      if (getScrollProgress() < getScrollThreshold()) return;
+      hasQueuedAutoOpen = true;
+      window.removeEventListener('scroll', maybeOpenFromScroll);
+      window.removeEventListener('resize', maybeOpenFromScroll);
+      openPopup();
     }
 
     if (postedSuccessfully) {
@@ -1504,11 +1529,11 @@
     } else if (serverError) {
       setError(serverError.textContent.trim());
       openPopup(true);
-    } else if (autoOpen && !hasBeenSeen()) {
-      var navigationElapsed =
-        window.performance && typeof window.performance.now === 'function' ? window.performance.now() : 0;
-      window.setTimeout(openPopup, Math.max(0, 2000 - navigationElapsed));
-    } else if (getReminderState() !== 'dismissed') {
+    } else if (autoOpen && !hasBeenSeen() && !hasSubscribed()) {
+      window.addEventListener('scroll', maybeOpenFromScroll, { passive: true });
+      window.addEventListener('resize', maybeOpenFromScroll, { passive: true });
+      maybeOpenFromScroll();
+    } else if (!autoOpen && getReminderState() !== 'dismissed') {
       showReminder();
     }
   })();

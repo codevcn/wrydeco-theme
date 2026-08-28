@@ -4,7 +4,6 @@
   @param {string} video_url - The MP4 video URL to render.
   @param {string} [mobile_video_url] - The MP4 video URL to render on phone viewports.
   @param {string} [poster_url] - The poster image URL shown before the video loads.
-  @param {string} [story_label] - The story badge label shown on the video.
   @param {string} [intro] - Supporting copy shown above the video frame.
   @param {string} [eyebrow] - Eyebrow text shown above the video frame.
   @param {string} [heading] - Accessible heading text for the section.
@@ -17,7 +16,6 @@
 {% enddoc %}
 
 {%- liquid
-  assign story_label = story_label | default: 'Behind the Craft'
   assign mobile_video_url = mobile_video_url | default: blank
   assign poster_url = poster_url | default: blank
   assign intro = intro | default: 'Discover how nature, craftsmanship, and thoughtful design come together to shape every Wrydeco piece.'
@@ -30,7 +28,7 @@
 -%}
 
 {%- if video_url != blank or mobile_video_url != blank -%}
-  <section class="welcome-video" aria-labelledby="{{ title_id }}">
+  <section class="welcome-video are-controls-hidden" aria-labelledby="{{ title_id }}">
     <div class="welcome-video__inner">
       <header class="welcome-video__header">
         {%- if eyebrow != blank -%}
@@ -67,26 +65,6 @@
         </video>
 
         <div class="welcome-video__shade" aria-hidden="true"></div>
-
-        {%- if story_label != blank -%}
-          <div class="welcome-video__badge" aria-hidden="true">
-            <span class="welcome-video__badge-icon">
-              <svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24">
-                <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="m15.477 12.89l1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526"/>
-                <circle cx="12" cy="8" r="6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7"/>
-              </svg>
-            </span>
-            <span>{{ story_label | escape }}</span>
-          </div>
-        {%- endif -%}
-
-        <div class="welcome-video__duration" aria-hidden="true">
-          <svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
-            <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6l4 2"/>
-          </svg>
-          <span data-welcome-video-duration>00:00</span>
-        </div>
 
         <button class="welcome-video__center-play" type="button" aria-label="{{ play_label | escape }}" data-welcome-video-toggle>
           <span class="welcome-video__icon welcome-video__icon--play" aria-hidden="true">
@@ -330,55 +308,6 @@
     transition: opacity var(--timing-base, 300ms) var(--ease-standard, ease);
   }
 
-  .welcome-video__badge,
-  .welcome-video__duration {
-    position: absolute;
-    z-index: 4;
-    top: clamp(24px, 1.55vw, 34px);
-    display: inline-flex;
-    align-items: center;
-    min-height: 44px;
-    padding: 0 18px;
-    border: 1px solid rgba(245, 241, 237, 0.11);
-    border-radius: 999px;
-    background: rgba(48, 32, 22, 0.72);
-    color: var(--color-milk, #fff9f1);
-    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.22);
-    backdrop-filter: blur(16px);
-    transition:
-      opacity var(--timing-short, 200ms) var(--ease-standard, ease),
-      visibility var(--timing-short, 200ms) var(--ease-standard, ease);
-  }
-
-  .welcome-video__badge {
-    left: clamp(28px, 2vw, 40px);
-    gap: 10px;
-    font-family: var(--font-body);
-    font-size: 17px;
-    font-weight: var(--font-weight-medium, 500);
-    line-height: 1;
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
-  }
-
-  .welcome-video__badge-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    border: 1px solid currentColor;
-    border-radius: 50%;
-  }
-
-  .welcome-video__duration {
-    right: clamp(28px, 2vw, 40px);
-    gap: 8px;
-    font-family: var(--font-body);
-    font-size: 17px;
-    line-height: 1;
-  }
-
   .welcome-video__center-play {
     position: absolute;
     z-index: 3;
@@ -599,12 +528,6 @@
     pointer-events: none;
   }
 
-  .welcome-video.is-playing .welcome-video__badge,
-  .welcome-video.is-playing .welcome-video__duration {
-    opacity: 0;
-    visibility: hidden;
-  }
-
   .welcome-video.is-playing .welcome-video__shade {
     opacity: 0.54;
   }
@@ -692,14 +615,6 @@
       font-size: 18px;
     }
 
-    .welcome-video__badge,
-    .welcome-video__duration {
-      top: 24px;
-      min-height: 40px;
-      padding: 0 15px;
-      font-size: 15px;
-    }
-
     .welcome-video__controls {
       grid-template-columns: 46px auto minmax(150px, 1fr) 46px minmax(86px, 116px) 46px 46px;
       gap: 10px;
@@ -766,36 +681,6 @@
       margin-top: 12px;
       font-size: 12px;
       line-height: 1.48;
-    }
-
-    .welcome-video__badge,
-    .welcome-video__duration {
-      top: 10px;
-      min-height: 30px;
-      padding: 0 10px;
-      font-size: 11px;
-    }
-
-    .welcome-video__badge {
-      left: 10px;
-      max-width: calc(100% - 104px);
-      gap: 6px;
-    }
-
-    .welcome-video__badge-icon {
-      width: 18px;
-      height: 18px;
-      flex: 0 0 auto;
-    }
-
-    .welcome-video__badge svg,
-    .welcome-video__duration svg {
-      width: 15px;
-      height: 15px;
-    }
-
-    .welcome-video__duration {
-      right: 10px;
     }
 
     .welcome-video__center-play {
@@ -900,15 +785,6 @@
   }
 
   @media screen and (max-width: 380px) {
-    .welcome-video__badge {
-      max-width: calc(100% - 105px);
-      font-size: 11px;
-    }
-
-    .welcome-video__duration {
-      font-size: 11px;
-    }
-
     .welcome-video__time {
       font-size: 13px;
     }
@@ -948,7 +824,6 @@
       const progressRange = section.querySelector('[data-welcome-video-progress]');
       const currentTime = section.querySelector('[data-welcome-video-current]');
       const totalTime = section.querySelector('[data-welcome-video-total]');
-      const durationPill = section.querySelector('[data-welcome-video-duration]');
       const muteButton = section.querySelector('[data-welcome-video-mute]');
       const volumeRange = section.querySelector('[data-welcome-video-volume]');
       const settingsButton = section.querySelector('[data-welcome-video-settings]');
@@ -1028,7 +903,6 @@
 
       const updateDuration = () => {
         if (totalTime) totalTime.textContent = formatTime(video.duration);
-        if (durationPill) durationPill.textContent = formatTime(video.duration, true);
       };
 
       const updateProgress = () => {
@@ -1099,9 +973,6 @@
         if (event.target.closest('[data-welcome-video-controls]')) return;
         if (event.target.closest('[data-welcome-video-toggle]')) return;
         if (event.target.closest('[data-welcome-video-settings-panel]')) return;
-        if (event.target.closest('.welcome-video__badge')) return;
-        if (event.target.closest('.welcome-video__duration')) return;
-
         const shouldStartHiddenPlayback = isCompactViewport() && (video.paused || video.ended);
         if (!shouldStartHiddenPlayback) {
           showControls();
@@ -1235,11 +1106,7 @@
       updateProgress();
       updateMutedState();
       updatePlayState();
-      if (isCompactViewport()) {
-        hideControls(true);
-      } else {
-        showControls();
-      }
+      hideControls(true);
     });
   });
 {% endjavascript %}

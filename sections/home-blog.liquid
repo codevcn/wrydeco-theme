@@ -3,9 +3,38 @@
   if home_blog == blank
     assign home_blog = blogs.news
   endif
+
+  assign blog_extra_config = metaobjects.blog_extra_config.values | first
+  assign homepage_post_handles = ''
+  assign all_blog_handles = ''
+  if blog_extra_config != blank
+    assign homepage_post_handles = blog_extra_config.homepage_post_handles.value | strip
+    assign all_blog_handles = blog_extra_config.all_blog_handles.value | strip
+  endif
+
+  assign has_configured_homepage_posts = false
+  if homepage_post_handles != blank
+    if all_blog_handles != blank
+      assign has_configured_homepage_posts = true
+    endif
+  endif
+
+  assign has_fallback_home_blog = false
+  if home_blog != blank
+    if home_blog.articles.size > 0
+      assign has_fallback_home_blog = true
+    endif
+  endif
+
+  assign should_render_home_journal = false
+  if has_configured_homepage_posts
+    assign should_render_home_journal = true
+  elsif has_fallback_home_blog
+    assign should_render_home_journal = true
+  endif
 -%}
 
-{%- if home_blog != blank and home_blog.articles.size > 0 -%}
+{%- if should_render_home_journal -%}
   <section
     class="home-journal"
     id="HomeJournal-{{ section.id }}"
@@ -30,62 +59,54 @@
       </header>
 
       <div class="home-journal__list" role="list">
-        {%- for article in home_blog.articles limit: 4 -%}
+        {%- liquid
+          assign rendered_article_count = 0
+        -%}
+
+        {%- if has_configured_homepage_posts -%}
           {%- liquid
-            assign article_excerpt = article.excerpt | strip_html | strip
-            if article_excerpt == blank
-              assign article_excerpt = article.content | strip_html | strip
-            endif
-            assign article_excerpt = article_excerpt | truncatewords: 22
-            assign article_image_alt = article.image.alt | default: article.title
-            assign article_label = article.tags | first
-            if article_label == blank
-              assign article_label = section.settings.fallback_label
-            endif
+            assign configured_post_handles = homepage_post_handles | split: ','
+            assign configured_blog_handles = all_blog_handles | split: ','
           -%}
 
-          <article class="home-journal__card" role="listitem">
-            <a
-              class="home-journal__media"
-              href="{{ article.url }}"
-              aria-label="{{ article.title | escape }}"
-            >
-              {%- if article.image -%}
-                {{
-                  article.image
-                  | image_url: width: 1200
-                  | image_tag:
-                    class: 'home-journal__image',
-                    loading: 'lazy',
-                    widths: '320, 480, 640, 800, 1000, 1200',
-                    sizes: '(max-width: 767px) 44vw, 565px',
-                    alt: article_image_alt
-                }}
-              {%- else -%}
-                <span class="home-journal__placeholder" aria-hidden="true"></span>
-              {%- endif -%}
-            </a>
+          {%- for post_handle_raw in configured_post_handles limit: 4 -%}
+            {%- liquid
+              assign post_handle = post_handle_raw | strip
+            -%}
 
-            <div class="home-journal__content">
-              <p class="home-journal__article-label">{{ article_label | escape }}</p>
-              <h3 class="home-journal__article-title">
-                <a href="{{ article.url }}">{{ article.title | escape }}</a>
-              </h3>
-              {%- if article_excerpt != blank -%}
-                <p class="home-journal__excerpt">{{ article_excerpt | escape }}</p>
-              {%- endif -%}
-              <a class="home-journal__article-link" href="{{ article.url }}">
-                <span>{{ section.settings.article_link_label | escape }}</span>
-                <span class="home-journal__arrow" aria-hidden="true">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 1024 1024">
-                    <path d="M0 0h1024v1024H0z" fill="none" />
-                    <path fill="currentColor" d="M754.8 480H160a32 32 0 1 0 0 64h594.8L521.3 777.3a32 32 0 0 0 45.4 45.4l288-288a32 32 0 0 0 0-45.4l-288-288a32 32 0 1 0-45.4 45.4z" />
-                  </svg>
-                </span>
-              </a>
-            </div>
-          </article>
-        {%- endfor -%}
+            {%- if post_handle != blank -%}
+              {%- for blog_handle_raw in configured_blog_handles -%}
+                {%- liquid
+                  assign blog_handle = blog_handle_raw | strip
+                  assign article_lookup_key = blog_handle | append: '/' | append: post_handle
+                  assign configured_article = articles[article_lookup_key]
+                -%}
+
+                {%- if configured_article != blank -%}
+                  {%- render 'home-journal-card',
+                    article: configured_article,
+                    article_link_label: section.settings.article_link_label,
+                    fallback_label: section.settings.fallback_label
+                  -%}
+                  {%- liquid
+                    assign rendered_article_count = rendered_article_count | plus: 1
+                  -%}
+                  {%- break -%}
+                {%- endif -%}
+              {%- endfor -%}
+            {%- endif -%}
+          {%- endfor -%}
+        {%- endif -%}
+
+        {%- if rendered_article_count == 0 -%}
+          {%- for article in home_blog.articles limit: 4 -%}
+            {%- render 'home-journal-card',
+              article: article,
+              article_link_label: section.settings.article_link_label,
+              fallback_label: section.settings.fallback_label
+            -%}
+          {%- endfor -%}
+        {%- endif -%}
       </div>
 
       <a class="home-journal__view-all styling__btn" href="{{ home_blog.url }}">
