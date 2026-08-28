@@ -46,11 +46,16 @@
     </header>
 
     <main class="mx-auto p-4 sm:p-8">
-        <div class="flex items-center gap-4 mb-8">
-            <h1 class="text-3xl font-bold text-gray-800 tracking-tight">Danh sách Collections</h1>
-            <div class="bg-indigo-100 text-indigo-700 text-sm font-bold px-3 py-1 rounded-full shadow-sm flex items-center justify-center min-w-[2.5rem]">
-                {{ total_count }}
+        <div class="flex items-center justify-between mb-8 w-full">
+            <div class="flex items-center gap-4">
+                <h1 class="text-3xl font-bold text-gray-800 tracking-tight">Danh sách Collections</h1>
+                <div class="bg-indigo-100 text-indigo-700 text-sm font-bold px-3 py-1 rounded-full shadow-sm flex items-center justify-center min-w-[2.5rem]">
+                    {{ total_count }}
+                </div>
             </div>
+            <button onclick="openCreateCollectionPopup()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-5 rounded-xl shadow-md transition-all flex items-center gap-2">
+                <iconify-icon icon="mdi:plus-thick"></iconify-icon> Tạo Collection
+            </button>
         </div>
         
         <!-- Controls -->
@@ -67,13 +72,18 @@
                 </div>
                 
                 <div class="flex items-center gap-3">
-                    <label class="text-sm font-semibold text-gray-700 whitespace-nowrap">Lọc theo SP:</label>
+                    <label class="text-sm font-semibold text-gray-700 whitespace-nowrap">Lọc theo:</label>
                     <select name="filter_mode" onchange="document.getElementById('filter-form').submit()" class="bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5 outline-none transition-colors cursor-pointer hover:border-gray-300">
                         <option value="all" {% if filter_mode == 'all' %}selected{% endif %}>Tất cả Collection</option>
                         <option value="not_empty" {% if filter_mode == 'not_empty' %}selected{% endif %}>Đang có SP (≥ 1 SP)</option>
                         <option value="empty" {% if filter_mode == 'empty' %}selected{% endif %}>Trống (0 SP)</option>
+                        <option value="published" {% if filter_mode == 'published' %}selected{% endif %}>Đã publish lên Online Store</option>
+                        <option value="unpublished" {% if filter_mode == 'unpublished' %}selected{% endif %}>Chưa publish lên Online Store</option>
                     </select>
                 </div>
+                <a href="/collections" class="whitespace-nowrap px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors border border-red-600 flex items-center justify-center">
+                    Xóa bộ lọc
+                </a>
             </form>
         </div>
         
@@ -86,9 +96,9 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {% for collection in collections %}
             <div class="bg-white rounded-xl shadow-sm hover:shadow-md border border-gray-100 overflow-hidden flex flex-col transition-all duration-300 hover:-translate-y-1">
-                <div class="h-48 w-full bg-gray-100 relative overflow-hidden">
+                <a href="/collections/{{ collection.id }}" target="_blank" rel="noopener noreferrer" class="block h-48 w-full bg-gray-100 relative overflow-hidden group">
                     {% if collection.image %}
-                    <img src="{{ collection.image }}" class="w-full h-full object-cover" alt="Collection Image">
+                    <img src="{{ collection.image }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" alt="Collection Image">
                     {% else %}
                     <div class="w-full h-full flex items-center justify-center text-gray-400">
                         <svg class="w-12 h-12 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
@@ -99,14 +109,30 @@
                         <svg class="w-3.5 h-3.5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
                         {{ collection.products_count }} SP
                     </div>
-                </div>
+                </a>
                 
                 <div class="p-5 flex flex-col flex-grow">
-                    <h2 class="text-lg font-bold text-gray-900 mb-1 line-clamp-1">{{ collection.title }}</h2>
+                    <a href="/collections/{{ collection.id }}" target="_blank" rel="noopener noreferrer" class="hover:text-indigo-600 transition-colors">
+                        <h2 class="text-lg font-bold text-gray-900 mb-1 line-clamp-1 hover:text-indigo-600 transition-colors">{{ collection.title }}</h2>
+                    </a>
                     <p class="text-xs font-mono text-indigo-600 mb-3 bg-indigo-50 px-2 py-0.5 rounded inline-block self-start">{{ collection.handle }}</p>
                     
                     <div class="text-sm text-gray-600 line-clamp-3 mb-4 prose prose-sm flex-grow">
                         {{ collection.description | safe if collection.description else '<span class="italic text-gray-400">Không có mô tả</span>'|safe }}
+                    </div>
+                    
+                    <div class="flex flex-col gap-2 mt-auto border-t border-gray-100 pt-3">
+                        <a href="https://admin.shopify.com/store/wrydeco/collections/{{ collection.id }}" target="_blank" rel="noopener noreferrer" class="text-xs font-medium text-center text-gray-700 bg-gray-100 hover:bg-gray-200 py-1.5 rounded transition-colors">
+                            Admin Shopify
+                        </a>
+                        <div class="grid grid-cols-2 gap-2">
+                            <a href="https://wrydeco.myshopify.com/collections/{{ collection.handle }}" target="_blank" rel="noopener noreferrer" class="text-xs font-medium text-center text-blue-700 bg-blue-50 hover:bg-blue-100 py-1.5 rounded transition-colors">
+                                Store Dev
+                            </a>
+                            <a href="https://wrydeco.com/collections/{{ collection.handle }}" target="_blank" rel="noopener noreferrer" class="text-xs font-medium text-center text-green-700 bg-green-50 hover:bg-green-100 py-1.5 rounded transition-colors">
+                                Store Real
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -148,6 +174,235 @@
 
         window.addEventListener('scroll', toggleScrollButtons);
         window.addEventListener('load', toggleScrollButtons);
+    </script>
+
+    
+    <!-- Lightbox Modal -->
+    <div id="imageLightboxModal" class="fixed inset-0 z-[200] flex items-center justify-center hidden bg-black/80 backdrop-blur-sm" onclick="closeLightbox()">
+        <button class="absolute top-6 right-6 text-white hover:text-gray-300 transition-colors bg-black/50 p-2 rounded-full">
+            <iconify-icon icon="mdi:close" class="text-3xl"></iconify-icon>
+        </button>
+        <img id="lightboxImage" src="" alt="Full size" class="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl" onclick="event.stopPropagation()">
+    </div>
+
+    <!-- Create Collection Modal -->
+    <div id="createCollectionModal" class="fixed inset-0 z-[100] flex items-center justify-center hidden">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeCreateCollectionPopup()"></div>
+        <div class="bg-white rounded-2xl shadow-2xl w-[90%] max-w-2xl max-h-[90vh] z-10 relative flex flex-col overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                    <iconify-icon icon="mdi:folder-plus-outline" class="text-indigo-600 text-xl"></iconify-icon> Tạo Collection Mới
+                </h3>
+                <button onclick="closeCreateCollectionPopup()" class="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-200 transition-colors">
+                    <iconify-icon icon="mdi:close" class="text-xl"></iconify-icon>
+                </button>
+            </div>
+            
+            <div class="p-6 overflow-y-auto" style="max-height: calc(90vh - 140px);">
+                <form id="createCollectionForm" onsubmit="submitCreateCollection(event)" class="space-y-5">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Tên Collection (Title) <span class="text-red-500">*</span></label>
+                        <input type="text" name="title" required class="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5">
+                    </div>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Đường dẫn tĩnh (Handle)</label>
+                            <input type="text" name="handle" placeholder="Auto-generated if empty" class="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Loại Collection</label>
+                            <select name="type" id="collectionType" onchange="toggleRulesSection()" class="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5">
+                                <option value="SMART" selected>Smart / Automated (Tự động)</option>
+                                <option value="MANUAL">Manual (Thủ công)</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div id="rulesSection" class="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100">
+                        <div class="flex items-center justify-between mb-3">
+                            <label class="block text-sm font-semibold text-gray-700">Điều kiện (Rules)</label>
+                            <select name="rule_match" class="text-sm bg-white border border-gray-200 rounded p-1">
+                                <option value="ALL">Tất cả (ALL)</option>
+                                <option value="ANY">Bất kỳ (ANY)</option>
+                            </select>
+                        </div>
+                        <div id="rulesList" class="space-y-2">
+                            <div class="flex gap-2 rule-item">
+                                <select name="rule_column[]" class="w-1/3 bg-white border border-gray-200 text-sm rounded-lg p-2" required>
+                                    <option value="TAG">Product Tag</option>
+                                    <option value="TITLE">Product Title</option>
+                                    <option value="TYPE">Product Type</option>
+                                    <option value="VENDOR">Product Vendor</option>
+                                    <option value="VARIANT_PRICE">Product Price</option>
+                                </select>
+                                <select name="rule_relation[]" class="w-1/3 bg-white border border-gray-200 text-sm rounded-lg p-2" required>
+                                    <option value="EQUALS">Equals</option>
+                                    <option value="NOT_EQUALS">Not Equals</option>
+                                    <option value="CONTAINS">Contains</option>
+                                    <option value="STARTS_WITH">Starts with</option>
+                                    <option value="ENDS_WITH">Ends with</option>
+                                    <option value="GREATER_THAN">Greater than</option>
+                                    <option value="LESS_THAN">Less than</option>
+                                </select>
+                                <input type="text" name="rule_condition[]" placeholder="Value..." required class="w-1/3 bg-white border border-gray-200 text-sm rounded-lg p-2">
+                                <button type="button" onclick="removeRule(this)" class="text-red-500 hover:text-red-700 p-2"><iconify-icon icon="mdi:trash-can-outline"></iconify-icon></button>
+                            </div>
+                        </div>
+                        <button type="button" onclick="addRule()" class="mt-3 text-sm text-indigo-600 font-medium hover:underline flex items-center gap-1">
+                            <iconify-icon icon="mdi:plus-circle-outline"></iconify-icon> Thêm điều kiện
+                        </button>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Mô tả (Description HTML)</label>
+                        <textarea name="description" rows="3" class="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5"></textarea>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Ảnh đại diện (Cover Photo)</label>
+                        <input type="file" name="image" accept="image/*" id="collectionCoverInput" onchange="previewCollectionCover(event)" class="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg p-2">
+                        <div id="collectionCoverPreviewContainer" class="hidden mt-3">
+                            <img id="collectionCoverPreview" src="" alt="Preview" class="max-w-full h-auto max-h-48 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity shadow-sm" onclick="openLightbox(this.src)">
+                            <button type="button" onclick="clearCollectionCover()" class="mt-2 text-xs font-medium text-red-600 hover:text-red-800">Xóa ảnh</button>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">SEO Title</label>
+                            <input type="text" name="seo_title" class="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg p-2.5">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">SEO Description</label>
+                            <input type="text" name="seo_description" class="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg p-2.5">
+                        </div>
+                    </div>
+                    
+                    <div id="createAlert" class="hidden rounded-lg p-3 text-sm font-medium mt-2"></div>
+                </form>
+            </div>
+            
+            <div class="px-6 py-4 border-t border-gray-100 bg-gray-50/80 flex justify-end gap-3 rounded-b-2xl">
+                <button type="button" onclick="closeCreateCollectionPopup()" class="px-5 py-2.5 rounded-xl font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 transition-all shadow-sm">
+                    Hủy
+                </button>
+                <button type="submit" form="createCollectionForm" id="createSubmitBtn" class="px-5 py-2.5 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-all shadow-md">
+                    Tạo mới
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        
+        function previewCollectionCover(event) {
+            const file = event.target.files[0];
+            const container = document.getElementById('collectionCoverPreviewContainer');
+            const preview = document.getElementById('collectionCoverPreview');
+            
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    container.classList.remove('hidden');
+                }
+                reader.readAsDataURL(file);
+            } else {
+                container.classList.add('hidden');
+                preview.src = '';
+            }
+        }
+        
+        function clearCollectionCover() {
+            document.getElementById('collectionCoverInput').value = '';
+            document.getElementById('collectionCoverPreviewContainer').classList.add('hidden');
+            document.getElementById('collectionCoverPreview').src = '';
+        }
+        
+        function openLightbox(src) {
+            document.getElementById('lightboxImage').src = src;
+            document.getElementById('imageLightboxModal').classList.remove('hidden');
+        }
+        
+        function closeLightbox() {
+            document.getElementById('imageLightboxModal').classList.add('hidden');
+            document.getElementById('lightboxImage').src = '';
+        }
+
+        function openCreateCollectionPopup() {
+            document.getElementById('createCollectionModal').classList.remove('hidden');
+        }
+        function closeCreateCollectionPopup() {
+            document.getElementById('createCollectionModal').classList.add('hidden');
+        }
+        function toggleRulesSection() {
+            const type = document.getElementById('collectionType').value;
+            const rulesSection = document.getElementById('rulesSection');
+            if (type === 'SMART') {
+                rulesSection.style.display = 'block';
+                document.querySelectorAll('#rulesList input, #rulesList select').forEach(el => el.required = true);
+            } else {
+                rulesSection.style.display = 'none';
+                document.querySelectorAll('#rulesList input, #rulesList select').forEach(el => el.required = false);
+            }
+        }
+        function addRule() {
+            const list = document.getElementById('rulesList');
+            const first = list.querySelector('.rule-item');
+            if (first) {
+                const clone = first.cloneNode(true);
+                clone.querySelector('input').value = '';
+                list.appendChild(clone);
+            }
+        }
+        function removeRule(btn) {
+            const list = document.getElementById('rulesList');
+            if (list.children.length > 1) {
+                btn.closest('.rule-item').remove();
+            } else {
+                alert("Smart collection cần ít nhất 1 điều kiện.");
+            }
+        }
+        
+        async function submitCreateCollection(e) {
+            e.preventDefault();
+            const btn = document.getElementById('createSubmitBtn');
+            const alertBox = document.getElementById('createAlert');
+            const form = document.getElementById('createCollectionForm');
+            
+            btn.disabled = true;
+            btn.innerHTML = 'Đang xử lý...';
+            alertBox.className = 'hidden mt-2 p-3 rounded-lg text-sm font-medium';
+            
+            const formData = new FormData(form);
+            
+            try {
+                const res = await fetch('/api/collections/create', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    alertBox.className = 'mt-2 p-3 rounded-lg text-sm font-medium bg-green-50 text-green-700 border border-green-200';
+                    alertBox.innerHTML = 'Tạo collection thành công! Đang tải lại...';
+                    setTimeout(() => window.location.reload(), 1000);
+                } else {
+                    alertBox.className = 'mt-2 p-3 rounded-lg text-sm font-medium bg-red-50 text-red-700 border border-red-200';
+                    alertBox.innerHTML = 'Lỗi: ' + data.message;
+                    btn.disabled = false;
+                    btn.innerHTML = 'Tạo mới';
+                }
+            } catch (err) {
+                alertBox.className = 'mt-2 p-3 rounded-lg text-sm font-medium bg-red-50 text-red-700 border border-red-200';
+                alertBox.innerHTML = 'Lỗi kết nối. Vui lòng thử lại.';
+                btn.disabled = false;
+                btn.innerHTML = 'Tạo mới';
+            }
+        }
+
     </script>
 </body>
 </html>

@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="/static/favicon-96x96.png" sizes="96x96" />
+    <title>{{ collection.title if collection else 'Collection Details' }} - Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+    <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        /* Lightbox Custom CSS */
+        #lightbox {
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        #lightbox.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        #lightbox img {
+            transform: scale(0.95);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        #lightbox.active img {
+            transform: scale(1);
+        }
+        .prose img { max-width: 100%; height: auto; border-radius: 0.5rem; }
+        .prose ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1rem; }
+        .prose ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 1rem; }
+        .prose p { margin-bottom: 1rem; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
+        <div class="mx-auto px-4 sm:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo -->
+                <div class="flex-shrink-0">
+                    <a target="_blank" rel="noopener noreferrer" href="/" class="flex items-center gap-2 text-indigo-600 font-bold text-xl hover:text-indigo-700 transition-colors">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                        <span>Shopify Admin Manager</span>
+                    </a>
+                </div>
+                <!-- Nav Links -->
+                <nav class="flex items-center gap-6">
+                    <a target="_blank" rel="noopener noreferrer" href="/" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Sản phẩm</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/collections" class="text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 pb-0.5">Collections</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/create" class="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">Tạo sản phẩm</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/edit-variants" class="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">Sửa hàng loạt</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/notes" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Ghi chú</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/reviews" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Reviews</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/blogs" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path></svg>Blog</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/settings" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>Settings</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="p-4 sm:p-8">
+        <div class="mx-auto">
+            <div class="mb-6 flex items-center gap-4">
+                <a href="/collections" class="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-800 font-medium transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                    Quay lại danh sách Collections
+                </a>
+            </div>
+
+            {% if not collection %}
+            <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-6 rounded-md shadow-sm">
+                <p class="text-sm text-yellow-700 font-medium">Không tìm thấy collection này!</p>
+            </div>
+            {% else %}
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Left column: Main Info & Media & Description -->
+                <div class="lg:col-span-2 space-y-8">
+                    <!-- Header Info -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sm:p-8">
+                        <div class="flex flex-col sm:flex-row justify-between items-start gap-4">
+                            <div>
+                                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">ID: <span class="font-mono">{{ collection.id }}</span></p>
+                                <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 cursor-pointer hover:text-indigo-600 transition-colors group flex items-center gap-2" data-val="{{ collection.title | escape }}" onclick="openInternalEditor('title', this.getAttribute('data-val'), 'Collection Title')" title="Nhấn để chỉnh sửa">
+                                    <span>{{ collection.title }}</span>
+                                    <iconify-icon icon="mdi:pencil-outline" class="text-lg text-gray-400 group-hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition-all"></iconify-icon>
+                                </h1>
+                                <div class="flex flex-wrap items-center gap-2 mt-3">
+                                    <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-100 text-gray-600 text-sm font-medium rounded-full cursor-pointer hover:bg-gray-200 transition-colors group" data-val="{{ collection.handle | escape }}" onclick="openInternalEditor('handle', this.getAttribute('data-val'), 'Collection Handle')" title="Nhấn để chỉnh sửa">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+                                        <span>{{ collection.handle }}</span>
+                                        <iconify-icon icon="mdi:pencil-outline" class="text-lg text-gray-400 group-hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition-all"></iconify-icon>
+                                    </div>
+                                    <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-700 border border-blue-200 text-sm font-medium rounded-full" title="Số lượng sản phẩm">
+                                        <iconify-icon icon="mdi:package-variant-closed"></iconify-icon>
+                                        {{ collection.products_count }} Sản phẩm
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Cover Photo -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sm:p-8">
+                        <div class="flex items-center justify-between mb-4 border-b border-gray-100 pb-3">
+                            <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                                <iconify-icon icon="mdi:image-outline" class="text-indigo-500 text-2xl"></iconify-icon>
+                                Cover Photo
+                            </h2>
+                            <div>
+                                <input type="file" id="cover-photo-input" class="hidden" accept="image/*" onchange="uploadCollectionImage(this)">
+                                <button onclick="document.getElementById('cover-photo-input').click()" class="bg-white hover:bg-gray-50 text-gray-800 hover:text-indigo-600 px-3 py-1.5 rounded-lg text-sm font-bold shadow-sm transition-colors border border-gray-200 flex items-center gap-2">
+                                    <iconify-icon icon="mdi:camera-retake-outline" class="text-lg"></iconify-icon>
+                                    <span id="change-image-text">Đổi ảnh</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="w-full bg-gray-50 flex items-center justify-center border border-gray-200 rounded-lg min-h-[300px] cursor-pointer group relative overflow-hidden" onclick="openLightbox()">
+                            {% if collection.image %}
+                            <img src="{{ collection.image }}" alt="Cover" class="w-full h-auto max-h-[500px] object-cover group-hover:scale-105 transition-transform duration-300" id="coverImage">
+                            <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300"></div>
+                            {% else %}
+                            <div class="text-gray-400 flex flex-col items-center group-hover:text-gray-500 transition-colors" id="coverImage">
+                                <svg class="w-16 h-16 opacity-60 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                <span class="text-sm font-medium">No Image</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Match Conditions -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sm:p-8">
+                        <h2 class="text-xl font-bold text-gray-800 mb-4 border-b border-gray-100 pb-3 flex items-center gap-2">
+                            <iconify-icon icon="mdi:filter-variant" class="text-yellow-500 text-2xl"></iconify-icon>
+                            Điều kiện Match (Rules)
+                        </h2>
+                        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                            {% if collection.rules_data.is_manual %}
+                                <div class="inline-block bg-gray-800 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-sm">
+                                    Manual collection (Thêm sản phẩm thủ công)
+                                </div>
+                            {% else %}
+                                {% if collection.rules_data.rules %}
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <span class="bg-gray-800 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-sm">Must match</span>
+                                        <span class="bg-gray-800 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-sm">{{ collection.rules_data.condition_logic }}</span>
+                                        <span class="font-bold text-gray-400 mx-1">:</span>
+                                        {% for rule in collection.rules_data.rules %}
+                                            <span class="bg-gray-800 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-sm">{{ rule.column }}</span>
+                                            <span class="bg-gray-800 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-sm">{{ rule.relation }}</span>
+                                            <span class="bg-gray-800 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-sm">{{ rule.condition }}</span>
+                                            {% if not loop.last %}
+                                                <span class="font-bold text-gray-300 mx-1">|</span>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <div class="inline-block bg-gray-800 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-sm">
+                                        Thêm sản phẩm tự động nhưng không có rule cụ thể
+                                    </div>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sm:p-8 relative group">
+                        <button type="button" data-desc="{{ collection.description | escape }}" onclick="openInternalEditor('descriptionHtml', this.getAttribute('data-desc'), 'Mô tả Collection')" class="absolute top-6 right-6 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-all z-10" title="Chỉnh sửa Mô tả Collection">
+                            <iconify-icon icon="mdi:pencil-outline" class="text-xl"></iconify-icon>
+                        </button>
+                        <h2 class="text-xl font-bold text-gray-800 mb-4 border-b border-gray-100 pb-3 flex items-center gap-2">
+                            <iconify-icon icon="mdi:text-box-outline" class="text-gray-500 text-2xl"></iconify-icon>
+                            Mô tả Collection
+                        </h2>
+                        <div class="prose max-w-none text-gray-700">
+                            {{ collection.description | safe if collection.description else '<span class="italic text-gray-400">Không có mô tả</span>'|safe }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right column: Metadata (SEO, Channels) -->
+                <div class="space-y-8">
+                    <!-- Kênh bán hàng -->
+                    <div class="bg-white rounded-xl shadow-sm border border-indigo-100 p-6 relative">
+                        <h2 class="text-lg font-bold text-indigo-800 mb-4 border-b border-indigo-50 pb-3 flex items-center justify-between">
+                            <span class="flex items-center gap-2">
+                                <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                                Kênh bán hàng đã Publish
+                            </span>
+                            <button id="save-publications-btn" onclick="savePublications()" class="hidden bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center gap-1.5">
+                                <iconify-icon icon="mdi:content-save-outline"></iconify-icon> Save
+                            </button>
+                        </h2>
+                        
+                        <div id="publications-error" class="hidden mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm font-medium"></div>
+                        
+                        <div class="space-y-3">
+                            {% for pub in collection.publications_data %}
+                            <div class="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg transition-colors">
+                                <span class="text-sm font-semibold text-gray-700">{{ pub.name }}</span>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" class="sr-only peer pub-checkbox" data-pub-id="{{ pub.id }}" data-original="{{ 'true' if pub.is_published else 'false' }}" {% if pub.is_published %}checked{% endif %} onchange="checkPublicationsChanged()">
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600 shadow-inner"></div>
+                                </label>
+                            </div>
+                            {% else %}
+                            <div class="text-sm text-gray-500 italic">Không có dữ liệu kênh bán hàng.</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- SEO -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                        <h2 class="text-lg font-bold text-gray-800 mb-4 border-b border-gray-100 pb-3 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                            SEO Fields
+                        </h2>
+                        <div class="space-y-4">
+                            <div>
+                                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">SEO Title</p>
+                                <div class="group cursor-pointer inline-flex w-full items-center justify-between hover:bg-gray-100 p-2 -ml-2 rounded-lg transition-colors" data-val="{{ collection.seo_title | escape }}" onclick="openInternalEditor('seo_title', this.getAttribute('data-val'), 'SEO Title')">
+                                    <p class="text-sm text-gray-800 bg-gray-50 p-2.5 rounded border border-gray-100 flex-grow">{{ collection.seo_title if collection.seo_title else collection.title }}</p>
+                                    <iconify-icon icon="mdi:pencil-outline" class="text-gray-400 group-hover:text-indigo-600 transition-colors text-lg opacity-0 group-hover:opacity-100 ml-2"></iconify-icon>
+                                </div>
+                            </div>
+                            <div>
+                                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">SEO Description</p>
+                                <div class="group cursor-pointer inline-flex w-full items-center justify-between hover:bg-gray-100 p-2 -ml-2 rounded-lg transition-colors" data-val="{{ collection.seo_description | escape }}" onclick="openInternalEditor('seo_description', this.getAttribute('data-val'), 'SEO Description')">
+                                    <p class="text-sm text-gray-800 bg-gray-50 p-2.5 rounded border border-gray-100 flex-grow line-clamp-3">{{ collection.seo_description if collection.seo_description else 'Không có' }}</p>
+                                    <iconify-icon icon="mdi:pencil-outline" class="text-gray-400 group-hover:text-indigo-600 transition-colors text-lg opacity-0 group-hover:opacity-100 ml-2"></iconify-icon>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </main>
+
+    <!-- Floating Copy Buttons -->
+    {% if collection %}
+    <div class="fixed top-24 right-4 sm:right-8 flex flex-row gap-3 z-50">
+        <!-- Copy ID Button -->
+        <div class="relative group flex items-center justify-center">
+            <button onclick="copyToClipboard('{{ collection.id }}', 'indicator-id')" class="bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 transition-all flex items-center justify-center focus:outline-none cursor-pointer border-none" title="Copy Collection ID">
+                <span class="font-bold text-xs uppercase">ID</span>
+            </button>
+            <div id="indicator-id" class="absolute -bottom-8 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 transition-opacity whitespace-nowrap pointer-events-none">Copied!</div>
+        </div>
+        <!-- Copy Handle Button -->
+        <div class="relative group flex items-center justify-center">
+            <button onclick="copyToClipboard('{{ collection.handle }}', 'indicator-handle')" class="bg-teal-600 text-white p-3 rounded-full shadow-lg hover:bg-teal-700 transition-all flex items-center justify-center focus:outline-none cursor-pointer border-none" title="Copy Collection Handle">
+                <span class="font-bold text-xs uppercase">HANDLE</span>
+            </button>
+            <div id="indicator-handle" class="absolute -bottom-8 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 transition-opacity whitespace-nowrap pointer-events-none">Copied!</div>
+        </div>
+        <!-- SHOPIFY Button -->
+        <div class="relative group flex items-center justify-end">
+            <a href="https://admin.shopify.com/store/wrydeco/collections/{{ collection.id }}" target="_blank" rel="noopener noreferrer" class="bg-gray-800 text-white p-3 rounded-full shadow-lg hover:bg-black transition-all flex items-center justify-center focus:outline-none cursor-pointer border-none" title="Open in Shopify Admin">
+                <span class="font-bold text-xs uppercase">SHOPIFY</span>
+            </a>
+        </div>
+        <!-- DEV Button -->
+        <div class="relative group flex items-center justify-end">
+            <a href="https://wrydeco.myshopify.com/collections/{{ collection.handle }}" target="_blank" rel="noopener noreferrer" class="bg-purple-500 text-white p-3 rounded-full shadow-lg hover:bg-purple-600 transition-all flex items-center justify-center focus:outline-none cursor-pointer border-none" title="Open in DEV Store">
+                <span class="font-bold text-xs uppercase">DEV</span>
+            </a>
+        </div>
+        <!-- REAL Button -->
+        <div class="relative group flex items-center justify-end">
+            <a href="https://wrydeco.com/collections/{{ collection.handle }}" target="_blank" rel="noopener noreferrer" class="bg-green-500 text-white p-3 rounded-full shadow-lg hover:bg-green-600 transition-all flex items-center justify-center focus:outline-none cursor-pointer border-none" title="Open in Real Store">
+                <span class="font-bold text-xs uppercase">REAL</span>
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Internal Editor Modal -->
+    <div id="internal-editor-modal" class="fixed inset-0 z-[100] flex items-center justify-center hidden">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeInternalEditor()"></div>
+        <div class="bg-white rounded-2xl shadow-2xl w-[90%] max-w-2xl z-10 relative overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                    <iconify-icon icon="mdi:pencil-box-multiple-outline" class="text-indigo-600 text-xl"></iconify-icon>
+                    Đang cập nhật <span id="internal-editor-target-name" class="text-indigo-600"></span>
+                </h3>
+                <button onclick="closeInternalEditor()" class="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100">
+                    <iconify-icon icon="mdi:close" class="text-2xl"></iconify-icon>
+                </button>
+            </div>
+            
+            <div class="p-6 overflow-y-auto">
+                <div id="internal-editor-alert" class="hidden mb-4 rounded-xl p-4 shadow-sm border"></div>
+                <input type="hidden" id="internal-editor-target">
+                
+                <div class="space-y-3">
+                    <label class="block text-sm font-semibold text-gray-700">Giá trị mới</label>
+                    <textarea id="internal-editor-input" rows="4" class="w-full p-3.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-800 outline-none transition-all resize-y shadow-sm" placeholder="Nhập giá trị mới..."></textarea>
+                </div>
+            </div>
+            
+            <div class="px-6 py-4 border-t border-gray-100 bg-gray-50/80 flex items-center justify-end gap-3 rounded-b-2xl">
+                <button onclick="closeInternalEditor()" class="px-5 py-2.5 rounded-xl font-medium text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 hover:text-gray-800 transition-all shadow-sm">Hủy bỏ</button>
+                <button onclick="submitInternalEditor()" id="internal-editor-submit-btn" class="px-6 py-2.5 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-all shadow-md hover:shadow-lg flex items-center gap-2">
+                    <iconify-icon icon="mdi:content-save-outline" class="text-lg"></iconify-icon>
+                    <span id="submit-btn-text">Lưu thay đổi</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lightbox for images -->
+    <div id="lightbox" class="fixed inset-0 z-[99] flex items-center justify-center bg-black/90 p-4" onclick="closeLightbox()">
+        <button id="lightbox-close" class="absolute top-4 right-4 sm:top-8 sm:right-8 text-white/70 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors focus:outline-none" onclick="closeLightbox()">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+        {% if collection and collection.image %}
+        <img id="lightbox-img" src="{{ collection.image }}" alt="Popup Image" class="max-w-full max-h-[90vh] rounded-xl shadow-2xl object-contain" onclick="event.stopPropagation()">
+        {% endif %}
+    </div>
+
+    <script>
+
+        // Copy to clipboard logic
+        function copyToClipboard(text, indicatorId) {
+            navigator.clipboard.writeText(text).then(() => {
+                const indicator = document.getElementById(indicatorId);
+                indicator.innerText = "Copied!";
+                indicator.classList.remove('bg-red-600');
+                indicator.classList.add('bg-gray-800');
+                indicator.classList.remove('opacity-0');
+                setTimeout(() => {
+                    indicator.classList.add('opacity-0');
+                }, 2000);
+            }).catch(err => {
+                const indicator = document.getElementById(indicatorId);
+                indicator.innerText = "Failed!";
+                indicator.classList.remove('bg-gray-800');
+                indicator.classList.add('bg-red-600');
+                indicator.classList.remove('opacity-0');
+                setTimeout(() => {
+                    indicator.classList.add('opacity-0');
+                }, 2000);
+            });
+        }
+        
+        
+        // Image Upload Logic
+        async function uploadCollectionImage(input) {
+            const file = input.files[0];
+            if (!file) return;
+            
+            const btnText = document.getElementById('change-image-text');
+            const originalText = btnText.innerText;
+            btnText.innerText = 'Đang tải lên...';
+            input.disabled = true;
+            
+            const formData = new FormData();
+            formData.append('image', file);
+            
+            try {
+                const res = await fetch(`/api/collections/${collectionId}/image`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    window.location.reload();
+                } else {
+                    alert(data.message || "Lỗi khi cập nhật ảnh.");
+                }
+            } catch (e) {
+                alert("Lỗi mạng khi tải lên ảnh.");
+            } finally {
+                btnText.innerText = originalText;
+                input.disabled = false;
+                input.value = '';
+            }
+        }
+
+        // Lightbox logic
+        function openLightbox() {
+            const lightbox = document.getElementById('lightbox');
+            lightbox.classList.remove('hidden');
+            // Allow display to apply before adding opacity
+            setTimeout(() => {
+                lightbox.classList.add('active');
+            }, 10);
+        }
+        
+        function closeLightbox() {
+            const lightbox = document.getElementById('lightbox');
+            lightbox.classList.remove('active');
+            setTimeout(() => {
+                lightbox.classList.add('hidden');
+            }, 300);
+        }
+
+        // Internal Editor logic
+        const collectionId = "{{ collection.id if collection else '' }}";
+        
+        function openInternalEditor(field, currentValue, titleName) {
+            const modal = document.getElementById('internal-editor-modal');
+            const targetNameEl = document.getElementById('internal-editor-target-name');
+            const targetInput = document.getElementById('internal-editor-target');
+            const valueInput = document.getElementById('internal-editor-input');
+            const alertEl = document.getElementById('internal-editor-alert');
+            
+            targetNameEl.innerText = titleName;
+            targetInput.value = field;
+            
+            // Handle HTML entities in current value
+            const txt = document.createElement('textarea');
+            txt.innerHTML = currentValue;
+            valueInput.value = txt.value;
+            
+            alertEl.classList.add('hidden');
+            
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                valueInput.focus();
+            }, 100);
+        }
+        
+        function closeInternalEditor() {
+            document.getElementById('internal-editor-modal').classList.add('hidden');
+        }
+        
+        async function submitInternalEditor() {
+            const field = document.getElementById('internal-editor-target').value;
+            const value = document.getElementById('internal-editor-input').value;
+            const btn = document.getElementById('internal-editor-submit-btn');
+            const btnText = document.getElementById('submit-btn-text');
+            const alertEl = document.getElementById('internal-editor-alert');
+            
+            btn.disabled = true;
+            btnText.innerText = 'Đang lưu...';
+            btn.classList.add('opacity-75', 'cursor-not-allowed');
+            alertEl.classList.add('hidden');
+            
+            try {
+                const res = await fetch(`/api/collections/${collectionId}/update`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ field, value })
+                });
+                
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    window.location.reload();
+                } else {
+                    showAlert(data.message || "Lỗi khi lưu dữ liệu.", "error");
+                }
+            } catch (e) {
+                showAlert("Lỗi mạng khi kết nối tới máy chủ.", "error");
+            } finally {
+                btn.disabled = false;
+                btnText.innerText = 'Lưu thay đổi';
+                btn.classList.remove('opacity-75', 'cursor-not-allowed');
+            }
+        }
+        
+        function showAlert(msg, type) {
+            const alertEl = document.getElementById('internal-editor-alert');
+            alertEl.innerText = msg;
+            alertEl.className = `mb-4 rounded-xl p-4 shadow-sm border text-sm font-medium ${
+                type === 'error' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-green-50 border-green-200 text-green-700'
+            }`;
+            alertEl.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>

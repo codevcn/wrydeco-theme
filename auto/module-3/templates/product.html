@@ -230,6 +230,26 @@
                     </div>
                 </div>
 
+
+                <!-- Collections -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mt-8">
+                    <h2 class="text-lg font-bold text-gray-800 mb-4 border-b border-gray-100 pb-3 flex items-center gap-2">
+                        <iconify-icon icon="mdi:folder-multiple-outline" class="text-purple-500 text-xl"></iconify-icon>
+                        Collections
+                    </h2>
+                    <div class="flex flex-wrap gap-2">
+                        {% if product.collections and product.collections.edges %}
+                            {% for edge in product.collections.edges %}
+                                <a href="/collections/{{ edge.node.id.split('/')[-1] }}" target="_blank" class="inline-flex items-center px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 text-sm font-medium rounded-lg border border-purple-200 transition-colors">
+                                    {{ edge.node.title }}
+                                </a>
+                            {% endfor %}
+                        {% else %}
+                            <span class="text-sm text-gray-500 italic">Sản phẩm này chưa thuộc collection nào.</span>
+                        {% endif %}
+                    </div>
+                </div>
+
                 <!-- Classification & Tags -->
                 <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mt-8">
                     <h2 class="text-lg font-bold text-gray-800 mb-4 border-b border-gray-100 pb-3 flex items-center gap-2">
@@ -353,14 +373,14 @@
                             </div>
                             {% if mf.namespace == 'custom' and mf.key == 'amazon_link' %}
                             <div class="text-sm text-gray-700 break-words mt-2 font-medium flex items-center justify-between group">
-                                <a href="{{ mf.value }}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline break-all">{{ mf.value }}</a>
+                                <a href="{{ mf.value }}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline truncate block mr-2" style="max-width: 85%;">{{ mf.value }}</a>
                                 <button type="button" onclick="openInternalEditor('amazonLink', '{{ mf.value | replace('\'', '\\\'') | escape }}', 'Amazon Link')" class="text-indigo-600 hover:bg-indigo-50 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" title="Chỉnh sửa Amazon Link">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                                 </button>
                             </div>
                             {% else %}
                             <div class="metafield-container mt-2 group relative">
-                                <div class="metafield-content text-sm text-gray-700 break-words font-medium overflow-hidden transition-all duration-300" style="max-height: 200px;">
+                                <div class="metafield-content text-sm text-gray-700 truncate font-medium transition-all duration-300" style="max-width: 85%;">
                                     {{ mf.value }}
                                 </div>
                                 <button type="button" onclick="openInternalEditor('metafield:{{ mf.namespace }}:{{ mf.key }}:{{ mf.type }}', '{{ mf.value | replace('\'', '\\\'') | escape }}', 'Metafield {{ mf.namespace }}.{{ mf.key }}')" class="absolute top-0 right-0 text-indigo-600 hover:bg-indigo-50 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity bg-white/80" title="Chỉnh sửa Metafield">
@@ -388,7 +408,7 @@
                                 <span class="text-[10px] text-gray-400 font-medium uppercase">single_line_text_field</span>
                             </div>
                             <div class="text-sm text-gray-700 break-words mt-2 font-medium flex items-center justify-between group">
-                                <span class="text-gray-600">{{ video_media_mf.value if video_media_mf.found else 'Chưa có dữ liệu' }}</span>
+                                <span class="text-gray-600 truncate mr-2" style="max-width: 85%;">{{ video_media_mf.value if video_media_mf.found else 'Chưa có dữ liệu' }}</span>
                                 <button type="button" onclick="openInternalEditor('metafield:custom:product_video_media:single_line_text_field', '{{ video_media_mf.value | replace('\'', '\\\'') | escape }}', 'Product Video Media')" class="text-indigo-600 hover:bg-indigo-50 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" title="Chỉnh sửa Video Media">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                                 </button>
@@ -548,7 +568,7 @@
         <div class="relative group flex items-center justify-end">
             <span id="copy-handle-indicator" class="absolute top-full mt-2 left-1/2 -translate-x-1/2 px-2.5 py-1.5 bg-gray-800 text-white text-xs font-medium rounded-lg opacity-0 transition-opacity whitespace-nowrap pointer-events-none">Đã copy Handle</span>
             <button onclick="copyToClipboard('{{ product.handle }}', 'copy-handle-indicator')" class="bg-teal-500 text-white p-3 rounded-full shadow-lg hover:bg-teal-600 transition-all flex items-center justify-center focus:outline-none cursor-pointer border-none" title="Copy Product Handle">
-                <iconify-icon icon="mdi:link-variant" class="text-xl"></iconify-icon>
+                <span class="font-bold text-xs uppercase">HANDLE</span>
             </button>
         </div>
     </div>

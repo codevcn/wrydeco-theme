@@ -10,6 +10,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
+from pydantic import BaseModel
 import requests
 
 load_dotenv()
@@ -1668,6 +1669,15 @@ def get_product_by_handle(handle: str):
             }
           }
         }
+        collections(first: 50) {
+          edges {
+            node {
+              id
+              title
+              handle
+            }
+          }
+        }
       }
     }
     """
@@ -1745,7 +1755,8 @@ async def read_product(request: Request, product_handle: str):
             "media": media_list,
             "prices": sorted_prices,
             "metafields": metafields,
-            "publications": publications
+            "publications": publications,
+            "collections": product_data.get("collections", {})
         }
         
         return templates.TemplateResponse(request=request, name="product.html", context={
@@ -1785,6 +1796,15 @@ def get_all_collections():
                 productsCount {
                   count
                 }
+                resourcePublications(first: 10) {
+                  edges {
+                    node {
+                      publication {
+                        name
+                      }
+                    }
+                  }
+                }
               }
             }
           }
@@ -1805,13 +1825,23 @@ def get_all_collections():
         collections_data = data["data"]["collections"]
         for edge in collections_data.get("edges", []):
             node = edge["node"]
+            
+            # Kiểm tra xem có publish lên Online Store không
+            is_published = False
+            for pub_edge in node.get("resourcePublications", {}).get("edges", []):
+                pub_name = pub_edge.get("node", {}).get("publication", {}).get("name", "")
+                if pub_name.lower() in ["online store", "cửa hàng trực tuyến"]:
+                    is_published = True
+                    break
+                    
             all_collections.append({
                 "id": node["id"].split("/")[-1],
                 "handle": node["handle"],
                 "title": node["title"],
                 "description": node.get("descriptionHtml", ""),
                 "image": node.get("image", {}).get("url") if node.get("image") else None,
-                "products_count": node.get("productsCount", {}).get("count", 0) if node.get("productsCount") else 0
+                "products_count": node.get("productsCount", {}).get("count", 0) if node.get("productsCount") else 0,
+                "published_online": is_published
             })
             
         page_info = collections_data.get("pageInfo", {})
@@ -1819,6 +1849,356 @@ def get_all_collections():
         cursor = page_info.get("endCursor")
         
     return all_collections
+
+
+def get_collection_by_id(collection_id: str):
+    query = """
+    query getCollection($id: ID!) {
+      collection(id: $id) {
+        id
+        title
+        handle
+        descriptionHtml
+        image { url }
+        seo { title description }
+        productsCount { count }
+        resourcePublications(first: 20) {
+          edges { node { publication { name } } }
+        }
+        ruleSet {
+          appliedDisjunctively
+          rules {
+            column
+            relation
+            condition
+          }
+        }
+      }
+    }
+    """
+    variables = {"id": f"gid://shopify/Collection/{collection_id}"}
+    response = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=HEADERS)
+    response.raise_for_status()
+    data = response.json()
+    if "errors" in data:
+        raise Exception(f"GraphQL Error: {data['errors']}")
+    
+    node = data["data"]["collection"]
+    if not node:
+        return None
+        
+    pub_map = get_publications_map()
+    channels = [pub["node"]["publication"]["name"] for pub in node.get("resourcePublications", {}).get("edges", [])]
+    publications_data = []
+    for pub_name, pub_id in pub_map.items():
+        publications_data.append({
+            "id": pub_id,
+            "name": pub_name,
+            "is_published": pub_name in channels
+        })
+    
+    rules = []
+    rule_set = node.get("ruleSet")
+    rules_data = {"is_manual": True, "condition_logic": "", "rules": []}
+    if rule_set:
+        rules_data["is_manual"] = False
+        applied_disjunctively = rule_set.get("appliedDisjunctively", False)
+        condition_logic = "Bất kỳ (Any)" if applied_disjunctively else "Tất cả (All)"
+        rules_data["condition_logic"] = condition_logic
+        for rule in rule_set.get("rules", []):
+            rules.append(f"{rule.get('column')} {rule.get('relation')} {rule.get('condition')}")
+            rules_data["rules"].append({
+                "column": rule.get('column'),
+                "relation": rule.get('relation'),
+                "condition": rule.get('condition')
+            })
+        rules_str = f"Must match {condition_logic}: " + " | ".join(rules) if rules else "Thêm sản phẩm tự động nhưng không có rule cụ thể"
+    else:
+        rules_str = "Manual collection (Thêm sản phẩm thủ công)"
+        
+    return {
+        "id": node["id"].split("/")[-1],
+        "handle": node["handle"],
+        "title": node["title"],
+        "description": node.get("descriptionHtml", ""),
+        "seo_title": node.get("seo", {}).get("title") if node.get("seo") else "",
+        "seo_description": node.get("seo", {}).get("description") if node.get("seo") else "",
+        "image": node.get("image", {}).get("url") if node.get("image") else None,
+        "products_count": node.get("productsCount", {}).get("count", 0) if node.get("productsCount") else 0,
+        "channels": channels,
+        "publications_data": publications_data,
+        "rules_str": rules_str,
+        "rules_data": rules_data
+    }
+
+
+@app.post("/api/collections/{collection_id}/publications")
+async def api_collection_publications(collection_id: str, request: Request):
+    try:
+        import json
+        data = await request.json()
+        publish_ids = data.get("publish_ids", [])
+        unpublish_ids = data.get("unpublish_ids", [])
+        
+        full_collection_id = f"gid://shopify/Collection/{collection_id}"
+        
+        errors = []
+        
+        # Publish
+        if publish_ids:
+            publish_input = [{"publicationId": pub_id} for pub_id in publish_ids]
+            query_publish = """
+            mutation publishablePublish($id: ID!, $input: [PublicationInput!]!) {
+              publishablePublish(id: $id, input: $input) {
+                userErrors { field message }
+              }
+            }
+            """
+            variables = {"id": full_collection_id, "input": publish_input}
+            res = requests.post(GRAPHQL_URL, json={"query": query_publish, "variables": variables}, headers=HEADERS)
+            res.raise_for_status()
+            res_data = res.json()
+            if "errors" in res_data:
+                errors.append(str(res_data["errors"]))
+            user_errors = res_data.get("data", {}).get("publishablePublish", {}).get("userErrors", [])
+            for ue in user_errors:
+                errors.append(ue["message"])
+                
+        # Unpublish
+        if unpublish_ids:
+            unpublish_input = [{"publicationId": pub_id} for pub_id in unpublish_ids]
+            query_unpublish = """
+            mutation publishableUnpublish($id: ID!, $input: [PublicationInput!]!) {
+              publishableUnpublish(id: $id, input: $input) {
+                userErrors { field message }
+              }
+            }
+            """
+            variables = {"id": full_collection_id, "input": unpublish_input}
+            res = requests.post(GRAPHQL_URL, json={"query": query_unpublish, "variables": variables}, headers=HEADERS)
+            res.raise_for_status()
+            res_data = res.json()
+            if "errors" in res_data:
+                errors.append(str(res_data["errors"]))
+            user_errors = res_data.get("data", {}).get("publishableUnpublish", {}).get("userErrors", [])
+            for ue in user_errors:
+                errors.append(ue["message"])
+                
+        if errors:
+            return HTMLResponse(content=json.dumps({"success": False, "message": " | ".join(errors)}), media_type="application/json")
+            
+        return HTMLResponse(content=json.dumps({"success": True}), media_type="application/json")
+    except Exception as e:
+        return HTMLResponse(content=json.dumps({"success": False, "message": str(e)}), media_type="application/json")
+
+
+from fastapi import UploadFile, File
+import base64
+
+@app.post("/api/collections/{collection_id}/image")
+async def update_collection_image(collection_id: str, request: Request, image: UploadFile = File(...)):
+    try:
+        # Check if collection is smart or custom
+        query = '''
+        query getCollection($id: ID!) {
+          collection(id: $id) {
+            ruleSet { rules { column } }
+          }
+        }
+        '''
+        variables = {"id": f"gid://shopify/Collection/{collection_id}"}
+        res = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=HEADERS)
+        res.raise_for_status()
+        data = res.json()
+        
+        node = data.get("data", {}).get("collection")
+        if not node:
+            return JSONResponse(status_code=404, content={"success": False, "message": "Collection not found"})
+            
+        is_smart = bool(node.get("ruleSet"))
+        collection_type = "smart_collection" if is_smart else "custom_collection"
+        
+        shop = os.getenv("SHOPIFY_SHOP")
+        api_version = os.getenv("SHOPIFY_API_VERSION")
+        rest_base_url = f"https://{shop}.myshopify.com/admin/api/{api_version}"
+        
+        # 1. Delete existing image
+        delete_url = f"{rest_base_url}/{collection_type}s/{collection_id}.json"
+        delete_payload = {
+            collection_type: {
+                "id": collection_id,
+                "image": None
+            }
+        }
+        res_delete = requests.put(delete_url, json=delete_payload, headers=HEADERS)
+        if not res_delete.ok:
+            return JSONResponse(status_code=400, content={"success": False, "message": f"Không thể xóa ảnh gốc: {res_delete.text}"})
+            
+        # 2. Upload new image
+        contents = await image.read()
+        encoded = base64.b64encode(contents).decode("utf-8")
+        
+        upload_payload = {
+            collection_type: {
+                "id": collection_id,
+                "image": {
+                    "attachment": encoded,
+                    "filename": image.filename
+                }
+            }
+        }
+        res_upload = requests.put(delete_url, json=upload_payload, headers=HEADERS)
+        if not res_upload.ok:
+            return JSONResponse(status_code=400, content={"success": False, "message": f"Không thể upload ảnh mới: {res_upload.text}"})
+            
+        return JSONResponse(content={"success": True})
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"success": False, "message": str(e)})
+
+class CollectionUpdate(BaseModel):
+    field: str
+    value: str
+
+@app.post("/api/collections/{collection_id}/update")
+async def update_collection(collection_id: str, data: CollectionUpdate):
+    field = data.field
+    value = data.value
+    
+    valid_fields = ["title", "handle", "descriptionHtml", "seo_title", "seo_description"]
+    if field not in valid_fields:
+        return JSONResponse(status_code=400, content={"success": False, "message": "Invalid field"})
+        
+    input_data = {"id": f"gid://shopify/Collection/{collection_id}"}
+    if field == "seo_title":
+        input_data["seo"] = {"title": value}
+    elif field == "seo_description":
+        input_data["seo"] = {"description": value}
+    else:
+        input_data[field] = value
+        
+    query = """
+    mutation collectionUpdate($input: CollectionInput!) {
+      collectionUpdate(input: $input) {
+        collection { id }
+        userErrors { field message }
+      }
+    }
+    """
+    response = requests.post(GRAPHQL_URL, json={"query": query, "variables": {"input": input_data}}, headers=HEADERS)
+    response.raise_for_status()
+    res_data = response.json()
+    if "errors" in res_data:
+        return JSONResponse(status_code=500, content={"success": False, "message": str(res_data["errors"])})
+        
+    user_errors = res_data["data"]["collectionUpdate"].get("userErrors", [])
+    if user_errors:
+        return JSONResponse(status_code=400, content={"success": False, "message": str(user_errors)})
+        
+    return JSONResponse(content={"success": True})
+
+@app.get("/collections/{collection_id}", response_class=HTMLResponse)
+async def collection_detail(request: Request, collection_id: str):
+    try:
+        collection = get_collection_by_id(collection_id)
+        if not collection:
+            return HTMLResponse("Collection not found", status_code=404)
+        return templates.TemplateResponse(request=request, name="collection_detail.html", context={
+            "request": request,
+            "collection": collection
+        })
+    except Exception as e:
+        return HTMLResponse(f"Error: {e}", status_code=500)
+
+@app.post("/api/collections/create")
+async def create_collection(request: Request):
+    form_data = await request.form()
+    title = form_data.get("title")
+    collection_type = form_data.get("type", "SMART") # MANUAL or SMART
+    handle = form_data.get("handle", "")
+    description = form_data.get("description", "")
+    seo_title = form_data.get("seo_title", "")
+    seo_description = form_data.get("seo_description", "")
+    
+    rule_columns = form_data.getlist("rule_column[]")
+    rule_relations = form_data.getlist("rule_relation[]")
+    rule_conditions = form_data.getlist("rule_condition[]")
+    rule_match = form_data.get("rule_match", "ALL")
+    
+    image = form_data.get("image")
+    
+    input_data = {
+        "title": title,
+    }
+    if handle: input_data["handle"] = handle
+    if description: input_data["descriptionHtml"] = description
+    
+    if seo_title or seo_description:
+        input_data["seo"] = {}
+        if seo_title: input_data["seo"]["title"] = seo_title
+        if seo_description: input_data["seo"]["description"] = seo_description
+        
+    if collection_type == "SMART":
+        rules = []
+        for c, r, v in zip(rule_columns, rule_relations, rule_conditions):
+            if c and r and v:
+                rules.append({"column": c, "relation": r, "condition": v})
+        
+        if not rules:
+            return JSONResponse(status_code=400, content={"success": False, "message": "Smart collection requires at least one rule."})
+            
+        input_data["ruleSet"] = {
+            "appliedDisjunctively": True if rule_match == "ANY" else False,
+            "rules": rules
+        }
+        
+    query = '''
+    mutation collectionCreate($input: CollectionInput!) {
+      collectionCreate(input: $input) {
+        collection { id }
+        userErrors { field message }
+      }
+    }
+    '''
+    res = requests.post(GRAPHQL_URL, json={"query": query, "variables": {"input": input_data}}, headers=HEADERS)
+    data = res.json()
+    
+    user_errors = data.get("data", {}).get("collectionCreate", {}).get("userErrors", [])
+    if user_errors:
+        return JSONResponse(status_code=400, content={"success": False, "message": user_errors[0]["message"]})
+        
+    new_collection = data.get("data", {}).get("collectionCreate", {}).get("collection", {})
+    new_id_gid = new_collection.get("id")
+    if not new_id_gid:
+        return JSONResponse(status_code=500, content={"success": False, "message": "Failed to get new collection ID"})
+        
+    new_id = new_id_gid.split("/")[-1]
+    
+    if image and hasattr(image, 'filename') and image.filename:
+        try:
+            shop = os.getenv("SHOPIFY_SHOP")
+            api_version = os.getenv("SHOPIFY_API_VERSION")
+            rest_base_url = f"https://{shop}.myshopify.com/admin/api/{api_version}"
+            
+            c_type = "smart_collection" if collection_type == "SMART" else "custom_collection"
+            contents = await image.read()
+            import base64
+            encoded = base64.b64encode(contents).decode("utf-8")
+            upload_payload = {
+                c_type: {
+                    "id": new_id,
+                    "image": {
+                        "attachment": encoded,
+                        "filename": image.filename
+                    }
+                }
+            }
+            upload_url = f"{rest_base_url}/{c_type}s/{new_id}.json"
+            requests.put(upload_url, json=upload_payload, headers=HEADERS)
+        except Exception as e:
+            print("Image upload error:", e)
+            
+    return JSONResponse(content={"success": True, "id": new_id})
+
 
 @app.get("/collections", response_class=HTMLResponse)
 async def read_collections(request: Request, 
@@ -1833,6 +2213,10 @@ async def read_collections(request: Request,
             collections = [c for c in collections if c["products_count"] == 0]
         elif filter_mode == "not_empty":
             collections = [c for c in collections if c["products_count"] > 0]
+        elif filter_mode == "published":
+            collections = [c for c in collections if c.get("published_online")]
+        elif filter_mode == "unpublished":
+            collections = [c for c in collections if not c.get("published_online")]
             
         # 2. Sort
         if sort_by == "title_asc":
@@ -1847,7 +2231,7 @@ async def read_collections(request: Request,
         return templates.TemplateResponse(request=request, name="collections.html", context={
             "request": request, 
             "collections": collections,
-            "total_count": total_collections_count,
+            "total_count": len(collections),
             "sort_by": sort_by,
             "filter_mode": filter_mode,
             "error": None
