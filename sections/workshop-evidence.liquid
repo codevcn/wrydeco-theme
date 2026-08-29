@@ -1,5 +1,5 @@
 {% comment %}
-  PDP workshop proof section sourced from the first store_media_info metaobject.
+  Workshop proof section sourced from the first store_media_info metaobject.
 {% endcomment %}
 
 {%- liquid
@@ -41,9 +41,9 @@
         {% endif %}
       </header>
 
-      <div class="workshop-evidence__media-grid">
+      <div class="workshop-evidence__media-grid" aria-label="Workshop process media">
         {% if handcraft_video_url != blank %}
-          <article class="workshop-evidence__video-card" data-workshop-video-card>
+          <article class="workshop-evidence__video-card workshop-evidence__video-card--handcraft workshop-evidence__proof-card workshop-evidence__proof-card--dark" data-workshop-video-card>
             <div class="workshop-evidence__video-frame">
               <video
                 class="workshop-evidence__video"
@@ -56,16 +56,15 @@
               </button>
             </div>
             <footer class="workshop-evidence__caption">
-              <span class="workshop-evidence__caption-icon" aria-hidden="true">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4M14 13.12c0 2.38 0 6.38-1 8.88m4.29-.98c.12-.6.43-2.3.5-3.02M2 12a10 10 0 0 1 18-6M2 16h.01m19.79 0c.2-2 .131-5.354 0-6"/><path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2m2.31 12c.21-.66.45-1.32.57-2M9 6.8a6 6 0 0 1 9 5.2v2"/></g></svg>
-              </span>
-              <span>{{ section.settings.handcraft_label | escape }}</span>
+              <span class="workshop-evidence__caption-number">01</span>
+              <span class="workshop-evidence__caption-divider" aria-hidden="true"></span>
+              <span class="workshop-evidence__caption-label">{{ section.settings.handcraft_label | escape }}</span>
             </footer>
           </article>
         {% endif %}
 
         {% if assembly_video_url != blank %}
-          <article class="workshop-evidence__video-card" data-workshop-video-card>
+          <article class="workshop-evidence__video-card workshop-evidence__video-card--assembly workshop-evidence__proof-card workshop-evidence__proof-card--light" data-workshop-video-card>
             <div class="workshop-evidence__video-frame">
               <video
                 class="workshop-evidence__video"
@@ -78,16 +77,15 @@
               </button>
             </div>
             <footer class="workshop-evidence__caption">
-              <span class="workshop-evidence__caption-icon" aria-hidden="true">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m5.196-9L6.804 15m0-6l10.392 6"/></svg>
-              </span>
-              <span>{{ section.settings.assembly_label | escape }}</span>
+              <span class="workshop-evidence__caption-number">02</span>
+              <span class="workshop-evidence__caption-divider" aria-hidden="true"></span>
+              <span class="workshop-evidence__caption-label">{{ section.settings.assembly_label | escape }}</span>
             </footer>
           </article>
         {% endif %}
 
         {% if packaging_image_count > 0 %}
-          <article class="workshop-evidence__packaging" data-workshop-packaging>
+          <article class="workshop-evidence__packaging workshop-evidence__proof-card workshop-evidence__proof-card--dark" data-workshop-packaging>
             <div class="workshop-evidence__package-frame">
               <div class="workshop-evidence__package-track" data-workshop-package-track>
                 {%- assign packaging_rendered_count = 0 -%}
@@ -101,6 +99,7 @@
                       aria-label="Open packaging image {{ packaging_rendered_count }}"
                       data-workshop-lightbox-open
                       data-workshop-lightbox-src="{{ normalized_packaging_image_url | escape }}"
+                      data-workshop-lightbox-index="{{ packaging_rendered_count | minus: 1 }}"
                     >
                       <img
                         {% if packaging_rendered_count == 1 %}
@@ -145,29 +144,36 @@
               {% endif %}
             </div>
             <footer class="workshop-evidence__caption workshop-evidence__caption--packaging">
-              <span class="workshop-evidence__caption-icon" aria-hidden="true">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M12 22V12m4 5l2 2l4-4"/><path d="M21 11.127V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.729l7 4a2 2 0 0 0 2 .001l1.32-.753"/><path d="M3.29 7L12 12l8.71-5M7.5 4.27l8.997 5.148"/></g></svg>
-              </span>
-              <span>{{ section.settings.packaging_label | escape }}</span>
+              <span class="workshop-evidence__caption-number">03</span>
+              <span class="workshop-evidence__caption-divider" aria-hidden="true"></span>
+              <span class="workshop-evidence__caption-label">{{ section.settings.packaging_label | escape }}</span>
             </footer>
           </article>
         {% endif %}
       </div>
 
       {% if packaging_image_count > 0 %}
-        <div class="workshop-evidence__lightbox" data-workshop-lightbox aria-hidden="true">
+        <div
+          class="workshop-evidence__lightbox"
+          data-workshop-lightbox
+          aria-hidden="true"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Packaging image preview"
+        >
           <div class="workshop-evidence__lightbox-backdrop" data-workshop-lightbox-close></div>
-          <div
-            class="workshop-evidence__lightbox-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Packaging image preview"
-          >
-            <button class="workshop-evidence__lightbox-close" type="button" aria-label="Close packaging image preview" data-workshop-lightbox-close>
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 6L6 18M6 6l12 12"/></svg>
+          <button class="workshop-evidence__lightbox-close" type="button" aria-label="Close packaging image preview" data-workshop-lightbox-close>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+          {% if packaging_image_count > 1 %}
+            <button class="workshop-evidence__lightbox-nav workshop-evidence__lightbox-nav--prev" type="button" aria-label="Previous packaging image" data-workshop-lightbox-prev>
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m15 18l-6-6l6-6"/></svg>
             </button>
-            <img class="workshop-evidence__lightbox-image" src="" alt="{{ section.settings.packaging_alt | escape }}" data-workshop-lightbox-image>
-          </div>
+            <button class="workshop-evidence__lightbox-nav workshop-evidence__lightbox-nav--next" type="button" aria-label="Next packaging image" data-workshop-lightbox-next>
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 18l6-6l-6-6"/></svg>
+            </button>
+          {% endif %}
+          <img class="workshop-evidence__lightbox-image" src="" alt="{{ section.settings.packaging_alt | escape }}" width="900" height="1080" data-workshop-lightbox-image>
         </div>
       {% endif %}
     </div>
@@ -177,24 +183,26 @@
 {% stylesheet %}
   .workshop-evidence {
     display: block;
-    padding: var(--sp-8) var(--layout-padding-desktop);
+    padding: clamp(var(--sp-8), 7vw, var(--sp-11)) 0 clamp(var(--sp-7), 6vw, var(--sp-10));
     overflow: clip;
     background:
-      radial-gradient(circle at 50% 18%, color-mix(in srgb, var(--color-clay) 16%, transparent), transparent 34%),
+      linear-gradient(90deg, rgb(74 44 24 / 4%) 1px, transparent 1px),
       linear-gradient(180deg, var(--color-white-cream), var(--color-bg));
+    background-size: 36px 36px, auto;
     color: var(--text-primary);
   }
 
   .workshop-evidence__inner {
     width: 100%;
-    max-width: calc(var(--layout-max-width) + var(--sp-12));
     margin-inline: auto;
   }
 
   .workshop-evidence__header {
     display: grid;
     justify-items: center;
-    margin-block-end: var(--sp-5);
+    max-width: calc(var(--layout-max-width) + var(--sp-8));
+    margin: 0 auto var(--sp-6);
+    padding-inline: var(--layout-padding-desktop);
     text-align: center;
   }
 
@@ -222,16 +230,27 @@
   .workshop-evidence__ornament {
     display: inline-flex;
     align-items: center;
-    gap: var(--sp-2);
+    gap: var(--sp-3);
     margin-block: var(--sp-3);
     color: var(--color-earth-brown);
   }
 
+  .workshop-evidence__ornament::before,
+  .workshop-evidence__ornament::after {
+    content: '';
+    display: block;
+    width: clamp(var(--sp-8), 7vw, var(--sp-11));
+    height: var(--border-width);
+    background: color-mix(in srgb, currentColor 54%, transparent);
+  }
+
   .workshop-evidence__ornament span {
     display: block;
-    width: var(--sp-9);
-    height: var(--border-width);
-    background: currentColor;
+    width: 10px;
+    height: 10px;
+    border: var(--border-width) solid currentColor;
+    background: color-mix(in srgb, var(--color-clay) 70%, var(--color-white-cream));
+    transform: rotate(45deg);
   }
 
   .workshop-evidence__subheading {
@@ -244,25 +263,131 @@
   }
 
   .workshop-evidence__media-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    align-items: start;
-    gap: clamp(var(--sp-4), 2.2vw, var(--sp-6));
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: clamp(var(--sp-4), 2.4vw, var(--sp-7));
+    width: 100%;
+    max-width: calc(var(--layout-max-width) + var(--sp-12) * 3);
+    margin-inline: auto;
+    padding: var(--sp-2) var(--layout-padding-desktop) var(--sp-4);
+    overflow-x: auto;
+    overflow-y: visible;
+    scroll-behavior: smooth;
+    scroll-padding-inline: var(--layout-padding-desktop);
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    cursor: grab;
+  }
+
+  .workshop-evidence__media-grid.is-dragging {
+    cursor: grabbing;
+    user-select: none;
+    scroll-snap-type: none;
+    scroll-behavior: auto;
+  }
+
+  .workshop-evidence__media-grid::-webkit-scrollbar {
+    display: none;
   }
 
   .workshop-evidence__video-card,
   .workshop-evidence__packaging {
-    min-width: var(--sp-0);
+    flex: 0 0 var(--workshop-card-width, clamp(360px, 28vw, 440px));
+    width: var(--workshop-card-width, clamp(360px, 28vw, 440px));
+    min-width: 0;
+    scroll-snap-align: center;
+  }
+
+  .workshop-evidence__video-card--handcraft {
+    --workshop-card-width: clamp(380px, 30vw, 440px);
+  }
+
+  .workshop-evidence__video-card--assembly {
+    --workshop-card-width: clamp(340px, 26vw, 390px);
+    margin-block: auto;
+  }
+
+  .workshop-evidence__packaging {
+    --workshop-card-width: clamp(380px, 30vw, 440px);
+    margin-block-start: 0;
+  }
+
+  .workshop-evidence__proof-card {
+    position: relative;
+    padding: clamp(8px, 0.72vw, 12px);
+    border: var(--border-width) solid rgb(66 36 18 / 78%);
+    border-radius: 4px;
+    background:
+      linear-gradient(90deg, rgb(255 246 224 / 5%), transparent 22% 80%, rgb(0 0 0 / 16%)),
+      radial-gradient(ellipse at 22% 24%, rgb(138 82 40 / 16%), transparent 42%),
+      radial-gradient(ellipse at 78% 72%, rgb(104 58 31 / 14%), transparent 48%),
+      repeating-linear-gradient(0deg, transparent 0 18px, rgb(255 225 170 / 3%) 18px 19px, transparent 19px 42px),
+      linear-gradient(180deg, rgb(68 38 19), rgb(42 24 13));
+    box-shadow:
+      0 24px 42px rgb(58 33 18 / 22%),
+      inset 0 0 0 3px rgb(20 12 8 / 32%),
+      inset 0 0 0 6px rgb(183 128 69 / 22%);
+  }
+
+  .workshop-evidence__proof-card::before {
+    content: '';
+    position: absolute;
+    inset: 8px;
+    z-index: 2;
+    pointer-events: none;
+    border: var(--border-width) solid rgb(230 174 106 / 34%);
+  }
+
+  .workshop-evidence__proof-card--light {
+    border-color: rgb(167 118 60 / 72%);
+    background:
+      linear-gradient(180deg, rgb(255 249 242 / 95%), rgb(235 220 199 / 94%)),
+      repeating-linear-gradient(100deg, rgb(139 93 48 / 8%) 0 12px, transparent 12px 26px);
+    box-shadow:
+      0 20px 34px rgb(74 44 24 / 16%),
+      inset 0 0 0 3px rgb(177 125 67 / 24%);
+  }
+
+  .workshop-evidence__video-card--assembly::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 7px;
+    z-index: 3;
+    width: clamp(92px, 49%, 185px);
+    height: 12px;
+    background:
+      linear-gradient(180deg, rgb(141 88 36 / 76%) 0 34%, rgb(204 151 82 / 88%) 34% 100%);
+    clip-path: polygon(0 100%, 18% 100%, 31% 30%, 69% 30%, 82% 100%, 100% 100%);
+    pointer-events: none;
+    transform: translateX(-50%);
+    box-shadow:
+      inset 0 1px 0 rgb(255 241 214 / 36%),
+      0 -1px 0 rgb(133 82 34 / 48%);
   }
 
   .workshop-evidence__video-frame,
   .workshop-evidence__package-frame {
     position: relative;
-    aspect-ratio: 4 / 5;
+    z-index: 1;
+    aspect-ratio: 9 / 16;
     overflow: hidden;
-    border-radius: var(--radius-xl);
+    border-radius: 2px;
     background: var(--color-earth-brown);
-    box-shadow: 0 24px 42px color-mix(in srgb, var(--color-earth-brown) 20%, transparent);
+    box-shadow:
+      inset 0 0 0 var(--border-width) rgb(255 245 229 / 16%),
+      0 1px 0 rgb(255 255 255 / 10%);
+  }
+
+  .workshop-evidence__video-card--assembly .workshop-evidence__video-frame {
+    aspect-ratio: 9 / 16;
+    border: 4px solid rgb(184 126 62 / 82%);
+    box-shadow:
+      0 0 0 var(--border-width) rgb(92 53 27 / 56%),
+      0 0 0 7px rgb(226 177 110 / 20%),
+      inset 0 0 0 var(--border-width) rgb(255 246 224 / 24%);
   }
 
   .workshop-evidence__video-frame {
@@ -275,7 +400,9 @@
     position: absolute;
     inset: 0;
     pointer-events: none;
-    background: linear-gradient(180deg, transparent 55%, color-mix(in srgb, var(--color-black) 18%, transparent));
+    background:
+      linear-gradient(180deg, rgb(0 0 0 / 10%), transparent 28% 64%, rgb(0 0 0 / 26%)),
+      linear-gradient(90deg, rgb(0 0 0 / 18%), transparent 18% 82%, rgb(0 0 0 / 20%));
   }
 
   .workshop-evidence__video {
@@ -293,14 +420,15 @@
     z-index: 2;
     display: inline-grid;
     place-items: center;
-    width: clamp(var(--sp-9), 5.2vw, var(--sp-11));
+    width: clamp(var(--sp-8), 5vw, var(--sp-10));
     min-width: var(--touch-target-min);
     aspect-ratio: 1;
-    border: var(--border-width) solid color-mix(in srgb, var(--color-earth-brown) 22%, transparent);
+    border: var(--border-width) solid rgb(74 44 24 / 16%);
     border-radius: var(--radius-full);
-    background: color-mix(in srgb, var(--color-white-cream) 92%, transparent);
+    background: rgb(255 249 242 / 82%);
     color: var(--color-earth-brown);
-    box-shadow: 0 14px 34px color-mix(in srgb, var(--color-black) 18%, transparent);
+    box-shadow: 0 14px 34px rgb(0 0 0 / 18%);
+    backdrop-filter: blur(4px);
     cursor: pointer;
     transform: translate(-50%, -50%);
     transition:
@@ -368,11 +496,12 @@
     width: clamp(var(--sp-6), 3.3vw, var(--sp-7));
     min-width: var(--touch-target-min);
     aspect-ratio: 1;
-    border: var(--border-width) solid color-mix(in srgb, var(--color-earth-brown) 12%, transparent);
+    border: var(--border-width) solid rgb(255 249 242 / 34%);
     border-radius: var(--radius-full);
-    background: color-mix(in srgb, var(--color-white-cream) 94%, transparent);
-    color: var(--color-earth-brown);
-    box-shadow: 0 10px 22px color-mix(in srgb, var(--color-black) 16%, transparent);
+    background: rgb(24 14 8 / 34%);
+    color: var(--color-white-cream);
+    box-shadow: 0 10px 22px rgb(0 0 0 / 18%);
+    backdrop-filter: blur(6px);
     cursor: pointer;
     transform: translateY(-50%);
   }
@@ -393,7 +522,7 @@
   .workshop-evidence__package-dots {
     position: absolute;
     right: var(--sp-4);
-    bottom: var(--sp-4);
+    bottom: var(--sp-5);
     left: var(--sp-4);
     z-index: 3;
     display: flex;
@@ -406,9 +535,9 @@
     min-width: var(--sp-2);
     height: var(--sp-2);
     padding: var(--sp-0);
-    border: var(--border-width) solid color-mix(in srgb, var(--color-white-cream) 78%, transparent);
+    border: var(--border-width) solid rgb(255 249 242 / 76%);
     border-radius: var(--radius-full);
-    background: color-mix(in srgb, var(--color-white-cream) 46%, transparent);
+    background: rgb(255 249 242 / 34%);
     cursor: pointer;
   }
 
@@ -421,29 +550,47 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: var(--sp-3);
-    margin-block-start: var(--sp-6);
-    color: var(--color-earth-brown);
+    gap: clamp(var(--sp-3), 1.4vw, var(--sp-5));
+    min-height: clamp(86px, 7vw, 112px);
+    margin: 0;
+    padding: var(--sp-4) var(--sp-5);
+    color: rgb(237 186 117);
     font-family: var(--font-body);
-    font-size: clamp(var(--font-size-body-lg), 1.5vw, var(--font-size-body-xl));
     font-weight: var(--font-weight-semibold);
     line-height: var(--line-height-tight);
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
   }
 
-  .workshop-evidence__caption-icon {
-    display: inline-grid;
+  .workshop-evidence__proof-card--light .workshop-evidence__caption {
+    color: var(--color-earth-brown);
+  }
+
+  .workshop-evidence__proof-card--dark .workshop-evidence__caption {
+    background:
+      radial-gradient(ellipse at 26% 48%, rgb(137 80 38 / 16%), transparent 46%),
+      repeating-linear-gradient(0deg, transparent 0 16px, rgb(255 224 166 / 4%) 16px 17px, transparent 17px 36px),
+      linear-gradient(180deg, rgb(54 30 15), rgb(35 20 11));
+    box-shadow: inset 0 var(--border-width) 0 rgb(230 174 106 / 22%);
+  }
+
+  .workshop-evidence__caption-number {
     flex: 0 0 auto;
-    place-items: center;
-    width: var(--sp-8);
-    aspect-ratio: 1;
-    border: var(--border-width) solid currentColor;
-    border-radius: var(--radius-full);
-    background: color-mix(in srgb, var(--color-white-cream) 84%, transparent);
+    font-family: var(--font-body);
+    font-size: clamp(var(--font-size-body-lg), 1.55vw, 26px);
+    letter-spacing: 0.08em;
   }
 
-  .workshop-evidence__caption-icon svg {
-    width: 50%;
-    height: 50%;
+  .workshop-evidence__caption-divider {
+    display: block;
+    width: var(--border-width);
+    height: clamp(var(--sp-5), 3vw, var(--sp-7));
+    background: currentColor;
+    opacity: 0.55;
+  }
+
+  .workshop-evidence__caption-label {
+    font-size: clamp(var(--font-size-caption), 1.1vw, var(--font-size-body-sm));
   }
 
   .workshop-evidence__lightbox {
@@ -452,7 +599,7 @@
     z-index: 9999;
     display: grid;
     place-items: center;
-    padding: var(--sp-6);
+    padding: clamp(var(--sp-5), 4vw, var(--sp-8));
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
@@ -472,49 +619,57 @@
   .workshop-evidence__lightbox-backdrop {
     position: absolute;
     inset: 0;
-    background: color-mix(in srgb, var(--color-earth-brown) 76%, transparent);
-    backdrop-filter: blur(8px);
-  }
-
-  .workshop-evidence__lightbox-dialog {
-    position: relative;
-    z-index: 1;
-    width: min(100%, 980px);
-    opacity: 0;
-    transform: scale(0.96) translateY(12px);
-    transition: opacity var(--timing-base) var(--ease-out), transform var(--timing-base) var(--ease-out);
-  }
-  
-  .workshop-evidence__lightbox.is-open .workshop-evidence__lightbox-dialog {
-    opacity: 1;
-    transform: scale(1) translateY(0);
+    background: rgb(0 0 0 / 72%);
   }
 
   .workshop-evidence__lightbox-image {
+    position: relative;
+    z-index: 1;
     display: block;
-    width: 100%;
-    max-height: calc(100vh - var(--sp-12));
+    width: auto;
+    max-width: min(100%, calc(100vw - clamp(112px, 12vw, 180px)));
+    max-height: calc(100vh - clamp(var(--sp-10), 10vw, var(--sp-12)));
     object-fit: contain;
-    border-radius: var(--radius-lg);
-    background: var(--color-white-cream);
-    box-shadow: 0 24px 60px color-mix(in srgb, var(--color-black) 42%, transparent);
+    background: transparent;
+    opacity: 0;
+    transform: scale(0.98);
+    transition:
+      opacity var(--timing-base) var(--ease-out),
+      transform var(--timing-base) var(--ease-out);
+  }
+
+  .workshop-evidence__lightbox.is-open .workshop-evidence__lightbox-image {
+    opacity: 1;
+    transform: scale(1);
   }
 
   .workshop-evidence__lightbox-close {
     position: absolute;
-    top: var(--sp-3);
-    right: var(--sp-3);
+    top: clamp(var(--sp-4), 3vw, var(--sp-6));
+    right: clamp(var(--sp-4), 3vw, var(--sp-6));
     z-index: 2;
     display: inline-grid;
     place-items: center;
-    width: var(--sp-8);
+    width: clamp(var(--sp-8), 3.8vw, var(--sp-10));
+    min-width: var(--touch-target-min);
     aspect-ratio: 1;
-    border: var(--border-width) solid color-mix(in srgb, var(--color-white-cream) 45%, transparent);
+    border: var(--border-width) solid color-mix(in srgb, var(--color-white-cream) 58%, transparent);
     border-radius: var(--radius-full);
-    background: color-mix(in srgb, var(--color-white-cream) 94%, transparent);
-    color: var(--color-earth-brown);
+    background: rgb(0 0 0 / 18%);
+    color: var(--color-white-cream);
     cursor: pointer;
-    box-shadow: 0 14px 32px color-mix(in srgb, var(--color-black) 24%, transparent);
+    backdrop-filter: blur(8px);
+    transition:
+      background-color var(--timing-base) var(--ease-out),
+      transform var(--timing-base) var(--ease-out);
+  }
+
+  .workshop-evidence__lightbox-close:hover,
+  .workshop-evidence__lightbox-close:focus-visible,
+  .workshop-evidence__lightbox-nav:hover,
+  .workshop-evidence__lightbox-nav:focus-visible {
+    background: color-mix(in srgb, var(--color-white-cream) 18%, transparent);
+    transform: scale(1.04);
   }
 
   .workshop-evidence__lightbox-close svg {
@@ -522,24 +677,60 @@
     height: 58%;
   }
 
+  .workshop-evidence__lightbox-nav {
+    position: absolute;
+    top: 50%;
+    z-index: 2;
+    display: inline-grid;
+    place-items: center;
+    width: clamp(var(--sp-9), 4.6vw, var(--sp-11));
+    min-width: var(--touch-target-min);
+    aspect-ratio: 1;
+    border: var(--border-width) solid color-mix(in srgb, var(--color-white-cream) 52%, transparent);
+    border-radius: var(--radius-full);
+    background: rgb(0 0 0 / 18%);
+    color: var(--color-white-cream);
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    transform: translateY(-50%);
+    transition:
+      background-color var(--timing-base) var(--ease-out),
+      transform var(--timing-base) var(--ease-out);
+  }
+
+  .workshop-evidence__lightbox-nav:hover,
+  .workshop-evidence__lightbox-nav:focus-visible {
+    transform: translateY(-50%) scale(1.04);
+  }
+
+  .workshop-evidence__lightbox-nav--prev {
+    left: clamp(var(--sp-3), 3vw, var(--sp-6));
+  }
+
+  .workshop-evidence__lightbox-nav--next {
+    right: clamp(var(--sp-3), 3vw, var(--sp-6));
+  }
+
+  .workshop-evidence__lightbox-nav svg {
+    width: 56%;
+    height: 56%;
+  }
+
   @media screen and (max-width: 1199px) {
-    .workshop-evidence {
-      padding-inline: var(--layout-padding-tablet);
-    }
-
     .workshop-evidence__media-grid {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: var(--sp-3);
+      justify-content: flex-start;
+      padding-inline: var(--layout-padding-tablet);
+      scroll-padding-inline: var(--layout-padding-tablet);
     }
 
-    .workshop-evidence__caption {
-      margin-block-start: var(--sp-3);
-      font-size: clamp(var(--font-size-body-sm), 1.2vw, var(--font-size-body-md));
-      gap: var(--sp-2);
+    .workshop-evidence__video-card--handcraft,
+    .workshop-evidence__packaging {
+      --workshop-card-width: clamp(360px, 44vw, 440px);
     }
 
-    .workshop-evidence__caption-icon {
-      width: var(--sp-6);
+    .workshop-evidence__video-card--assembly {
+      --workshop-card-width: clamp(340px, 41vw, 390px);
+      margin-block-start: var(--sp-6);
     }
     
     .workshop-evidence__play {
@@ -552,42 +743,32 @@
       padding: var(--sp-7) 0 var(--sp-6);
     }
 
+    .workshop-evidence__header {
+      padding-inline: var(--layout-padding-mobile);
+      margin-block-end: var(--sp-5);
+    }
+
     .workshop-evidence__media-grid {
-      display: flex;
-      flex-wrap: nowrap;
-      overflow-x: auto;
-      scroll-snap-type: x proximity;
-      scroll-behavior: smooth;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
       gap: var(--sp-4);
       padding-inline: var(--layout-padding-mobile);
       scroll-padding-inline: var(--layout-padding-mobile);
-      cursor: grab;
-    }
-    
-    .workshop-evidence__media-grid.is-dragging {
-      cursor: grabbing;
-      user-select: none;
-      scroll-snap-type: none;
-      scroll-behavior: auto;
     }
 
-    .workshop-evidence__media-grid::-webkit-scrollbar {
-      display: none;
-    }
-
-    .workshop-evidence__video-card,
+    .workshop-evidence__video-card--handcraft,
+    .workshop-evidence__video-card--assembly,
     .workshop-evidence__packaging {
-      flex: 0 0 auto;
-      width: clamp(270px, 78vw, 360px);
+      --workshop-card-width: clamp(286px, 82vw, 350px);
+      margin-block-start: 0;
       scroll-snap-align: start;
+    }
+
+    .workshop-evidence__video-card--assembly {
+      --workshop-card-width: clamp(268px, 74vw, 318px);
     }
 
     .workshop-evidence__video-frame,
     .workshop-evidence__package-frame {
-      aspect-ratio: 4 / 5;
-      border-radius: 14px;
+      aspect-ratio: 9 / 16;
     }
     
     .workshop-evidence__package-frame {
@@ -595,16 +776,9 @@
     }
 
     .workshop-evidence__caption {
-      justify-content: center;
-      margin-inline: auto;
-      max-width: 100%;
-      margin-block-start: 16px;
-      font-size: var(--font-size-body-lg);
-      gap: 12px;
-    }
-
-    .workshop-evidence__caption-icon {
-      width: var(--sp-8);
+      min-height: 82px;
+      padding: var(--sp-3) var(--sp-4);
+      gap: var(--sp-3);
     }
 
     .workshop-evidence__package-nav--prev {
@@ -617,6 +791,35 @@
 
     .workshop-evidence__lightbox {
       padding: var(--sp-4);
+    }
+
+    .workshop-evidence__lightbox-image {
+      max-width: calc(100vw - var(--sp-4));
+      max-height: calc(100vh - var(--sp-12));
+    }
+
+    .workshop-evidence__lightbox-close {
+      top: var(--sp-3);
+      right: var(--sp-3);
+    }
+
+    .workshop-evidence__lightbox-nav {
+      top: auto;
+      bottom: var(--sp-4);
+      transform: none;
+    }
+
+    .workshop-evidence__lightbox-nav:hover,
+    .workshop-evidence__lightbox-nav:focus-visible {
+      transform: scale(1.04);
+    }
+
+    .workshop-evidence__lightbox-nav--prev {
+      left: var(--sp-4);
+    }
+
+    .workshop-evidence__lightbox-nav--next {
+      right: var(--sp-4);
     }
   }
 {% endstylesheet %}
@@ -637,12 +840,47 @@
       image.removeAttribute('data-workshop-image-src');
     }
 
+    function primeWorkshopVideoFrame(video) {
+      if (!video || video.dataset.workshopPreviewPrimed === 'true') return;
+
+      video.dataset.workshopPreviewPrimed = 'true';
+
+      var seekPreviewFrame = function () {
+        if (!video.paused || video.readyState === 0) return;
+
+        try {
+          if (video.duration > 0.16) {
+            video.currentTime = 0.12;
+          }
+        } catch (error) {
+          // Some browsers can reject early media seeks; the play button remains usable.
+        }
+      };
+
+      if (video.readyState >= 1) {
+        seekPreviewFrame();
+      } else {
+        video.addEventListener('loadedmetadata', seekPreviewFrame, { once: true });
+      }
+    }
+
     function loadWorkshopVideo(video) {
-      if (!video || video.getAttribute('src')) return;
+      if (!video) return;
+
+      if (video.getAttribute('src')) {
+        primeWorkshopVideoFrame(video);
+        return;
+      }
 
       video.src = video.dataset.workshopVideoSrc;
       video.removeAttribute('data-workshop-video-src');
       video.load();
+      primeWorkshopVideoFrame(video);
+    }
+
+    function getSlideImageAlt(slide) {
+      var image = slide ? slide.querySelector('img') : null;
+      return image ? image.alt : '';
     }
 
     function setPackageIndex(packaging, index) {
@@ -663,12 +901,30 @@
       });
     }
 
-    function openLightbox(section, src) {
+    function setLightboxIndex(lightbox, index) {
+      var section = lightbox ? lightbox.closest('.workshop-evidence') : null;
+      var packaging = section ? section.querySelector('[data-workshop-packaging]') : null;
+      var slides = getPackagingSlides(packaging);
+      var image = lightbox ? lightbox.querySelector('[data-workshop-lightbox-image]') : null;
+      if (!lightbox || !packaging || !slides.length || !image) return;
+
+      var nextIndex = (index + slides.length) % slides.length;
+      var nextSlide = slides[nextIndex];
+      var nextSrc = nextSlide ? nextSlide.dataset.workshopLightboxSrc : '';
+      if (!nextSrc) return;
+
+      setPackageIndex(packaging, nextIndex);
+      image.src = nextSrc;
+      image.alt = getSlideImageAlt(nextSlide) || image.alt;
+      lightbox.dataset.workshopLightboxIndex = nextIndex;
+    }
+
+    function openLightbox(section, index) {
       var lightbox = section ? section.querySelector('[data-workshop-lightbox]') : null;
       var image = lightbox ? lightbox.querySelector('[data-workshop-lightbox-image]') : null;
-      if (!lightbox || !image || !src) return;
+      if (!lightbox || !image) return;
 
-      image.src = src;
+      setLightboxIndex(lightbox, Number(index || 0));
       activeLightbox = lightbox;
       lightbox.classList.add('is-open');
       lightbox.setAttribute('aria-hidden', 'false');
@@ -737,10 +993,26 @@
         return;
       }
 
+      var lightboxPrevButton = event.target.closest('[data-workshop-lightbox-prev]');
+      if (lightboxPrevButton) {
+        var prevLightbox = lightboxPrevButton.closest('[data-workshop-lightbox]');
+        var lightboxPrevIndex = Number(prevLightbox.dataset.workshopLightboxIndex || 0);
+        setLightboxIndex(prevLightbox, lightboxPrevIndex - 1);
+        return;
+      }
+
+      var lightboxNextButton = event.target.closest('[data-workshop-lightbox-next]');
+      if (lightboxNextButton) {
+        var nextLightbox = lightboxNextButton.closest('[data-workshop-lightbox]');
+        var lightboxNextIndex = Number(nextLightbox.dataset.workshopLightboxIndex || 0);
+        setLightboxIndex(nextLightbox, lightboxNextIndex + 1);
+        return;
+      }
+
       var lightboxButton = event.target.closest('[data-workshop-lightbox-open]');
       if (lightboxButton) {
         var section = lightboxButton.closest('.workshop-evidence');
-        openLightbox(section, lightboxButton.dataset.workshopLightboxSrc);
+        openLightbox(section, Number(lightboxButton.dataset.workshopLightboxIndex || 0));
         return;
       }
 
@@ -818,6 +1090,14 @@
 
       if (event.key === 'Escape') {
         closeLightbox(activeLightbox);
+      }
+
+      if (event.key === 'ArrowLeft') {
+        setLightboxIndex(activeLightbox, Number(activeLightbox.dataset.workshopLightboxIndex || 0) - 1);
+      }
+
+      if (event.key === 'ArrowRight') {
+        setLightboxIndex(activeLightbox, Number(activeLightbox.dataset.workshopLightboxIndex || 0) + 1);
       }
     });
 
