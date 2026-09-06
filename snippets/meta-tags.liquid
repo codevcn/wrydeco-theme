@@ -97,6 +97,64 @@
   >
 {%- endif -%}
 
+{%- if request.page_type == 'article' -%}
+  {%- liquid
+    assign article_schema_description = seo_page_description | default: article.excerpt | strip_html | strip
+    if article_schema_description == blank
+      assign article_schema_description = article.content | strip_html | strip | truncatewords: 32
+    endif
+
+    assign article_schema_image_url = blank
+    if page_image
+      assign article_schema_image_url = page_image | image_url: width: 1200 | prepend: 'https:'
+    elsif article.image
+      assign article_schema_image_url = article.image | image_url: width: 1200 | prepend: 'https:'
+    endif
+
+    assign article_schema_author_name = article.author | default: shop.name
+    assign article_schema_date_published = blank
+    if article.published_at
+      assign article_schema_date_published = article.published_at | date: '%Y-%m-%dT%H:%M:%S%:z'
+    elsif article.created_at
+      assign article_schema_date_published = article.created_at | date: '%Y-%m-%dT%H:%M:%S%:z'
+    endif
+    assign article_schema_date_modified = article.updated_at | date: '%Y-%m-%dT%H:%M:%S%:z'
+    assign article_schema_home_url = 'https://wrydeco.com/'
+    assign article_schema_organization_id = article_schema_home_url | append: '#organization'
+    assign article_schema_logo_url = 'store-logo-trans.png' | file_url | prepend: 'https:'
+  -%}
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BlogPosting",
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": {{ canonical_url | json }}
+      },
+      "headline": {{ article.title | json }},
+      "description": {{ article_schema_description | json }},
+      {%- if article_schema_image_url != blank %}
+        "image": [{{ article_schema_image_url | json }}],
+      {%- endif %}
+      "author": {
+        "@type": "Organization",
+        "name": {{ article_schema_author_name | json }}
+      },
+      "publisher": {
+        "@type": "Organization",
+        "@id": {{ article_schema_organization_id | json }},
+        "name": {{ shop.name | json }},
+        "logo": {
+          "@type": "ImageObject",
+          "url": {{ article_schema_logo_url | json }}
+        }
+      },
+      "datePublished": {{ article_schema_date_published | json }},
+      "dateModified": {{ article_schema_date_modified | json }}
+    }
+  </script>
+{%- endif -%}
+
 <meta
   name="twitter:card"
   content="summary_large_image"

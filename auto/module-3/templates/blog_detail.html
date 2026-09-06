@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="/static/favicon-96x96.png" sizes="96x96" />
+    <link rel="shortcut icon" href="/static/favicon.ico" />
+    <title>{{ article.title }} - Blog Detail</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .prose img { max-width: 100%; height: auto; border-radius: 0.375rem; }
+        .prose a { color: #4f46e5; text-decoration: underline; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
+        <div class="mx-auto px-4 sm:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo -->
+                <div class="flex-shrink-0">
+                    <a target="_blank" rel="noopener noreferrer" href="/" class="flex items-center gap-2 text-indigo-600 font-bold text-xl hover:text-indigo-700 transition-colors">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                        <span>Shopify Admin Manager</span>
+                    </a>
+                </div>
+                <!-- Nav Links -->
+                <nav class="flex items-center gap-6">
+                    <a target="_blank" rel="noopener noreferrer" href="/" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Sản phẩm</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/collections" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Collections</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/create" class="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">Tạo sản phẩm</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/edit-variants" class="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">Sửa hàng loạt</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/notes" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Ghi chú</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/reviews" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Reviews</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/blogs" class="text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 pb-0.5 flex items-center gap-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path></svg>Blog</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/settings" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>Settings</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+    
+    <!-- Action Buttons (Top Right) -->
+    <div class="fixed top-20 right-4 sm:right-8 flex flex-row gap-2 z-40">
+        <a href="https://admin.shopify.com/store/wrydeco/content/articles/{{ article.id.split('/')[-1] }}" target="_blank" class="bg-black text-white text-xs font-bold px-3 py-2 rounded shadow hover:bg-gray-800 transition text-center">SHOPIFY</a>
+        <a href="https://wrydeco.myshopify.com/blogs/news/{{ article.handle }}" target="_blank" class="bg-blue-600 text-white text-xs font-bold px-3 py-2 rounded shadow hover:bg-blue-700 transition text-center">DEV</a>
+        <a href="https://wrydeco.com/blogs/news/{{ article.handle }}" target="_blank" class="bg-green-600 text-white text-xs font-bold px-3 py-2 rounded shadow hover:bg-green-700 transition text-center">REAL</a>
+        <button onclick="copyToClipboard('{{ article.id.split('/')[-1] }}', this)" class="bg-gray-600 text-white text-xs font-bold px-3 py-2 rounded shadow hover:bg-gray-700 transition text-center">ID</button>
+        <button onclick="copyToClipboard('{{ article.handle }}', this)" class="bg-gray-600 text-white text-xs font-bold px-3 py-2 rounded shadow hover:bg-gray-700 transition text-center">HANDLE</button>
+    </div>
+
+    <div class="max-w-[90%] mx-auto space-y-6 py-8">
+        
+        <!-- Actions Top -->
+        <div class="flex items-center gap-4 mb-6">
+            <a href="/blogs" class="text-indigo-600 hover:text-indigo-800 font-medium text-sm flex items-center gap-1 w-max">
+                &larr; Quay lại danh sách Blog
+            </a>
+            <button onclick="openCreateModal()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition flex items-center gap-2">
+                <iconify-icon icon="mdi:plus" class="text-lg"></iconify-icon> Tạo Blog Post mới
+            </button>
+        </div>
+
+        <!-- TOP SECTION -->
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div class="flex justify-between items-center border-b pb-2 mb-4">
+                <h2 class="text-xl font-bold text-gray-800">Thông tin chung (Top)</h2>
+                <button onclick="openDeleteModal()" class="bg-red-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-red-700 transition flex items-center gap-2">
+                    <iconify-icon icon="mdi:trash-can-outline" class="text-base"></iconify-icon> Xóa Post này
+                </button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Cover Image -->
+                <div class="md:col-span-1">
+                    <div class="flex justify-between items-center mb-2">
+                        <p class="text-sm font-semibold text-gray-600">Cover Image</p>
+                        <div class="flex items-center gap-2">
+                            <button onclick="document.getElementById('coverImageInput').click()" class="text-xs bg-indigo-50 text-indigo-600 px-2 py-1 rounded hover:bg-indigo-100 font-medium">Change</button>
+                            <button id="saveCoverImageBtn" onclick="saveCoverImage()" class="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 font-medium hidden">Save</button>
+                        </div>
+                        <input type="file" id="coverImageInput" accept="image/*" class="hidden" onchange="onCoverImageSelected(this)">
+                    </div>
+                    {% if article.image and article.image.url %}
+                    <img id="cover-image-preview" src="{{ article.image.url }}" alt="Cover" onclick="openLightbox(this.src)" class="w-full h-auto rounded-lg border shadow-sm cursor-pointer hover:opacity-90 transition">
+                    {% else %}
+                    <div id="cover-image-fallback" class="w-full h-40 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 border">
+                        Không có ảnh bìa
+                    </div>
+                    <img id="cover-image-preview" src="" alt="Cover" onclick="openLightbox(this.src)" class="hidden w-full h-auto rounded-lg border shadow-sm cursor-pointer hover:opacity-90 transition">
+                    {% endif %}
+                </div>
+                
+                <!-- Basic Info -->
+                <div class="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-xs text-gray-500 font-semibold uppercase">ID</p>
+                        <p class="text-sm text-gray-900 truncate">{{ article.id.split('/')[-1] }}</p>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2 mb-1">
+                            <p class="text-xs text-gray-500 font-semibold uppercase">Handle</p>
+                            <button onclick="openEditor('handle')" class="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 p-1 rounded-md transition flex items-center justify-center" title="Chỉnh sửa"><iconify-icon icon="mdi:pencil" class="text-base"></iconify-icon></button>
+                        </div>
+                        <p class="text-sm text-gray-900 break-all" id="val-handle">{{ article.handle }}</p>
+                    </div>
+                    <div class="sm:col-span-2">
+                        <div class="flex items-center gap-2">
+                            <p class="text-xs text-gray-500 font-semibold uppercase">Title</p>
+                            <button onclick="openEditor('title')" class="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 p-1 rounded-md transition flex items-center justify-center" title="Chỉnh sửa"><iconify-icon icon="mdi:pencil" class="text-base"></iconify-icon></button>
+                        </div>
+                        <p class="text-base font-medium text-gray-900" id="val-title">{{ article.title }}</p>
+                    </div>
+                    <div class="sm:col-span-2">
+                        <div class="flex items-center gap-2">
+                            <p class="text-xs text-gray-500 font-semibold uppercase">Excerpt (Tóm tắt)</p>
+                            <button onclick="openEditor('summary')" class="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 p-1 rounded-md transition flex items-center justify-center" title="Chỉnh sửa"><iconify-icon icon="mdi:pencil" class="text-base"></iconify-icon></button>
+                        </div>
+                        <div class="text-sm text-gray-700 bg-gray-50 p-2 rounded border mt-1 max-h-24 overflow-y-auto" id="val-summary">
+                            {{ article.summary | safe if article.summary else '' }}
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <p class="text-xs text-gray-500 font-semibold uppercase">Visibility</p>
+                            <button onclick="openEditor('visibility')" class="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 p-1 rounded-md transition flex items-center justify-center" title="Chỉnh sửa"><iconify-icon icon="mdi:pencil" class="text-base"></iconify-icon></button>
+                        </div>
+                        <p class="text-sm mt-1" id="val-visibility" data-val="{{ 'true' if article.isPublished else 'false' }}">
+                            {% if article.isPublished %}
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Hiển thị (Published)</span>
+                            {% else %}
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">Đã ẩn (Hidden)</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500 font-semibold uppercase">Ngày xuất bản</p>
+                        <p class="text-sm text-gray-900 mt-1">{{ article.publishedAt_fmt or '-' }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Organization & SEO -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 pt-6 border-t">
+                <!-- Organization -->
+                <div>
+                    <h3 class="text-sm font-semibold text-gray-800 mb-3 uppercase">Organization</h3>
+                    <div class="space-y-3">
+                        <div>
+                            <p class="text-xs text-gray-500">Author (Tác giả)</p>
+                            <p class="text-sm text-gray-900">{{ article.author.name if article.author else '-' }}</p>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                            <p class="text-xs text-gray-500 font-semibold uppercase">Blog chứa bài viết</p>
+                            <button onclick="openEditor('blog')" class="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 p-1 rounded-md transition flex items-center justify-center" title="Chỉnh sửa"><iconify-icon icon="mdi:pencil" class="text-base"></iconify-icon></button>
+                        </div>
+                            <p class="text-sm font-medium text-indigo-600 mt-1" id="val-blog" data-val="{{ article.blog.id if article.blog else '' }}">{{ article.blog.title if article.blog else '-' }}</p>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                            <p class="text-xs text-gray-500 font-semibold uppercase">Tags</p>
+                            <button onclick="openEditor('tags')" class="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 p-1 rounded-md transition flex items-center justify-center" title="Chỉnh sửa"><iconify-icon icon="mdi:pencil" class="text-base"></iconify-icon></button>
+                        </div>
+                            <div class="flex flex-wrap gap-1 mt-1" id="val-tags">
+                                {% if article.tags %}
+                                    {% for tag in article.tags %}
+                                    <span class="bg-gray-100 border text-gray-700 px-2 py-0.5 rounded text-xs tag-item">{{ tag }}</span>
+                                    {% endfor %}
+                                {% else %}
+                                    <span class="text-sm text-gray-400 empty-tags">-</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- SEO fields -->
+                <div>
+                    <div class="flex items-center gap-2 mb-3">
+                    <h3 class="text-sm font-semibold text-gray-800 uppercase">SEO Fields</h3>
+                    <button onclick="openEditor('seo')" class="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 p-1 rounded-md transition flex items-center justify-center" title="Chỉnh sửa"><iconify-icon icon="mdi:pencil" class="text-base"></iconify-icon></button>
+                </div>
+                    <div class="space-y-3 bg-blue-50 p-4 rounded-lg border border-blue-100">
+                        <div>
+                            <p class="text-xs text-blue-700 font-medium">SEO Title</p>
+                            <p class="text-sm text-gray-900 font-medium mt-0.5" id="val-seo-title">
+                                {{ article.seo_title.value if article.seo_title else '' }}
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-blue-700 font-medium">SEO Description</p>
+                            <p class="text-sm text-gray-700 mt-0.5 text-justify" id="val-seo-desc">
+                                {{ article.seo_desc.value if article.seo_desc else '' }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Content Area -->
+        <section class="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+            <div class="flex items-center gap-2 border-b pb-3 mb-6">
+                <h2 class="text-xl font-bold text-gray-800">Content (Mid)</h2>
+                <button onclick="openEditor('body')" class="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 p-1 rounded-md transition flex items-center justify-center" title="Chỉnh sửa Nội dung"><iconify-icon icon="mdi:pencil" class="text-base"></iconify-icon></button>
+                <button id="copyContentBtn" onclick="copyContent()" class="ml-auto flex items-center gap-2 bg-gray-100 text-gray-700 hover:bg-gray-200 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border border-gray-200" title="Copy Content">
+                    <iconify-icon icon="mdi:content-copy"></iconify-icon> <span id="copyContentText">Copy</span>
+                </button>
+            </div>
+            <div class="prose max-w-none text-gray-800 leading-relaxed text-justify">
+                {{ article.body | safe if article.body else '<span class="text-gray-400 italic">Bài viết không có nội dung.</span>' | safe }}
+            </div>
+            <textarea id="val-body-raw" class="hidden">{{ article.body if article.body else '' }}</textarea>
+        </section>
+
+        <!-- BOTTOM SECTION -->
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-12">
+            <h2 class="text-xl font-bold border-b pb-2 mb-4 text-gray-800 flex items-center gap-2">
+                Bình luận (Bottom)
+                {% set comments = article.comments.edges if article.comments else [] %}
+                <span class="bg-indigo-100 text-indigo-800 text-xs py-1 px-2 rounded-full">{{ comments | length }}</span>
+            </h2>
+            
+            <div class="space-y-4">
+                {% if comments %}
+                    {% for edge in comments %}
+                    {% set comment = edge.node %}
+                    <div class="p-4 rounded-lg border {% if comment.status == 'PUBLISHED' %}border-green-200 bg-green-50{% elif comment.status == 'UNAPPROVED' %}border-yellow-200 bg-yellow-50{% else %}border-gray-200 bg-gray-50{% endif %}">
+                        <div class="flex justify-between items-start mb-2">
+                            <div>
+                                <p class="text-sm font-semibold text-gray-900">{{ comment.author.name if comment.author else 'Ẩn danh' }} <span class="text-xs font-normal text-gray-500">&lt;{{ comment.author.email if comment.author else '' }}&gt;</span></p>
+                                <p class="text-xs text-gray-500">{{ comment.createdAt_fmt }}</p>
+                            </div>
+                            <div>
+                                {% if comment.status == 'PUBLISHED' %}
+                                <span class="text-xs font-medium text-green-700 bg-green-100 px-2 py-1 rounded">Published</span>
+                                {% elif comment.status == 'UNAPPROVED' %}
+                                <span class="text-xs font-medium text-yellow-700 bg-yellow-100 px-2 py-1 rounded">Pending</span>
+                                {% else %}
+                                <span class="text-xs font-medium text-gray-700 bg-gray-200 px-2 py-1 rounded">{{ comment.status }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="text-sm text-gray-700">
+                            {{ comment.bodyHtml | safe }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-6 text-gray-500">
+                        Chưa có bình luận nào cho bài viết này.
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+
+    </div>
+
+    <!-- Internal Editor Modal -->
+    <div id="editorModal" onclick="closeEditor()" class="fixed inset-0 z-[110] bg-black/50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div onclick="event.stopPropagation()" class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+                <h3 id="editorModalTitle" class="text-lg font-bold text-gray-800">Edit</h3>
+                <button onclick="closeEditor()" class="text-gray-400 hover:text-gray-700 transition"><iconify-icon icon="mdi:close" class="text-xl"></iconify-icon></button>
+            </div>
+            <div class="p-6 flex-grow overflow-y-auto" id="editorModalBody">
+                <!-- Inputs will be injected here -->
+            </div>
+            <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
+                <button onclick="closeEditor()" class="px-4 py-2 border rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition">Cancel</button>
+                <button id="editorSubmitBtn" onclick="submitEditor()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition flex items-center gap-2">
+                    Submit
+                </button>
+            </div>
+        </div>
+    </div>
+
+    
+    <!-- Create Post Modal -->
+    <div id="createModal" onclick="closeCreateModal()" class="fixed inset-0 z-[110] bg-black/50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div onclick="event.stopPropagation()" class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+                <h3 class="text-lg font-bold text-gray-800">Tạo Blog Post mới</h3>
+                <button onclick="closeCreateModal()" class="text-gray-400 hover:text-gray-700 transition"><iconify-icon icon="mdi:close" class="text-xl"></iconify-icon></button>
+            </div>
+            <div class="p-6 flex-grow overflow-y-auto space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Title <span class="text-red-500">*</span></label>
+                    <input type="text" id="createInputTitle" class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border" placeholder="Nhập tiêu đề...">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Blog <span class="text-red-500">*</span></label>
+                        <select id="createInputBlog" class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border">
+                            {% for b in all_blogs %}
+                            <option value="{{ b.id }}">{{ b.title | escape }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Author</label>
+                        <input type="text" id="createInputAuthor" class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border" value="{{ article.author.name if article.author else 'Wrydeco Admin' }}">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Visibility</label>
+                    <select id="createInputVisibility" class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border">
+                        <option value="true">Hiển thị (Published)</option>
+                        <option value="false">Đã ẩn (Hidden)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Excerpt (Tóm tắt)</label>
+                    <textarea id="createInputSummary" rows="3" class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Content (HTML)</label>
+                    <textarea id="createInputBody" rows="5" class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border font-mono text-sm"></textarea>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
+                <button onclick="closeCreateModal()" class="px-4 py-2 border rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition">Cancel</button>
+                <button id="createSubmitBtn" onclick="submitCreatePost()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition flex items-center gap-2">
+                    Create Post
+                </button>
+            </div>
+        </div>
+    </div>
+
+    
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" onclick="closeDeleteModal()" class="fixed inset-0 z-[120] bg-black/50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div onclick="event.stopPropagation()" class="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+                <h3 class="text-lg font-bold text-red-600 flex items-center gap-2">
+                    <iconify-icon icon="mdi:alert-circle-outline" class="text-xl"></iconify-icon> Xác nhận xóa
+                </h3>
+                <button onclick="closeDeleteModal()" class="text-gray-400 hover:text-gray-700 transition"><iconify-icon icon="mdi:close" class="text-xl"></iconify-icon></button>
+            </div>
+            <div class="p-6">
+                <p class="text-sm text-gray-600 mb-4">Bạn có chắc chắn muốn xóa Blog Post này không? Hành động này không thể hoàn tác.</p>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Mật khẩu xác thực <span class="text-red-500">*</span></label>
+                    <input type="password" id="deletePassword" class="w-full border-gray-300 rounded-md shadow-sm focus:border-red-500 focus:ring-red-500 p-2 border" placeholder="Nhập mật khẩu để xóa...">
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
+                <button onclick="closeDeleteModal()" class="px-4 py-2 border rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition">Hủy</button>
+                <button id="confirmDeleteBtn" onclick="submitDeletePost()" class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition flex items-center gap-2">
+                    <iconify-icon icon="mdi:trash-can-outline"></iconify-icon> Xóa
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lightbox -->
+    <div id="lightbox" class="fixed inset-0 z-[100] bg-black/80 hidden flex items-center justify-center p-4 backdrop-blur-sm cursor-zoom-out" onclick="closeLightbox()">
+        <img id="lightbox-img" src="" class="max-w-full max-h-full object-contain rounded-lg shadow-2xl cursor-auto" alt="Lightbox Image" onclick="event.stopPropagation()">
+    </div>
+
+    <!-- Scroll Buttons -->
+    <div class="fixed bottom-8 right-8 flex flex-col gap-3 z-50">
+        <button id="scrollToTopBtn" onclick="window.scrollTo({top: 0, behavior: 'instant'})" class="bg-indigo-600 text-white p-3 rounded-full shadow-lg hover:bg-indigo-700 transition-all opacity-0 pointer-events-none" title="Cuộn lên đầu trang">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
+        </button>
+        <button id="scrollToBottomBtn" onclick="window.scrollTo({top: document.body.scrollHeight, behavior: 'instant'})" class="bg-indigo-600 text-white p-3 rounded-full shadow-lg hover:bg-indigo-700 transition-all opacity-0 pointer-events-none" title="Cuộn xuống cuối trang">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        </button>
+    </div>
+
+    <script>
+        const scrollToTopBtn = document.getElementById('scrollToTopBtn');
+        const scrollToBottomBtn = document.getElementById('scrollToBottomBtn');
+        
+        function toggleScrollButtons() {
+            if (window.scrollY > 300) {
+                scrollToTopBtn.classList.remove('opacity-0', 'pointer-events-none');
+            } else {
+                scrollToTopBtn.classList.add('opacity-0', 'pointer-events-none');
+            }
+            
+            if (window.scrollY + window.innerHeight < document.body.scrollHeight - 300) {
+                scrollToBottomBtn.classList.remove('opacity-0', 'pointer-events-none');
+            } else {
+                scrollToBottomBtn.classList.add('opacity-0', 'pointer-events-none');
+            }
+        }
+
+        window.addEventListener('scroll', toggleScrollButtons);
+        window.addEventListener('load', toggleScrollButtons);
+
+        function copyToClipboard(text, btn) {
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = btn.innerText;
+                btn.innerText = 'COPIED!';
+                btn.classList.add('bg-green-500');
+                btn.classList.remove('bg-gray-600', 'hover:bg-gray-700');
+                setTimeout(() => {
+                    btn.innerText = originalText;
+                    btn.classList.remove('bg-green-500');
+                    btn.classList.add('bg-gray-600', 'hover:bg-gray-700');
+                }, 1500);
+            }).catch(err => {
+                alert("Lỗi copy: " + err);
+            });
+        }
+
+        function copyContent() {
+            const rawBody = document.getElementById('val-body-raw').value;
+            navigator.clipboard.writeText(rawBody).then(() => {
+                const btn = document.getElementById('copyContentBtn');
+                const textSpan = document.getElementById('copyContentText');
+                const originalText = textSpan.innerText;
+                textSpan.innerText = 'Copied!';
+                btn.classList.add('bg-green-100', 'text-green-800', 'border-green-300');
+                btn.classList.remove('bg-gray-100', 'text-gray-700', 'border-gray-200');
+                setTimeout(() => {
+                    textSpan.innerText = originalText;
+                    btn.classList.remove('bg-green-100', 'text-green-800', 'border-green-300');
+                    btn.classList.add('bg-gray-100', 'text-gray-700', 'border-gray-200');
+                }, 1500);
+            }).catch(err => {
+                alert("Lỗi copy: " + err);
+            });
+        }
+
+        function openLightbox(url) {
+            const lightbox = document.getElementById('lightbox');
+            const lightboxImg = document.getElementById('lightbox-img');
+            lightboxImg.src = url;
+            lightbox.classList.remove('hidden');
+        }
+
+        function closeLightbox() {
+            const lightbox = document.getElementById('lightbox');
+            lightbox.classList.add('hidden');
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeLightbox();
+                closeEditor();
+                closeCreateModal();
+                closeDeleteModal();
+            }
+        });
+
+        let currentEditField = '';
+
+        
+        function openCreateModal() {
+            document.getElementById('createModal').classList.remove('hidden');
+        }
+
+        function closeCreateModal() {
+            document.getElementById('createModal').classList.add('hidden');
+        }
+
+        async function submitCreatePost() {
+            const title = document.getElementById('createInputTitle').value.trim();
+            if (!title) {
+                alert('Vui lòng nhập Title!');
+                return;
+            }
+            
+            const btn = document.getElementById('createSubmitBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = 'Đang tạo...';
+            btn.disabled = true;
+            
+            const payload = {
+                title: title,
+                blogId: document.getElementById('createInputBlog').value,
+                author: document.getElementById('createInputAuthor').value,
+                isPublished: document.getElementById('createInputVisibility').value === 'true',
+                summary: document.getElementById('createInputSummary').value,
+                body: document.getElementById('createInputBody').value
+            };
+            
+            try {
+                const res = await fetch('/blogs/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    window.location.href = `/blogs/${data.id}`;
+                } else {
+                    alert('Lỗi tạo Post: ' + (data.error || 'Unknown error'));
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
+            } catch (err) {
+                alert('Lỗi mạng: ' + err.message);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        
+        function openDeleteModal() {
+            document.getElementById('deletePassword').value = '';
+            document.getElementById('deleteModal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('deletePassword').focus(), 100);
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').classList.add('hidden');
+        }
+
+        async function submitDeletePost() {
+            const pwd = document.getElementById('deletePassword').value.trim();
+            if (!pwd) {
+                alert('Vui lòng nhập mật khẩu xác thực!');
+                return;
+            }
+            
+            const btn = document.getElementById('confirmDeleteBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = 'Đang xóa...';
+            btn.disabled = true;
+            
+            try {
+                const res = await fetch(`/blogs/{{ article.id.split('/')[-1] }}/delete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: pwd })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('Đã xóa Post thành công!');
+                    window.location.href = '/blogs';
+                } else {
+                    alert('Lỗi xóa Post: ' + (data.message || 'Unknown error'));
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
+            } catch (err) {
+                alert('Lỗi mạng: ' + err.message);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        function openEditor(field) {
+            currentEditField = field;
+            const modal = document.getElementById('editorModal');
+            const titleEl = document.getElementById('editorModalTitle');
+            const bodyEl = document.getElementById('editorModalBody');
+            
+            let html = '';
+            
+            if (field === 'title') {
+                titleEl.innerText = 'Chỉnh sửa Title';
+                const val = document.getElementById('val-title').innerText.trim();
+                html = `<input type="text" id="editInputTitle" class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border" value="${val.replace(/"/g, '&quot;')}">`;
+            } else if (field === 'handle') {
+                titleEl.innerText = 'Chỉnh sửa Handle';
+                const val = document.getElementById('val-handle').innerText.trim();
+                html = `<input type="text" id="editInputHandle" class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border" value="${val.replace(/"/g, '&quot;')}">`;
+            } else if (field === 'summary') {
+                titleEl.innerText = 'Chỉnh sửa Excerpt (Tóm tắt)';
+                const val = document.getElementById('val-summary').innerHTML.trim();
+                html = `<textarea id="editInputSummary" rows="8" class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border">${val}</textarea>`;
+            } else if (field === 'visibility') {
+                titleEl.innerText = 'Chỉnh sửa Visibility';
+                const isPub = document.getElementById('val-visibility').getAttribute('data-val') === 'true';
+                html = `
+                    <select id="editInputVisibility" class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border">
+                        <option value="true" ${isPub ? 'selected' : ''}>Hiển thị (Published)</option>
+                        <option value="false" ${!isPub ? 'selected' : ''}>Đã ẩn (Hidden)</option>
+                    </select>
+                `;
+            } else if (field === 'seo') {
+                titleEl.innerText = 'Chỉnh sửa SEO Fields';
+                const seoTitle = document.getElementById('val-seo-title').innerText.trim();
+                const seoDesc = document.getElementById('val-seo-desc').innerText.trim();
+                html = `
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">SEO Title</label>
+                            <input type="text" id="editInputSeoTitle" class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border" value="${seoTitle.replace(/"/g, '&quot;')}">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">SEO Description</label>
+                            <textarea id="editInputSeoDesc" rows="6" class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border">${seoDesc}</textarea>
+                        </div>
+                    </div>
+                `;
+            } else if (field === 'blog') {
+                titleEl.innerText = 'Chỉnh sửa Blog';
+                const currentBlogId = document.getElementById('val-blog').getAttribute('data-val');
+                html = `<select id="editInputBlog" class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border">`;
+                {% for b in all_blogs %}
+                html += `<option value="{{ b.id }}" ${currentBlogId === '{{ b.id }}' ? 'selected' : ''}>{{ b.title | replace("'", "\\'") | replace('"', '\\"') }}</option>`;
+                {% endfor %}
+                html += `</select>`;
+            } else if (field === 'tags') {
+                titleEl.innerText = 'Chỉnh sửa Tags';
+                const tagEls = document.querySelectorAll('#val-tags .tag-item');
+                let tags = [];
+                tagEls.forEach(el => tags.push(el.innerText.trim()));
+                const tagsStr = tags.join(', ');
+                html = `
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Tags (cách nhau bằng dấu phẩy)</label>
+                    <input type="text" id="editInputTags" class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border" value="${tagsStr.replace(/"/g, '&quot;')}">
+                `;
+            } else if (field === 'body') {
+                titleEl.innerText = 'Chỉnh sửa Nội dung (HTML)';
+                const val = document.getElementById('val-body-raw').value;
+                html = `<textarea id="editInputBody" rows="20" class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border font-mono text-sm">${val}</textarea>`;
+            }
+            
+            bodyEl.innerHTML = html;
+            modal.classList.remove('hidden');
+        }
+
+        function closeEditor() {
+            document.getElementById('editorModal').classList.add('hidden');
+            currentEditField = '';
+        }
+
+        async function submitEditor() {
+            const btn = document.getElementById('editorSubmitBtn');
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = 'Đang lưu...';
+            btn.disabled = true;
+            
+            let value = null;
+            if (currentEditField === 'title') {
+                value = document.getElementById('editInputTitle').value;
+            } else if (currentEditField === 'handle') {
+                value = document.getElementById('editInputHandle').value;
+            } else if (currentEditField === 'summary') {
+                value = document.getElementById('editInputSummary').value;
+            } else if (currentEditField === 'visibility') {
+                value = document.getElementById('editInputVisibility').value;
+                currentEditField = 'isPublished';
+            } else if (currentEditField === 'seo') {
+                value = {
+                    title: document.getElementById('editInputSeoTitle').value,
+                    description: document.getElementById('editInputSeoDesc').value
+                };
+            } else if (currentEditField === 'blog') {
+                value = document.getElementById('editInputBlog').value;
+                currentEditField = 'blogId'; // Send as blogId to backend
+            } else if (currentEditField === 'tags') {
+                const tagsStr = document.getElementById('editInputTags').value;
+                value = tagsStr.split(',').map(s => s.trim()).filter(s => s.length > 0);
+            } else if (currentEditField === 'body') {
+                value = document.getElementById('editInputBody').value;
+            }
+            
+            await updatePostData(currentEditField, value);
+            btn.innerHTML = originalHtml;
+            btn.disabled = false;
+            closeEditor();
+        }
+
+        let pendingCoverImageBase64 = null;
+
+        function onCoverImageSelected(input) {
+            if (!input.files || input.files.length === 0) return;
+            const file = input.files[0];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                pendingCoverImageBase64 = e.target.result;
+                // Show the Save button
+                document.getElementById('saveCoverImageBtn').classList.remove('hidden');
+                
+                // Preview the image
+                const imgEl = document.getElementById('cover-image-preview');
+                const fallbackEl = document.getElementById('cover-image-fallback');
+                if (imgEl) {
+                    imgEl.src = pendingCoverImageBase64;
+                    imgEl.classList.remove('hidden');
+                }
+                if (fallbackEl) {
+                    fallbackEl.classList.add('hidden');
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function saveCoverImage() {
+            if (!pendingCoverImageBase64) return;
+            const btn = document.getElementById('saveCoverImageBtn');
+            const originalText = btn.innerText;
+            btn.innerText = 'Đang lưu...';
+            btn.disabled = true;
+            
+            await updatePostData('image', pendingCoverImageBase64);
+            
+            btn.innerText = originalText;
+            btn.disabled = false;
+        }
+
+        async function updatePostData(field, value) {
+            try {
+                const res = await fetch(`/blogs/{{ article.id.split('/')[-1] }}/update`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ field, value })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    alert('Lỗi cập nhật: ' + (data.error || 'Unknown error'));
+                }
+            } catch (err) {
+                alert('Lỗi mạng: ' + err.message);
+            }
+        }
+    </script>
+</body>
+</html>

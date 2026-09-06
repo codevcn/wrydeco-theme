@@ -6,7 +6,7 @@ import csv
 import io
 from datetime import datetime
 from fastapi import FastAPI, Request, Form
-from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
@@ -2120,10 +2120,15 @@ async def update_collection(collection_id: str, data: CollectionUpdate):
         return JSONResponse(status_code=400, content={"success": False, "message": "Invalid field"})
         
     input_data = {"id": f"gid://shopify/Collection/{collection_id}"}
-    if field == "seo_title":
-        input_data["seo"] = {"title": value}
-    elif field == "seo_description":
-        input_data["seo"] = {"description": value}
+    if field in ["seo_title", "seo_description"]:
+        collection = get_collection_by_id(collection_id)
+        existing_title = collection.get("seo_title") or "" if collection else ""
+        existing_desc = collection.get("seo_description") or "" if collection else ""
+        
+        if field == "seo_title":
+            input_data["seo"] = {"title": value, "description": existing_desc}
+        else:
+            input_data["seo"] = {"title": existing_title, "description": value}
     else:
         input_data[field] = value
         
@@ -4085,7 +4090,15 @@ async def blogs_page(request: Request, sort: str = "created_desc", search: str =
             "totalStoreCount": total_store_count,
             "totalSearchCount": total_search_count
         }), media_type="application/json")
-                
+    # Fetch all blogs for the dropdown
+    try:
+        b_query = "{ blogs(first: 50) { edges { node { id title } } } }"
+        b_res = requests.post(GRAPHQL_URL, json={"query": b_query}, headers=HEADERS).json()
+        all_blogs = [edge["node"] for edge in b_res.get("data", {}).get("blogs", {}).get("edges", [])]
+    except Exception as e:
+        print("Error fetching blogs:", e)
+        all_blogs = []
+
     return templates.TemplateResponse(request=request, name="blogs.html", context={
         "request": request,
         "articles": articles,
@@ -4096,7 +4109,8 @@ async def blogs_page(request: Request, sort: str = "created_desc", search: str =
         "total_search_count": total_search_count,
         "date_type": date_type,
         "date_from": date_from,
-        "date_to": date_to
+        "date_to": date_to,
+        "all_blogs": all_blogs
     })
 
 @app.get("/settings", response_class=HTMLResponse)
@@ -4317,3 +4331,269 @@ async def api_product_publications(request: Request):
         import traceback
         traceback.print_exc()
         return HTMLResponse(content=json.dumps({"success": False, "message": str(e)}), media_type="application/json")
+
+
+def get_article_detail(article_id):
+    query = """
+    query getArticle($id: ID!) {
+      article(id: $id) {
+        id
+        handle
+        title
+        summary
+        isPublished
+        publishedAt
+        createdAt
+        updatedAt
+        image { url }
+        author { name }
+        blog { id title }
+        tags
+        seo_title: metafield(namespace: "global", key: "title_tag") { value }
+        seo_desc: metafield(namespace: "global", key: "description_tag") { value }
+        body
+        comments(first: 50) {
+          edges {
+            node {
+              id
+              author { name email }
+              bodyHtml
+              status
+              createdAt
+            }
+          }
+        }
+      }
+    }
+    """
+    
+    full_id = f"gid://shopify/Article/{article_id}"
+    variables = {"id": full_id}
+    
+    try:
+        res = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=HEADERS)
+        res.raise_for_status()
+        data = res.json()
+        if "errors" in data:
+            print("GraphQL Errors fetching article detail:", data["errors"])
+            return None
+        return data.get("data", {}).get("article")
+    except Exception as e:
+        print("Error fetching article detail:", e)
+        return None
+
+@app.get("/blogs/handle/{handle}")
+async def redirect_blog_by_handle(handle: str):
+    query = """
+    query getArticlesByHandle($query: String!) {
+      articles(first: 1, query: $query) {
+        edges {
+          node {
+            id
+          }
+        }
+      }
+    }
+    """
+    variables = {"query": f"handle:{handle}"}
+    try:
+        res = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=HEADERS)
+        data = res.json()
+        edges = data.get("data", {}).get("articles", {}).get("edges", [])
+        if edges:
+            node_id = edges[0]["node"]["id"].split("/")[-1]
+            from fastapi.responses import RedirectResponse
+            return RedirectResponse(url=f"/blogs/{node_id}")
+        return HTMLResponse("Không tìm thấy bài viết nào với handle này.", status_code=404)
+    except Exception as e:
+        return HTMLResponse(f"Lỗi: {str(e)}", status_code=500)
+
+@app.get("/blogs/{article_id}")
+async def blog_detail_page(request: Request, article_id: str):
+    article = get_article_detail(article_id)
+    if not article:
+        return HTMLResponse("Không tìm thấy bài viết hoặc có lỗi xảy ra.", status_code=404)
+        
+    # Format date
+    from datetime import datetime
+    for date_field in ["createdAt", "updatedAt", "publishedAt"]:
+        if article.get(date_field):
+            try:
+                dt = datetime.fromisoformat(article[date_field].replace("Z", "+00:00"))
+                article[f"{date_field}_fmt"] = dt.strftime("%d/%m/%Y %H:%M")
+            except Exception:
+                article[f"{date_field}_fmt"] = article[date_field]
+                
+    if article.get("comments") and article["comments"].get("edges"):
+        for edge in article["comments"]["edges"]:
+            c_node = edge["node"]
+            if c_node.get("createdAt"):
+                try:
+                    dt = datetime.fromisoformat(c_node["createdAt"].replace("Z", "+00:00"))
+                    c_node["createdAt_fmt"] = dt.strftime("%d/%m/%Y %H:%M")
+                except Exception:
+                    c_node["createdAt_fmt"] = c_node["createdAt"]
+    
+    # Fetch all blogs for the dropdown
+    try:
+        b_query = "{ blogs(first: 50) { edges { node { id title } } } }"
+        b_res = requests.post(GRAPHQL_URL, json={"query": b_query}, headers=HEADERS).json()
+        all_blogs = [edge["node"] for edge in b_res.get("data", {}).get("blogs", {}).get("edges", [])]
+    except Exception as e:
+        print("Error fetching blogs:", e)
+        all_blogs = []
+    
+    return templates.TemplateResponse(request=request, name="blog_detail.html", context={
+        "request": request,
+        "article": article,
+        "all_blogs": all_blogs
+    })
+
+
+
+@app.post("/blogs/{article_id}/update")
+async def update_blog_post(article_id: str, request: Request):
+    try:
+        data = await request.json()
+        field = data.get("field")
+        value = data.get("value")
+        
+        article_gid = f"gid://shopify/Article/{article_id}"
+        article_input = {}
+        
+        if field == "title":
+            article_input["title"] = value
+        elif field == "handle":
+            article_input["handle"] = value
+        elif field == "summary":
+            article_input["summary"] = value
+        elif field == "body":
+            article_input["body"] = value
+        elif field == "isPublished":
+            article_input["isPublished"] = str(value).lower() == "true"
+        elif field == "seo":
+            article_input["metafields"] = [
+                {"namespace": "global", "key": "title_tag", "value": str(value.get("title", "")), "type": "string"},
+                {"namespace": "global", "key": "description_tag", "value": str(value.get("description", "")), "type": "string"}
+            ]
+        elif field == "blogId":
+            article_input["blogId"] = value
+        elif field == "tags":
+            article_input["tags"] = value
+        elif field == "image":
+            import re
+            b64_data = re.sub('^data:image/.+;base64,', '', value)
+            rest_url = f"https://{os.getenv('SHOPIFY_SHOP')}.myshopify.com/admin/api/{os.getenv('SHOPIFY_API_VERSION', '2024-04')}/articles/{article_id}.json"
+            payload = {
+                "article": {
+                    "id": article_id,
+                    "image": {
+                        "attachment": b64_data
+                    }
+                }
+            }
+            res = requests.put(rest_url, json=payload, headers=HEADERS)
+            if res.status_code in [200, 201]:
+                return JSONResponse({"success": True})
+            else:
+                return JSONResponse({"success": False, "error": res.text})
+                
+        if article_input:
+            mutation = """
+            mutation articleUpdate($id: ID!, $article: ArticleUpdateInput!) {
+              articleUpdate(id: $id, article: $article) {
+                article { id }
+                userErrors { field message }
+              }
+            }
+            """
+            res = requests.post(GRAPHQL_URL, json={"query": mutation, "variables": {"id": article_gid, "article": article_input}}, headers=HEADERS)
+            res_data = res.json()
+            errors = res_data.get("data", {}).get("articleUpdate", {}).get("userErrors", [])
+            if errors:
+                return JSONResponse({"success": False, "error": errors[0]["message"]})
+            return JSONResponse({"success": True})
+            
+        return JSONResponse({"success": False, "error": "Invalid field"})
+    except Exception as e:
+        print("Update error:", e)
+        return JSONResponse({"success": False, "error": str(e)})
+
+
+
+@app.post("/blogs/create")
+async def create_blog_post(request: Request):
+    try:
+        data = await request.json()
+        
+        # Build article input
+        article_input = {
+            "title": data.get("title", ""),
+            "author": {"name": data.get("author", "Wrydeco Admin")},
+        }
+        
+        if data.get("blogId"):
+            article_input["blogId"] = data.get("blogId")
+        if data.get("summary"):
+            article_input["summary"] = data.get("summary")
+        if data.get("body"):
+            article_input["body"] = data.get("body")
+        if "isPublished" in data:
+            article_input["isPublished"] = data.get("isPublished")
+            
+        mutation = """
+        mutation articleCreate($article: ArticleCreateInput!) {
+          articleCreate(article: $article) {
+            article { id }
+            userErrors { field message }
+          }
+        }
+        """
+        res = requests.post(GRAPHQL_URL, json={"query": mutation, "variables": {"article": article_input}}, headers=HEADERS)
+        res_data = res.json()
+        
+        errors = res_data.get("data", {}).get("articleCreate", {}).get("userErrors", [])
+        if errors:
+            return JSONResponse({"success": False, "error": errors[0]["message"]})
+            
+        article_id = res_data["data"]["articleCreate"]["article"]["id"].split('/')[-1]
+        return JSONResponse({"success": True, "id": article_id})
+    except Exception as e:
+        print("Create error:", e)
+        return JSONResponse({"success": False, "error": str(e)})
+
+
+
+@app.post("/blogs/{article_id}/delete")
+async def delete_blog_post(article_id: str, request: Request):
+    try:
+        data = await request.json()
+        password = data.get("password")
+        
+        # Verify password
+        config_data = get_config()
+        if password != config_data.get("DELETE_PASSWORD"):
+            return JSONResponse({"success": False, "message": "Mật khẩu không chính xác!"})
+            
+        # Delete article via GraphQL
+        article_gid = f"gid://shopify/Article/{article_id}"
+        mutation = """
+        mutation articleDelete($id: ID!) {
+          articleDelete(id: $id) {
+            deletedId
+            userErrors { field message }
+          }
+        }
+        """
+        res = requests.post(GRAPHQL_URL, json={"query": mutation, "variables": {"id": article_gid}}, headers=HEADERS)
+        res_data = res.json()
+        
+        errors = res_data.get("data", {}).get("articleDelete", {}).get("userErrors", [])
+        if errors:
+            return JSONResponse({"success": False, "message": errors[0]["message"]})
+            
+        return JSONResponse({"success": True})
+    except Exception as e:
+        print("Delete error:", e)
+        return JSONResponse({"success": False, "message": str(e)})
+

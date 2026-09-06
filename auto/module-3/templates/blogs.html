@@ -46,13 +46,23 @@
     </header>
 
     <main class="max-w-[90%] mx-auto sm:py-8">
-        <div class="mb-8">
-            <h1 class="text-3xl font-bold text-gray-800 tracking-tight flex items-center gap-2">
-                <svg class="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path></svg>
-                Quản lý Blog
-                <span id="total-store-count" class="ml-2 text-sm font-semibold bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full">{{ total_store_count }}</span>
-            </h1>
-            <p class="text-gray-500 mt-2">Trang quản lý các bài viết blog trên hệ thống.</p>
+        <div class="mb-8 flex items-center justify-between w-full">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800 tracking-tight flex items-center gap-2">
+                    <svg class="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path></svg>
+                    Quản lý Blog
+                    <span id="total-store-count" class="ml-2 text-sm font-semibold bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full">{{ total_store_count }}</span>
+                </h1>
+                <p class="text-gray-500 mt-2">Trang quản lý các bài viết blog trên hệ thống.</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <button onclick="openGotoPostModal()" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-bold py-2.5 px-5 rounded-xl shadow-sm transition-all flex items-center gap-2">
+                    <iconify-icon icon="mdi:arrow-right-circle" class="text-xl"></iconify-icon> Đi đến Post
+                </button>
+                <button onclick="openCreateModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-5 rounded-xl shadow-md transition-all flex items-center gap-2">
+                    <iconify-icon icon="mdi:plus" class="text-xl"></iconify-icon> Tạo Blog Post mới
+                </button>
+            </div>
         </div>
 
         <div class="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -70,12 +80,15 @@
                 {% set active_filters = 0 %}
                 {% if date_from %}{% set active_filters = active_filters + 1 %}{% endif %}
                 {% if date_to %}{% set active_filters = active_filters + 1 %}{% endif %}
-                <button type="button" id="toggleFilterBtn" style="margin-left: 12px;" class="{% if date_from or date_to %}bg-indigo-50 border-indigo-300 text-indigo-700{% else %}bg-white{% endif %} inline-flex items-center gap-2 px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors" title="Bộ lọc nâng cao">
+                <button type="button" id="toggleFilterBtn" class="{% if date_from or date_to %}bg-indigo-50 border-indigo-300 text-indigo-700{% else %}bg-white{% endif %} inline-flex items-center gap-2 px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors" title="Bộ lọc nâng cao">
                     <iconify-icon icon="mdi:filter-variant" class="text-lg"></iconify-icon>
                     <span>Filter</span>
                     <span id="filterCountBadge" class="{% if active_filters > 0 %}inline-flex{% else %}hidden{% endif %} ml-1 items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
                         {{ active_filters }}
                     </span>
+                </button>
+                <button type="button" id="resetBtn" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors whitespace-nowrap">
+                    Reset tìm kiếm
                 </button>
             </div>
             
@@ -131,6 +144,7 @@
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STT</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ảnh bìa</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Blog</th>
@@ -140,10 +154,13 @@
                     </thead>
                     <tbody id="articles-tbody" class="bg-white divide-y divide-gray-200">
                         {% for article in articles %}
-                        <tr class="hover:bg-gray-50 transition-colors">
+                        <tr class="hover:bg-gray-50 transition-colors cursor-pointer" onclick="highlightRow(this)">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-500 text-center">
+                                {{ loop.index }}
+                            </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 {% if article.image and article.image.url %}
-                                <img src="{{ article.image.url }}" alt="Cover" class="h-12 w-12 object-cover rounded cursor-pointer border border-gray-200 hover:opacity-80" onclick="previewImage('{{ article.image.url }}')">
+                                <img src="{{ article.image.url }}" alt="Cover" class="h-12 w-12 object-cover rounded cursor-pointer border border-gray-200 hover:opacity-80" onclick="previewImage('{{ article.image.url }}'); event.stopPropagation();">
                                 {% else %}
                                 <div class="h-12 w-12 bg-gray-100 rounded flex items-center justify-center text-gray-400 border border-gray-200">
                                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
@@ -151,7 +168,9 @@
                                 {% endif %}
                             </td>
                             <td class="px-6 py-4">
-                                <div class="text-sm font-medium text-gray-900 truncate max-w-sm" title="{{ article.title }}">{{ article.title }}</div>
+                                <a href="/blogs/{{ article.id.split('/')[-1] }}" target="_blank" class="text-indigo-600 hover:underline text-sm font-medium truncate max-w-sm block" title="{{ article.title }}" onclick="event.stopPropagation();">
+                                    {{ article.title }}
+                                </a>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="text-sm text-gray-500">{{ article.blog.title if article.blog else '-' }}</div>
@@ -169,7 +188,7 @@
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="5" class="px-6 py-10 text-center text-gray-500">
+                            <td colspan="6" class="px-6 py-10 text-center text-gray-500">
                                 Không có bài viết nào.
                             </td>
                         </tr>
@@ -201,7 +220,160 @@
         </div>
     </div>
 
+    <!-- Create Post Modal -->
+    <div id="createModal" onclick="closeCreateModal()" class="fixed inset-0 z-[110] bg-black/50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div onclick="event.stopPropagation()" class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+                <h3 class="text-lg font-bold text-gray-800">Tạo Blog Post mới</h3>
+                <button onclick="closeCreateModal()" class="text-gray-400 hover:text-gray-700 transition"><iconify-icon icon="mdi:close" class="text-xl"></iconify-icon></button>
+            </div>
+            <div class="p-6 flex-grow overflow-y-auto space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Title <span class="text-red-500">*</span></label>
+                    <input type="text" id="createInputTitle" class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border" placeholder="Nhập tiêu đề...">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Blog <span class="text-red-500">*</span></label>
+                        <select id="createInputBlog" class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border">
+                            {% for b in all_blogs %}
+                            <option value="{{ b.id }}">{{ b.title | escape }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Author</label>
+                        <input type="text" id="createInputAuthor" class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border" value="Wrydeco Admin">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Visibility</label>
+                    <select id="createInputVisibility" class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border">
+                        <option value="true">Hiển thị (Published)</option>
+                        <option value="false">Đã ẩn (Hidden)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Excerpt (Tóm tắt)</label>
+                    <textarea id="createInputSummary" rows="3" class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Content (HTML)</label>
+                    <textarea id="createInputBody" rows="5" class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border font-mono text-sm"></textarea>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
+                <button onclick="closeCreateModal()" class="px-4 py-2 border rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition">Cancel</button>
+                <button id="createSubmitBtn" onclick="submitCreatePost()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition flex items-center gap-2">
+                    Create Post
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Goto Post Modal -->
+    <div id="gotoPostModal" class="fixed inset-0 z-[100] flex items-center justify-center hidden">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeGotoPostModal()"></div>
+        <div class="bg-white rounded-2xl shadow-2xl w-[90%] max-w-md z-10 relative flex flex-col overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                    Đi đến Post
+                </h3>
+                <button onclick="closeGotoPostModal()" class="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-200 transition-colors">
+                    <iconify-icon icon="mdi:close" class="text-xl"></iconify-icon>
+                </button>
+            </div>
+            <div class="p-6">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Nhập Handle của Post</label>
+                <input type="text" id="gotoPostHandleInput" class="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5 outline-none transition-colors" placeholder="Ví dụ: my-first-blog-post">
+            </div>
+            <div class="px-6 py-4 border-t border-gray-100 bg-gray-50/80 flex justify-end gap-3 rounded-b-2xl">
+                <button type="button" onclick="closeGotoPostModal()" class="px-5 py-2.5 rounded-xl font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 transition-all shadow-sm">
+                    Hủy
+                </button>
+                <button type="button" onclick="submitGotoPost()" class="px-5 py-2.5 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-all shadow-md">
+                    Đi đến
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
+        function openCreateModal() {
+            document.getElementById('createModal').classList.remove('hidden');
+        }
+
+        function closeCreateModal() {
+            document.getElementById('createModal').classList.add('hidden');
+        }
+
+        async function submitCreatePost() {
+            const title = document.getElementById('createInputTitle').value.trim();
+            if (!title) {
+                alert('Vui lòng nhập Title!');
+                return;
+            }
+            
+            const btn = document.getElementById('createSubmitBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = 'Đang tạo...';
+            btn.disabled = true;
+            
+            const payload = {
+                title: title,
+                blogId: document.getElementById('createInputBlog').value,
+                author: document.getElementById('createInputAuthor').value,
+                isPublished: document.getElementById('createInputVisibility').value === 'true',
+                summary: document.getElementById('createInputSummary').value,
+                body: document.getElementById('createInputBody').value
+            };
+            
+            try {
+                const res = await fetch('/blogs/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    window.location.href = `/blogs/${data.id}`;
+                } else {
+                    alert('Lỗi tạo Post: ' + (data.error || 'Unknown error'));
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
+            } catch (err) {
+                alert('Lỗi mạng: ' + err.message);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        function openGotoPostModal() {
+            document.getElementById('gotoPostModal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('gotoPostHandleInput').focus(), 100);
+        }
+
+        function closeGotoPostModal() {
+            document.getElementById('gotoPostModal').classList.add('hidden');
+            document.getElementById('gotoPostHandleInput').value = '';
+        }
+
+        function submitGotoPost() {
+            const handle = document.getElementById('gotoPostHandleInput').value.trim();
+            if (handle) {
+                window.open('/blogs/handle/' + handle, '_blank');
+                closeGotoPostModal();
+            }
+        }
+
+        document.getElementById('gotoPostHandleInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                submitGotoPost();
+            }
+        });
+
         let currentCursors = {
             start: '{{ pageInfo.startCursor or "" }}',
             end: '{{ pageInfo.endCursor or "" }}',
@@ -211,6 +383,10 @@
 
         document.getElementById('searchSubmitBtn').addEventListener('click', function() {
             loadData();
+        });
+        
+        document.getElementById('resetBtn').addEventListener('click', function() {
+            window.location.href = '/blogs';
         });
         
         document.getElementById('toggleFilterBtn').addEventListener('click', function() {
@@ -315,15 +491,16 @@
 
                 tbody.innerHTML = '';
                 if (data.articles.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-10 text-center text-gray-500">Không có bài viết nào phù hợp.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-10 text-center text-gray-500">Không có bài viết nào phù hợp.</td></tr>`;
                 } else {
-                    data.articles.forEach(article => {
+                    data.articles.forEach((article, index) => {
                         const tr = document.createElement('tr');
-                        tr.className = 'hover:bg-gray-50 transition-colors';
+                        tr.className = 'hover:bg-gray-50 transition-colors cursor-pointer';
+                        tr.onclick = function() { highlightRow(this); };
                         
                         let imageHtml = '';
                         if (article.image && article.image.url) {
-                            imageHtml = `<img src="${article.image.url}" alt="Cover" class="h-12 w-12 object-cover rounded cursor-pointer border border-gray-200 hover:opacity-80" onclick="previewImage('${article.image.url}')">`;
+                            imageHtml = `<img src="${article.image.url}" alt="Cover" class="h-12 w-12 object-cover rounded cursor-pointer border border-gray-200 hover:opacity-80" onclick="previewImage('${article.image.url}'); event.stopPropagation();">`;
                         } else {
                             imageHtml = `<div class="h-12 w-12 bg-gray-100 rounded flex items-center justify-center text-gray-400 border border-gray-200"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg></div>`;
                         }
@@ -335,10 +512,14 @@
                             : `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">Hidden</span>`;
                         const dateStr = article.publishedAt_fmt || '-';
 
+                        const articleId = article.id.split('/').pop();
+                        const titleHtml = `<a href="/blogs/${articleId}" target="_blank" class="text-indigo-600 hover:underline text-sm font-medium truncate max-w-sm block" title="${article.title}" onclick="event.stopPropagation();">${highlightedTitle}</a>`;
+
                         tr.innerHTML = `
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-500 text-center">${index + 1}</td>
                             <td class="px-6 py-4 whitespace-nowrap">${imageHtml}</td>
                             <td class="px-6 py-4">
-                                <div class="text-sm font-medium text-gray-900 truncate max-w-sm" title="${article.title}">${highlightedTitle}</div>
+                                ${titleHtml}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="text-sm text-gray-500">${blogTitle}</div>
@@ -364,6 +545,16 @@
         
         function closePreview() {
             document.getElementById('image-preview-modal').classList.add('hidden');
+        }
+
+        function highlightRow(row) {
+            // Remove highlight from all rows
+            const allRows = document.querySelectorAll('#articles-tbody tr');
+            allRows.forEach(tr => {
+                tr.classList.remove('bg-indigo-50');
+            });
+            // Add highlight to clicked row
+            row.classList.add('bg-indigo-50');
         }
     </script>
 </body>
