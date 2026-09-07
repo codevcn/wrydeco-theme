@@ -5,7 +5,6 @@
 
 {% liquid
   assign consultation_url = section.settings.consultation_url | default: '#custom-inquiry__story-telling'
-  assign process_url = section.settings.process_url | default: '#custom-process'
 %}
 
 <section
@@ -22,6 +21,8 @@
       loading="eager"
       fetchpriority="high"
     >
+    <div class="customization-hero__shade" aria-hidden="true"></div>
+    <div class="customization-hero__shade-front" aria-hidden="true"></div>
   </div>
 
   <div class="customization-hero__inner">
@@ -43,15 +44,6 @@
       <div class="customization-hero__actions">
         <a class="customization-hero__button customization-hero__button--primary" href="{{ consultation_url }}">
           <span>{{ section.settings.primary_label | escape }}</span>
-          <span aria-hidden="true">
-            <svg xmlns="http://www.w3.org/2000/svg" width="1.5em" height="1.5em" viewBox="0 0 1024 1024">
-              <path d="M0 0h1024v1024H0z" fill="none" />
-              <path fill="currentColor" d="M754.8 480H160a32 32 0 1 0 0 64h594.8L521.3 777.3a32 32 0 0 0 45.4 45.4l288-288a32 32 0 0 0 0-45.4l-288-288a32 32 0 1 0-45.4 45.4z" />
-            </svg>
-          </span>
-        </a>
-        <a class="customization-hero__button customization-hero__button--secondary" href="{{ process_url }}">
-          <span>{{ section.settings.secondary_label | escape }}</span>
           <span aria-hidden="true">
             <svg xmlns="http://www.w3.org/2000/svg" width="1.5em" height="1.5em" viewBox="0 0 1024 1024">
               <path d="M0 0h1024v1024H0z" fill="none" />
@@ -107,6 +99,53 @@
 </section>
 
 {% stylesheet %}
+  body:has(.customization-hero) .header__heading-logo {
+    filter: brightness(0) invert(1);
+  }
+
+  body:has(.customization-hero) .header__heading-link,
+  body:has(.customization-hero) .header__nav-item,
+  body:has(.customization-hero) .header__icon,
+  body:has(.customization-hero) .header__icon--search,
+  body:has(.customization-hero) .header__icon--cart,
+  body:has(.customization-hero) .header__icon--menu,
+  body:has(.customization-hero) .header__icon--account,
+  body:has(.customization-hero) .header__localization .loc-picker__code,
+  body:has(.customization-hero) .header__localization .loc-picker__chevron {
+    color: var(--color-cream) !important;
+  }
+
+  body:has(.customization-hero) .header__nav-item:hover,
+  body:has(.customization-hero) .header__icon:hover {
+    color: var(--color-stone);
+  }
+
+  body:has(.customization-hero) .header__consultation-link {
+    border-color: color-mix(in srgb, var(--color-cream) 64%, transparent);
+    background-color: transparent;
+    color: var(--color-cream);
+  }
+
+  body:has(.customization-hero) .header__consultation-link:hover {
+    background-color: var(--color-cream);
+    color: var(--color-earth-brown);
+  }
+
+  body:has(.customization-hero) .header {
+    border-bottom: none !important;
+  }
+
+  body:has(.customization-hero) .header__search-widget {
+    color: var(--color-cream, #f5f1ed) !important;
+    background-color: rgba(247, 242, 236, 0.14) !important;
+    border-color: rgba(247, 242, 236, 0.28) !important;
+  }
+
+  body:has(.customization-hero) .header__search-widget:hover {
+    background-color: rgba(247, 242, 236, 0.24) !important;
+    border-color: rgba(247, 242, 236, 0.5) !important;
+  }
+
   .customization-hero {
     position: relative;
     isolation: isolate;
@@ -120,7 +159,7 @@
   .customization-hero__media {
     position: absolute;
     inset: var(--sp-0);
-    z-index: -2;
+    z-index: 0;
   }
 
   .customization-hero__media img {
@@ -128,27 +167,43 @@
     block-size: 100%;
     object-fit: cover;
     object-position: center;
+    display: block;
+    position: relative;
+    z-index: 0;
   }
 
-  .customization-hero__media::after {
+  .customization-hero__shade,
+  .customization-hero__shade-front {
     position: absolute;
-    inset: var(--sp-0);
-    background: linear-gradient(
-      to right,
-      color-mix(in srgb, var(--color-cream) 98%, transparent) 0%,
-      color-mix(in srgb, var(--color-cream) 76%, transparent) 38%,
-      transparent 62%
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .customization-hero__shade {
+    z-index: 2;
+    background-image: linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.88) 0%,
+      rgba(0, 0, 0, 0.42) 28%,
+      rgba(0, 0, 0, 0.28) 60%,
+      rgba(0, 0, 0, 0.12) 100%
     );
-    content: '';
+  }
+
+  .customization-hero__shade-front {
+    z-index: 3;
+    background-color: rgba(0, 0, 0, 0.1);
   }
 
   .customization-hero__inner {
+    position: relative;
+    z-index: 10;
     inline-size: min(
       calc(100% - (var(--layout-padding-desktop) * 2)),
       calc(var(--layout-showcase-max-width) + (var(--sp-12) * 2))
     );
     margin-inline: auto;
-    padding-block: 104px;
+    padding-block: calc(var(--gap-main-content-to-header) - 20px);
     padding-inline: var(--sp-4);
   }
 
@@ -161,7 +216,8 @@
     align-items: center;
     gap: var(--sp-2);
     margin: var(--sp-0) var(--sp-0) var(--sp-5);
-    color: var(--color-earth-brown);
+    color: rgba(247, 242, 236, 0.88);
+    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5);
     font-size: var(--font-size-caption);
     font-weight: var(--font-weight-semibold);
     letter-spacing: calc(var(--letter-spacing-wide) * 5);
@@ -174,7 +230,7 @@
     place-items: center;
     inline-size: var(--sp-7);
     block-size: var(--sp-7);
-    color: var(--color-clay);
+    color: var(--color-cream);
     font-size: var(--font-size-display-sm);
   }
 
@@ -182,7 +238,8 @@
     display: flex;
     flex-direction: column;
     margin: var(--sp-0);
-    color: var(--color-earth-brown);
+    color: var(--color-cream);
+    text-shadow: 0 2px 16px rgba(0, 0, 0, 0.5);
     font-family: var(--font-display-light);
     font-size: clamp(var(--font-size-display-lg), 3.5vw, calc(var(--font-size-display-xl) + var(--sp-2)));
     font-weight: var(--font-weight-light);
@@ -202,7 +259,7 @@
     gap: var(--sp-2);
     inline-size: fit-content;
     margin-block: var(--sp-5);
-    color: var(--color-clay);
+    color: rgba(247, 242, 236, 0.75);
   }
 
   .customization-hero__ornament span {
@@ -218,7 +275,8 @@
   .customization-hero__description {
     max-inline-size: 52ch;
     margin: var(--sp-0);
-    color: var(--text-secondary);
+    color: rgba(247, 242, 236, 0.92);
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.5);
     font-size: var(--font-size-body-md);
     line-height: var(--line-height-generous);
   }
@@ -258,15 +316,6 @@
     background: var(--color-charcoal);
   }
 
-  .customization-hero__button--secondary {
-    background: color-mix(in srgb, var(--bg-tertiary) 54%, transparent);
-    color: var(--color-earth-brown);
-  }
-
-  .customization-hero__button--secondary:hover {
-    background: var(--bg-tertiary);
-  }
-
   .customization-hero__button:active {
     transform: translateY(var(--border-width));
   }
@@ -278,6 +327,7 @@
 
   .customization-hero__services {
     position: absolute;
+    z-index: 10;
     right: var(--layout-padding-desktop);
     bottom: var(--sp-5);
     left: var(--layout-padding-desktop);
@@ -346,8 +396,8 @@
 
   @media screen and (max-width: 75rem) {
     .customization-hero__inner {
+      padding-top: calc(var(--gap-main-content-to-header) - 60px);
       inline-size: min(calc(100% - (var(--layout-padding-tablet) * 2)), var(--layout-showcase-max-width));
-      padding-block-start: calc(var(--sp-6) + var(--sp-8));
     }
 
     .customization-hero__copy {
@@ -359,7 +409,6 @@
     }
 
     .customization-hero__services {
-      display: none;
       right: var(--layout-padding-tablet);
       left: var(--layout-padding-tablet);
     }
@@ -370,17 +419,13 @@
       min-block-size: auto;
     }
 
-    .customization-hero__media::after {
-      background: color-mix(in srgb, var(--color-cream) 82%, transparent);
-    }
-
     .customization-hero__media img {
       object-position: 68% center;
     }
 
     .customization-hero__inner {
       inline-size: min(calc(100% - (var(--layout-padding-mobile) * 2)), var(--layout-showcase-max-width));
-      padding-block: calc(var(--sp-6) + var(--sp-7)) var(--sp-7);
+      padding-block: var(--gap-main-content-to-header-mobile);
     }
 
     .customization-hero__copy {
@@ -411,8 +456,8 @@
     }
 
     .customization-hero__button {
-      inline-size: 100%;
       min-inline-size: 0;
+      width: fit-content;
     }
 
     .customization-hero__note i {
@@ -467,8 +512,6 @@
     },
     { "type": "text", "id": "primary_label", "label": "Primary button label", "default": "Book Consultation" },
     { "type": "url", "id": "consultation_url", "label": "Consultation link" },
-    { "type": "text", "id": "secondary_label", "label": "Secondary button label", "default": "View custom process" },
-    { "type": "url", "id": "process_url", "label": "Custom process link" },
     {
       "type": "text",
       "id": "note_first",

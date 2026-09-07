@@ -147,6 +147,57 @@
             <span class="footer-custom__submit-spinner" aria-hidden="true"></span>
           </button>
         </div>
+        <div
+          class="footer-custom__success"
+          data-newsletter-success
+          {% unless form.posted_successfully? %}
+            hidden
+          {% endunless %}
+          role="status"
+          aria-live="polite"
+        >
+          <span class="footer-custom__success-icon" aria-hidden="true">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          </span>
+          <span class="footer-custom__success-text">Thanks for subscribing!</span>
+        </div>
+        {%- if form.errors -%}
+          <div class="footer-custom__error" role="alert">
+            <span class="footer-custom__error-icon" aria-hidden="true">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+            </span>
+            <span class="footer-custom__error-text">
+              {{ form.errors.translated_fields.email | capitalize }}
+              {{ form.errors.messages.email }}
+            </span>
+          </div>
+        {%- endif -%}
       {% endform %}
 
       {%- if section.settings.show_currency -%}
@@ -509,6 +560,69 @@
   .footer-custom__submit:hover {
     background: #f5d4af;
     transform: translateY(-1px);
+  }
+
+  .footer-custom__success {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-medium);
+    color: #8ed69e;
+    line-height: 1.4;
+  }
+
+  .footer-custom__success[hidden] {
+    display: none !important;
+  }
+
+  .footer-custom__success-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    border-radius: var(--radius-full);
+    background-color: rgba(142, 214, 158, 0.16);
+    color: #8ed69e;
+  }
+
+  .footer-custom__success-icon svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  .footer-custom__error {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    font-size: var(--font-size-body-sm);
+    color: #f87171;
+    line-height: 1.4;
+  }
+
+  .footer-custom__error[hidden] {
+    display: none !important;
+  }
+
+  .footer-custom__error-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    border-radius: var(--radius-full);
+    background-color: rgba(248, 113, 113, 0.16);
+    color: #f87171;
+  }
+
+  .footer-custom__error-icon svg {
+    width: 13px;
+    height: 13px;
   }
 
   .footer-custom__localization {
@@ -1081,6 +1195,12 @@
       min-height: 50px;
     }
 
+    .footer-custom__success,
+    .footer-custom__error {
+      justify-content: center;
+      width: 100%;
+    }
+
     .footer-custom__follow-on-shop {
       max-width: none;
       margin-inline: auto;
@@ -1303,82 +1423,107 @@
 
 {% javascript %}
   (function () {
-    var form = document.querySelector('.footer-custom__form');
-    if (!form || form.dataset.newsletterAjax === 'true') return;
-    form.dataset.newsletterAjax = 'true';
-
-    var btn = form.querySelector('[data-newsletter-submit]');
-    if (!btn) return;
-
-    function toast(message, type) {
-      if (window.showToast) {
-        window.showToast({ message: message, type: type, position: 'bottom-left' });
-      }
-    }
-
-    function setLoading(state) {
-      if (state) {
-        btn.setAttribute('aria-busy', 'true');
-        btn.disabled = true;
-      } else {
-        btn.removeAttribute('aria-busy');
-        btn.disabled = false;
-      }
-    }
-
-    form.addEventListener('submit', function (event) {
-      // Let the browser's native validation handle empty/invalid emails first.
-      if (typeof form.checkValidity === 'function' && !form.checkValidity()) return;
-      if (btn.getAttribute('aria-busy') === 'true') return;
-
-      event.preventDefault();
-      setLoading(true);
-
-      var action = (form.getAttribute('action') || '/contact').split('#')[0];
-      var data = new FormData(form);
-
-      fetch(action, { method: 'POST', body: data, redirect: 'follow' })
-        .then(function (res) {
-          if (!res.ok) {
-            form.submit();
-            return null;
-          }
-
-          return res.text().then(function (html) {
-            return {
-              url: res.url,
-              redirected: res.redirected,
-              html: html,
-            };
-          });
-        })
-        .then(function (result) {
-          if (!result) return;
-
-          var success =
-            result.redirected ||
-            /customer_posted=true/.test(result.url) ||
-            /customer_posted=true/.test(result.html) ||
-            /posted_successfully\?/.test(result.html);
-
-          if (!success) {
-            setLoading(false);
-            toast('We could not subscribe that email. Please try again.', 'error');
-            return;
-          }
-
-          setLoading(false);
-          form.reset();
-          if (window.WrydecoDiscountAutoApply) {
-            window.WrydecoDiscountAutoApply.unlockAndSync();
-          } else {
-            document.dispatchEvent(new CustomEvent('wry:newsletter-signup-success'));
-          }
-          toast('Thanks for subscribing.', 'success');
-        })
-        .catch(function () {
-          form.submit();
+    function checkCustomerPosted() {
+      if (window.location.href.indexOf('customer_posted=true') !== -1) {
+        document.querySelectorAll('[data-newsletter-success]').forEach(function (el) {
+          el.hidden = false;
         });
+      }
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', checkCustomerPosted, { once: true });
+    } else {
+      checkCustomerPosted();
+    }
+
+    function initNewsletterForm(form) {
+      if (!form || form.dataset.newsletterAjax === 'true') return;
+      form.dataset.newsletterAjax = 'true';
+
+      var btn = form.querySelector('[data-newsletter-submit]');
+      var successMsg = form.querySelector('[data-newsletter-success]');
+      if (!btn) return;
+
+      function toast(message, type) {
+        if (window.showToast) {
+          window.showToast({ message: message, type: type, position: 'bottom-left' });
+        }
+      }
+
+      function setLoading(state) {
+        if (state) {
+          btn.setAttribute('aria-busy', 'true');
+          btn.disabled = true;
+        } else {
+          btn.removeAttribute('aria-busy');
+          btn.disabled = false;
+        }
+      }
+
+      form.addEventListener('submit', function (event) {
+        // Let the browser's native validation handle empty/invalid emails first.
+        if (typeof form.checkValidity === 'function' && !form.checkValidity()) return;
+        if (btn.getAttribute('aria-busy') === 'true') return;
+
+        event.preventDefault();
+        setLoading(true);
+
+        var action = (form.getAttribute('action') || '/contact').split('#')[0];
+        var data = new FormData(form);
+
+        fetch(action, { method: 'POST', body: data, redirect: 'follow' })
+          .then(function (res) {
+            if (!res.ok) {
+              form.submit();
+              return null;
+            }
+
+            return res.text().then(function (html) {
+              return {
+                url: res.url,
+                redirected: res.redirected,
+                html: html,
+              };
+            });
+          })
+          .then(function (result) {
+            if (!result) return;
+
+            var success =
+              result.redirected ||
+              /customer_posted=true/.test(result.url) ||
+              /customer_posted=true/.test(result.html) ||
+              /posted_successfully\?/.test(result.html);
+
+            if (!success) {
+              setLoading(false);
+              toast('We could not subscribe that email. Please try again.', 'error');
+              return;
+            }
+
+            setLoading(false);
+            form.reset();
+            if (successMsg) {
+              successMsg.hidden = false;
+            }
+            if (window.WrydecoDiscountAutoApply) {
+              window.WrydecoDiscountAutoApply.unlockAndSync();
+            } else {
+              document.dispatchEvent(new CustomEvent('wry:newsletter-signup-success'));
+            }
+            toast('Thanks for subscribing.', 'success');
+          })
+          .catch(function () {
+            form.submit();
+          });
+      });
+    }
+
+    document.querySelectorAll('.footer-custom__form').forEach(initNewsletterForm);
+    document.addEventListener('shopify:section:load', function () {
+      checkCustomerPosted();
+      document.querySelectorAll('.footer-custom__form').forEach(initNewsletterForm);
     });
   })();
 {% endjavascript %}

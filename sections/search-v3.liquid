@@ -36,6 +36,8 @@
         loading="eager"
         fetchpriority="high"
       >
+      <div class="srp-hero__shade" aria-hidden="true"></div>
+      <div class="srp-hero__shade-front" aria-hidden="true"></div>
     </div>
 
     <div class="srp-hero__inner">
@@ -239,16 +241,56 @@
               {% continue %}
             {% endif %}
             {% liquid
-              assign ptype = result.type
+              assign card_variant = result.selected_or_first_available_variant | default: result.variants.first
+              assign artist = ''
+              assign author = result.metafields.custom.author_info.value
+              if author != blank and author.author_name.value != blank
+                assign artist = author.author_name.value
+              endif
+
+              assign is_new = false
+              for coll in result.collections
+                if coll.handle == 'new-arrivals'
+                  assign is_new = true
+                  break
+                endif
+              endfor
             %}
             <article class="srp-card">
               <div class="srp-card__media-wrap">
-                <a class="srp-card__media" href="{{ result.url }}" aria-label="{{ result.title | escape }}">
-                  {% if result.featured_image %}
+                <a
+                  class="srp-card__media"
+                  href="{{ result.url }}"
+                  aria-label="{{ result.title | escape }}"
+                  data-hover-gallery
+                >
+                  {% if result.media.size > 0 %}
+                    {% assign img_count = 0 %}
+                    {% for media in result.media %}
+                      {% if media.media_type == 'image' %}
+                        {% assign img_class = 'srp-card__image' %}
+                        {% if img_count == 0 %}{% assign img_class = 'srp-card__image is-active' %}{% endif %}
+                        {% assign card_alt = media.alt | default: result.title %}
+                        {{
+                          media.preview_image
+                          | image_url: width: 720
+                          | image_tag:
+                            class: img_class,
+                            loading: 'lazy',
+                            widths: '280, 420, 560, 720',
+                            sizes: '(min-width: 1024px) 24vw, (min-width: 768px) 33vw, 90vw',
+                            alt: card_alt
+                        }}
+                        {% assign img_count = img_count | plus: 1 %}
+                        {% if img_count >= 5 %}{% break %}{% endif %}
+                      {% endif %}
+                    {% endfor %}
+                  {% elsif result.featured_image %}
                     {{
                       result.featured_image
                       | image_url: width: 720
                       | image_tag:
+                        class: 'srp-card__image is-active',
                         loading: 'lazy',
                         widths: '280, 420, 560, 720',
                         sizes: '(min-width: 1024px) 24vw, (min-width: 768px) 33vw, 90vw',
@@ -256,30 +298,80 @@
                       | default: result.title
                     }}
                   {% else %}
-                    {{ 'product-1' | placeholder_svg_tag: 'placeholder-svg' }}
+                    {{ 'product-1' | placeholder_svg_tag: 'srp-card__image is-active placeholder-svg' }}
                   {% endif %}
                 </a>
+
                 {% render 'wishlist-card-button', product: result %}
+
+                <button
+                  type="button"
+                  class="srp-card__add"
+                  data-add-to-cart
+                  data-variant-id="{{ card_variant.id }}"
+                  aria-label="Add {{ result.title | escape }} to cart"
+                  {% unless result.available %}
+                    disabled aria-disabled="true"
+                  {% endunless %}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    fill="currentColor"
+                    class="bi bi-cart-plus-fill"
+                    viewBox="0 0 16 16"
+                    aria-hidden="true"
+                  >
+                    <path d="M.5 1a.5.5 0 0 0 0 1h1.11l.401 1.607 1.498 7.985A.5.5 0 0 0 4 12h1a2 2 0 1 0 0 4 2 2 0 0 0 0-4h1a.5.5 0 0 0 .491-.408l1.5-8A.5.5 0 0 0 14.5 3H2.89l-.405-1.621A.5.5 0 0 0 2 1zM6 14a1 1 0 1 1-2 0 1 1 0 0 1 2 0m7 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0M9 5.5V7h1.5a.5.5 0 0 1 0 1H9v1.5a.5.5 0 0 1-1 0V8H6.5a.5.5 0 0 1 0-1H8V5.5a.5.5 0 0 1 1 0"/>
+                  </svg>
+                </button>
+
+                {%- if is_new -%}
+                  <span class="srp-card__badge srp-card__badge--new">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 36 36">
+                      <path d="M0 0h36v36H0z" fill="none" />
+                      <path fill="currentColor" d="m34.11 24.49l-3.92-6.62l3.88-6.35a1 1 0 0 0-.85-1.52H2a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h31.25a1 1 0 0 0 .86-1.51m-23.6-3.31H9.39l-3.26-4.34v4.35H5V15h1.13l3.27 4.35V15h1.12ZM16.84 16h-3.53v1.49h3.2v1h-3.2v1.61h3.53v1h-4.66V15h4.65Zm8.29 5.16H24l-1.55-4.59l-1.55 4.61h-1.12l-2-6.18H19l1.32 4.43L21.84 15h1.22l1.46 4.43L25.85 15h1.23Z" class="clr-i-solid clr-i-solid-path-1" />
+                      <path fill="none" d="M0 0h36v36H0z" />
+                    </svg>
+                    <span class="srp-card__badge-text">New</span>
+                  </span>
+                {%- endif -%}
               </div>
 
               <div class="srp-card__info">
-                {% if ptype != blank %}
-                  <span class="srp-card__pill">{{ ptype | escape }}</span>
-                {% endif %}
-
                 <h2 class="srp-card__title">
-                  <a href="{{ result.url }}">
+                  <a class="srp-card__title-link" href="{{ result.url }}">
                     {{- result.title | split: ',' | first | split: ' - ' | first | strip | escape -}}
                   </a>
                 </h2>
 
                 <hr class="srp-card__divider">
 
+                {% if artist != blank %}
+                  <p class="srp-card__artist">Crafted By {{ artist | escape }}</p>
+                {% endif %}
+
                 <p class="srp-card__price">
-                  <span class="srp-card__price-label">{{ 'search.from_price' | t }}</span> {{ result.price | money }}
+                  <span style="font-weight: var(--font-weight-light);">From</span> {{ result.price | money }}
                 </p>
 
-                {% render 'free-shipping-badge' %}
+                <div class="srp-card__badges-row">
+                  <span class="srp-card__freeshipping">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="1.2em" height="1.2em" viewBox="0 0 24 24">
+                      <path d="M0 0h24v24H0z" fill="none" />
+                      <path fill="currentColor" d="M18 8h-2V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10h2a3 3 0 1 0 6 0h4a3 3 0 1 0 6 0h2v-5zM7 18.5a1.5 1.5 0 1 1 .001-3.001A1.5 1.5 0 0 1 7 18.5M4 14V7h10v7zm13 4.5a1.5 1.5 0 1 1 .001-3.001A1.5 1.5 0 0 1 17 18.5" />
+                    </svg>
+                    <span class="srp-card__freeshipping-text">Free Shipping</span>
+                  </span>
+
+                  <span class="srp-card__warranty">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="1.2em" height="1.2em" viewBox="0 0 24 24">
+                      <path fill="currentColor" d="m10 17l-4-4l1.41-1.41L10 14.17l6.59-6.59L18 9m-6-8L3 5v6c0 5.55 3.84 10.74 9 12c5.16-1.26 9-6.45 9-12V5z" />
+                    </svg>
+                    <span class="srp-card__warranty-text">1-Year Warranty</span>
+                  </span>
+                </div>
               </div>
             </article>
           {% endfor %}
@@ -450,17 +542,44 @@
               </a>
 
               {% if is_new %}
-                <span class="srp-popular-card__new">New</span>
+                <span class="srp-card__badge srp-card__badge--new">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 36 36">
+                    <path d="M0 0h36v36H0z" fill="none" />
+                    <path fill="currentColor" d="m34.11 24.49l-3.92-6.62l3.88-6.35a1 1 0 0 0-.85-1.52H2a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h31.25a1 1 0 0 0 .86-1.51m-23.6-3.31H9.39l-3.26-4.34v4.35H5V15h1.13l3.27 4.35V15h1.12ZM16.84 16h-3.53v1.49h3.2v1h-3.2v1.61h3.53v1h-4.66V15h4.65Zm8.29 5.16H24l-1.55-4.59l-1.55 4.61h-1.12l-2-6.18H19l1.32 4.43L21.84 15h1.22l1.46 4.43L25.85 15h1.23Z" class="clr-i-solid clr-i-solid-path-1" />
+                    <path fill="none" d="M0 0h36v36H0z" />
+                  </svg>
+                  <span class="srp-card__badge-text">New</span>
+                </span>
               {% endif %}
 
               {% render 'wishlist-card-button', product: popular_product %}
+
+              {% assign popular_variant = popular_product.selected_or_first_available_variant | default: popular_product.variants.first %}
+              <button
+                type="button"
+                class="srp-card__add"
+                data-add-to-cart
+                data-variant-id="{{ popular_variant.id }}"
+                aria-label="Add {{ popular_product.title | escape }} to cart"
+                {% unless popular_product.available %}
+                  disabled aria-disabled="true"
+                {% endunless %}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  fill="currentColor"
+                  class="bi bi-cart-plus-fill"
+                  viewBox="0 0 16 16"
+                  aria-hidden="true"
+                >
+                  <path d="M.5 1a.5.5 0 0 0 0 1h1.11l.401 1.607 1.498 7.985A.5.5 0 0 0 4 12h1a2 2 0 1 0 0 4 2 2 0 0 0 0-4h1a.5.5 0 0 0 .491-.408l1.5-8A.5.5 0 0 0 14.5 3H2.89l-.405-1.621A.5.5 0 0 0 2 1zM6 14a1 1 0 1 1-2 0 1 1 0 0 1 2 0m7 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0M9 5.5V7h1.5a.5.5 0 0 1 0 1H9v1.5a.5.5 0 0 1-1 0V8H6.5a.5.5 0 0 1 0-1H8V5.5a.5.5 0 0 1 1 0"/>
+                </svg>
+              </button>
             </div>
 
             <div class="srp-popular-card__info">
-              {% if ptype != blank %}
-                <span class="srp-popular-card__pill">{{ ptype | escape }}</span>
-              {% endif %}
-
               <h3 class="srp-popular-card__name">
                 <a class="srp-popular-card__name-link" href="{{ popular_product.url }}">
                   {{- popular_product.title | split: ',' | first | split: ' - ' | first | strip | escape -}}
@@ -473,13 +592,24 @@
                 <p class="srp-popular-card__artist">Crafted By {{ artist | escape }}</p>
               {% endif %}
 
-              <p class="srp-popular-card__price"><span>From</span> {{ popular_product.price | money }}</p>
+              <p class="srp-popular-card__price"><span style="font-weight: var(--font-weight-light);">From</span> {{ popular_product.price | money }}</p>
 
-              {% if material != blank %}
-                <p class="srp-popular-card__material">{{ material | metafield_text }}</p>
-              {% endif %}
+              <div class="srp-card__badges-row">
+                <span class="srp-card__freeshipping">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="1.2em" height="1.2em" viewBox="0 0 24 24">
+                    <path d="M0 0h24v24H0z" fill="none" />
+                    <path fill="currentColor" d="M18 8h-2V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10h2a3 3 0 1 0 6 0h4a3 3 0 1 0 6 0h2v-5zM7 18.5a1.5 1.5 0 1 1 .001-3.001A1.5 1.5 0 0 1 7 18.5M4 14V7h10v7zm13 4.5a1.5 1.5 0 1 1 .001-3.001A1.5 1.5 0 0 1 17 18.5" />
+                  </svg>
+                  <span class="srp-card__freeshipping-text">Free Shipping</span>
+                </span>
 
-              {% render 'free-shipping-badge' %}
+                <span class="srp-card__warranty">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="1.2em" height="1.2em" viewBox="0 0 24 24">
+                    <path fill="currentColor" d="m10 17l-4-4l1.41-1.41L10 14.17l6.59-6.59L18 9m-6-8L3 5v6c0 5.55 3.84 10.74 9 12c5.16-1.26 9-6.45 9-12V5z" />
+                  </svg>
+                  <span class="srp-card__warranty-text">1-Year Warranty</span>
+                </span>
+              </div>
             </div>
           </article>
         {% endfor %}
@@ -496,9 +626,42 @@
     color: var(--text-primary);
   }
 
+  body:has(.srp-hero) .header__heading-logo {
+    filter: brightness(0) invert(1);
+  }
+
+  body:has(.srp-hero) .header__heading-link,
+  body:has(.srp-hero) .header__nav-item,
+  body:has(.srp-hero) .header__icon,
+  body:has(.srp-hero) .header__icon--search,
+  body:has(.srp-hero) .header__icon--cart,
+  body:has(.srp-hero) .header__icon--menu,
+  body:has(.srp-hero) .header__icon--account,
+  body:has(.srp-hero) .header__localization .loc-picker__code,
+  body:has(.srp-hero) .header__localization .loc-picker__chevron {
+    color: var(--color-cream) !important;
+  }
+
+  body:has(.srp-hero) .header__nav-item:hover,
+  body:has(.srp-hero) .header__icon:hover {
+    color: var(--color-stone);
+  }
+
+  body:has(.srp-hero) .header__consultation-link {
+    border-color: color-mix(in srgb, var(--color-cream) 64%, transparent);
+    background-color: transparent;
+    color: var(--color-cream);
+  }
+
+  body:has(.srp-hero) .header__consultation-link:hover {
+    background-color: var(--color-cream);
+    color: var(--color-earth-brown);
+  }
+
   /* Hero */
   .srp-hero {
     position: relative;
+    isolation: isolate;
     display: flex;
     align-items: center;
     min-height: clamp(calc(var(--sp-12) * 3), 50vh, calc(var(--sp-12) * 5));
@@ -516,21 +679,32 @@
     object-fit: cover;
     object-position: right center;
     display: block;
+    position: relative;
+    z-index: 0;
   }
-  .srp-hero__media::after {
-    content: '';
+  .srp-hero__shade,
+  .srp-hero__shade-front {
     position: absolute;
     inset: 0;
-    background: linear-gradient(
-      90deg,
-      var(--color-cream) 0%,
-      color-mix(in srgb, var(--color-cream) 88%, transparent) 32%,
-      transparent 62%
+    pointer-events: none;
+  }
+  .srp-hero__shade {
+    z-index: 2;
+    background-image: linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.88) 0%,
+      rgba(0, 0, 0, 0.42) 28%,
+      rgba(0, 0, 0, 0.28) 60%,
+      rgba(0, 0, 0, 0.12) 100%
     );
+  }
+  .srp-hero__shade-front {
+    z-index: 3;
+    background-color: rgba(0, 0, 0, 0.1);
   }
   .srp-hero__inner {
     position: relative;
-    z-index: 1;
+    z-index: 10;
     display: flex;
     flex-direction: column;
     gap: var(--sp-4);
@@ -544,19 +718,21 @@
     font-size: clamp(var(--font-size-display-md), 3.2vw, var(--font-size-display-xl));
     font-weight: 500;
     line-height: var(--line-height-display);
-    color: var(--text-primary);
+    color: var(--color-cream);
+    text-shadow: 0 2px 16px rgba(0, 0, 0, 0.5);
   }
   .srp-hero__subtitle {
     margin: 0;
     max-width: 48ch;
     font-size: var(--font-size-body-md);
     line-height: var(--line-height-generous);
-    color: var(--text-secondary);
+    color: rgba(247, 242, 236, 0.9);
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.5);
   }
 
   .srp-discovery {
     position: relative;
-    z-index: 2;
+    z-index: 10;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -707,7 +883,7 @@
   }
 
   .srp-popular {
-    padding: var(--sp-6) 96px var(--section-spacing-desktop);
+    padding: var(--sp-6) 64px var(--section-spacing-desktop);
     margin: 0;
     margin-top: var(--sp-6);
   }
@@ -755,8 +931,8 @@
     display: flex;
     flex-direction: column;
     min-width: 0;
-    padding: var(--sp-2);
-    border: var(--border-width) solid var(--border-light);
+    padding: var(--sp-3);
+    border: 1px solid var(--border-light);
     border-radius: var(--radius-lg);
     background-color: var(--color-milk);
     box-shadow: var(--shadow-elevation-1);
@@ -792,41 +968,17 @@
   .srp-popular-card__media:hover .srp-popular-card__image {
     transform: scale(1.03);
   }
-  .srp-popular-card__new {
-    position: absolute;
-    top: var(--sp-2);
-    left: var(--sp-2);
-    z-index: 3;
-    display: inline-flex;
-    align-items: center;
-    min-height: var(--sp-5);
-    padding: 0 var(--sp-3);
-    border-radius: var(--radius-full);
-    background-color: var(--color-milk);
-    color: var(--color-earth-brown);
-    font-size: var(--font-size-caption);
-    font-weight: var(--font-weight-bold);
-  }
   .srp-popular-card__info {
     position: relative;
     display: flex;
     flex-direction: column;
-    padding: var(--sp-4) var(--sp-1) var(--sp-1);
-  }
-  .srp-popular-card__pill {
-    align-self: flex-start;
-    font-family: var(--font-roboto);
-    font-size: var(--font-size-caption);
-    font-weight: var(--font-weight-semibold);
-    letter-spacing: 0;
-    text-transform: uppercase;
-    color: var(--color-clay);
+    padding: var(--sp-5) var(--sp-0) var(--sp-2);
   }
   .srp-popular-card__name {
     margin: var(--sp-2) 0 0;
     min-width: 0;
     font-family: var(--font-body);
-    font-size: var(--font-size-body-lg);
+    font-size: var(--font-size-body-xl);
     font-weight: var(--font-weight-semibold);
     line-height: var(--line-height-tight);
     color: var(--text-primary);
@@ -839,16 +991,16 @@
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
     font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.01em;
   }
   .srp-popular-card__divider {
-    width: var(--sp-5);
-    height: var(--border-width);
-    margin: var(--sp-3) 0 0;
-    border: 0;
+    width: 20px;
+    height: 2px;
+    margin: var(--sp-4) 0 0;
+    border: none;
     background-color: var(--color-orange);
   }
-  .srp-popular-card__artist,
-  .srp-popular-card__material {
+  .srp-popular-card__artist {
     margin: var(--sp-2) 0 0;
     color: var(--color-clay);
     font-size: var(--font-size-body-sm);
@@ -856,9 +1008,10 @@
   }
   .srp-popular-card__price {
     margin: var(--sp-2) 0 0;
+    font-family: var(--font-body);
+    font-size: var(--font-size-body-lg);
+    font-weight: var(--font-weight-semibold);
     color: var(--text-primary);
-    font-size: var(--font-size-body-md);
-    font-weight: var(--font-weight-bold);
   }
   .srp-popular-card__price span {
     font-weight: var(--font-weight-light);
@@ -972,7 +1125,7 @@
 
   /* Grid */
   .srp-grid-wrap {
-    padding: var(--sp-6) 96px var(--section-spacing-desktop);
+    padding: var(--sp-6) 64px var(--section-spacing-desktop);
   }
   .srp-grid {
     display: grid;
@@ -984,10 +1137,11 @@
     display: flex;
     flex-direction: column;
     min-width: 0;
+    padding: var(--sp-3);
     background-color: var(--color-milk);
-    box-shadow: var(--shadow-elevation-1);
+    border: 1px solid var(--border-light);
     border-radius: var(--radius-lg);
-    padding: var(--sp-2);
+    box-shadow: var(--shadow-elevation-1);
   }
   .srp-card__media-wrap {
     position: relative;
@@ -998,42 +1152,116 @@
     overflow: hidden;
     border-radius: var(--radius-md);
     background-color: var(--bg-secondary);
+    position: relative;
   }
-  .srp-card__media img {
+  .srp-card__image {
+    position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
     display: block;
-    transition: transform var(--timing-long) var(--ease-standard);
+    opacity: 0;
+    z-index: 0;
+    transition: transform var(--timing-long) var(--ease-standard), opacity var(--timing-base) var(--ease-standard);
   }
+  .srp-card__image.is-prev {
+    opacity: 1;
+    z-index: 1;
+  }
+  .srp-card__image.is-active {
+    opacity: 1;
+    z-index: 2;
+  }
+  .srp-card__media:hover .srp-card__image,
   .srp-card__media:hover img {
     transform: scale(1.03);
   }
+  .srp-card__add {
+    position: absolute;
+    right: var(--sp-3);
+    bottom: var(--sp-3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border: none;
+    border-radius: var(--radius-full);
+    background-color: var(--surface-elevated);
+    color: var(--color-earth-brown);
+    box-shadow: var(--shadow-elevation-2);
+    cursor: pointer;
+    transition: transform var(--timing-short) var(--ease-standard),
+      background-color var(--timing-short) var(--ease-standard);
+  }
+  .srp-card__add svg {
+    width: 18px;
+    height: 18px;
+  }
+  .srp-card__add:hover {
+    transform: translateY(-2px);
+    background-color: var(--color-cream);
+  }
+  .srp-card__add:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .srp-card__add.is-loading {
+    pointer-events: none;
+    opacity: 0.6;
+  }
+
+  .srp-card__badge {
+    position: absolute;
+    top: var(--sp-3);
+    left: var(--sp-3);
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    border-radius: 99px;
+    background: var(--color-milk, #fffdf9);
+    color: var(--color-earth-brown, #4a2c18);
+    font-family: var(--font-body);
+    font-weight: var(--font-weight-bold);
+    font-size: 14px;
+    line-height: 1;
+    letter-spacing: 0.02em;
+  }
+  .srp-card__badge svg {
+    display: flex;
+    width: 24px;
+    height: 24px;
+    margin-right: 4px;
+    fill: currentColor;
+  }
+  .srp-card__badge--best {
+    min-height: 24px;
+  }
+  .srp-card__badge--best svg {
+    width: 18px;
+    height: 18px;
+    color: var(--color-star-rating, #8a5d37);
+  }
+
   .srp-card__info {
     position: relative;
     display: flex;
     flex-direction: column;
-    padding: var(--sp-4) var(--sp-1) var(--sp-1);
-  }
-  .srp-card__pill {
-    align-self: flex-start;
-    font-family: var(--font-roboto);
-    font-size: var(--font-size-caption);
-    font-weight: var(--font-weight-semibold);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--color-clay);
+    padding: var(--sp-5) var(--sp-0) var(--sp-0);
   }
   .srp-card__title {
-    margin: var(--sp-3) 0 0;
+    margin: var(--sp-2) 0 0;
     min-width: 0;
     font-family: var(--font-body);
-    font-size: var(--font-size-body-lg);
-    font-weight: var(--font-weight-medium);
+    font-size: var(--font-size-body-xl);
+    font-weight: var(--font-weight-semibold);
     line-height: var(--line-height-tight);
     color: var(--text-primary);
-    letter-spacing: 0.01em;
   }
+  .srp-card__title-link,
   .srp-card__title a {
     color: inherit;
     text-decoration: none;
@@ -1041,23 +1269,49 @@
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    letter-spacing: 0.01em;
+  }
+  .srp-card__artist {
+    margin: var(--sp-2) 0 0;
+    font-size: var(--font-size-body-sm);
+    font-family: var(--font-body);
+    color: var(--color-clay);
   }
   .srp-card__divider {
     width: 20px;
     height: 2px;
-    margin: var(--sp-3) 0 0;
+    margin: var(--sp-4) 0 0;
     border: none;
     background-color: var(--color-orange);
   }
   .srp-card__price {
-    margin: var(--sp-3) 0 0;
+    margin: var(--sp-1) 0 0;
     font-family: var(--font-body);
-    font-size: var(--font-size-body-md);
-    font-weight: var(--font-weight-bold);
+    font-size: var(--font-size-body-lg);
+    font-weight: var(--font-weight-semibold);
     color: var(--text-primary);
   }
-  .srp-card__price-label {
-    font-weight: var(--font-weight-light);
+
+  .srp-card__badges-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--sp-2);
+    margin-top: var(--sp-3);
+  }
+  .srp-card__freeshipping,
+  .srp-card__warranty {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: 2px var(--sp-3);
+    background-color: #f8e9cb;
+    color: var(--color-earth-brown);
+    white-space: nowrap;
+  }
+  .srp-card__freeshipping-text,
+  .srp-card__warranty-text {
+    font-size: var(--font-size-body-sm);
   }
 
   .srp-card .loox-rating,
@@ -1169,9 +1423,20 @@
     border-color: transparent;
   }
 
+  @media screen and (max-width: 1440px) {
+    .srp-grid:not(.is-list) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  @media screen and (max-width: 1084px) {
+    .srp-grid:not(.is-list) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
   @media screen and (max-width: 1024px) {
-    .srp-grid,
-    .srp-grid.is-list {
+    .srp-grid:not(.is-list) {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
     .srp-popular__grid {
@@ -1193,21 +1458,6 @@
   }
 
   @media screen and (max-width: 768px) {
-    body:has(.srp) .header__icon--search,
-    body:has(.srp) .header__icon--cart,
-    body:has(.srp) .header__icon--menu,
-    body:has(.srp) .header__icon--account,
-    body:has(.srp) .header__localization .loc-picker__code,
-    body:has(.srp) .header__localization .loc-picker__chevron {
-      color: var(--color-earth-brown);
-    }
-    body:has(.srp) .header {
-      border: 1px solid #cfcbc7b4;
-    }
-    body:has(.srp) .loc-picker__option .loc-picker__code {
-      color: var(--color-earth-brown) !important;
-    }
-
     .srp-popular-card__new {
       display: none;
     }
@@ -1220,14 +1470,6 @@
     }
     .srp-hero {
       min-height: 220px;
-    }
-    .srp-hero__media::after {
-      background: linear-gradient(
-        90deg,
-        var(--color-cream) 0%,
-        color-mix(in srgb, var(--color-cream) 92%, transparent) 55%,
-        color-mix(in srgb, var(--color-cream) 60%, transparent) 100%
-      );
     }
     .srp-hero__inner {
       width: 100%;
@@ -1364,7 +1606,8 @@
   }
 
   @media screen and (max-width: 480px) {
-    .srp-grid {
+    .srp-grid,
+    .srp-grid:not(.is-list) {
       grid-template-columns: repeat(1, minmax(0, 1fr));
     }
     .srp-grid.is-list {
@@ -1390,6 +1633,27 @@
     }
     .srp-pagination__inner {
       border-radius: 0;
+    }
+    .srp-card__info,
+    .srp-popular-card__info {
+      padding-top: var(--sp-3);
+    }
+    .srp-card__title,
+    .srp-popular-card__name {
+      margin: var(--sp-2) 0 0;
+      font-size: var(--font-size-body-md);
+    }
+    .srp-card__price,
+    .srp-popular-card__price {
+      margin: var(--sp-1) 0 0;
+      font-size: var(--font-size-body-md);
+    }
+    .srp-card__artist {
+      font-size: var(--font-size-body-sm);
+    }
+    .srp-card__add {
+      width: 40px;
+      height: 40px;
     }
   }
 {% endstylesheet %}
@@ -1445,11 +1709,72 @@
       });
       requestWishlistRender();
 
+      function updateCartBubble() {
+        fetch(window.Shopify.routes.root + 'cart.js')
+          .then(function (res) {
+            return res.json();
+          })
+          .then(function (cart) {
+            var cartIcon = document.querySelector('.header__icon--cart');
+            if (!cartIcon) return;
+            var bubble = cartIcon.querySelector('.cart-count-bubble');
+            if (cart.item_count > 0) {
+              if (!bubble) {
+                bubble = document.createElement('div');
+                bubble.className = 'cart-count-bubble';
+                bubble.innerHTML = '<span></span>';
+                cartIcon.appendChild(bubble);
+              }
+              bubble.querySelector('span').textContent = cart.item_count;
+            } else if (bubble) {
+              bubble.remove();
+            }
+          });
+      }
+
+      document.querySelectorAll('[data-add-to-cart]').forEach(function (btn) {
+        if (btn.dataset.init === 'true') return;
+        btn.dataset.init = 'true';
+        btn.addEventListener('click', function () {
+          if (btn.disabled || btn.classList.contains('is-loading')) return;
+          var variantId = btn.dataset.variantId;
+          if (!variantId) return;
+
+          btn.classList.add('is-loading');
+          fetch(window.Shopify.routes.root + 'cart/add.js', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/javascript' },
+            body: JSON.stringify({ id: variantId, quantity: 1 }),
+          })
+            .then(function (res) {
+              return res.json();
+            })
+            .then(function (data) {
+              if (data.status) {
+                throw new Error(data.description || 'Could not add to cart');
+              }
+              if (window.showToast) {
+                window.showToast({ message: 'Item added to your cart.', type: 'success', position: 'bottom-left' });
+              }
+              updateCartBubble();
+              document.dispatchEvent(new CustomEvent('cart:updated', { detail: { open: true } }));
+            })
+            .catch(function (err) {
+              if (window.showToast) {
+                window.showToast({ message: err.message, type: 'error', position: 'bottom-left' });
+              }
+            })
+            .finally(function () {
+              btn.classList.remove('is-loading');
+            });
+        });
+      });
+
       document.querySelectorAll('[data-hover-gallery]').forEach(function (gallery) {
         if (gallery.dataset.initHover === 'true') return;
         gallery.dataset.initHover = 'true';
 
-        var images = gallery.querySelectorAll('.srp-popular-card__image');
+        var images = gallery.querySelectorAll('.srp-card__image, .srp-popular-card__image');
         if (images.length <= 1) return;
 
         var intervalId = null;
@@ -1529,7 +1854,7 @@
 {
   "name": "t:general.search",
   "settings": [
-    { "type": "text", "id": "heading", "label": "Heading", "default": "Find What Inspires You" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Find Products" },
     {
       "type": "text",
       "id": "subtitle",

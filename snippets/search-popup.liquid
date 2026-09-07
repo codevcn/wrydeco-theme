@@ -40,6 +40,7 @@
               class="search-popup__input"
               aria-label="Search"
               autocomplete="off"
+              autofocus
             >
           </div>
         </form>
@@ -282,12 +283,17 @@
     
     // Set 'open' attribute in next frame to allow DOM to update and transition to trigger
     requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        popup.setAttribute('open', '');
-        // Small hack for the component to focus its input
-        const input = popup.querySelector('input[type="search"]');
-        if (input) input.focus();
-      });
+      popup.setAttribute('open', '');
+      const focusInput = () => {
+        const input = popup.querySelector('input[type="search"], .search-popup__input');
+        if (input) {
+          input.focus({ preventScroll: true });
+        }
+      };
+      focusInput();
+      requestAnimationFrame(focusInput);
+      setTimeout(focusInput, 60);
+      setTimeout(focusInput, 150);
     });
   };
 
