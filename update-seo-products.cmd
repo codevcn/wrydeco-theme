@@ -1,1 +1,0 @@
-python todo\SEO\update_products.py

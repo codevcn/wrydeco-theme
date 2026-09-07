@@ -34,13 +34,11 @@
     </{{ header_heading_tag }}>
 
     {%- capture room_nav_data -%}
-      Living Room::Wood Floor Sculptures=wooden-floor-sculpture|Floating Wood Shelves=floating-shelves|Coffee Tables=coffee-tables|Tree Bookshelves=tree-bookshelves
-      ||Bedroom::Beds & Headboards=bed-frame-with-headboard|Tree Bookshelves=tree-bookshelves|Wall-Mounted Tree Bookshelves=wall-mounted-tree-bookshelves|Floating Bookshelves=floating-bookshelf
-      ||Kitchen::Wine Racks=wine-racks|Wall-Mounted Wine Racks=wall-mounted-wine-rack
-      ||Home Office::Tree Bookshelves=tree-bookshelves|Sculptural Bookshelves=bookshelf-modern|Corner Tree Bookshelves=corner-bookshelf|Standing Tree Bookshelves=standing-bookshelf|Floating Bookshelves=floating-bookshelf
-      ||Kid's Room::
-      ||Entryway::
-      ||Business Decor::Wood Floor Sculptures=wooden-floor-sculpture|Coffee Tables=coffee-tables|Sculptural Bookshelves=bookshelf-modern
+      Living Room::Coffee Tables=coffee-tables|End Tables=end-table|Wood Floor Sculptures=wooden-floor-sculpture|Wall Decorative Sculptures=wall-decorative-sculpture|Floating Wood Shelves=floating-shelves|Gothic Wall Shelves=wall-shelf-gothic|Fireplace Mantel Shelves=fireplace-mantel-shelf|Floor Lamp Bases=wood-floor-lamp-base|Lamp Bases=wooden-lamp-base|Plant Stands=wooden-plant-stand|Storage Cabinets=storage-cabinet|Cat Trees=cat-tree|Parrot Trees=parrot-tree|Wood Wall Mirrors=mirror
+      ||Bedroom::Beds & Headboards=bed-frame-with-headboard|Bedside Tables=bedside-table|Jewelry Tree Organizer Stands=jewelry-tree-organizer-stand|Wood Wall Mirrors=mirror|Lamp Bases=wooden-lamp-base
+      ||Kitchen & Dining::Wine Racks=wine-racks|Wall-Mounted Wine Racks=wall-mounted-wine-rack|Tree Wine Racks=tree-wine-rack|Fruit Bowls=wooden-fruit-bowl
+      ||Home Office & Library::Tree Bookshelves=tree-bookshelves|Sculptural Bookshelves=bookshelf-modern|Rustic Tree Bookshelves=bookshelf-rustic|Corner Tree Bookshelves=corner-bookshelf|Standing Tree Bookshelves=standing-bookshelf|Floating Bookshelves=floating-bookshelf|Wall-Mounted Tree Bookshelves=wall-mounted-tree-bookshelves|Floating Wood Shelves=floating-shelves|Storage Cabinets=storage-cabinet
+      ||Nursery & Kids' Room::Tree Bookshelves=tree-bookshelves|Corner Tree Bookshelves=corner-bookshelf|Standing Tree Bookshelves=standing-bookshelf|Wall-Mounted Tree Bookshelves=wall-mounted-tree-bookshelves|Floating Bookshelves=floating-bookshelf|Cat Trees=cat-tree
     {%- endcapture -%}
     {%- assign room_nav_items = room_nav_data | strip | split: '||' -%}
 
@@ -52,8 +50,24 @@
             assign room_title = room_nav_parts[0] | strip
             assign room_collections_value = room_nav_parts[1] | strip
             assign room_collections = room_collections_value | split: '|'
+            assign room_visible_collection_count = 0
           -%}
           {%- if room_collections_value == blank -%}
+            {%- continue -%}
+          {%- endif -%}
+          {%- for room_collection in room_collections -%}
+            {%- liquid
+              assign room_collection_parts = room_collection | split: '='
+              assign room_collection_handle = room_collection_parts[1] | strip
+              assign coll = collections[room_collection_handle]
+            -%}
+            {%- if coll != blank -%}
+              {%- if coll.url != blank -%}
+                {%- assign room_visible_collection_count = room_visible_collection_count | plus: 1 -%}
+              {%- endif -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {%- if room_visible_collection_count == 0 -%}
             {%- continue -%}
           {%- endif -%}
           <li class="header__nav-item-has-mega-menu">
@@ -74,27 +88,31 @@
                         {%- assign room_collection_title = room_collection_parts[0] | strip -%}
                         {%- assign room_collection_handle = room_collection_parts[1] | strip -%}
                         {%- assign coll = collections[room_collection_handle] -%}
-                        {%- assign coll_image = coll.image | default: coll.products.first.featured_image -%}
-                        <li>
-                          <a
-                            class="cmega__collection-link"
-                            href="{{ routes.collections_url }}/{{ room_collection_handle }}"
-                          >
-                            <div class="cmega__collection-image-wrapper">
-                              {%- if coll_image != blank -%}
-                                <img
-                                  src="{{ coll_image | image_url: width: 400 }}"
-                                  alt="{{ room_collection_title | escape }}"
-                                  loading="lazy"
-                                  class="cmega__collection-image"
-                                >
-                              {%- else -%}
-                                {{ 'collection-1' | placeholder_svg_tag: 'cmega__collection-image placeholder-svg' }}
-                              {%- endif -%}
-                            </div>
-                            <span class="cmega__collection-title">{{ room_collection_title }}</span>
-                          </a>
-                        </li>
+                        {%- if coll != blank -%}
+                          {%- if coll.url != blank -%}
+                            {%- assign coll_image = coll.image | default: coll.products.first.featured_image -%}
+                            <li>
+                              <a
+                                class="cmega__collection-link"
+                                href="{{ routes.collections_url }}/{{ room_collection_handle }}"
+                              >
+                                <div class="cmega__collection-image-wrapper">
+                                  {%- if coll_image != blank -%}
+                                    <img
+                                      src="{{ coll_image | image_url: width: 400 }}"
+                                      alt="{{ room_collection_title | escape }}"
+                                      loading="lazy"
+                                      class="cmega__collection-image"
+                                    >
+                                  {%- else -%}
+                                    {{ 'collection-1' | placeholder_svg_tag: 'cmega__collection-image placeholder-svg' }}
+                                  {%- endif -%}
+                                </div>
+                                <span class="cmega__collection-title">{{ room_collection_title }}</span>
+                              </a>
+                            </li>
+                          {%- endif -%}
+                        {%- endif -%}
                       {%- endfor -%}
                     </ul>
                   {%- else -%}
@@ -172,8 +190,24 @@
                   assign room_title = room_nav_parts[0] | strip
                   assign room_collections_value = room_nav_parts[1] | strip
                   assign room_collections = room_collections_value | split: '|'
+                  assign room_visible_collection_count = 0
                 -%}
                 {%- if room_collections_value == blank -%}
+                  {%- continue -%}
+                {%- endif -%}
+                {%- for room_collection in room_collections -%}
+                  {%- liquid
+                    assign room_collection_parts = room_collection | split: '='
+                    assign room_collection_handle = room_collection_parts[1] | strip
+                    assign coll = collections[room_collection_handle]
+                  -%}
+                  {%- if coll != blank -%}
+                    {%- if coll.url != blank -%}
+                      {%- assign room_visible_collection_count = room_visible_collection_count | plus: 1 -%}
+                    {%- endif -%}
+                  {%- endif -%}
+                {%- endfor -%}
+                {%- if room_visible_collection_count == 0 -%}
                   {%- continue -%}
                 {%- endif -%}
                 <li class="cmega__group" data-mega-group>
@@ -182,7 +216,7 @@
                       <span class="cmega__group-name">{{ room_title }}</span>
                       <span class="cmega__group-desc">
                         {%- if room_collections_value != blank -%}
-                          {{ room_collections.size }} collections
+                          {{ room_visible_collection_count }} collections
                         {%- else -%}
                           Coming soon
                         {%- endif -%}
@@ -209,28 +243,32 @@
                           {%- assign room_collection_title = room_collection_parts[0] | strip -%}
                           {%- assign room_collection_handle = room_collection_parts[1] | strip -%}
                           {%- assign coll = collections[room_collection_handle] -%}
-                          {%- assign coll_image = coll.image | default: coll.products.first.featured_image -%}
-                          <li>
-                            <a
-                              href="{{ routes.collections_url }}/{{ room_collection_handle }}"
-                              data-mobile-menu-close
-                              class="cmega__collection-link"
-                            >
-                              <div class="cmega__collection-image-wrapper">
-                                {%- if coll_image != blank -%}
-                                  <img
-                                    src="{{ coll_image | image_url: width: 400 }}"
-                                    alt="{{ room_collection_title | escape }}"
-                                    loading="lazy"
-                                    class="cmega__collection-image"
-                                  >
-                                {%- else -%}
-                                  {{ 'collection-1' | placeholder_svg_tag: 'cmega__collection-image placeholder-svg' }}
-                                {%- endif -%}
-                              </div>
-                              <span class="cmega__collection-title">{{ room_collection_title }}</span>
-                            </a>
-                          </li>
+                          {%- if coll != blank -%}
+                            {%- if coll.url != blank -%}
+                              {%- assign coll_image = coll.image | default: coll.products.first.featured_image -%}
+                              <li>
+                                <a
+                                  href="{{ routes.collections_url }}/{{ room_collection_handle }}"
+                                  data-mobile-menu-close
+                                  class="cmega__collection-link"
+                                >
+                                  <div class="cmega__collection-image-wrapper">
+                                    {%- if coll_image != blank -%}
+                                      <img
+                                        src="{{ coll_image | image_url: width: 400 }}"
+                                        alt="{{ room_collection_title | escape }}"
+                                        loading="lazy"
+                                        class="cmega__collection-image"
+                                      >
+                                    {%- else -%}
+                                      {{ 'collection-1' | placeholder_svg_tag: 'cmega__collection-image placeholder-svg' }}
+                                    {%- endif -%}
+                                  </div>
+                                  <span class="cmega__collection-title">{{ room_collection_title }}</span>
+                                </a>
+                              </li>
+                            {%- endif -%}
+                          {%- endif -%}
                         {%- endfor -%}
                       </ul>
                     {%- else -%}
