@@ -41,68 +41,6 @@
   .product-gallery__zoom-lens.is-active {
     display: block;
   }
-  .product-gallery__wishlist {
-    position: absolute;
-    inset-block-start: var(--sp-4);
-    inset-inline-end: var(--sp-4);
-    z-index: 3;
-    display: grid;
-    place-items: center;
-    inline-size: var(--sp-6-bigger);
-    block-size: var(--sp-6-bigger);
-    padding: var(--sp-0);
-    border: var(--border-width) solid var(--color-bark);
-    border-radius: var(--radius-full);
-    background-color: var(--color-milk);
-    box-shadow: var(--shadow-elevation-1);
-    color: var(--color-bark);
-    cursor: pointer;
-    transition: var(--transition-fast);
-  }
-  .product-gallery__wishlist:hover,
-  .product-gallery__wishlist:focus-visible,
-  .product-gallery__wishlist.is-added {
-    background-color: red;
-    color: var(--color-milk);
-  }
-  .product-gallery__wishlist:focus-visible {
-    outline: var(--border-width) solid var(--color-bark);
-    outline-offset: var(--sp-1);
-  }
-  .product-gallery__wishlist:disabled {
-    cursor: wait;
-  }
-  .product-gallery__wishlist-icon,
-  .product-gallery__wishlist-icon svg {
-    display: block;
-    inline-size: var(--sp-5);
-    block-size: var(--sp-5);
-  }
-  .product-gallery__wishlist-loading {
-    display: none;
-    inline-size: var(--sp-5);
-    block-size: var(--sp-5);
-    border: calc(var(--border-width) * 2) solid currentColor;
-    border-inline-start-color: transparent;
-    border-radius: var(--radius-full);
-    animation: product-gallery-wishlist-spin var(--timing-extra-long) linear infinite;
-  }
-  .product-gallery__wishlist[aria-busy='true'] .product-gallery__wishlist-icon {
-    display: none;
-  }
-  .product-gallery__wishlist[aria-busy='true'] .product-gallery__wishlist-loading {
-    display: block;
-  }
-  @keyframes product-gallery-wishlist-spin {
-    to {
-      transform: rotate(360deg);
-    }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .product-gallery__wishlist-loading {
-      animation: none;
-    }
-  }
   .product-gallery__stage-loading {
     position: absolute;
     inset: 0;
@@ -272,10 +210,6 @@
   @media screen and (max-width: 720px) {
     .product-gallery {
       margin-block-end: var(--sp-3);
-    }
-    .product-gallery__wishlist {
-      inset-block-start: var(--sp-3);
-      inset-inline-end: var(--sp-3);
     }
   }
 
@@ -672,138 +606,8 @@
   }
 {% endstylesheet %}
 
-{%- liquid
-  assign product_video_position = 5
-  assign product_video_url = product.metafields.custom.product_video_media.value | default: product.metafields.custom.product_video_media | strip
-  assign has_product_video = false
-  if product_video_url != blank
-    assign has_product_video = true
-  endif
-
-  assign product_video_media_id = 'product-video-media'
-  assign product_video_alt = product.title | append: ' video'
-  assign product_video_embed_url = product_video_url
-  assign product_video_kind = 'iframe'
-  assign product_video_youtube_id = blank
-
-  if has_product_video
-    assign product_video_url_downcase = product_video_url | downcase
-    if product_video_url_downcase contains '.mp4'
-      assign product_video_kind = 'video'
-    endif
-    if product_video_url_downcase contains '.webm'
-      assign product_video_kind = 'video'
-    endif
-    if product_video_url_downcase contains '.ogg'
-      assign product_video_kind = 'video'
-    endif
-
-    if product_video_url_downcase contains 'youtu.be/'
-      assign product_video_youtube_id = product_video_url | split: 'youtu.be/' | last | split: '?' | first | split: '&' | first
-      assign product_video_embed_url = 'https://www.youtube.com/embed/' | append: product_video_youtube_id
-    elsif product_video_url_downcase contains 'youtube.com/shorts/'
-      assign product_video_youtube_id = product_video_url | split: 'youtube.com/shorts/' | last | split: '?' | first | split: '&' | first
-      assign product_video_embed_url = 'https://www.youtube.com/embed/' | append: product_video_youtube_id
-    elsif product_video_url_downcase contains 'youtube.com/embed/'
-      assign product_video_youtube_id = product_video_url | split: 'youtube.com/embed/' | last | split: '?' | first | split: '&' | first
-      assign product_video_embed_url = 'https://www.youtube.com/embed/' | append: product_video_youtube_id
-    elsif product_video_url_downcase contains 'youtube.com/watch'
-      assign product_video_youtube_id = product_video_url | split: 'v=' | last | split: '&' | first
-      assign product_video_embed_url = 'https://www.youtube.com/embed/' | append: product_video_youtube_id
-    elsif product_video_url_downcase contains 'vimeo.com/'
-      assign product_video_vimeo_id = product_video_url | split: 'vimeo.com/' | last | split: '?' | first | split: '/' | last
-      assign product_video_embed_url = 'https://player.vimeo.com/video/' | append: product_video_vimeo_id
-    endif
-  endif
--%}
-
-{%- capture product_video_play_icon -%}
-  <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg>
-{%- endcapture -%}
-
-{%- capture product_video_main_item -%}
-  {%- if has_product_video -%}
-    <div
-      id="ProductMedia-{{ section_id }}-{{ product_video_media_id }}"
-      class="product-gallery__main-item{% if product.media.size == 0 %} is-active{% endif %}"
-      data-main-media-id="{{ product_video_media_id }}"
-      data-main-media-type="video"
-      data-alt="{{ product_video_alt | escape }}"
-    >
-      <div class="product-gallery__main-media product-gallery__main-video">
-        {%- if product_video_kind == 'video' -%}
-          <video controls preload="metadata" playsinline>
-            <source src="{{ product_video_url | escape }}">
-          </video>
-        {%- else -%}
-          <iframe
-            src="{{ product_video_embed_url | escape }}"
-            title="{{ product_video_alt | escape }}"
-            loading="lazy"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowfullscreen
-          ></iframe>
-        {%- endif -%}
-      </div>
-    </div>
-  {%- endif -%}
-{%- endcapture -%}
-
-{%- capture product_video_thumbnail -%}
-  {%- if has_product_video -%}
-    <button
-      type="button"
-      class="product-gallery__thumbnail product-gallery__thumbnail--video{% if product.media.size == 0 %} is-active{% endif %}"
-      data-thumbnail-id="{{ product_video_media_id }}"
-      data-alt="{{ product_video_alt | escape }}"
-      aria-controls="ProductMedia-{{ section_id }}-{{ product_video_media_id }}"
-      aria-pressed="{% if product.media.size == 0 %}true{% else %}false{% endif %}"
-      aria-label="View {{ product_video_alt | escape }}"
-    >
-      <span class="product-gallery__thumbnail-video-icon" aria-hidden="true">
-        {{ product_video_play_icon }}
-      </span>
-    </button>
-  {%- endif -%}
-{%- endcapture -%}
-
-{%- capture product_video_lightbox_thumbnail -%}
-  {%- if has_product_video -%}
-    <button
-      type="button"
-      class="product-lightbox__thumbnail product-lightbox__thumbnail--video"
-      data-lightbox-thumbnail
-      data-lightbox-media-id="{{ product_video_media_id }}"
-      data-lightbox-type="video"
-      data-lightbox-video-kind="{{ product_video_kind }}"
-      data-lightbox-video-src="{{ product_video_embed_url | escape }}"
-      data-lightbox-alt="{{ product_video_alt | escape }}"
-      aria-label="View {{ product_video_alt | escape }}"
-      aria-pressed="false"
-    >
-      <span class="product-lightbox__thumbnail-video-icon" aria-hidden="true">
-        {{ product_video_play_icon }}
-      </span>
-    </button>
-  {%- endif -%}
-{%- endcapture -%}
-
 <div class="product-gallery" data-product-gallery>
   <div class="product-gallery__main">
-    {% assign wishlist_variant = current_variant | default: product.selected_or_first_available_variant %}
-    <button
-      type="button"
-      class="product-gallery__wishlist"
-      data-product-wishlist
-      data-wishlist-product-id="{{ product.id }}"
-      data-wishlist-variant-id="{{ wishlist_variant.id }}"
-      data-wishlist-product-title="{{ product.title | escape }}"
-      aria-label="Add {{ product.title | escape }} to wishlist"
-      aria-pressed="false"
-    >
-      <span class="product-gallery__wishlist-icon" data-product-wishlist-icon aria-hidden="true"></span>
-      <span class="product-gallery__wishlist-loading" aria-hidden="true"></span>
-    </button>
 
     {% assign has_best_seller = false %}
     {% assign best_seller_entry = metaobjects.outstanding_materials.values | first %}
@@ -827,11 +631,6 @@
     <div class="product-gallery__zoom-lens" data-zoom-lens aria-hidden="true"></div>
     {% assign featured_media = current_variant.featured_media | default: product.featured_media %}
     {% for media in product.media %}
-      {%- if has_product_video -%}
-        {%- if forloop.index == product_video_position -%}
-          {{ product_video_main_item }}
-        {%- endif -%}
-      {%- endif -%}
       {% liquid
         assign is_active_media = false
         if media.id == featured_media.id
@@ -894,11 +693,6 @@
         {% endcase %}
       </div>
     {% endfor %}
-    {%- if has_product_video -%}
-      {%- if product.media.size < product_video_position -%}
-        {{ product_video_main_item }}
-      {%- endif -%}
-    {%- endif -%}
     <div
       class="product-gallery__stage-loading"
       data-gallery-stage-loading
@@ -914,18 +708,10 @@
     if product.media.size > 1
       assign show_product_thumbnails = true
     endif
-    if has_product_video
-      assign show_product_thumbnails = true
-    endif
   -%}
   {% if show_product_thumbnails %}
     <div class="product-gallery__thumbnails">
       {% for media in product.media %}
-        {%- if has_product_video -%}
-          {%- if forloop.index == product_video_position -%}
-            {{ product_video_thumbnail }}
-          {%- endif -%}
-        {%- endif -%}
         {% liquid
           assign is_active_thumbnail = false
           if media.id == featured_media.id
@@ -949,11 +735,6 @@
           {{ media | image_url: width: 160 | image_tag: loading: 'lazy', alt: thumbnail_alt }}
         </button>
       {% endfor %}
-      {%- if has_product_video -%}
-        {%- if product.media.size < product_video_position -%}
-          {{ product_video_thumbnail }}
-        {%- endif -%}
-      {%- endif -%}
     </div>
   {% endif %}
 
@@ -981,18 +762,10 @@
     {%- liquid
       assign lightbox_images = product.media | where: 'media_type', 'image'
       assign lightbox_media_count = lightbox_images.size
-      if has_product_video
-        assign lightbox_media_count = lightbox_media_count | plus: 1
-      endif
     -%}
     <div class="product-lightbox__content">
       <div class="product-lightbox__media-list custom-scrollbar" role="group" aria-label="Product media">
         {% for media in lightbox_images %}
-          {%- if has_product_video -%}
-            {%- if forloop.index == product_video_position -%}
-              {{ product_video_lightbox_thumbnail }}
-            {%- endif -%}
-          {%- endif -%}
           {%- assign lightbox_alt = media.alt | default: product.title -%}
           <button
             type="button"
@@ -1014,11 +787,6 @@
             }}
           </button>
         {% endfor %}
-        {%- if has_product_video -%}
-          {%- if lightbox_images.size < product_video_position -%}
-            {{ product_video_lightbox_thumbnail }}
-          {%- endif -%}
-        {%- endif -%}
       </div>
 
       <div class="product-lightbox__stage">
@@ -1605,375 +1373,16 @@
       });
     }
 
-    function readCookie(name) {
-      var cookies = document.cookie ? document.cookie.split('; ') : [];
-
-      for (var index = 0; index < cookies.length; index += 1) {
-        var separatorIndex = cookies[index].indexOf('=');
-        if (separatorIndex === -1) continue;
-        if (cookies[index].slice(0, separatorIndex) !== name) continue;
-
-        try {
-          return decodeURIComponent(cookies[index].slice(separatorIndex + 1));
-        } catch (error) {
-          return '';
-        }
-      }
-
-      return '';
-    }
-
-    function createWishlistCustomerId() {
-      if (!window.crypto || !window.crypto.getRandomValues) return '';
-
-      var bytes = new Uint8Array(15);
-      var binary = '';
-      window.crypto.getRandomValues(bytes);
-
-      bytes.forEach(function (byte) {
-        binary += String.fromCharCode(byte);
-      });
-
-      return window.btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-    }
-
-    // Read the wishlist customer id WITHOUT creating one, so simply viewing a
-    // product never sets a cookie. Returns '' when the shopper has no id yet.
-    function resolveWishlistCustomerId() {
-      var analytics = window.ShopifyAnalytics && window.ShopifyAnalytics.meta;
-      var customerId = analytics && analytics.page && analytics.page.customerId;
-
-      if (!customerId && window.meta && window.meta.page) {
-        customerId = window.meta.page.customerId;
-      }
-      if (!customerId && window.__st) {
-        customerId = window.__st.cid;
-      }
-      if (customerId) return String(customerId);
-
-      return readCookie('__v__wl__c__') || '';
-    }
-
-    function getWishlistCustomerId() {
-      var existingCustomerId = resolveWishlistCustomerId();
-      if (existingCustomerId) return existingCustomerId;
-
-      var generatedCustomerId = createWishlistCustomerId();
-      if (!generatedCustomerId) return '';
-
-      document.cookie =
-        '__v__wl__c__=' + encodeURIComponent(generatedCustomerId) + '; path=/; max-age=31536000; samesite=strict';
-      return generatedCustomerId;
-    }
-
-    // Locally mirror wishlist item ids by variant, so the heart shows the known
-    // state on load and the API item can be removed on the next click.
-    var WISHLIST_ADDED_STORAGE_PREFIX = 'wrydeco_wishlist_added_';
-
-    function wishlistStorageKey(customerId) {
-      return WISHLIST_ADDED_STORAGE_PREFIX + (customerId || 'anon');
-    }
-
-    function readAddedVariants(customerId) {
-      try {
-        var raw = window.localStorage.getItem(wishlistStorageKey(customerId));
-        if (!raw) return {};
-        var parsed = JSON.parse(raw);
-        return parsed && typeof parsed === 'object' ? parsed : {};
-      } catch (error) {
-        return {};
-      }
-    }
-
-    function isVariantAdded(variantId) {
-      if (!variantId) return false;
-      return Boolean(readAddedVariants(resolveWishlistCustomerId())[String(variantId)]);
-    }
-
-    function rememberAddedVariant(customerId, variantId, wishlistItemId) {
-      if (!variantId) return;
-      try {
-        var map = readAddedVariants(customerId);
-        map[String(variantId)] = wishlistItemId || true;
-        window.localStorage.setItem(wishlistStorageKey(customerId), JSON.stringify(map));
-      } catch (error) {
-        // Non-fatal: the button still works without the local mirror.
-      }
-    }
-
-    function forgetAddedVariant(customerId, variantId) {
-      if (!variantId) return;
-      try {
-        var map = readAddedVariants(customerId);
-        delete map[String(variantId)];
-
-        if (Object.keys(map).length) {
-          window.localStorage.setItem(wishlistStorageKey(customerId), JSON.stringify(map));
-        } else {
-          window.localStorage.removeItem(wishlistStorageKey(customerId));
-        }
-      } catch (error) {
-        // Non-fatal: the remote wishlist is still authoritative.
-      }
-    }
-
-    function getStoredWishlistItemId(customerId, variantId) {
-      var storedValue = readAddedVariants(customerId)[String(variantId)];
-      return storedValue === true ? '' : storedValue || '';
-    }
-
-    function getWishlistItemVariantId(item) {
-      if (!item) return '';
-      if (item.variantId) return item.variantId;
-      return item.variant && item.variant.id ? item.variant.id : '';
-    }
-
-    function findWishlistItem(apiHost, shopId, customerId, variantId) {
-      var query = '?sid=' + encodeURIComponent(String(shopId)) + '&cid=' + encodeURIComponent(String(customerId));
-
-      return window
-        .fetch(apiHost + '/bundle/api/v2/sf/ws' + query, {
-          method: 'GET',
-          headers: { Accept: 'application/json' },
-          cache: 'no-store',
-        })
-        .then(function (response) {
-          if (!response.ok) throw new Error('Wishlist lookup failed');
-          return response.json();
-        })
-        .then(function (items) {
-          if (!Array.isArray(items)) return null;
-
-          return (
-            items.find(function (item) {
-              return String(getWishlistItemVariantId(item)) === String(variantId);
-            }) || null
-          );
-        });
-    }
-
-    function removeWishlistItem(apiHost, shopId, customerId, wishlistItemId) {
-      var path = [shopId, customerId, wishlistItemId]
-        .map(function (value) {
-          return encodeURIComponent(String(value));
-        })
-        .join('/');
-
-      return window.fetch(apiHost + '/bundle/api/v2/sf/ws/' + path, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        cache: 'no-store',
-      });
-    }
-
-    function applyWishlistButtonState(button, added) {
-      var title = button.dataset.wishlistProductTitle || 'this piece';
-      button.classList.toggle('is-added', added);
-      button.setAttribute('aria-pressed', added ? 'true' : 'false');
-      button.setAttribute('aria-label', added ? title + ' is in your wishlist' : 'Add ' + title + ' to wishlist');
-    }
-
-    function syncWishlistButtonForVariant(button) {
-      applyWishlistButtonState(button, isVariantAdded(getWishlistVariantId(button)));
-    }
-
-    function syncWishlistIcon(button) {
-      var iconTarget = button.querySelector('[data-product-wishlist-icon]');
-      var sourceIcon = document.querySelector('#vitals-wishlist-header .Vtl-WishlistHeader__HeartIconWrapper');
-      if (!iconTarget || !sourceIcon || iconTarget.firstElementChild) return false;
-
-      var icon = sourceIcon.cloneNode(true);
-      icon.removeAttribute('class');
-      icon.removeAttribute('style');
-      icon.setAttribute('aria-hidden', 'true');
-      icon.style.setProperty('fill', 'currentColor', 'important');
-      iconTarget.appendChild(icon);
-      return true;
-    }
-
-    function getWishlistVariantId(button) {
-      // The product form's hidden id is the live source of truth (it is what the
-      // add-to-cart request submits), so trust it before the URL param, which can
-      // lag behind the current selection.
-      var selectedVariant = document.querySelector('form[action*="/cart/add"] [name="id"]');
-      if (selectedVariant && selectedVariant.value) return selectedVariant.value;
-
-      var urlVariantId = new URL(window.location.href).searchParams.get('variant');
-      if (urlVariantId) return urlVariantId;
-
-      return button.dataset.wishlistVariantId;
-    }
-
-    function updateWishlistHeaderCount(change) {
-      var counter = document.querySelector('#vitals-wishlist-header .Vtl-WishlistHeader__HeartCounter');
-      if (!counter) {
-        if (change < 1) return;
-
-        var iconWrapper = document.querySelector('#vitals-wishlist-header .Vtl-WishlistHeader__IconWrapper');
-        if (!iconWrapper) return;
-
-        counter = document.createElement('span');
-        counter.className = 'Vtl-WishlistHeader__HeartCounter';
-        iconWrapper.appendChild(counter);
-      }
-
-      var count = Number.parseInt(counter.textContent, 10);
-      var nextCount = Math.max(0, (Number.isNaN(count) ? 0 : count) + change);
-
-      if (nextCount === 0) {
-        counter.remove();
-        return;
-      }
-
-      counter.textContent = String(nextCount);
-    }
-
-    function showWishlistToast(message, type) {
-      if (typeof window.showToast !== 'function') return;
-      window.showToast({
-        message: message,
-        type: type,
-        position: 'bottom-left',
-        duration: 4000,
-      });
-    }
-
-    function initProductWishlist() {
-      document.querySelectorAll('[data-product-wishlist]').forEach(function (button) {
-        if (button.dataset.wishlistInit === 'true') return;
-        button.dataset.wishlistInit = 'true';
-
-        if (!syncWishlistIcon(button)) {
-          var observer = new MutationObserver(function () {
-            if (syncWishlistIcon(button)) observer.disconnect();
-          });
-          observer.observe(document.body, { childList: true, subtree: true });
-        }
-
-        // Reflect the known state for the initial variant, and keep it in sync
-        // when the shopper switches variants — wishlist membership is per-variant,
-        // so a heart added for one variant must not stay lit for another.
-        syncWishlistButtonForVariant(button);
-        document.addEventListener('variant:change', function () {
-          syncWishlistButtonForVariant(button);
-        });
-
-        button.addEventListener('click', function (event) {
-          event.preventDefault();
-          event.stopPropagation();
-          if (button.disabled) return;
-
-          var wishlistData = window.vtlsLiquidData || {};
-          var appId = wishlistData.shopInfo && wishlistData.shopInfo.appId;
-          var apiHost = appId && wishlistData.apiHosts && wishlistData.apiHosts[appId];
-          var shopId = wishlistData.shopInfo && wishlistData.shopInfo.id;
-          var variantId = getWishlistVariantId(button);
-          var customerId = getWishlistCustomerId();
-          var isRemoving = button.getAttribute('aria-pressed') === 'true';
-
-          if (!apiHost || !shopId || !customerId || !variantId) {
-            showWishlistToast('We could not update your wishlist. Please try again.', 'error');
-            return;
-          }
-
-          var idleAriaLabel = button.getAttribute('aria-label');
-          var loadingAriaLabel = isRemoving ? 'Removing from wishlist' : 'Adding to wishlist';
-          button.disabled = true;
-          button.setAttribute('aria-busy', 'true');
-          button.setAttribute('aria-label', loadingAriaLabel);
-
-          var request;
-
-          if (isRemoving) {
-            var storedWishlistItemId = getStoredWishlistItemId(customerId, variantId);
-            var wishlistItemRequest = storedWishlistItemId
-              ? Promise.resolve({ id: storedWishlistItemId })
-              : findWishlistItem(apiHost, shopId, customerId, variantId);
-
-            request = wishlistItemRequest.then(function (wishlistItem) {
-              if (!wishlistItem || !wishlistItem.id) return null;
-
-              return removeWishlistItem(apiHost, shopId, customerId, wishlistItem.id).then(function (response) {
-                if (!response.ok && response.status !== 404) {
-                  throw new Error('Wishlist remove failed');
-                }
-                return response;
-              });
-            });
-          } else {
-            request = window.fetch(apiHost + '/bundle/api/v2/sf/ws', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                shop_id: shopId,
-                customerId: customerId,
-                productId: Number(button.dataset.wishlistProductId),
-                variantId: Number(variantId),
-              }),
-            });
-          }
-
-          request
-            .then(function (response) {
-              if (isRemoving) {
-                forgetAddedVariant(customerId, variantId);
-                applyWishlistButtonState(button, false);
-                updateWishlistHeaderCount(-1);
-                showWishlistToast('Removed from your wishlist.', 'success');
-                return;
-              }
-
-              if (response.status === 409) {
-                rememberAddedVariant(customerId, variantId);
-                applyWishlistButtonState(button, true);
-                showWishlistToast('This piece is already in your wishlist.', 'info');
-                return;
-              }
-              if (!response.ok) throw new Error('Wishlist request failed');
-
-              return response
-                .json()
-                .catch(function () {
-                  return null;
-                })
-                .then(function (wishlistItem) {
-                  rememberAddedVariant(customerId, variantId, wishlistItem && wishlistItem.id);
-                  applyWishlistButtonState(button, true);
-                  updateWishlistHeaderCount(1);
-                  showWishlistToast('Added to your wishlist.', 'success');
-                });
-            })
-            .catch(function () {
-              showWishlistToast(
-                isRemoving
-                  ? 'We could not remove this piece from your wishlist. Please try again.'
-                  : 'We could not add this piece to your wishlist. Please try again.',
-                'error'
-              );
-            })
-            .finally(function () {
-              button.disabled = false;
-              button.removeAttribute('aria-busy');
-              if (button.getAttribute('aria-label') === loadingAriaLabel) {
-                button.setAttribute('aria-label', idleAriaLabel);
-              }
-            });
-        });
-      });
-    }
-
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', function () {
         initGalleryStageLoading();
         initGalleryLightbox();
         initGalleryZoom();
-        initProductWishlist();
       });
     } else {
       initGalleryStageLoading();
       initGalleryLightbox();
       initGalleryZoom();
-      initProductWishlist();
     }
   })();
 </script>

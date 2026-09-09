@@ -21,6 +21,8 @@
   else
     assign bg_alt = heading
   endif
+
+  assign banner_description = collection.description | default: section.settings.description
 %}
 
 <section class="col-banner" id="CollectionBanner-{{ section.id }}">
@@ -75,9 +77,11 @@
 
   <div class="col-banner__inner">
     <h1 class="col-banner__title">{{ heading | escape }}</h1>
-    <span class="col-banner__subtitle"
-      >Shaped by nature and crafted by hand, each piece brings warmth and timeless character home.</span
-    >
+    {%- if banner_description != blank -%}
+      <div class="col-banner__subtitle rte">
+        {{ banner_description }}
+      </div>
+    {%- endif -%}
   </div>
 </section>
 
@@ -123,8 +127,12 @@
     isolation: isolate;
     width: 100%;
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    align-items: flex-start;
     justify-content: center;
+    gap: 42px;
+    padding-left: var(--sp-9);
+    padding-right: var(--sp-9);
     min-height: clamp(520px, 42vw, 680px);
     overflow: hidden;
     background-color: var(--color-cream);
@@ -170,27 +178,33 @@
     background-color: rgba(0, 0, 0, 0.1);
   }
 
+  .col-banner__crumbs {
+    position: relative;
+    z-index: 10;
+    margin-top: 65px;
+  }
+
   .col-banner__inner {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    text-align: center;
+    align-items: flex-start;
+    text-align: left;
     position: relative;
-    top: 0;
     z-index: 10;
     width: 100%;
-    max-width: 680px;
+    max-width: 880px;
     height: fit-content;
-    padding: var(--sp-4) var(--sp-6);
-    margin-inline: auto;
+    padding: 0;
+    margin: 0;
   }
 
   .col-banner__crumbs-list {
     display: flex;
     align-items: center;
+    justify-content: flex-start;
     flex-wrap: wrap;
     gap: var(--sp-2);
-    margin: 0 0 var(--sp-5);
+    margin: 0;
     padding: 0;
     list-style: none;
     font-size: var(--font-size-caption);
@@ -198,10 +212,7 @@
     letter-spacing: 0.05em;
     text-transform: uppercase;
     color: rgba(247, 242, 236, 0.85);
-    top: 132px;
-    position: absolute;
-    left: var(--sp-9);
-    z-index: 10;
+    position: relative;
   }
   .col-banner__crumb a {
     color: rgba(247, 242, 236, 0.75);
@@ -221,58 +232,69 @@
   .col-banner__title {
     margin: 0;
     font-family: var(--font-display-light);
-    font-size: clamp(2.25rem, 3.15vw, 3.5rem);
+    font-size: clamp(2.25rem, 2.8vw, 3.5rem);
     font-weight: 600;
     line-height: var(--line-height-display);
     letter-spacing: 0.01rem;
     color: var(--color-cream);
     text-shadow: 0 2px 16px rgba(0, 0, 0, 0.5);
-    text-align: center;
+    text-align: left;
   }
   .col-banner__subtitle {
     color: rgba(247, 242, 236, 0.9);
     text-shadow: 0 1px 10px rgba(0, 0, 0, 0.5);
     padding-block: var(--sp-3) var(--sp-3);
-    max-width: 50ch;
-    text-align: center;
-    margin-inline: auto;
+    margin: 0;
+    font-size: var(--font-size-body-md);
+    line-height: var(--line-height-generous);
+    text-align: left;
+    max-width: 68ch;
+  }
+  .col-banner__subtitle p {
+    margin: 0 0 var(--sp-2);
+  }
+  .col-banner__subtitle p:last-child {
+    margin-bottom: 0;
+  }
+  .col-banner__subtitle a {
+    color: var(--color-cream);
+    text-decoration: underline;
   }
 
   @media screen and (max-width: 1024px) {
     .col-banner__inner {
-      max-width: 80%;
+      max-width: 90%;
     }
   }
 
   @media screen and (max-width: 768px) {
+    .col-banner {
+      padding-left: var(--layout-padding-mobile);
+      padding-right: var(--layout-padding-mobile);
+    }
+
     .col-banner__crumb {
       font-size: 10px;
     }
     .col-banner__title {
-      font-size: var(--font-size-display-md);
+      font-size: var(--font-size-display-sm);
+      text-align: left;
     }
 
     .col-banner__subtitle {
+      font-size: var(--font-size-body-sm);
       padding-block: var(--sp-1) var(--sp-1);
+      text-align: left;
     }
-    /* Align the breadcrumb with the mobile content padding (not the desktop
-       72px inset) and drop it below the overlaid header so it stops colliding
-       with the logo/icons. */
-    .col-banner__crumbs-list {
-      top: calc(64px + var(--sp-3));
-      left: var(--layout-padding-mobile);
-      margin: 0 0 var(--sp-2);
+    .col-banner__subtitle p {
+      margin-bottom: var(--sp-1);
     }
     .col-banner__inner {
-      /* top: calc(64px + var(--sp-5)); */
       max-width: 100%;
-      padding-left: var(--layout-padding-mobile);
-      padding-right: var(--layout-padding-mobile);
-      padding-top: var(--sp-3);
-      padding-bottom: var(--sp-3);
+      padding: 0;
       gap: var(--sp-3);
-      align-items: center;
-      text-align: center;
+      align-items: flex-start;
+      text-align: left;
     }
   }
 {% endstylesheet %}
