@@ -1,116 +1,111 @@
-<div class="trust-bar">
-  <div class="trust-bar__inner page-width">
-    {%- for block in section.blocks -%}
-      <div class="trust-bar__item" {{ block.shopify_attributes }}>
-        <span class="trust-bar__icon" aria-hidden="true">
-          {%- render 'hero-feature-icon', icon: block.settings.icon -%}
-        </span>
-        <span class="trust-bar__text">
-          <span class="trust-bar__title">{{ block.settings.title }}</span>
-          {%- if block.settings.subtitle != blank -%}
-            <span class="trust-bar__subtitle">{{ block.settings.subtitle }}</span>
-          {%- endif -%}
-        </span>
-      </div>
-    {%- endfor -%}
+{%- if section.settings.show_bar -%}
+  <div class="trust-bar">
+    <div class="trust-bar__inner page-width">
+      {%- for block in section.blocks -%}
+        <div class="trust-bar__item" {{ block.shopify_attributes }}>
+          <span class="trust-bar__icon" aria-hidden="true">
+            {%- render 'hero-feature-icon', icon: block.settings.icon -%}
+          </span>
+          <span class="trust-bar__text">
+            <span class="trust-bar__title">{{ block.settings.title }}</span>
+            {%- if block.settings.subtitle != blank -%}
+              <span class="trust-bar__subtitle">{{ block.settings.subtitle }}</span>
+            {%- endif -%}
+          </span>
+        </div>
+      {%- endfor -%}
+    </div>
   </div>
-</div>
+{%- endif -%}
 
 {% stylesheet %}
   .trust-bar {
     display: block;
-    background-color: var(--color-earth-brown, #f5f2ed);
+    background-color: var(--color-earth-brown);
+    color: var(--color-cream);
   }
 
   .trust-bar__inner {
-    /* display: grid; */
-    display: none;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    display: grid;
+    grid-template-columns: repeat(6, minmax(var(--sp-0), 1fr));
     align-items: center;
-    margin: 0 auto;
-    padding: var(--sp-5, 24px) var(--container-padding-x, 48px);
-    gap: var(--sp-4, 16px);
+    width: min(100%, var(--page-max-width));
+    margin-inline: auto;
+    padding: var(--sp-5) var(--container-padding-x);
+    gap: var(--sp-4);
   }
 
   .trust-bar__item {
     display: flex;
     align-items: center;
-    gap: var(--sp-3, 12px);
-    min-width: 0;
+    gap: var(--sp-3);
+    min-width: var(--sp-0);
   }
 
   .trust-bar__item + .trust-bar__item {
-    padding-left: var(--sp-4, 16px);
-    border-left: 1px solid var(--border-light, #e8e4df);
+    padding-left: var(--sp-4);
+    border-left: var(--border-width) solid color-mix(in srgb, var(--color-cream) 24%, transparent);
   }
 
   .trust-bar__icon {
-    color: var(--color-bark, #6b5d52);
-    flex-shrink: 0;
     display: flex;
+    flex: none;
+    color: var(--color-cream);
   }
 
   .trust-bar__icon svg {
     color: var(--color-cream);
-    width: 26px;
-    height: 26px;
+    width: var(--sp-5);
+    height: var(--sp-5);
   }
 
   .trust-bar__text {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    min-width: 0;
+    min-width: var(--sp-0);
+    gap: var(--sp-1);
   }
 
   .trust-bar__title {
-    font-family: var(--font-body);
-    font-size: var(--font-size-body-sm, 14px);
-    font-weight: var(--font-weight-semibold, 600);
-    line-height: var(--line-height-snug, 1.3);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-semibold);
+    line-height: var(--line-height-snug);
     color: var(--color-cream);
-    width: max-content;
   }
 
   .trust-bar__subtitle {
-    font-family: var(--font-body);
-    font-size: var(--font-size-caption, 12px);
-    line-height: var(--line-height-snug, 1.3);
+    font-size: var(--font-size-caption);
+    line-height: var(--line-height-snug);
     color: var(--color-stone);
   }
 
   /* --- Responsive (desktop-first overrides) --- */
   @media screen and (max-width: 1024px) {
     .trust-bar__inner {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: var(--sp-5, 24px);
+      grid-template-columns: repeat(3, minmax(var(--sp-0), 1fr));
+      gap: var(--sp-5);
     }
     .trust-bar__item:nth-child(3n + 1) {
-      padding-left: 0;
-      border-left: 0;
+      padding-left: var(--sp-0);
+      border-left: var(--sp-0);
     }
   }
 
-  @media screen and (max-width: 600px) {
+  @media screen and (max-width: 767px) {
     .trust-bar__inner {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: var(--sp-4, 16px);
-      padding-inline: var(--sp-4);
+      grid-template-columns: repeat(2, minmax(var(--sp-0), 1fr));
+      gap: var(--sp-4);
+      padding-inline: var(--layout-padding-mobile);
     }
-    .trust-bar__title {
-      width: fit-content;
-    }
+
     .trust-bar__item:nth-child(odd) {
-      padding-left: 0;
-      border-left: 0;
+      padding-left: var(--sp-0);
+      border-left: var(--sp-0);
     }
+
     .trust-bar__item:nth-child(even) {
-      padding-left: var(--sp-4, 16px);
-      border-left: 1px solid var(--border-light, #e8e4df);
-    }
-    .trust-bar__icon svg {
-      width: 22px;
-      height: 22px;
+      padding-left: var(--sp-4);
+      border-left: var(--border-width) solid color-mix(in srgb, var(--color-cream) 24%, transparent);
     }
   }
 {% endstylesheet %}
@@ -120,7 +115,14 @@
   "name": "Trust Bar",
   "tag": "section",
   "class": "section section-trust-bar",
-  "settings": [],
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "show_bar",
+      "label": "Show trust bar",
+      "default": false
+    }
+  ],
   "blocks": [
     {
       "type": "trust_item",
@@ -148,11 +150,14 @@
   "presets": [
     {
       "name": "Trust Bar",
+      "settings": {
+        "show_bar": true
+      },
       "blocks": [
         { "type": "trust_item", "settings": { "icon": "sourcing", "title": "Ethical Sourcing", "subtitle": "Sustainably harvested wood" } },
         { "type": "trust_item", "settings": { "icon": "artisan", "title": "Handcrafted by Artisans", "subtitle": "Decades of experience" } },
         { "type": "trust_item", "settings": { "icon": "made", "title": "Made to Order", "subtitle": "Limited, not mass produced" } },
-        { "type": "trust_item", "settings": { "icon": "truck", "title": "Secure & Insured Delivery", "subtitle": "Special handling available" } },
+        { "type": "trust_item", "settings": { "icon": "truck", "title": "Free Worldwide Shipping", "subtitle": "" } },
         { "type": "trust_item", "settings": { "icon": "warranty", "title": "1-Year Warranty", "subtitle": "For structural integrity" } },
         { "type": "trust_item", "settings": { "icon": "support", "title": "Dedicated Support", "subtitle": "We're here for you" } }
       ]
