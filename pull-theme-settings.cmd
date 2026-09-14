@@ -1,1 +1,0 @@
-shopify theme pull --store wrydeco.myshopify.com --theme 163050487865 --only config/settings_data.json

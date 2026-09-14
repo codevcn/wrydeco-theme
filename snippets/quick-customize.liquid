@@ -637,13 +637,13 @@
     justify-content: center;
     gap: 8px;
     width: 100%;
-    height: 54px;
+    height: 44px;
     border: 1px solid var(--color-earth-brown);
     border-radius: 6px;
     background-color: var(--color-earth-brown);
     color: var(--color-cream);
     font-family: var(--font-body, inherit);
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 500;
     letter-spacing: 0.15em;
     cursor: pointer;
@@ -653,7 +653,7 @@
 
   .sp-quick__add [data-quick-add-text] {
     font-family: var(--font-roboto);
-    font-size: 1rem;
+    font-size: 14px;
     text-transform: uppercase;
     transform: translateY(2px);
     white-space: nowrap;
@@ -719,13 +719,13 @@
     justify-content: center;
     gap: 8px;
     width: 100%;
-    height: 54px;
+    height: 44px;
     border: 1px solid var(--color-clay);
     border-radius: 6px;
     background-color: var(--color-clay);
     color: var(--color-cream);
     font-family: var(--font-body, inherit);
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 900;
     letter-spacing: 0.15em;
     text-transform: uppercase;
@@ -1257,8 +1257,6 @@
     var lastFocused = null; // element to restore focus to on close
 
     // Custom "Custom" handling (mirrors the PDP variant picker).
-    var UPLOAD_ENDPOINT = 'https://vnote.io.vn/api/upload-image';
-    var REQUEST_ENDPOINT = 'https://vnote.io.vn/api/custom-size-requests';
     var MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
     // Sub-dialogs rendered once alongside the main dialog; cached in wireModal().
@@ -1552,23 +1550,30 @@
       }
       toast('Uploading…', 'info');
 
-      var fd = new FormData();
-      fd.append('image', file);
+      var api = window.WrydecoApi;
+      var uploadPromise =
+        api && typeof api.uploadCustomColorImage === 'function'
+          ? api.uploadCustomColorImage(file)
+          : (function () {
+              var fd = new FormData();
+              fd.append('image', file);
+              return fetch('https://admin.wrydeco.com/api/upload-image', { method: 'POST', body: fd }).then(function (
+                res
+              ) {
+                return res
+                  .json()
+                  .catch(function () {
+                    return {};
+                  })
+                  .then(function (data) {
+                    return { ok: res.ok, data: data };
+                  });
+              });
+            })();
 
-      // Do not set Content-Type: let the browser add the multipart boundary.
-      fetch(UPLOAD_ENDPOINT, { method: 'POST', body: fd })
-        .then(function (res) {
-          return res
-            .json()
-            .catch(function () {
-              return {};
-            })
-            .then(function (data) {
-              return { ok: res.ok, data: data };
-            });
-        })
+      uploadPromise
         .then(function (r) {
-          if (r.ok && r.data && r.data.image_url) {
+          if (r && r.ok && r.data && r.data.image_url) {
             customImage.url = r.data.image_url;
             // Only now that a reference image exists do we commit the "Custom"
             // selection (select the pill + update price/variant).
@@ -1578,7 +1583,9 @@
             }
             toast('Custom color uploaded.', 'success');
           } else {
-            toast((r.data && r.data.detail) || 'Upload failed. Please try again.', 'error');
+            var detail =
+              (r && r.data && (r.data.detail || r.data.message)) || 'Upload failed. Please try again.';
+            toast(typeof detail === 'string' ? detail : 'Upload failed. Please try again.', 'error');
           }
         })
         .catch(function () {
@@ -1675,9 +1682,26 @@
       if (submitBtn) submitBtn.disabled = true;
       if (submitLabel) submitLabel.textContent = 'Sending…';
 
-      fetch(REQUEST_ENDPOINT, { method: 'POST', body: fd })
+      var api = window.WrydecoApi;
+      var requestPromise =
+        api && typeof api.submitCustomSizeRequest === 'function'
+          ? api.submitCustomSizeRequest(fd)
+          : fetch('https://admin.wrydeco.com/api/custom-size-requests', { method: 'POST', body: fd }).then(function (
+              response
+            ) {
+              return response
+                .json()
+                .catch(function () {
+                  return null;
+                })
+                .then(function (data) {
+                  return { ok: response.ok, status: response.status, data: data };
+                });
+            });
+
+      requestPromise
         .then(function (response) {
-          if (response.ok) {
+          if (response && response.ok) {
             toast("Thank you — we've received your request and will contact you shortly.", 'success');
             if (ta) ta.value = '';
             if (contactEl) contactEl.value = '';
@@ -1685,26 +1709,20 @@
             closeSizePopup();
             return;
           }
-          return response
-            .json()
-            .catch(function () {
-              return null;
-            })
-            .then(function (data) {
-              var mapped = false;
-              if (data && Array.isArray(data.errors)) {
-                data.errors.forEach(function (err) {
-                  if (err.field === 'custom_size_description') {
-                    setSizeError('note', err.message);
-                    mapped = true;
-                  } else if (err.field === 'customer_contact') {
-                    setSizeError('contact', err.message);
-                    mapped = true;
-                  }
-                });
+          var data = response && response.data;
+          var mapped = false;
+          if (data && Array.isArray(data.errors)) {
+            data.errors.forEach(function (err) {
+              if (err.field === 'custom_size_description') {
+                setSizeError('note', err.message);
+                mapped = true;
+              } else if (err.field === 'customer_contact') {
+                setSizeError('contact', err.message);
+                mapped = true;
               }
-              if (!mapped) toast((data && data.message) || 'Something went wrong. Please try again.', 'error');
             });
+          }
+          if (!mapped) toast((data && data.message) || 'Something went wrong. Please try again.', 'error');
         })
         .catch(function () {
           toast('Something went wrong. Please try again.', 'error');

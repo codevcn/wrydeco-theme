@@ -18,27 +18,6 @@
   assign email_label_text = voucher.email_label_text.value
 %}
 
-<button
-  type="button"
-  class="lead-capture-test-toggle"
-  data-lead-capture-test-toggle
-  aria-controls="LeadCaptureDialog"
-  aria-expanded="false"
-  hidden
->
-  Test lead popup
-</button>
-
-<button
-  type="button"
-  class="lead-capture-test-toggle lead-capture-test-toggle--success"
-  data-lead-capture-test-success-toggle
-  aria-controls="LeadCaptureDialog"
-  aria-expanded="false"
-  hidden
->
-  Test success popup
-</button>
 
 <div
   class="lead-capture"
@@ -344,8 +323,8 @@
 </div>
 
 {% stylesheet %}
-  .lead-capture-test-toggle[hidden],
-  .lead-capture-reminder[hidden],
+
+.lead-capture-reminder[hidden],
   .lead-capture[hidden],
   .lead-capture__title[hidden],
   .lead-capture__voucher[hidden],
@@ -354,33 +333,6 @@
     display: none;
   }
 
-  .lead-capture-test-toggle {
-    position: fixed;
-    z-index: calc(var(--z-drawer) + 11);
-    bottom: var(--sp-12);
-    left: var(--sp-4);
-    min-height: var(--sp-7);
-    padding: var(--sp-2) var(--sp-4);
-    border: var(--border-width) solid var(--color-clay);
-    border-radius: var(--radius-full);
-    background: var(--color-brown-dark);
-    box-shadow: var(--shadow-elevation-2);
-    color: var(--text-inverse);
-    cursor: pointer;
-    font-family: var(--font-body);
-    font-size: var(--font-size-body-sm);
-    font-weight: var(--font-weight-semibold);
-  }
-
-  .lead-capture-test-toggle--success {
-    bottom: calc(var(--sp-4) * 2 + var(--sp-7));
-  }
-
-  .lead-capture-test-toggle:hover {
-    background: var(--color-brown);
-  }
-
-  .lead-capture-test-toggle:focus-visible,
   .lead-capture-reminder__open:focus-visible,
   .lead-capture-reminder__close:focus-visible,
   .lead-capture__close:focus-visible,
@@ -1117,8 +1069,6 @@
     if (!root || root.dataset.initialized === 'true') return;
     root.dataset.initialized = 'true';
 
-    var testToggle = document.querySelector('[data-lead-capture-test-toggle]');
-    var testSuccessToggle = document.querySelector('[data-lead-capture-test-success-toggle]');
     var dialog = root.querySelector('[data-lead-capture-dialog]');
     var form = root.querySelector('form');
     var emailInput = root.querySelector('input[type="email"]');
@@ -1254,7 +1204,6 @@
       if ((!forceOpen && hasBeenSeen()) || isOpen) return;
       window.clearTimeout(closeTimer);
       isOpen = true;
-      if (testToggle) testToggle.setAttribute('aria-expanded', 'true');
       lastFocusedElement = document.activeElement;
       root.hidden = false;
       root.setAttribute('aria-hidden', 'false');
@@ -1270,7 +1219,6 @@
     function closePopup() {
       if (!isOpen) return;
       isOpen = false;
-      if (testToggle) testToggle.setAttribute('aria-expanded', 'false');
       root.classList.remove('is-open');
       root.setAttribute('aria-hidden', 'true');
       document.documentElement.classList.remove('lead-capture-is-open');
@@ -1478,24 +1426,6 @@
       });
     }
 
-    if (testToggle && new URLSearchParams(window.location.search).get('lead_popup_test') === '1') {
-      testToggle.hidden = false;
-      testToggle.addEventListener('click', function () {
-        if (isOpen) {
-          closePopup();
-        } else {
-          openPopup(true);
-        }
-      });
-
-      if (testSuccessToggle) {
-        testSuccessToggle.hidden = false;
-        testSuccessToggle.addEventListener('click', function () {
-          showSuccess();
-          if (!isOpen) openPopup(true);
-        });
-      }
-    }
 
     var responseParameters = new URLSearchParams(window.location.search);
     var redirectedSuccessfully =

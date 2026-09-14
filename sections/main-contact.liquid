@@ -240,15 +240,24 @@
     </div>
 
     <aside class="contact-info" aria-label="Contact details">
-      {% assign legal_info = shop.metaobjects.store_legal_info['store-legal-info-first'] %}
-      {% assign email_value = legal_info.support_email.value | default: section.settings.email_address %}
-      {% assign phone_value = legal_info.phone_number.value | default: section.settings.phone_number %}
-      {% assign address_value = legal_info.business_address.value | default: section.settings.address_text %}
-      {% assign hours_value = legal_info.online_store_hours.value | default: section.settings.hours_text %}
-      {% if hours_value == '24/7' %}
-        {% assign hours_value = '24/7 online support, Central Time (CT)' %}
-      {% endif %}
-      {% assign consultation_value = 'Online by appointment. No retail showroom or walk-in visits.' %}
+      {%- liquid
+        assign legal_info = null
+        for entry in metaobjects.store_legal_info.values limit: 1
+          assign legal_info = entry
+        endfor
+
+        assign email_value = legal_info.support_email.value | default: section.settings.email_address
+        assign phone_value = legal_info.phone_number.value | default: section.settings.phone_number
+        assign address_value = legal_info.business_address.value | default: section.settings.address_text
+        if address_value contains 'Registered business address only' or address_value == blank
+          assign address_value = 'Beaconfield Group LLC, 1209 Mountain Road Pl NE, Ste R, Albuquerque, New Mexico 87110, United States'
+        endif
+        assign hours_value = legal_info.online_store_hours.value | default: section.settings.hours_text
+        if hours_value == '24/7'
+          assign hours_value = '24/7 online support, Central Time (CT)'
+        endif
+        assign consultation_value = 'Online by appointment. No retail showroom or walk-in visits.'
+      -%}
 
       <ul class="contact-info__list" role="list">
         <li class="contact-info__origin">
@@ -324,7 +333,7 @@
             </svg>
           </span>
           <span class="contact-info__text">
-            <span class="contact-info__label">{{ section.settings.address_label | escape }}</span>
+            <span class="contact-info__label">{{ section.settings.address_label | replace: 'Registered Business Address', 'Business Address' | default: 'Business Address' | escape }}</span>
             <span class="contact-info__value">{{ address_value | escape | newline_to_br }}</span>
           </span>
         </li>
@@ -927,13 +936,13 @@
     { "type": "text", "id": "email_address", "label": "Email address", "default": "support@wrydeco.com" },
     { "type": "text", "id": "phone_label", "label": "Phone label", "default": "Phone" },
     { "type": "text", "id": "phone_number", "label": "Phone number", "default": "+1 (801) 340-6671" },
-    { "type": "text", "id": "address_label", "label": "Address label", "default": "Registered Business Address" },
+    { "type": "text", "id": "address_label", "label": "Address label", "default": "Business Address" },
     { "type": "text", "id": "consultation_label", "label": "Consultation label", "default": "Consultation" },
     {
       "type": "textarea",
       "id": "address_text",
       "label": "Address text",
-      "default": "Registered business address only. WRYDECO does not operate a retail showroom or accept walk-in visits."
+      "default": "Beaconfield Group LLC, 1209 Mountain Road Pl NE, Ste R, Albuquerque, New Mexico 87110, United States"
     },
     { "type": "text", "id": "hours_label", "label": "Hours label", "default": "Online Support" },
     {

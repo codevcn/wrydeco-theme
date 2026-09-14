@@ -2,6 +2,11 @@
 setlocal
 
 :: ==========================================
+:: DỌN DẸP CODE TEST TRƯỚC KHI ĐÓNG GÓI
+:: ==========================================
+call "%~dp0scripts\lead-capture-test\remove-test-src.cmd"
+
+:: ==========================================
 :: CẤU HÌNH ĐƯỜNG DẪN FILE
 :: ==========================================
 :: File cấu hình chứa thông tin version hiện tại (chuẩn Semantic Versioning)

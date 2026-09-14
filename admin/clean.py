@@ -7,6 +7,7 @@ from pathlib import Path
 
 KEEP_CONTENT = [
     ".env",
+    "access-token.md",
 	"clean.cmd",
     "clean.py",
 	"get_access_token.py",

@@ -60,3 +60,14 @@ The technical implementation must align with the brand's luxury positioning.
 - **Rendering Constraint:** When rendering icons or graphical symbols on the web interface, you MUST strictly use inline SVG code. NEVER use HTML Entities (e.g., `&#x25B6;`, `&rarr;`, etc.) for this purpose.
 - **Tool Requirement:** Whenever an AI Agent needs to create an icon in the codebase, write SVG code, or source an SVG image, it MUST use the `iconify` API tool located in the `my-tools` folder.
 - **Error Handling:** If an error occurs while using the Iconify API, the Agent is free to handle it, but it MUST explicitly notify the user that an error occurred during the API execution.
+
+## 10. External API Calls & Service Architecture
+
+- **Mandatory Rule:** When writing code that needs to call external APIs (outside standard Shopify core storefront/cart routes), developers and AI agents MUST use a centralized API Service rather than hardcoding API endpoints, domains, headers, or request configurations in individual sections, snippets, or blocks.
+- **Reference Service:** `assets/api-service.js` (exposing `window.WrydecoApi`).
+- **Core Endpoints & Methods Provided:**
+  - `uploadCustomColorImage(file)`: Uploads custom color/finish reference images to `https://admin.wrydeco.com/api/upload-image`.
+  - `submitCustomSizeRequest(payload)`: Submits quick custom size inquiries to `https://admin.wrydeco.com/api/custom-size-requests`.
+  - `submitConsultation(formData, [customEndpoint])`: Submits bespoke design consultation inquiries to `https://admin.wrydeco.com/api/consultations`.
+- **Rationale:** Centralizing API logic ensures maintainability, seamless scalability, unified CORS/error handling, and eliminates bug risks from fragmented hardcoded URLs across the codebase.
+

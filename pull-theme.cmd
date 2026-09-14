@@ -1,1 +1,0 @@
-shopify theme pull --store wrydeco.myshopify.com

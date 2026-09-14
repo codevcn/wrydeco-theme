@@ -1537,7 +1537,6 @@
     // form as the `added_url_image` line-item property, which travels into the
     // cart alongside the chosen size and surface.
     function initCustomColorUpload() {
-      var UPLOAD_ENDPOINT = 'https://vnote.io.vn/api/upload-image';
       var MAX_BYTES = 10 * 1024 * 1024;
 
       function toast(message, type) {
@@ -1642,23 +1641,30 @@
 
           setLoading(true);
 
-          var formData = new FormData();
-          formData.append('image', file);
+          var api = window.WrydecoApi;
+          var uploadPromise =
+            api && typeof api.uploadCustomColorImage === 'function'
+              ? api.uploadCustomColorImage(file)
+              : (function () {
+                  var formData = new FormData();
+                  formData.append('image', file);
+                  return fetch('https://admin.wrydeco.com/api/upload-image', { method: 'POST', body: formData }).then(
+                    function (response) {
+                      return response
+                        .json()
+                        .catch(function () {
+                          return {};
+                        })
+                        .then(function (data) {
+                          return { ok: response.ok, data: data };
+                        });
+                    }
+                  );
+                })();
 
-          // Do not set Content-Type: let the browser add the multipart boundary.
-          fetch(UPLOAD_ENDPOINT, { method: 'POST', body: formData })
-            .then(function (response) {
-              return response
-                .json()
-                .catch(function () {
-                  return {};
-                })
-                .then(function (data) {
-                  return { ok: response.ok, data: data };
-                });
-            })
+          uploadPromise
             .then(function (result) {
-              if (result.ok && result.data && result.data.image_url) {
+              if (result && result.ok && result.data && result.data.image_url) {
                 uploadedUrl = result.data.image_url;
                 if (preview) {
                   preview.src = uploadedUrl;
@@ -1669,8 +1675,10 @@
                 selectCustom(); // the uploaded image becomes the selected custom finish
                 toast('Custom color uploaded.', 'success');
               } else {
-                var detail = (result.data && result.data.detail) || 'Upload failed. Please try again.';
-                toast(detail, 'error');
+                var detail =
+                  (result && result.data && (result.data.detail || result.data.message)) ||
+                  'Upload failed. Please try again.';
+                toast(typeof detail === 'string' ? detail : 'Upload failed. Please try again.', 'error');
               }
             })
             .catch(function () {
@@ -1811,8 +1819,6 @@
     // Request (multipart FormData) to the server — a lead for the production team.
     // It does not select a variant or add to cart.
     function initCustomSizeNote() {
-      var REQUEST_ENDPOINT = 'https://vnote.io.vn/api/custom-size-requests';
-
       var popup = document.querySelector('[data-custom-size-popup]');
       var tiles = document.querySelectorAll('[data-custom-size]:not([data-custom-size-init])');
       if (!popup || tiles.length === 0) return;
@@ -1927,10 +1933,26 @@
 
         setLoading(true);
 
-        // Do not set Content-Type: let the browser add the multipart boundary.
-        fetch(REQUEST_ENDPOINT, { method: 'POST', body: formData })
+        var api = window.WrydecoApi;
+        var requestPromise =
+          api && typeof api.submitCustomSizeRequest === 'function'
+            ? api.submitCustomSizeRequest(formData)
+            : fetch('https://admin.wrydeco.com/api/custom-size-requests', { method: 'POST', body: formData }).then(
+                function (response) {
+                  return response
+                    .json()
+                    .catch(function () {
+                      return null;
+                    })
+                    .then(function (data) {
+                      return { ok: response.ok, status: response.status, data: data };
+                    });
+                }
+              );
+
+        requestPromise
           .then(function (response) {
-            if (response.ok) {
+            if (response && response.ok) {
               toast("Thank you — we've received your request and will contact you shortly.", 'success');
               if (textarea) textarea.value = '';
               if (contact) contact.value = '';
@@ -1939,18 +1961,22 @@
               return;
             }
             // Map the API's structured field errors back onto the inputs.
-            return response.json().catch(function () { return null; }).then(function (data) {
-              var mapped = false;
-              if (data && Array.isArray(data.errors)) {
-                data.errors.forEach(function (err) {
-                  if (err.field === 'custom_size_description') { setError('note', err.message); mapped = true; }
-                  else if (err.field === 'customer_contact') { setError('contact', err.message); mapped = true; }
-                });
-              }
-              if (!mapped) {
-                toast((data && data.message) || 'Something went wrong. Please try again.', 'error');
-              }
-            });
+            var data = response && response.data;
+            var mapped = false;
+            if (data && Array.isArray(data.errors)) {
+              data.errors.forEach(function (err) {
+                if (err.field === 'custom_size_description') {
+                  setError('note', err.message);
+                  mapped = true;
+                } else if (err.field === 'customer_contact') {
+                  setError('contact', err.message);
+                  mapped = true;
+                }
+              });
+            }
+            if (!mapped) {
+              toast((data && data.message) || 'Something went wrong. Please try again.', 'error');
+            }
           })
           .catch(function () {
             toast('Something went wrong. Please try again.', 'error');

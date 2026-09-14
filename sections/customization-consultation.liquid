@@ -7,7 +7,7 @@
 {% liquid
   assign form_id = 'CustomizationConsultation-' | append: section.id
   assign privacy_url = shop.privacy_policy.url | default: routes.root_url
-  assign api_endpoint = section.settings.api_endpoint | default: 'https://admin.vnote.io.vn/api/consultations'
+  assign api_endpoint = section.settings.api_endpoint | default: 'https://admin.wrydeco.com/api/consultations'
 %}
 
 <section
@@ -2062,10 +2062,22 @@
         if (labelSpan) labelSpan.textContent = 'Sending…';
 
         try {
-          // Do not set Content-Type: let the browser add the multipart boundary.
-          const response = await fetch(endpoint, { method: 'POST', body: formData });
+          const api = window.WrydecoApi;
+          const result =
+            api && typeof api.submitConsultation === 'function'
+              ? await api.submitConsultation(formData, endpoint)
+              : await (async () => {
+                  const response = await fetch(endpoint, { method: 'POST', body: formData });
+                  let data = null;
+                  try {
+                    data = await response.json();
+                  } catch (parseError) {
+                    data = null;
+                  }
+                  return { ok: response.ok, status: response.status, data };
+                })();
 
-          if (response.ok) {
+          if (result.ok) {
             clearAllErrors();
             notify(successMessage, 'success');
             form.reset();
@@ -2074,13 +2086,7 @@
             if (fileInput) fileInput.dispatchEvent(new Event('change'));
           } else {
             // Surface the API's structured errors instead of a blind generic toast.
-            let data = null;
-            try {
-              data = await response.json();
-            } catch (parseError) {
-              data = null;
-            }
-
+            const data = result.data;
             const apiErrors = data && Array.isArray(data.errors) ? data.errors : [];
             if (apiErrors.length) {
               clearAllErrors();
@@ -2300,7 +2306,7 @@
       "type": "text",
       "id": "api_endpoint",
       "label": "Consultation API endpoint",
-      "default": "https://admin.vnote.io.vn/api/consultations",
+      "default": "https://admin.wrydeco.com/api/consultations",
       "info": "Endpoint that receives FormData (name, phone_or_email, message, optional consultation_time and file)."
     },
     {
