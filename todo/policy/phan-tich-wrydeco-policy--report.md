@@ -14,7 +14,7 @@
 |:---:|:---|:---|:---|:---:|:---|
 | 01 | **P0 – Rất cao** | Image alt text của product page chứa brand **“WAZARO”** | Brand/identity contamination; ảnh hưởng toàn site | **ĐÃ FIX** | Đã tạo file CSV chuyên dụng chỉ sửa duy nhất cột Image Alt Text (thay 27 ảnh WAZARO sang WRYDECO cho 3 sản phẩm). |
 | 02 | **P0 – Rất cao** | Claim “372 Verified Client Reviews / 4.7 / 99% / 400+ Homes Styled”; PDP hiện “4.7 (372 reviews)” | Thiếu bằng chứng provenance; dễ bị Google hiểu là giả mạo product reviews | **Chưa fix** | Cần bằng chứng review thực hoặc điều chỉnh/gỡ bỏ claim không thể chứng minh. |
-| 03 | **P0 – Cao** | Landing page sản phẩm không có hiển thị chữ “Availability” (chỉ có Add to Cart) | Google yêu cầu hiển thị rõ tình trạng còn hàng / đặt làm (availability) | **Chưa fix** | Cần thêm nhãn Availability (In Stock / Made to Order) rõ ràng trên PDP. |
+| 03 | **P0 – Cao** | Landing page sản phẩm không có hiển thị chữ “Availability” (chỉ có Add to Cart) | Google yêu cầu hiển thị rõ tình trạng còn hàng / đặt làm (availability) | **ĐÃ FIX** | Đã thêm nhãn "In Stock" kèm icon chấm xanh và microdata `itemprop="availability"` ngay phía trên section `.product-buy-buttons`, đồng bộ JS realtime khi đổi variant. Đồng thời cập nhật Accordion Shipping & Return khớp 100% policy. |
 | 04 | **P1 – Cao** | Contact page thiếu địa chỉ tại block "Registered Business Address"; Footer chỉ ghi street name | Business identity không đồng nhất, thiếu chi tiết pháp nhân | **ĐÃ FIX** | Đã đồng bộ đầy đủ pháp nhân `Beaconfield Group LLC` kèm đầy đủ số nhà, Suite R, City, State, ZIP trên cả Contact page và Footer. |
 | 05 | **P1 – Cao** | Website headline “Free Worldwide Shipping” nhưng policy chỉ áp dụng cho “eligible” | Claim tuyệt đối rộng hơn điều kiện thực tế | **ĐÃ FIX** | Đã sửa headline thành `Free Shipping on All Orders` (có link trỏ về policy); định nghĩa rõ "eligible" gắn trực tiếp với selector quốc gia tại checkout. |
 | 06 | **P1 – Cao** | Shipping policy thiếu thông tin thuế nhập khẩu (import duties/taxes) cho đơn quốc tế | Rủi ro omission về chi phí ẩn phát sinh khi nhận hàng | **ĐÃ FIX** | Đã bổ sung cam kết thuế DDP (Delivery Duty Paid) trọn gói theo phê duyệt của Leader Phương: WRYDECO chịu 100% thuế phí. |
@@ -22,7 +22,7 @@
 | 08 | **P2 – Cần kiểm** | Trang Track Order chỉ xác minh được heading, chưa xác minh được flow thực tế | Nghi ngờ tính năng chưa hoàn thiện | **Chưa fix** | Cần kiểm tra flow tra cứu thực tế với tracking number mẫu. |
 | 09 | **Chưa thể kết luận** | GMC feed, structured data, Google Payments, checkout cuối cùng, thuế, phí ship tại checkout | Chưa đối chiếu live với Google Merchant Center | **Chưa fix** | Cần đồng bộ giữa data feed gửi sang GMC và dữ liệu hiển thị trên website. |
 
-**Tiến độ hiện tại:** Đã khắc phục hoàn chỉnh **5 / 9** vấn đề (xử lý xong vấn đề brand contamination WAZARO và 100% các vấn đề P1 cấp bách về Policy & Code artifact).
+**Tiến độ hiện tại:** Đã khắc phục hoàn chỉnh **6 / 9** vấn đề (xử lý xong brand contamination WAZARO, Availability trên PDP và 100% các vấn đề P1 cấp bách về Policy & Code artifact).
 
 ---
 
@@ -120,6 +120,27 @@
     - Duy nhất 27 ô `Image Alt Text` được thay thế từ `WAZARO` thành `WRYDECO`.
   - Đồng thời tạo bản catalog đầy đủ [`backup-products-data/from-real-store - latest/products_fixed_wazaro_all.csv`](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/backup-products-data/from-real-store%20-%20latest/products_fixed_wazaro_all.csv) gồm 5.224 dòng sạch hoàn toàn.
 
+### 2.6. Mục 03: Bổ sung nhãn Availability và cập nhật Accordion Shipping & Return trên PDP
+
+- **Vấn đề trước khi sửa:**
+  - Trang chi tiết sản phẩm (PDP) hoàn toàn không có hiển thị chữ "Availability" hay bất kỳ nhãn nào thể hiện tình trạng sẵn có của hàng hóa tại khu vực mua hàng (Buy Box), dẫn đến việc crawler của Google Merchant Center cảnh báo thiếu trường Availability.
+  - Accordion "Shipping & Return" ở chân cột thông tin sản phẩm thiếu các mốc thời gian thực hiện chi tiết, thiếu cam kết thuế nhập khẩu DDP trọn gói, và ghi sai mốc đổi trả thành "within 30 days of purchase" (trong khi chính sách chính thức là "within 30 calendar days of delivery").
+
+- **Các file đã can thiệp & giải pháp:**
+  1. [`snippets/product-buy-buttons.liquid`](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/snippets/product-buy-buttons.liquid):
+     - Bổ sung component `.product-availability` nằm ngay phía trên section `.product-buy-buttons` (giữa khối chọn thuộc tính kích thước/màu sắc và cụm quantity / Add to Cart):
+       - Hiển thị nhãn rút gọn chuẩn chỉ: `In Stock` (hoặc `Out of Stock` nếu biến thể hết hàng) kèm icon chấm tròn màu xanh (`#2e7d32`).
+       - Tích hợp thẻ microdata trực tiếp: `<link itemprop="availability" href="https://schema.org/InStock">` giúp crawler đọc được dữ liệu trực quan ngay tại cụm mua hàng.
+  2. [`snippets/product-variant-picker.liquid`](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/snippets/product-variant-picker.liquid):
+     - Đồng bộ JavaScript realtime: Khi người dùng nhấp chọn các biến thể khác nhau (kích thước, hoàn thiện gỗ), nhãn `In Stock` / `Out of Stock` và thuộc tính Schema URL tự động cập nhật tương ứng ngay lập tức không cần tải lại trang.
+  3. [`sections/main-product.liquid`](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/sections/main-product.liquid) & [`snippets/product-info-accordions.liquid`](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/snippets/product-info-accordions.liquid):
+     - Cập nhật schema default và fallback nội dung cho Accordion "Shipping & Return" khớp 100% với Policy mới nhất:
+       - **Processing & Crafting:** 15–20 business days (handmade to order).
+       - **Transit Time:** 3–5 business days.
+       - **Estimated Total:** Approximately 18–25 business days.
+       - **Duties & Taxes:** Delivered Duty Paid (DDP) — bao trọn 100% thuế hải quan.
+       - **30-Day Return:** Sửa chuẩn thành 30 calendar days of delivery, 100% store-paid return cho hàng lỗi/hỏng, và cung cấp email liên hệ `support@wrydeco.com`.
+
 ---
 
 ## 3. Nhật ký can thiệp tệp tin (Files & Assets Changelog)
@@ -137,10 +158,14 @@
 | [`scripts/lead-capture-test/init-test-src.cmd`](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/scripts/lead-capture-test/init-test-src.cmd) | New | CMD wrapper thực thi `init_test.py`. |
 | [`scripts/lead-capture-test/remove_test.py`](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/scripts/lead-capture-test/remove_test.py) | New | Script dọn sạch code test popup. |
 | [`scripts/lead-capture-test/remove-test-src.cmd`](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/scripts/lead-capture-test/remove-test-src.cmd) | New | CMD wrapper thực thi `remove_test.py`. |
-| [`todo/policy/phan-tich-wrydeco-policy.md`](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/todo/policy/phan-tich-wrydeco-policy.md) | Modify | Thêm cột "Đã fix" và cập nhật trạng thái các mục đã xử lý. |
+| [`todo/policy/phan-tich-wrydeco-policy.md`](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/todo/policy/phan-tich-wrydeco-policy.md) | Modify | Cập nhật cột "Đã fix" và trạng thái các mục đã xử lý (WAZARO, Availability, Identity, Policy). |
 | [`backup-products-data/from-real-store - latest/products_fixed_wazaro_3_products_only.csv`](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/backup-products-data/from-real-store%20-%20latest/products_fixed_wazaro_3_products_only.csv) | New | File CSV 54 dòng chứa 3 sản phẩm đã thay thế sạch WAZARO sang WRYDECO ở Image Alt Text để import. |
 | [`backup-products-data/from-real-store - latest/products_fixed_wazaro_all.csv`](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/backup-products-data/from-real-store%20-%20latest/products_fixed_wazaro_all.csv) | New | File CSV toàn bộ 5.224 dòng sản phẩm đã thay thế sạch WAZARO sang WRYDECO ở Image Alt Text. |
 | **Metaobject trên Store** (`gid://shopify/Metaobject/197517934649`) | Live API Update | Sửa Headline thành `Free Shipping on All Orders` có link dẫn về policy. |
+| [`snippets/product-buy-buttons.liquid`](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/snippets/product-buy-buttons.liquid) | Modify | Thêm hiển thị In Stock kèm chấm xanh và microdata Schema ngay phía trên .product-buy-buttons. |
+| [`snippets/product-variant-picker.liquid`](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/snippets/product-variant-picker.liquid) | Modify | Đồng bộ JS cập nhật realtime nhãn In Stock / Out of Stock khi đổi biến thể sản phẩm. |
+| [`sections/main-product.liquid`](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/sections/main-product.liquid) | Modify | Cập nhật schema default cho setting accordion_shipping_return_content khớp 100% policy mới. |
+| [`snippets/product-info-accordions.liquid`](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/snippets/product-info-accordions.liquid) | Modify | Thêm fallback nội dung Shipping & Return chuẩn policy (Processing 15-20 ngày, Transit 3-5 ngày, Thuế DDP, 30 ngày from delivery). |
 
 ---
 
@@ -155,11 +180,15 @@
    - Mở file [`snippets/lead-capture-popup.liquid`](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/snippets/lead-capture-popup.liquid) và tìm kiếm chuỗi `lead-capture-test` hoặc `DEV-TEST`. Kết quả trả về phải là **0 kết quả**.
 3. **Kiểm tra Headline trên store:**
    - Truy cập trang chủ WRYDECO, kiểm tra top announcement bar: Phải hiển thị *"Free Shipping on All Orders"* và click vào sẽ chuyển hướng đến `/policies/shipping-policy`.
+4. **Kiểm tra nhãn Availability & Accordion trên PDP:**
+   - Mở bất kỳ trang sản phẩm nào (ví dụ: `/products/rustic-driftwood-solid-wood-floating-shelf-wall-decor`).
+   - Kiểm tra ngay phía trên khối `QUANTITY` và nút `ADD TO CART`: Phải thấy nhãn `In Stock` kèm icon chấm tròn màu xanh.
+   - Thử click chọn các biến thể kích thước/màu sắc khác nhau: Nhãn `In Stock` giữ vững trạng thái và URL thay đổi tham số `?variant=...` tức thì.
+   - Cuộn xuống mở Accordion `SHIPPING & RETURN`: Kiểm tra hiển thị đầy đủ 15–20 ngày processing, 3–5 ngày transit, Delivered Duty Paid (DDP), 30 calendar days of delivery, và email `support@wrydeco.com`.
 
 ---
 
 ## 5. Các bước xử lý tiếp theo được khuyến nghị (Next Remediation Steps)
 
-Trước khi submit yêu cầu Google xem xét lại (Request Review), còn 2 vấn đề **P0** cốt lõi cần hoàn thiện nốt:
+Trước khi submit yêu cầu Google xem xét lại (Request Review), còn 1 vấn đề **P0** cốt lõi cần hoàn thiện nốt:
 1. **P0 - Xử lý cụm số liệu Social Proof & Reviews:** Rà soát claim `372 Verified Client Reviews / 4.7 / 99% Satisfaction / 400+ Homes Styled`. Nếu không có hệ thống review bên thứ 3 (như Trustpilot, Judge.me, Loox) chứng minh được xuất xứ, cần gỡ bỏ hoặc điều chỉnh cách hiển thị các claim đánh giá cụ thể này trên cả Homepage và Product page.
-2. **P0 - Thêm nhãn "Availability" trên trang sản phẩm:** Bổ sung hiển thị rõ ràng tình trạng hàng hóa (ví dụ: `Availability: In Stock` hoặc `Availability: Made-to-Order (Crafted in 15–20 days)`) ngay cạnh giá sản phẩm và nút Add to Cart.

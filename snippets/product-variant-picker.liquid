@@ -1452,6 +1452,21 @@
             if (addText) addText.textContent = selectedVariant.available ? 'ADD TO CART' : 'SOLD OUT';
             if (addBtn) addBtn.disabled = !selectedVariant.available;
 
+            var availBadge = document.querySelector('[data-variant-availability]');
+            var availLink = document.querySelector('[data-variant-availability-link]');
+            if (availBadge) {
+              if (selectedVariant.available) {
+                availBadge.className = 'product-availability product-availability--in-stock';
+                availBadge.innerHTML = '<link itemprop="availability" href="https://schema.org/InStock" data-variant-availability-link><span class="product-availability__dot" aria-hidden="true"></span><span class="product-availability__text">In Stock</span>';
+              } else {
+                availBadge.className = 'product-availability product-availability--out-of-stock';
+                availBadge.innerHTML = '<link itemprop="availability" href="https://schema.org/OutOfStock" data-variant-availability-link><span class="product-availability__dot" aria-hidden="true"></span><span class="product-availability__text">Out of Stock</span>';
+              }
+            }
+            if (availLink) {
+              availLink.setAttribute('href', selectedVariant.available ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock');
+            }
+
             if (window.history && window.history.replaceState) {
               var nextUrl = new URL(window.location.href);
               nextUrl.searchParams.set('variant', selectedVariant.id);

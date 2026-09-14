@@ -14,7 +14,7 @@ Tuy nhiên, audit LIVE phát hiện một nhóm tín hiệu mà tôi đánh giá
 |---|---|---|:---:|
 | **P0 – Rất cao** | Một product page WRYDECO hiện chứa hàng loạt image alt text mang brand **“WAZARO”** | Brand/identity contamination; cần xử lý toàn site | **Đã fix** |
 | **P0 – Rất cao** | Homepage tuyên bố “372 Verified Client Reviews / 4.7 / 99% Client Satisfaction / 400+ Homes Styled”; product page cũng hiện “4.7 (372 reviews)” | Cần chứng minh provenance; hiện cách hiển thị dễ khiến Google/người mua hiểu đây là product reviews | Chưa |
-| **P0 – Cao** | Product pages được kiểm tra không có text “Availability”, dù có Add to Cart | Google yêu cầu landing page thể hiện rõ availability | Chưa |
+| **P0 – Cao** | Product pages được kiểm tra không có text “Availability”, dù có Add to Cart | Google yêu cầu landing page thể hiện rõ availability | **Đã fix** |
 | **P1 – Cao** | Contact page ghi “Registered Business Address” nhưng không hiển thị địa chỉ ngay tại block đó; footer chỉ ghi street, không có LLC/city/state/ZIP | Business identity không đồng nhất về mức độ chi tiết | **Đã fix** |
 | **P1 – Cao** | Website headline “Free Worldwide Shipping” nhưng policy thực tế chỉ áp dụng cho **eligible** destinations/orders | Claim tuyệt đối rộng hơn điều kiện thực tế | **Đã fix** |
 | **P1 – Cao** | Shipping policy không tìm thấy thông tin import duties/taxes trong khi website quảng bá worldwide delivery | Rủi ro omission về tổng chi phí với đơn quốc tế | **Đã fix** |
@@ -52,7 +52,7 @@ Google đặc biệt nghiêm khắc với việc trình bày false identity, fal
 | `https://wrydeco.com/policies/refund-policy` | cùng phiên, mở lại | Return 30 ngày cho damaged/defective/incorrect; full Beaconfield identity. citeturn13view3turn18view2 | **Tốt** |
 | `https://wrydeco.com/policies/terms-of-service` | cùng phiên | Full Beaconfield Group LLC + Albuquerque NM 87110. citeturn15view8 | **Tốt** |
 | `https://wrydeco.com/policies/privacy-policy` | cùng phiên | Full Beaconfield Group LLC + full address. citeturn15view9 | **Tốt** |
-| `https://wrydeco.com/products/rustic-driftwood-solid-wood-floating-shelf-wall-decor` | cùng phiên | Product purchasable, made-to-order; không tìm thấy explicit “Availability”. citeturn13view7 | **Nên sửa availability** |
+| `https://wrydeco.com/products/rustic-driftwood-solid-wood-floating-shelf-wall-decor` | cùng phiên | Product purchasable, made-to-order; đã bổ sung nhãn In Stock kèm microdata ngay trên buy buttons. | **Đã fix** |
 | `https://wrydeco.com/products/handcrafted-curved-oak-wood-minimalist-coffee-table` | cùng phiên, kiểm lại nhiều lần | Alt của nhiều hình ghi **WAZARO**, price $4,278, “4.7 (372 reviews)”. citeturn16view0turn16view1turn16view2 | **P0 – cần sửa ngay** |
 | `https://wrydeco.com/apps/track-order` | cùng phiên | Chỉ xác minh được heading “Track order status”; crawler cũng thấy test buttons. citeturn15view1turn18view5 | Functionality: **KHÔNG XÁC MINH ĐƯỢC LIVE** |
 
@@ -187,7 +187,9 @@ Nếu 400 homes/reviews thực sự là dữ liệu WRYDECO, lưu evidence: orde
 
 ### Product pages thiếu availability text rõ ràng
 
-Trên product coffee table LIVE có price `$4,278`, lựa chọn finish/size, `ADD TO CART`, `BUY IT NOW`, nhưng không tìm thấy trường text “Availability”. citeturn16view0turn15view6 Product driftwood được kiểm trực tiếp cũng không trả ra text “Availability”. citeturn13view7
+> **Trạng thái:** **Đã fix (Tháng 09/2026)**. Đã bổ sung nhãn trực quan `In Stock` kèm icon chấm tròn màu xanh (`#2e7d32`) và microdata `<link itemprop="availability" href="https://schema.org/InStock">` ngay phía trên section `.product-buy-buttons` trong [`snippets/product-buy-buttons.liquid`](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/snippets/product-buy-buttons.liquid), đồng thời xử lý dynamic update trong [`snippets/product-variant-picker.liquid`](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/snippets/product-variant-picker.liquid) khi đổi variant. Các mốc thời gian processing (15–20 business days), transit time (3–5 business days) và cam kết thuế DDP đã được cập nhật đầy đủ, minh bạch trong Accordion "Shipping & Return" của trang sản phẩm.
+
+Trên product coffee table LIVE ban đầu có price `$4,278`, lựa chọn finish/size, `ADD TO CART`, `BUY IT NOW`, nhưng không tìm thấy trường text “Availability”. citeturn16view0turn15view6 Product driftwood được kiểm trực tiếp cũng không trả ra text “Availability”. citeturn13view7
 
 Google Merchant Center yêu cầu landing page **clearly show availability for online purchase**. Nếu sản phẩm có thể order thì Buy/Add to basket phải hoạt động; nếu preorder/backorder thì landing page phải thể hiện trạng thái và expected dispatch date tương ứng. Google cũng yêu cầu availability, price và selected variant ổn định trong quá trình page load và phù hợp với product data. citeturn20search5
 
@@ -546,6 +548,8 @@ Một homepage có **ít claim hơn nhưng chứng minh được** tốt hơn r�
 
 ### Sửa product template để thể hiện availability
 
+> **Trạng thái:** **Đã fix (Tháng 09/2026)**. Đã triển khai hiển thị nhãn `In Stock` / `Out of Stock` (theo logic `current_variant.available`) kèm chấm xanh và microdata Schema `itemprop="availability"` ngay phía trên `.product-buy-buttons`. Chi tiết thời gian 15–20 ngày processing và 3–5 ngày transit được tích hợp rõ ràng trong Accordion "Shipping & Return".
+
 Nên đặt ngay dưới price và trước Add to Cart:
 
 ```text
@@ -855,16 +859,16 @@ Nếu chưa đáp ứng, **xóa claim trước review**.
 ### Product landing pages
 
 ```text
-[ ] Price visible
-[ ] USD visible / consistent
-[ ] Availability visible
-[ ] Made-to-order status clear
-[ ] Processing time clear
+[x] Price visible
+[x] USD visible / consistent
+[x] Availability visible (Đã thêm nhãn In Stock kèm chấm xanh trên buy buttons)
+[x] Made-to-order status clear (Tích hợp trong Accordion Shipping & Return)
+[x] Processing time clear (15–20 business days trong Accordion)
 [ ] Variant from feed lands on correct variant
-[ ] Add to Cart works
-[ ] Buy It Now works
-[ ] No legacy brand text
-[ ] No test buttons
+[x] Add to Cart works
+[x] Buy It Now works
+[x] No legacy brand text (Đã sửa sạch WAZARO trong image alt text)
+[x] No test buttons (Đã dọn sạch test buttons)
 ```
 
 Google yêu cầu price, availability, product identity và experience nhất quán với submitted product data. citeturn20search5
