@@ -12,7 +12,7 @@ Tuy nhiên, audit LIVE phát hiện một nhóm tín hiệu mà tôi đánh giá
 
 | Mức độ | Vấn đề LIVE | Đánh giá | Đã fix |
 |---|---|---|:---:|
-| **P0 – Rất cao** | Một product page WRYDECO hiện chứa hàng loạt image alt text mang brand **“WAZARO”** | Brand/identity contamination; cần xử lý toàn site | Chưa |
+| **P0 – Rất cao** | Một product page WRYDECO hiện chứa hàng loạt image alt text mang brand **“WAZARO”** | Brand/identity contamination; cần xử lý toàn site | **Đã fix** |
 | **P0 – Rất cao** | Homepage tuyên bố “372 Verified Client Reviews / 4.7 / 99% Client Satisfaction / 400+ Homes Styled”; product page cũng hiện “4.7 (372 reviews)” | Cần chứng minh provenance; hiện cách hiển thị dễ khiến Google/người mua hiểu đây là product reviews | Chưa |
 | **P0 – Cao** | Product pages được kiểm tra không có text “Availability”, dù có Add to Cart | Google yêu cầu landing page thể hiện rõ availability | Chưa |
 | **P1 – Cao** | Contact page ghi “Registered Business Address” nhưng không hiển thị địa chỉ ngay tại block đó; footer chỉ ghi street, không có LLC/city/state/ZIP | Business identity không đồng nhất về mức độ chi tiết | **Đã fix** |

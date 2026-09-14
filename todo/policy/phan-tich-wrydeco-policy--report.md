@@ -12,7 +12,7 @@
 
 | STT | Mức độ | Vấn đề LIVE ban đầu | Đánh giá rủi ro | Trạng thái | Giải pháp / Chi tiết xử lý |
 |:---:|:---|:---|:---|:---:|:---|
-| 01 | **P0 – Rất cao** | Image alt text của product page chứa brand **“WAZARO”** | Brand/identity contamination; ảnh hưởng toàn site | **Chưa fix** | Cần xuất CSV sản phẩm, rà soát toàn bộ image alt text / media và thay thế bằng WRYDECO. |
+| 01 | **P0 – Rất cao** | Image alt text của product page chứa brand **“WAZARO”** | Brand/identity contamination; ảnh hưởng toàn site | **ĐÃ FIX** | Đã tạo file CSV chuyên dụng chỉ sửa duy nhất cột Image Alt Text (thay 27 ảnh WAZARO sang WRYDECO cho 3 sản phẩm). |
 | 02 | **P0 – Rất cao** | Claim “372 Verified Client Reviews / 4.7 / 99% / 400+ Homes Styled”; PDP hiện “4.7 (372 reviews)” | Thiếu bằng chứng provenance; dễ bị Google hiểu là giả mạo product reviews | **Chưa fix** | Cần bằng chứng review thực hoặc điều chỉnh/gỡ bỏ claim không thể chứng minh. |
 | 03 | **P0 – Cao** | Landing page sản phẩm không có hiển thị chữ “Availability” (chỉ có Add to Cart) | Google yêu cầu hiển thị rõ tình trạng còn hàng / đặt làm (availability) | **Chưa fix** | Cần thêm nhãn Availability (In Stock / Made to Order) rõ ràng trên PDP. |
 | 04 | **P1 – Cao** | Contact page thiếu địa chỉ tại block "Registered Business Address"; Footer chỉ ghi street name | Business identity không đồng nhất, thiếu chi tiết pháp nhân | **ĐÃ FIX** | Đã đồng bộ đầy đủ pháp nhân `Beaconfield Group LLC` kèm đầy đủ số nhà, Suite R, City, State, ZIP trên cả Contact page và Footer. |
@@ -22,7 +22,7 @@
 | 08 | **P2 – Cần kiểm** | Trang Track Order chỉ xác minh được heading, chưa xác minh được flow thực tế | Nghi ngờ tính năng chưa hoàn thiện | **Chưa fix** | Cần kiểm tra flow tra cứu thực tế với tracking number mẫu. |
 | 09 | **Chưa thể kết luận** | GMC feed, structured data, Google Payments, checkout cuối cùng, thuế, phí ship tại checkout | Chưa đối chiếu live với Google Merchant Center | **Chưa fix** | Cần đồng bộ giữa data feed gửi sang GMC và dữ liệu hiển thị trên website. |
 
-**Tiến độ hiện tại:** Đã khắc phục hoàn chỉnh **4 / 9** vấn đề (tập trung 100% các vấn đề P1 cấp bách về Policy & Code artifact).
+**Tiến độ hiện tại:** Đã khắc phục hoàn chỉnh **5 / 9** vấn đề (xử lý xong vấn đề brand contamination WAZARO và 100% các vấn đề P1 cấp bách về Policy & Code artifact).
 
 ---
 
@@ -108,6 +108,18 @@
      - **File [`dev.cmd`](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/dev.cmd):** Thêm lệnh gọi `init-test-src.cmd` trước khi khởi động `shopify theme dev`.
      - **File [`compress-store-src.cmd`](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/compress-store-src.cmd):** Thêm lệnh gọi `remove-test-src.cmd` ngay đầu script để luôn đảm bảo file nén đẩy lên store là bản production sạch 100%.
 
+### 2.5. Mục 01: Xử lý triệt để brand cũ WAZARO trong Image Alt Text qua file CSV
+
+- **Vấn đề trước khi sửa:**
+  - Có 27 hình ảnh thuộc 3 sản phẩm bàn cà phê (`handcrafted-curved-oak-wood-minimalist-coffee-table`, `custom-handcrafted-wave-solid-oak-wood-coffee-table-1`, `custom-handcrafted-wave-solid-oak-wood-coffee-table`) chứa chữ `WAZARO` trong `Image Alt Text`.
+  - Kiểm tra chéo toàn bộ các trường khác (Title, Body HTML, Vendor, Tags, và 13 cột Metafield): Sạch 100%, không bị dính chữ WAZARO.
+
+- **Giải pháp đã thực hiện:**
+  - Tạo file CSV chuyên dụng [`backup-products-data/from-real-store - latest/products_fixed_wazaro_3_products_only.csv`](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/backup-products-data/from-real-store%20-%20latest/products_fixed_wazaro_3_products_only.csv) chứa đúng 54 dòng của 3 sản phẩm bị ảnh hưởng:
+    - 66 cột khác được giữ nguyên vẹn 100% không suy suyển.
+    - Duy nhất 27 ô `Image Alt Text` được thay thế từ `WAZARO` thành `WRYDECO`.
+  - Đồng thời tạo bản catalog đầy đủ [`backup-products-data/from-real-store - latest/products_fixed_wazaro_all.csv`](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/backup-products-data/from-real-store%20-%20latest/products_fixed_wazaro_all.csv) gồm 5.224 dòng sạch hoàn toàn.
+
 ---
 
 ## 3. Nhật ký can thiệp tệp tin (Files & Assets Changelog)
@@ -125,7 +137,9 @@
 | [`scripts/lead-capture-test/init-test-src.cmd`](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/scripts/lead-capture-test/init-test-src.cmd) | New | CMD wrapper thực thi `init_test.py`. |
 | [`scripts/lead-capture-test/remove_test.py`](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/scripts/lead-capture-test/remove_test.py) | New | Script dọn sạch code test popup. |
 | [`scripts/lead-capture-test/remove-test-src.cmd`](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/scripts/lead-capture-test/remove-test-src.cmd) | New | CMD wrapper thực thi `remove_test.py`. |
-| [`todo/policy/phan-tich-wrydeco-policy.md`](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/todo/policy/phan-tich-wrydeco-policy.md) | Modify | Thêm cột "Đã fix" vào bảng audit LIVE để theo dõi tiến độ. |
+| [`todo/policy/phan-tich-wrydeco-policy.md`](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/todo/policy/phan-tich-wrydeco-policy.md) | Modify | Thêm cột "Đã fix" và cập nhật trạng thái các mục đã xử lý. |
+| [`backup-products-data/from-real-store - latest/products_fixed_wazaro_3_products_only.csv`](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/backup-products-data/from-real-store%20-%20latest/products_fixed_wazaro_3_products_only.csv) | New | File CSV 54 dòng chứa 3 sản phẩm đã thay thế sạch WAZARO sang WRYDECO ở Image Alt Text để import. |
+| [`backup-products-data/from-real-store - latest/products_fixed_wazaro_all.csv`](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/backup-products-data/from-real-store%20-%20latest/products_fixed_wazaro_all.csv) | New | File CSV toàn bộ 5.224 dòng sản phẩm đã thay thế sạch WAZARO sang WRYDECO ở Image Alt Text. |
 | **Metaobject trên Store** (`gid://shopify/Metaobject/197517934649`) | Live API Update | Sửa Headline thành `Free Shipping on All Orders` có link dẫn về policy. |
 
 ---
@@ -146,7 +160,6 @@
 
 ## 5. Các bước xử lý tiếp theo được khuyến nghị (Next Remediation Steps)
 
-Trước khi submit yêu cầu Google xem xét lại (Request Review), cần hoàn thiện nốt 3 vấn đề **P0** cốt lõi:
-1. **P0 - Xử lý triệt để brand cũ WAZARO:** Export toàn bộ sản phẩm trên store ra file CSV, tìm kiếm tất cả các dòng chứa `WAZARO` trong `Image Alt Text`, `Title`, `Body HTML`, `Tags` và thay thế bằng `WRYDECO`.
-2. **P0 - Xử lý cụm số liệu Social Proof & Reviews:** Rà soát claim `372 Verified Client Reviews / 4.7 / 99% Satisfaction / 400+ Homes Styled`. Nếu không có hệ thống review bên thứ 3 (như Trustpilot, Judge.me, Loox) chứng minh được xuất xứ, cần gỡ bỏ các claim đánh giá cụ thể này trên cả Homepage và Product page.
-3. **P0 - Thêm nhãn "Availability" trên trang sản phẩm:** Bổ sung hiển thị rõ ràng tình trạng hàng hóa (ví dụ: `Availability: In Stock` hoặc `Availability: Made-to-Order (Crafted in 15–20 days)`) ngay cạnh giá sản phẩm và nút Add to Cart.
+Trước khi submit yêu cầu Google xem xét lại (Request Review), còn 2 vấn đề **P0** cốt lõi cần hoàn thiện nốt:
+1. **P0 - Xử lý cụm số liệu Social Proof & Reviews:** Rà soát claim `372 Verified Client Reviews / 4.7 / 99% Satisfaction / 400+ Homes Styled`. Nếu không có hệ thống review bên thứ 3 (như Trustpilot, Judge.me, Loox) chứng minh được xuất xứ, cần gỡ bỏ hoặc điều chỉnh cách hiển thị các claim đánh giá cụ thể này trên cả Homepage và Product page.
+2. **P0 - Thêm nhãn "Availability" trên trang sản phẩm:** Bổ sung hiển thị rõ ràng tình trạng hàng hóa (ví dụ: `Availability: In Stock` hoặc `Availability: Made-to-Order (Crafted in 15–20 days)`) ngay cạnh giá sản phẩm và nút Add to Cart.
