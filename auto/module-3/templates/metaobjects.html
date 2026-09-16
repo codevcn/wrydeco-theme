@@ -1,0 +1,1406 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Quản lý Meta Objects ({{ total_displayed }})</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/static/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+    <link rel="shortcut icon" href="/static/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="Wrydeco" />
+    <link rel="manifest" href="/static/site.webmanifest" />
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS v4 CDN -->
+    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Single Active Row Indicator - Màu xanh tím (Indigo / Violet) */
+        .metaobject-row {
+            cursor: pointer;
+            transition: background-color 0.15s ease, border-color 0.15s ease;
+        }
+        .metaobject-row.active-row {
+            background-color: #f0f3ff !important;
+            border-left: 4px solid #4f46e5 !important;
+        }
+        .metaobject-row.active-row .row-stt-badge {
+            background-color: #4f46e5 !important;
+            color: #ffffff !important;
+            font-weight: 700 !important;
+        }
+        .metaobject-row.active-row .row-indicator-dot {
+            opacity: 1 !important;
+            transform: scale(1) !important;
+        }
+        .metaobject-row .row-indicator-dot {
+            opacity: 0;
+            transform: scale(0.6);
+            transition: opacity 0.15s ease, transform 0.15s ease;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
+        <div class="mx-auto px-4 sm:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo -->
+                <div class="flex-shrink-0">
+                    <a target="_blank" rel="noopener noreferrer" href="/" class="flex items-center gap-2 text-indigo-600 font-bold text-xl hover:text-indigo-700 transition-colors">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                        <span>Shopify Admin Manager</span>
+                    </a>
+                </div>
+                <!-- Nav Links -->
+                <nav class="flex items-center gap-6">
+                    <a target="_blank" rel="noopener noreferrer" href="/" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Sản phẩm</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/collections" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Collections</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/metaobjects" class="text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 pb-0.5">Meta Objects</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/create" class="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">Tạo sản phẩm</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/edit-variants" class="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">Sửa hàng loạt</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/blogs" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path></svg>Blog</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/policies" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>Policy</a>
+                    <button id="drawer-toggle-btn" type="button" onclick="toggleDrawer()" class="p-1.5 text-gray-600 hover:text-indigo-600 hover:bg-gray-100 rounded-lg transition-colors flex items-center justify-center focus:outline-none" title="Menu tiện ích">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 max-w-[104rem] w-full mx-auto px-4 sm:px-8 py-6">
+        <!-- Breadcrumb & Title Section -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div>
+                <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-indigo-600 mb-1">
+                    <span>Cửa hàng: {{ shopify_shop }}</span>
+                    <span>•</span>
+                    <span>Dữ liệu tùy chỉnh (Custom Data)</span>
+                </div>
+                <h1 class="text-2xl font-bold text-gray-900 flex items-center gap-3">
+                    <span>Quản lý Meta Objects</span>
+                    <span id="active-count-badge" class="px-2.5 py-0.5 text-xs font-semibold bg-indigo-100 text-indigo-700 rounded-full border border-indigo-200">
+                        {{ total_displayed }} đối tượng
+                    </span>
+                </h1>
+                <p class="text-xs text-gray-500 mt-1">
+                    Danh sách các định nghĩa Metaobject trên store. Nhấn vào bất kỳ hàng nào để xem thông tin chi tiết các trường và chỉnh sửa bản ghi.
+                </p>
+            </div>
+            <!-- Action buttons: Nút Tạo mới Metaobject nằm bên trái nút Mở Shopify Custom Data -->
+            <div class="flex items-center gap-2.5">
+                <button 
+                    type="button" 
+                    onclick="openCreateMetaobjectModal()" 
+                    class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    title="Tạo mới một định nghĩa Metaobject trên store"
+                >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    <span>Tạo mới Metaobject</span>
+                </button>
+                <a target="_blank" rel="noopener noreferrer" href="https://admin.shopify.com/store/{{ shopify_shop }}/settings/custom_data" class="inline-flex items-center gap-1.5 px-3 py-2 bg-white text-gray-700 hover:text-indigo-600 text-xs font-medium rounded-lg border border-gray-300 hover:border-indigo-300 shadow-sm transition-colors">
+                    <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                    <span>Mở Shopify Custom Data</span>
+                </a>
+                <button type="button" onclick="window.location.reload()" class="p-2 text-gray-600 hover:text-indigo-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm" title="Tải lại dữ liệu">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Filter Tabs & Search Bar -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <!-- Tabs: Custom (14) vs All (18) -->
+                <div class="flex items-center bg-gray-100 p-1 rounded-lg self-start">
+                    <a href="/metaobjects?tab=custom" class="px-4 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 {% if current_tab == 'custom' %}bg-white text-indigo-600 font-semibold shadow-sm{% else %}text-gray-600 hover:text-gray-900{% endif %}">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
+                        <span>Tùy chỉnh (Custom)</span>
+                        <span class="px-1.5 py-0.2 text-[11px] font-bold rounded-full {% if current_tab == 'custom' %}bg-indigo-100 text-indigo-700{% else %}bg-gray-200 text-gray-700{% endif %}">{{ total_custom }}</span>
+                    </a>
+                    <a href="/metaobjects?tab=all" class="px-4 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 {% if current_tab == 'all' %}bg-white text-indigo-600 font-semibold shadow-sm{% else %}text-gray-600 hover:text-gray-900{% endif %}">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                        <span>Tất cả (All)</span>
+                        <span class="px-1.5 py-0.2 text-[11px] font-bold rounded-full {% if current_tab == 'all' %}bg-indigo-100 text-indigo-700{% else %}bg-gray-200 text-gray-700{% endif %}">{{ total_all }}</span>
+                    </a>
+                </div>
+
+                <!-- Live Search Bar -->
+                <div class="flex-1 max-w-md relative">
+                    <input 
+                        type="text" 
+                        id="search-input" 
+                        placeholder="Tìm kiếm metaobject, mã type, tên field..." 
+                        value="{{ search }}"
+                        class="w-full pl-9 pr-8 py-2 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all shadow-xs"
+                    >
+                    <svg class="w-4 h-4 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    <button id="clear-search-btn" type="button" onclick="clearSearch()" class="hidden absolute right-2.5 top-2.5 text-gray-400 hover:text-gray-600 focus:outline-none">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Layout 2 Cột: Bảng Metaobjects & Panel Xem Nhanh Chi Tiết -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            
+            <!-- Cột Bảng Metaobjects (8 cột trên màn lớn) -->
+            <div class="lg:col-span-8 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-gray-50 border-b border-gray-200 text-gray-600 font-semibold uppercase tracking-wider">
+                                <th class="py-3 px-3 w-14 text-center">STT</th>
+                                <th class="py-3 px-4">Tên Định Nghĩa (Definition)</th>
+                                <th class="py-3 px-3">Mã Type</th>
+                                <th class="py-3 px-3">Người Tạo</th>
+                                <th class="py-3 px-3 text-center">Số Trường</th>
+                                <th class="py-3 px-3 text-center">Số Bản Ghi</th>
+                                <th class="py-3 px-3 text-right">Thao Tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="metaobjects-tbody" class="divide-y divide-gray-200">
+                            {% for d in definitions %}
+                            <tr 
+                                id="row-{{ d.type }}"
+                                class="metaobject-row hover:bg-indigo-50/40 transition-colors"
+                                data-type="{{ d.type }}"
+                                onclick="selectMetaobjectRow('{{ d.type }}')"
+                            >
+                                <!-- Cột STT kèm Indicator Dot màu xanh tím -->
+                                <td class="py-3.5 px-3 text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1.5">
+                                        <span class="row-indicator-dot w-2 h-2 rounded-full bg-indigo-600 ring-4 ring-indigo-200"></span>
+                                        <span class="row-stt-badge inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 transition-colors">
+                                            {{ loop.index }}
+                                        </span>
+                                    </div>
+                                </td>
+
+                                <!-- Cột Tên Definition -->
+                                <td class="py-3.5 px-4">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-7 h-7 rounded-lg bg-gray-100 text-gray-600 flex items-center justify-center flex-shrink-0">
+                                            <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                                        </div>
+                                        <div>
+                                            <div class="font-bold text-gray-900 text-[13px] hover:text-indigo-600 transition-colors flex items-center gap-2">
+                                                <span>{{ d.name }}</span>
+                                                {% if d.storefront_access == 'PUBLIC' or d.storefront_access == 'PUBLIC_READ' or d.storefront_access == 'READ' %}
+                                                <span class="px-1.5 py-0.2 text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 rounded" title="Truy cập Storefront được phép">Storefront</span>
+                                                {% endif %}
+                                            </div>
+                                            {% if d.description %}
+                                            <div class="text-[11px] text-gray-500 line-clamp-1 max-w-xs mt-0.5">{{ d.description }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <!-- Cột Mã Type / Handle -->
+                                <td class="py-3.5 px-3 whitespace-nowrap">
+                                    <code class="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-[11px] font-mono border border-gray-200">{{ d.type }}</code>
+                                </td>
+
+                                <!-- Cột Người tạo -->
+                                <td class="py-3.5 px-3 whitespace-nowrap text-gray-600 text-xs">
+                                    <span class="inline-flex items-center gap-1">
+                                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                                        <span>{{ d.added_by }}</span>
+                                    </span>
+                                </td>
+
+                                <!-- Cột Số trường -->
+                                <td class="py-3.5 px-3 text-center whitespace-nowrap">
+                                    <span class="px-2 py-0.5 text-xs font-semibold bg-gray-100 text-gray-700 rounded-full border border-gray-200">
+                                        {{ d.fields_count }} trường
+                                    </span>
+                                </td>
+
+                                <!-- Cột Số bản ghi (Entries) -->
+                                <td class="py-3.5 px-3 text-center whitespace-nowrap">
+                                    {% if d.entries | length > 0 %}
+                                    <span class="px-2.5 py-0.5 text-xs font-bold bg-indigo-100 text-indigo-700 rounded-full border border-indigo-200">
+                                        {{ d.entries | length }}
+                                    </span>
+                                    {% else %}
+                                    <span class="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-400 rounded-full">
+                                        0
+                                    </span>
+                                    {% endif %}
+                                </td>
+
+                                <!-- Cột Thao tác -->
+                                <td class="py-3.5 px-3 text-right whitespace-nowrap">
+                                    <div class="flex items-center justify-end gap-1.5" onclick="event.stopPropagation()">
+                                        <button 
+                                            type="button" 
+                                            onclick="openDetailModal('{{ d.type }}')" 
+                                            class="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-gray-100 rounded-lg transition-colors"
+                                            title="Xem toàn bộ cấu hình"
+                                        >
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                                        </button>
+                                        <a 
+                                            target="_blank" 
+                                            rel="noopener noreferrer" 
+                                            href="https://admin.shopify.com/store/{{ shopify_shop }}/content/metaobjects/entries/{{ d.type }}" 
+                                            class="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-gray-100 rounded-lg transition-colors"
+                                            title="Mở trong Shopify Admin"
+                                        >
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="7" class="py-12 text-center text-gray-500">
+                                    <div class="flex flex-col items-center justify-center">
+                                        <svg class="w-10 h-10 text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                        <p class="text-sm font-medium">Không tìm thấy Metaobject nào phù hợp</p>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Footer Summary Bar -->
+                <div class="px-4 py-3 bg-gray-50 border-t border-gray-200 flex items-center justify-between text-xs text-gray-500">
+                    <div>
+                        <span>Hiển thị <strong id="visible-count" class="text-gray-900 font-semibold">{{ definitions | length }}</strong> / {{ total_displayed }} đối tượng</span>
+                    </div>
+                    <div class="text-[11px] text-gray-400">
+                        <span>Click vào 1 hàng để xem chi tiết các trường hoặc nhấn vào bản ghi để chỉnh sửa</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cột Panel Chi Tiết Cạnh Phải (4 cột trên màn lớn) -->
+            <div class="lg:col-span-4 sticky top-[78px]">
+                <div id="quick-inspect-card" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="p-4 border-b border-gray-200 bg-gray-50/70 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-indigo-600 ring-4 ring-indigo-100"></span>
+                            <h3 class="font-bold text-gray-900 text-sm">Chi Tiết Metaobject</h3>
+                        </div>
+                        <a id="panel-shopify-link" target="_blank" rel="noopener noreferrer" href="#" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1 transition-colors">
+                            <span>Shopify Admin</span>
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                        </a>
+                    </div>
+
+                    <!-- Nội dung chi tiết được cập nhật tự động khi chọn row -->
+                    <div class="p-4 space-y-4">
+                        <div>
+                            <div class="text-xs text-gray-500 uppercase font-semibold tracking-wider">Tên Metaobject</div>
+                            <div id="panel-name" class="text-base font-bold text-gray-900 mt-0.5">--</div>
+                            <div id="panel-type" class="text-xs font-mono text-indigo-600 mt-0.5">--</div>
+                        </div>
+
+                        <div id="panel-desc-container" class="hidden">
+                            <div class="text-xs text-gray-500 uppercase font-semibold tracking-wider">Mô tả</div>
+                            <div id="panel-desc" class="text-xs text-gray-700 mt-0.5 bg-gray-50 p-2 rounded-lg border border-gray-100">--</div>
+                        </div>
+
+                        <!-- Panel Tabs: Trường cấu hình vs Danh sách bản ghi -->
+                        <div class="border-t border-gray-100 pt-3">
+                            <div class="flex items-center gap-2 border-b border-gray-200 pb-2 mb-3 text-xs">
+                                <button id="tab-fields-btn" type="button" onclick="switchPanelTab('fields')" class="font-bold text-indigo-600 border-b-2 border-indigo-600 pb-1 focus:outline-none">
+                                    Trường cấu hình (<span id="panel-fields-count">0</span>)
+                                </button>
+                                <button id="tab-entries-btn" type="button" onclick="switchPanelTab('entries')" class="font-medium text-gray-500 hover:text-gray-900 pb-1 focus:outline-none">
+                                    Bản ghi (<span id="panel-entries-count">0</span>)
+                                </button>
+                            </div>
+
+                            <!-- Tab 1: Danh sách các trường (Fields) -->
+                            <div id="panel-fields-content" class="space-y-2 max-h-96 overflow-y-auto pr-1">
+                                <div class="text-xs text-gray-400 italic">Chọn 1 hàng để xem các trường dữ liệu.</div>
+                            </div>
+
+                            <!-- Tab 2: Danh sách các bản ghi (Entries) -->
+                            <div id="panel-entries-content" class="hidden space-y-2 max-h-96 overflow-y-auto pr-1">
+                                <div class="text-xs text-gray-400 italic">Không có bản ghi nào.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Modal Chi Tiết Toàn Diện (Full Modal) -->
+    <div id="detail-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs hidden">
+        <div class="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    </div>
+                    <div>
+                        <h2 id="modal-title" class="text-base font-bold text-gray-900">Chi tiết Định nghĩa Metaobject</h2>
+                        <div id="modal-type" class="text-xs text-indigo-600 font-mono">--</div>
+                    </div>
+                </div>
+                <button type="button" onclick="closeDetailModal()" class="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-200 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="p-6 overflow-y-auto space-y-5 text-xs flex-1">
+                <div>
+                    <h4 class="font-bold text-gray-800 text-xs uppercase tracking-wider mb-2">Thông Tin Chung</h4>
+                    <div class="grid grid-cols-2 gap-3 bg-gray-50 p-3 rounded-xl border border-gray-200">
+                        <div>
+                            <span class="text-gray-500">Người tạo:</span>
+                            <span id="modal-added-by" class="font-semibold text-gray-800 ml-1">--</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-500">Storefront Access:</span>
+                            <span id="modal-storefront" class="font-semibold text-gray-800 ml-1">--</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-500">Số trường:</span>
+                            <span id="modal-fields-count" class="font-semibold text-gray-800 ml-1">--</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-500">Số bản ghi (Entries):</span>
+                            <span id="modal-entries-count" class="font-semibold text-gray-800 ml-1">--</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Danh sách Fields trong Modal -->
+                <div>
+                    <h4 class="font-bold text-gray-800 text-xs uppercase tracking-wider mb-2">Các Trường Cấu Hình (Field Definitions)</h4>
+                    <div id="modal-fields-list" class="space-y-2">
+                        <!-- Sẽ được điền bằng JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-3 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
+                <a id="modal-admin-link" target="_blank" rel="noopener noreferrer" href="#" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium text-xs transition-colors flex items-center gap-1.5 shadow-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                    <span>Mở trang quản lý trên Shopify</span>
+                </a>
+                <button type="button" onclick="closeDetailModal()" class="px-4 py-2 bg-white hover:bg-gray-100 border border-gray-300 text-gray-700 rounded-lg font-medium text-xs transition-colors">
+                    Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Popup Chỉnh Sửa Bản Ghi (Edit Metaobject Entry Modal) -->
+    <div id="edit-entry-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs hidden">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center shadow-xs">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                    </div>
+                    <div>
+                        <h2 id="edit-modal-title" class="text-base font-bold text-gray-900">Chỉnh sửa Bản ghi</h2>
+                        <div id="edit-modal-subtitle" class="text-xs text-indigo-600 font-mono mt-0.5">--</div>
+                    </div>
+                </div>
+                <button type="button" onclick="closeEditEntryModal()" class="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-200 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <!-- Modal Body Form -->
+            <div class="p-6 overflow-y-auto space-y-4 text-xs flex-1">
+                <!-- Thông báo trạng thái (Alert) -->
+                <div id="edit-entry-alert" class="hidden p-3 rounded-xl border text-xs flex items-center gap-2">
+                    <span id="edit-entry-alert-icon"></span>
+                    <span id="edit-entry-alert-msg" class="font-medium"></span>
+                </div>
+
+                <div class="text-xs text-gray-500 mb-2">
+                    Nhập giá trị mới cho các trường dưới đây và nhấn <strong>Save</strong> để lưu trực tiếp vào Shopify Store.
+                </div>
+
+                <!-- Form Dynamic Fields -->
+                <form id="edit-entry-form" onsubmit="event.preventDefault(); saveEntryChanges();" class="space-y-4">
+                    <div id="edit-fields-container" class="space-y-3.5">
+                        <!-- Fields sẽ được sinh tự động bằng JS -->
+                    </div>
+                </form>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-3.5 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <a id="edit-modal-shopify-link" target="_blank" rel="noopener noreferrer" href="#" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium inline-flex items-center gap-1 transition-colors">
+                        <span>Mở bản ghi trên Shopify</span>
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                    </a>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="closeEditEntryModal()" class="px-4 py-2 bg-white hover:bg-gray-100 border border-gray-300 text-gray-700 rounded-lg font-medium text-xs transition-colors">
+                        Hủy
+                    </button>
+                    <button 
+                        id="btn-save-entry" 
+                        type="button" 
+                        onclick="saveEntryChanges()" 
+                        class="inline-flex items-center gap-1.5 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-bold rounded-lg shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <svg id="btn-save-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+                        <span id="btn-save-text">Save</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Popup Tạo Mới Metaobject Definition (Create Metaobject Modal) -->
+    <div id="create-metaobject-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs hidden">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center shadow-xs">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    </div>
+                    <div>
+                        <h2 class="text-base font-bold text-gray-900">Tạo mới Metaobject trên Store</h2>
+                        <div class="text-xs text-gray-500 mt-0.5">Tạo định nghĩa Metaobject mới với các trường dữ liệu theo chuẩn Shopify Admin</div>
+                    </div>
+                </div>
+                <button type="button" onclick="closeCreateMetaobjectModal()" class="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-200 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <!-- Modal Body Form -->
+            <div class="p-6 overflow-y-auto space-y-5 text-xs flex-1">
+                <!-- Thông báo trạng thái (Alert) -->
+                <div id="create-metaobject-alert" class="hidden p-3 rounded-xl border text-xs flex items-center gap-2">
+                    <span id="create-metaobject-alert-icon"></span>
+                    <span id="create-metaobject-alert-msg" class="font-medium"></span>
+                </div>
+
+                <!-- Phần 1: Thông tin cơ bản -->
+                <div class="bg-gray-50/80 p-4 rounded-xl border border-gray-200 space-y-3.5">
+                    <h3 class="font-bold text-gray-900 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                        <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <span>Thông Tin Chung (Definition Info)</span>
+                    </h3>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                        <!-- Name -->
+                        <div>
+                            <label class="block font-bold text-gray-800 mb-1">
+                                Tên Metaobject <span class="text-red-500">*</span>
+                            </label>
+                            <input 
+                                type="text" 
+                                id="create-def-name" 
+                                placeholder="Ví dụ: Author Profile, Product Badge..."
+                                oninput="autoSlugType(this.value)"
+                                class="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                            >
+                        </div>
+
+                        <!-- Type -->
+                        <div>
+                            <label class="block font-bold text-gray-800 mb-1">
+                                Mã Type (Handle) <span class="text-red-500">*</span>
+                            </label>
+                            <input 
+                                type="text" 
+                                id="create-def-type" 
+                                placeholder="author_profile"
+                                class="w-full px-3 py-2 text-xs font-mono border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                            >
+                            <div class="text-[10px] text-gray-400 mt-1 font-mono">Chỉ bao gồm chữ thường a-z, số và dấu gạch dưới _</div>
+                        </div>
+                    </div>
+
+                    <!-- Description -->
+                    <div>
+                        <label class="block font-bold text-gray-800 mb-1">Mô tả (Description)</label>
+                        <input 
+                            type="text" 
+                            id="create-def-desc" 
+                            placeholder="Mô tả mục đích sử dụng định nghĩa metaobject này..."
+                            class="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                        >
+                    </div>
+
+                    <!-- Storefront access toggle -->
+                    <div class="flex items-center gap-2 pt-1">
+                        <input type="checkbox" id="create-def-storefront" checked class="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500">
+                        <label for="create-def-storefront" class="font-medium text-gray-700 cursor-pointer">
+                            Cho phép giao diện Storefront đọc dữ liệu (Storefront read access)
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Phần 2: Cấu hình các trường dữ liệu (Fields) -->
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="font-bold text-gray-900 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                                <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+                                <span>Các Trường Dữ Liệu (Field Definitions)</span>
+                            </h3>
+                            <p class="text-[11px] text-gray-500 mt-0.5">Thêm các trường dữ liệu cần lưu cho metaobject này (điền tên key và kiểu dữ liệu)</p>
+                        </div>
+                        <button 
+                            type="button" 
+                            onclick="addCreateFieldRow()" 
+                            class="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold rounded-lg text-xs transition-colors border border-indigo-200"
+                        >
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                            <span>Thêm trường</span>
+                        </button>
+                    </div>
+
+                    <!-- Container danh sách Fields -->
+                    <div id="create-fields-list" class="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+                        <!-- Dynamic field rows -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-3.5 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
+                <div class="text-[11px] text-gray-400">
+                    Metaobject mới sẽ được lưu trực tiếp vào Shopify Admin Custom Data.
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="closeCreateMetaobjectModal()" class="px-4 py-2 bg-white hover:bg-gray-100 border border-gray-300 text-gray-700 rounded-lg font-medium text-xs transition-colors">
+                        Hủy
+                    </button>
+                    <button 
+                        id="btn-submit-create" 
+                        type="button" 
+                        onclick="submitCreateMetaobject()" 
+                        class="inline-flex items-center gap-1.5 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-bold rounded-lg shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <svg id="btn-create-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        <span id="btn-create-text">Create</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dữ liệu Metaobjects Definitions nhúng cho Client-side tương tác tức thời -->
+    <script>
+        const definitionsData = {{ definitions | tojson }};
+        const definitionsMap = {};
+        definitionsData.forEach(d => {
+            definitionsMap[d.type] = d;
+        });
+
+        let currentActiveType = null;
+        let currentEditingEntry = null;
+        let currentEditingDef = null;
+
+        // Danh sách các data type chuẩn của Shopify Metafields / Metaobjects
+        const SHOPIFY_DATA_TYPES = [
+            { value: "single_line_text_field", label: "Văn bản một dòng (Single line text)" },
+            { value: "multi_line_text_field", label: "Văn bản nhiều dòng (Multi-line text)" },
+            { value: "number_integer", label: "Số nguyên (Integer)" },
+            { value: "number_decimal", label: "Số thập phân (Decimal)" },
+            { value: "boolean", label: "True / False (Boolean)" },
+            { value: "file_reference", label: "Tập tin / Hình ảnh (File reference)" },
+            { value: "color", label: "Màu sắc (Color)" },
+            { value: "url", label: "Đường dẫn liên kết (URL)" },
+            { value: "date", label: "Ngày (Date)" },
+            { value: "date_time", label: "Ngày & Giờ (Date and Time)" },
+            { value: "json", label: "Dữ liệu JSON (JSON)" },
+            { value: "rich_text_field", label: "Văn bản định dạng phong phú (Rich text)" }
+        ];
+
+        // Hàm kích hoạt indicator màu xanh tím cho 1 row duy nhất
+        function selectMetaobjectRow(type) {
+            if (!definitionsMap[type]) return;
+
+            // Xóa indicator cũ
+            document.querySelectorAll('.metaobject-row').forEach(r => {
+                r.classList.remove('active-row');
+            });
+
+            // Gán indicator mới (màu xanh tím: border-l-4 border-indigo-600, bg-[#f0f3ff])
+            const targetRow = document.getElementById(`row-${type}`);
+            if (targetRow) {
+                targetRow.classList.add('active-row');
+            }
+
+            currentActiveType = type;
+            renderQuickInspectPanel(definitionsMap[type]);
+        }
+
+        // Render thông tin vào Quick Inspect Card
+        function renderQuickInspectPanel(def) {
+            if (!def) return;
+
+            document.getElementById('panel-name').textContent = def.name;
+            document.getElementById('panel-type').textContent = `type: ${def.type}`;
+            document.getElementById('panel-shopify-link').href = `https://admin.shopify.com/store/{{ shopify_shop }}/content/metaobjects/entries/${def.type}`;
+
+            // Mô tả
+            const descContainer = document.getElementById('panel-desc-container');
+            const descEl = document.getElementById('panel-desc');
+            if (def.description) {
+                descEl.textContent = def.description;
+                descContainer.classList.remove('hidden');
+            } else {
+                descContainer.classList.add('hidden');
+            }
+
+            // Cập nhật số lượng
+            const fieldsCount = def.fieldDefinitions ? def.fieldDefinitions.length : 0;
+            const entriesCount = def.entries ? def.entries.length : 0;
+            document.getElementById('panel-fields-count').textContent = fieldsCount;
+            document.getElementById('panel-entries-count').textContent = entriesCount;
+
+            // Render Tab Fields
+            const fieldsContent = document.getElementById('panel-fields-content');
+            if (fieldsCount > 0) {
+                fieldsContent.innerHTML = def.fieldDefinitions.map(f => `
+                    <div class="p-2.5 bg-gray-50 rounded-lg border border-gray-100 flex items-center justify-between hover:bg-gray-100/70 transition-colors">
+                        <div>
+                            <div class="font-semibold text-gray-800 text-xs">${f.name || f.key}</div>
+                            <div class="text-[11px] font-mono text-gray-500">${f.key}</div>
+                        </div>
+                        <span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded text-[10px] font-medium border border-indigo-100">
+                            ${f.type ? f.type.name : 'field'}
+                        </span>
+                    </div>
+                `).join('');
+            } else {
+                fieldsContent.innerHTML = '<div class="text-xs text-gray-400 italic">Chưa có trường nào được định nghĩa.</div>';
+            }
+
+            // Render Tab Entries (Cho phép bấm vào từng bản ghi để chỉnh sửa popup)
+            const entriesContent = document.getElementById('panel-entries-content');
+            if (entriesCount > 0) {
+                entriesContent.innerHTML = def.entries.map((e, idx) => `
+                    <div 
+                        onclick="openEditEntryModal('${def.type}', '${e.numeric_id}')"
+                        class="p-2.5 bg-gray-50 hover:bg-indigo-50/70 border border-gray-200 hover:border-indigo-300 rounded-lg flex items-center justify-between cursor-pointer transition-all group shadow-2xs"
+                        title="Nhấn để chỉnh sửa bản ghi này"
+                    >
+                        <div class="truncate max-w-[210px]">
+                            <div class="font-bold text-gray-800 group-hover:text-indigo-600 text-xs truncate transition-colors flex items-center gap-1.5">
+                                <svg class="w-5 h-5 text-gray-400 group-hover:text-indigo-600 transition-colors shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                <span class="truncate">${e.displayName || e.handle || 'Bản ghi #' + (idx + 1)}</span>
+                            </div>
+                            <div class="text-[10px] text-gray-400 font-mono truncate mt-0.5">ID: ${e.numeric_id || ''} • Click để sửa</div>
+                        </div>
+                        <div class="flex items-center gap-1" onclick="event.stopPropagation()">
+                            <button 
+                                type="button"
+                                onclick="openEditEntryModal('${def.type}', '${e.numeric_id}')"
+                                class="px-2 py-1 bg-white hover:bg-indigo-600 text-gray-600 hover:text-white border border-gray-200 hover:border-indigo-600 rounded text-[11px] font-medium transition-all shadow-2xs"
+                                title="Sửa bản ghi"
+                            >
+                                Sửa
+                            </button>
+                            <a target="_blank" rel="noopener noreferrer" href="https://admin.shopify.com/store/{{ shopify_shop }}/content/metaobjects/entries/${def.type}/${e.numeric_id}" class="p-1 text-gray-400 hover:text-indigo-600 hover:bg-gray-100 rounded transition-colors" title="Mở trên Shopify">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                            </a>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                entriesContent.innerHTML = '<div class="text-xs text-gray-400 italic">Chưa có bản ghi nào thuộc loại này.</div>';
+            }
+        }
+
+        // Chuyển tab giữa Fields và Entries trong Quick Panel
+        function switchPanelTab(tab) {
+            const fieldsBtn = document.getElementById('tab-fields-btn');
+            const entriesBtn = document.getElementById('tab-entries-btn');
+            const fieldsContent = document.getElementById('panel-fields-content');
+            const entriesContent = document.getElementById('panel-entries-content');
+
+            if (tab === 'fields') {
+                fieldsBtn.className = 'font-bold text-indigo-600 border-b-2 border-indigo-600 pb-1 focus:outline-none';
+                entriesBtn.className = 'font-medium text-gray-500 hover:text-gray-900 pb-1 focus:outline-none';
+                fieldsContent.classList.remove('hidden');
+                entriesContent.classList.add('hidden');
+            } else {
+                entriesBtn.className = 'font-bold text-indigo-600 border-b-2 border-indigo-600 pb-1 focus:outline-none';
+                fieldsBtn.className = 'font-medium text-gray-500 hover:text-gray-900 pb-1 focus:outline-none';
+                entriesContent.classList.remove('hidden');
+                fieldsContent.classList.add('hidden');
+            }
+        }
+
+        // Mở Modal xem chi tiết toàn diện
+        function openDetailModal(type) {
+            const def = definitionsMap[type];
+            if (!def) return;
+
+            document.getElementById('modal-title').textContent = def.name;
+            document.getElementById('modal-type').textContent = `Loại định nghĩa: ${def.type}`;
+            document.getElementById('modal-added-by').textContent = def.added_by || 'Shopify Web';
+            document.getElementById('modal-storefront').textContent = def.storefront_access || 'NONE';
+            document.getElementById('modal-fields-count').textContent = `${def.fields_count || 0} trường`;
+            document.getElementById('modal-entries-count').textContent = `${def.entries ? def.entries.length : 0} bản ghi`;
+            document.getElementById('modal-admin-link').href = `https://admin.shopify.com/store/{{ shopify_shop }}/content/metaobjects/entries/${def.type}`;
+
+            const fieldsList = document.getElementById('modal-fields-list');
+            if (def.fieldDefinitions && def.fieldDefinitions.length > 0) {
+                fieldsList.innerHTML = def.fieldDefinitions.map(f => `
+                    <div class="p-3 bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-between">
+                        <div>
+                            <div class="font-bold text-gray-900 text-xs">${f.name || f.key}</div>
+                            <div class="text-[11px] font-mono text-gray-500 mt-0.5">key: <strong>${f.key}</strong></div>
+                            ${f.description ? `<div class="text-[11px] text-gray-600 mt-1">${f.description}</div>` : ''}
+                        </div>
+                        <div class="text-right flex flex-col items-end gap-1">
+                            <span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded text-[11px] font-semibold border border-indigo-100">
+                                ${f.type ? f.type.name : 'string'}
+                            </span>
+                            ${f.required ? '<span class="text-[10px] text-red-600 font-semibold">* Bắt buộc</span>' : '<span class="text-[10px] text-gray-400">Tùy chọn</span>'}
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                fieldsList.innerHTML = '<div class="text-gray-400 italic">Không có trường nào.</div>';
+            }
+
+            document.getElementById('detail-modal').classList.remove('hidden');
+        }
+
+        function closeDetailModal() {
+            document.getElementById('detail-modal').classList.add('hidden');
+        }
+
+        // ==========================================
+        // POPUP CHỈNH SỬA BẢN GHI (EDIT ENTRY MODAL)
+        // ==========================================
+        function openEditEntryModal(defType, numericId) {
+            const def = definitionsMap[defType];
+            if (!def) return;
+            const entry = def.entries.find(e => String(e.numeric_id) === String(numericId));
+            if (!entry) return;
+
+            currentEditingDef = def;
+            currentEditingEntry = entry;
+
+            // Reset Alert Box
+            hideEditAlert();
+
+            // Set Header
+            document.getElementById('edit-modal-title').textContent = `Chỉnh sửa: ${entry.displayName || entry.handle || 'Bản ghi #' + numericId}`;
+            document.getElementById('edit-modal-subtitle').textContent = `Định nghĩa: ${def.name} (${def.type}) • ID: ${numericId}`;
+            document.getElementById('edit-modal-shopify-link').href = `https://admin.shopify.com/store/{{ shopify_shop }}/content/metaobjects/entries/${def.type}/${numericId}`;
+
+            // Reset Save Button
+            resetSaveButton();
+
+            // Tạo Map giá trị hiện tại của entry: { key: value }
+            const entryValueMap = {};
+            if (entry.fields) {
+                entry.fields.forEach(f => {
+                    entryValueMap[f.key] = f.value !== null && f.value !== undefined ? f.value : '';
+                });
+            }
+
+            // Render form fields
+            const container = document.getElementById('edit-fields-container');
+            const fieldDefs = def.fieldDefinitions || [];
+
+            if (fieldDefs.length === 0 && (!entry.fields || entry.fields.length === 0)) {
+                container.innerHTML = '<div class="text-gray-400 italic py-4 text-center">Bản ghi này không có trường dữ liệu nào.</div>';
+            } else {
+                // Hợp nhất trường từ definition và trường có trong entry
+                const renderedKeys = new Set();
+                let html = '';
+
+                // Render theo định nghĩa trước
+                fieldDefs.forEach(fd => {
+                    renderedKeys.add(fd.key);
+                    const val = entryValueMap[fd.key] !== undefined ? entryValueMap[fd.key] : '';
+                    const typeName = fd.type ? fd.type.name : 'single_line_text_field';
+                    html += buildFieldInputHtml(fd.key, fd.name || fd.key, typeName, val, fd.description, fd.required);
+                });
+
+                // Nếu trong entry có field nào chưa có trong definition, render thêm
+                if (entry.fields) {
+                    entry.fields.forEach(ef => {
+                        if (!renderedKeys.has(ef.key)) {
+                            html += buildFieldInputHtml(ef.key, ef.key, ef.type || 'single_line_text_field', ef.value || '', '', false);
+                        }
+                    });
+                }
+
+                container.innerHTML = html;
+            }
+
+            document.getElementById('edit-entry-modal').classList.remove('hidden');
+        }
+
+        // Tạo HTML cho từng input phù hợp theo loại dữ liệu
+        function buildFieldInputHtml(key, name, typeName, value, description, isRequired) {
+            const escapedVal = String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+
+            let inputHtml = '';
+            const lowerType = (typeName || '').toLowerCase();
+
+            if (lowerType === 'boolean') {
+                const isChecked = String(value).toLowerCase() === 'true';
+                inputHtml = `
+                    <select name="field_${key}" class="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
+                        <option value="true" ${isChecked ? 'selected' : ''}>True (Đúng / Bật)</option>
+                        <option value="false" ${!isChecked ? 'selected' : ''}>False (Sai / Tắt)</option>
+                    </select>
+                `;
+            } else if (lowerType.includes('multi_line') || lowerType.includes('json') || lowerType.includes('rich_text') || (value && value.length > 80)) {
+                inputHtml = `
+                    <textarea 
+                        name="field_${key}" 
+                        rows="4" 
+                        class="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none font-mono ${lowerType.includes('json') ? 'bg-gray-50' : 'bg-white'}"
+                        placeholder="Nhập nội dung..."
+                    >${escapedVal}</textarea>
+                `;
+            } else if (lowerType.includes('number_integer')) {
+                inputHtml = `
+                    <input 
+                        type="number" 
+                        step="1" 
+                        name="field_${key}" 
+                        value="${escapedVal}" 
+                        class="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                    >
+                `;
+            } else if (lowerType.includes('number_decimal') || lowerType.includes('float')) {
+                inputHtml = `
+                    <input 
+                        type="number" 
+                        step="any" 
+                        name="field_${key}" 
+                        value="${escapedVal}" 
+                        class="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                    >
+                `;
+            } else {
+                inputHtml = `
+                    <input 
+                        type="text" 
+                        name="field_${key}" 
+                        value="${escapedVal}" 
+                        class="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                        placeholder="Nhập giá trị..."
+                    >
+                `;
+            }
+
+            return `
+                <div class="bg-gray-50/80 p-3 rounded-xl border border-gray-200 focus-within:border-indigo-400 focus-within:bg-indigo-50/20 transition-all">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="font-bold text-gray-800 text-xs flex items-center gap-1.5">
+                            <span>${name}</span>
+                            ${isRequired ? '<span class="text-red-500 font-bold" title="Trường bắt buộc">*</span>' : ''}
+                        </label>
+                        <div class="flex items-center gap-1.5">
+                            <span class="font-mono text-[10px] text-gray-400">key: ${key}</span>
+                            <span class="px-1.5 py-0.2 bg-gray-200/70 text-gray-700 rounded text-[10px] font-mono">
+                                ${typeName}
+                            </span>
+                        </div>
+                    </div>
+                    ${description ? `<p class="text-[11px] text-gray-500 mb-2">${description}</p>` : ''}
+                    <div>${inputHtml}</div>
+                </div>
+            `;
+        }
+
+        function closeEditEntryModal() {
+            document.getElementById('edit-entry-modal').classList.add('hidden');
+            currentEditingEntry = null;
+            currentEditingDef = null;
+        }
+
+        function showEditAlert(type, message) {
+            const alertEl = document.getElementById('edit-entry-alert');
+            const iconEl = document.getElementById('edit-entry-alert-icon');
+            const msgEl = document.getElementById('edit-entry-alert-msg');
+
+            alertEl.classList.remove('hidden', 'bg-red-50', 'border-red-200', 'text-red-700', 'bg-emerald-50', 'border-emerald-200', 'text-emerald-700');
+
+            if (type === 'error') {
+                alertEl.classList.add('bg-red-50', 'border-red-200', 'text-red-700');
+                iconEl.innerHTML = '<svg class="w-4 h-4 text-red-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
+            } else {
+                alertEl.classList.add('bg-emerald-50', 'border-emerald-200', 'text-emerald-700');
+                iconEl.innerHTML = '<svg class="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
+            }
+
+            msgEl.textContent = message;
+        }
+
+        function hideEditAlert() {
+            document.getElementById('edit-entry-alert').classList.add('hidden');
+        }
+
+        function resetSaveButton() {
+            const btn = document.getElementById('btn-save-entry');
+            const icon = document.getElementById('btn-save-icon');
+            const text = document.getElementById('btn-save-text');
+
+            btn.disabled = false;
+            btn.className = 'inline-flex items-center gap-1.5 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-bold rounded-lg shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed';
+            icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>';
+            text.textContent = 'Save';
+        }
+
+        // GỬI LƯU GIÁ TRỊ MỚI VÀO STORE QUA BACKEND
+        async function saveEntryChanges() {
+            if (!currentEditingEntry) return;
+
+            const btn = document.getElementById('btn-save-entry');
+            const icon = document.getElementById('btn-save-icon');
+            const text = document.getElementById('btn-save-text');
+
+            // Bật trạng thái Loading
+            btn.disabled = true;
+            icon.innerHTML = '<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
+            text.textContent = 'Đang lưu vào store...';
+            hideEditAlert();
+
+            // Thu thập form fields
+            const form = document.getElementById('edit-entry-form');
+            const formData = new FormData(form);
+            const fieldsToUpdate = [];
+
+            for (let [key, val] of formData.entries()) {
+                if (key.startsWith('field_')) {
+                    const actualKey = key.replace('field_', '');
+                    fieldsToUpdate.push({
+                        key: actualKey,
+                        value: val
+                    });
+                }
+            }
+
+            try {
+                const response = await fetch('/api/metaobjects/update', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        id: currentEditingEntry.id,
+                        fields: fieldsToUpdate
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    showEditAlert('success', 'Đã lưu giá trị mới vào Shopify Store thành công!');
+                    text.textContent = 'Đã lưu!';
+                    btn.className = 'inline-flex items-center gap-1.5 px-5 py-2 bg-emerald-600 text-white text-xs font-bold rounded-lg shadow-sm transition-all';
+                    icon.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
+
+                    if (result.metaobject && result.metaobject.fields) {
+                        currentEditingEntry.fields = result.metaobject.fields;
+                        if (result.metaobject.displayName) {
+                            currentEditingEntry.displayName = result.metaobject.displayName;
+                        }
+                    } else {
+                        fieldsToUpdate.forEach(uf => {
+                            const existing = currentEditingEntry.fields.find(f => f.key === uf.key);
+                            if (existing) {
+                                existing.value = uf.value;
+                            } else {
+                                currentEditingEntry.fields.push({ key: uf.key, value: uf.value });
+                            }
+                        });
+                    }
+
+                    if (currentEditingDef) {
+                        renderQuickInspectPanel(currentEditingDef);
+                    }
+
+                    setTimeout(() => {
+                        closeEditEntryModal();
+                    }, 1200);
+
+                } else {
+                    const errMsg = result.message || (result.errors ? result.errors.map(e => e.message).join('; ') : 'Có lỗi xảy ra khi lưu vào Shopify.');
+                    showEditAlert('error', `Không thể lưu: ${errMsg}`);
+                    resetSaveButton();
+                }
+            } catch (err) {
+                console.error('Lỗi kết nối khi cập nhật metaobject:', err);
+                showEditAlert('error', `Lỗi kết nối máy chủ: ${err.message}`);
+                resetSaveButton();
+            }
+        }
+
+        // ===============================================
+        // POPUP TẠO MỚI METAOBJECT (CREATE METAOBJECT)
+        // ==========================================
+        let createFieldCounter = 0;
+
+        function openCreateMetaobjectModal() {
+            document.getElementById('create-def-name').value = '';
+            document.getElementById('create-def-type').value = '';
+            document.getElementById('create-def-desc').value = '';
+            document.getElementById('create-def-storefront').checked = true;
+
+            hideCreateAlert();
+            resetCreateButton();
+
+            // Khởi tạo danh sách fields với 1 field mẫu
+            const fieldsContainer = document.getElementById('create-fields-list');
+            fieldsContainer.innerHTML = '';
+            createFieldCounter = 0;
+            addCreateFieldRow('Tiêu đề', 'title', 'single_line_text_field', true);
+
+            document.getElementById('create-metaobject-modal').classList.remove('hidden');
+            setTimeout(() => {
+                document.getElementById('create-def-name').focus();
+            }, 100);
+        }
+
+        function closeCreateMetaobjectModal() {
+            document.getElementById('create-metaobject-modal').classList.add('hidden');
+        }
+
+        function autoSlugType(nameVal) {
+            const typeInput = document.getElementById('create-def-type');
+            if (typeInput) {
+                const slug = nameVal
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .replace(/[^a-zA-Z0-9\s]/g, '')
+                    .trim()
+                    .toLowerCase()
+                    .replace(/\s+/g, '_');
+                typeInput.value = slug;
+            }
+        }
+
+        function autoSlugKey(inputEl, rowId) {
+            const keyInput = document.getElementById(`field-key-${rowId}`);
+            if (keyInput && (!keyInput.value || keyInput.dataset.autoModified === 'true')) {
+                const slug = inputEl.value
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .replace(/[^a-zA-Z0-9\s]/g, '')
+                    .trim()
+                    .toLowerCase()
+                    .replace(/\s+/g, '_');
+                keyInput.value = slug;
+                keyInput.dataset.autoModified = 'true';
+            }
+        }
+
+        function addCreateFieldRow(initName = '', initKey = '', initType = 'single_line_text_field', initReq = false) {
+            createFieldCounter++;
+            const rowId = createFieldCounter;
+            const container = document.getElementById('create-fields-list');
+
+            const rowDiv = document.createElement('div');
+            rowDiv.id = `create-field-row-${rowId}`;
+            rowDiv.className = 'p-3 bg-gray-50 rounded-xl border border-gray-200 grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center';
+
+            const optionsHtml = SHOPIFY_DATA_TYPES.map(t => 
+                `<option value="${t.value}" ${t.value === initType ? 'selected' : ''}>${t.label}</option>`
+            ).join('');
+
+            rowDiv.innerHTML = `
+                <!-- Tên trường (Label) -->
+                <div class="sm:col-span-4">
+                    <label class="block text-[10px] font-bold text-gray-500 mb-0.5 uppercase">Tên trường (Name)</label>
+                    <input 
+                        type="text" 
+                        id="field-name-${rowId}" 
+                        value="${initName}" 
+                        placeholder="Ví dụ: Tiêu đề"
+                        oninput="autoSlugKey(this, ${rowId})"
+                        class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                    >
+                </div>
+
+                <!-- Tên key -->
+                <div class="sm:col-span-3">
+                    <label class="block text-[10px] font-bold text-gray-500 mb-0.5 uppercase">Key <span class="text-red-500">*</span></label>
+                    <input 
+                        type="text" 
+                        id="field-key-${rowId}" 
+                        value="${initKey}" 
+                        placeholder="title"
+                        onfocus="this.dataset.autoModified='false'"
+                        class="w-full px-2.5 py-1.5 text-xs font-mono border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                    >
+                </div>
+
+                <!-- Kiểu dữ liệu -->
+                <div class="sm:col-span-3">
+                    <label class="block text-[10px] font-bold text-gray-500 mb-0.5 uppercase">Data Type <span class="text-red-500">*</span></label>
+                    <select 
+                        id="field-type-${rowId}" 
+                        class="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                    >
+                        ${optionsHtml}
+                    </select>
+                </div>
+
+                <!-- Bắt buộc & Nút xóa -->
+                <div class="sm:col-span-2 flex items-center justify-between sm:justify-end gap-2 pt-3 sm:pt-0">
+                    <label class="inline-flex items-center gap-1 cursor-pointer" title="Trường này có bắt buộc khi tạo bản ghi không?">
+                        <input type="checkbox" id="field-req-${rowId}" ${initReq ? 'checked' : ''} class="w-5 h-5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500">
+                        <span class="text-[11px] text-gray-600 font-medium">Bắt buộc</span>
+                    </label>
+                    <button 
+                        type="button" 
+                        onclick="removeCreateFieldRow(${rowId})" 
+                        class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Xóa trường này"
+                    >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                </div>
+            `;
+
+            container.appendChild(rowDiv);
+        }
+
+        function removeCreateFieldRow(rowId) {
+            const row = document.getElementById(`create-field-row-${rowId}`);
+            if (row) {
+                const totalRows = document.querySelectorAll('#create-fields-list > div').length;
+                if (totalRows <= 1) {
+                    showCreateAlert('error', 'Metaobject cần có ít nhất 1 trường dữ liệu!');
+                    return;
+                }
+                row.remove();
+            }
+        }
+
+        function showCreateAlert(type, message) {
+            const alertEl = document.getElementById('create-metaobject-alert');
+            const iconEl = document.getElementById('create-metaobject-alert-icon');
+            const msgEl = document.getElementById('create-metaobject-alert-msg');
+
+            alertEl.classList.remove('hidden', 'bg-red-50', 'border-red-200', 'text-red-700', 'bg-emerald-50', 'border-emerald-200', 'text-emerald-700');
+
+            if (type === 'error') {
+                alertEl.classList.add('bg-red-50', 'border-red-200', 'text-red-700');
+                iconEl.innerHTML = '<svg class="w-4 h-4 text-red-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
+            } else {
+                alertEl.classList.add('bg-emerald-50', 'border-emerald-200', 'text-emerald-700');
+                iconEl.innerHTML = '<svg class="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
+            }
+
+            msgEl.textContent = message;
+        }
+
+        function hideCreateAlert() {
+            document.getElementById('create-metaobject-alert').classList.add('hidden');
+        }
+
+        function resetCreateButton() {
+            const btn = document.getElementById('btn-submit-create');
+            const icon = document.getElementById('btn-create-icon');
+            const text = document.getElementById('btn-create-text');
+
+            btn.disabled = false;
+            btn.className = 'inline-flex items-center gap-1.5 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-bold rounded-lg shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed';
+            icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>';
+            text.textContent = 'Create';
+        }
+
+        // Submit form tạo Metaobject mới
+        async function submitCreateMetaobject() {
+            const name = document.getElementById('create-def-name').value.trim();
+            const type = document.getElementById('create-def-type').value.trim();
+            const desc = document.getElementById('create-def-desc').value.trim();
+            const storefront = document.getElementById('create-def-storefront').checked;
+
+            if (!name) {
+                showCreateAlert('error', 'Vui lòng nhập Tên Metaobject (Name)!');
+                document.getElementById('create-def-name').focus();
+                return;
+            }
+
+            if (!type) {
+                showCreateAlert('error', 'Vui lòng nhập Mã Type (Handle)!');
+                document.getElementById('create-def-type').focus();
+                return;
+            }
+
+            // Thu thập fields
+            const fieldRows = document.querySelectorAll('#create-fields-list > div');
+            if (fieldRows.length === 0) {
+                showCreateAlert('error', 'Vui lòng thêm ít nhất 1 trường dữ liệu cho Metaobject!');
+                return;
+            }
+
+            const fields = [];
+            let hasError = false;
+
+            fieldRows.forEach(row => {
+                const rowId = row.id.replace('create-field-row-', '');
+                const fn = document.getElementById(`field-name-${rowId}`)?.value.trim() || '';
+                const fk = document.getElementById(`field-key-${rowId}`)?.value.trim() || '';
+                const ft = document.getElementById(`field-type-${rowId}`)?.value.trim() || 'single_line_text_field';
+                const fr = document.getElementById(`field-req-${rowId}`)?.checked || false;
+
+                if (!fk) {
+                    showCreateAlert('error', 'Mỗi trường dữ liệu cần có Tên Key hợp lệ!');
+                    hasError = true;
+                    return;
+                }
+
+                fields.push({
+                    name: fn || fk,
+                    key: fk,
+                    type: ft,
+                    required: fr
+                });
+            });
+
+            if (hasError) return;
+
+            // Bắt đầu gửi tạo
+            const btn = document.getElementById('btn-submit-create');
+            const icon = document.getElementById('btn-create-icon');
+            const text = document.getElementById('btn-create-text');
+
+            btn.disabled = true;
+            icon.innerHTML = '<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
+            text.textContent = 'Đang tạo trên Shopify...';
+            hideCreateAlert();
+
+            try {
+                const response = await fetch('/api/metaobjects/definitions/create', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        type: type,
+                        description: desc,
+                        storefront: storefront,
+                        fields: fields
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    showCreateAlert('success', 'Đã tạo mới Metaobject thành công trên Shopify Store!');
+                    text.textContent = 'Đã tạo!';
+                    btn.className = 'inline-flex items-center gap-1.5 px-5 py-2 bg-emerald-600 text-white text-xs font-bold rounded-lg shadow-sm transition-all';
+                    icon.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
+
+                    // Tải lại trang sau 1.2s để load Metaobject mới vào danh sách
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1200);
+                } else {
+                    const errMsg = result.message || (result.errors ? result.errors.map(e => e.message).join('; ') : 'Có lỗi xảy ra khi tạo Metaobject trên Shopify.');
+                    showCreateAlert('error', `Không thể tạo: ${errMsg}`);
+                    resetCreateButton();
+                }
+            } catch (err) {
+                console.error('Lỗi kết nối khi tạo metaobject definition:', err);
+                showCreateAlert('error', `Lỗi kết nối máy chủ: ${err.message}`);
+                resetCreateButton();
+            }
+        }
+
+        // Live Search Filter
+        const searchInput = document.getElementById('search-input');
+        const clearBtn = document.getElementById('clear-search-btn');
+
+        searchInput.addEventListener('input', function(e) {
+            const val = e.target.value.trim().toLowerCase();
+            clearBtn.classList.toggle('hidden', val.length === 0);
+
+            let visible = 0;
+            document.querySelectorAll('.metaobject-row').forEach(row => {
+                const type = row.dataset.type;
+                const def = definitionsMap[type];
+                if (!def) return;
+
+                let match = false;
+                if (
+                    def.name.toLowerCase().includes(val) ||
+                    def.type.toLowerCase().includes(val) ||
+                    (def.description && def.description.toLowerCase().includes(val))
+                ) {
+                    match = true;
+                } else if (def.fieldDefinitions) {
+                    for (const f of def.fieldDefinitions) {
+                        if (
+                            (f.name && f.name.toLowerCase().includes(val)) ||
+                            (f.key && f.key.toLowerCase().includes(val))
+                        ) {
+                            match = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (match) {
+                    row.style.display = '';
+                    visible++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            document.getElementById('visible-count').textContent = visible;
+        });
+
+        function clearSearch() {
+            searchInput.value = '';
+            searchInput.dispatchEvent(new Event('input'));
+            searchInput.focus();
+        }
+
+        // Tự động chọn dòng đầu tiên khi tải trang
+        window.addEventListener('DOMContentLoaded', () => {
+            if (definitionsData.length > 0) {
+                selectMetaobjectRow(definitionsData[0].type);
+            }
+        });
+    </script>
+
+    <!-- Drawer component -->
+    {% include "drawer.html" %}
+</body>
+</html>

@@ -4597,3 +4597,512 @@ async def delete_blog_post(article_id: str, request: Request):
         print("Delete error:", e)
         return JSONResponse({"success": False, "message": str(e)})
 
+
+
+def get_metaobject_definitions_data():
+    from datetime import datetime
+    query = """
+    query getMetaobjectDefinitions {
+      metaobjectDefinitions(first: 50) {
+        edges {
+          node {
+            id
+            name
+            type
+            description
+            metaobjectsCount
+            fieldDefinitions {
+              name
+              key
+              type {
+                name
+              }
+              description
+              required
+            }
+            access {
+              storefront
+            }
+          }
+        }
+      }
+    }
+    """
+    try:
+        res = requests.post(GRAPHQL_URL, json={"query": query}, headers=HEADERS)
+        res.raise_for_status()
+        data = res.json()
+        if "errors" in data:
+            print("GraphQL error in get_metaobject_definitions:", data["errors"])
+            return []
+        edges = data.get("data", {}).get("metaobjectDefinitions", {}).get("edges", [])
+        defs = [e["node"] for e in edges]
+        
+        # Process defs
+        for d in defs:
+            d["numeric_id"] = d["id"].split("/")[-1]
+            d["is_custom"] = not d["type"].startswith("shopify--")
+            d["added_by"] = "Shopify Web" if d["is_custom"] else "Shopify Standard"
+            d["storefront_access"] = d.get("access", {}).get("storefront", "NONE")
+            d["fields_count"] = len(d.get("fieldDefinitions", []))
+            d["entries"] = []
+
+        # Batch query entries
+        active_defs = [d for d in defs if d.get("metaobjectsCount", 0) > 0]
+        if active_defs:
+            query_parts = []
+            alias_map = {}
+            for i, d in enumerate(active_defs):
+                alias = f"mo_{i}"
+                alias_map[alias] = d
+                safe_type = d["type"].replace('"', '\\"')
+                query_parts.append(f"""
+                {alias}: metaobjects(type: "{safe_type}", first: 50) {{
+                  edges {{
+                    node {{
+                      id
+                      handle
+                      type
+                      displayName
+                      updatedAt
+                      fields {{
+                        key
+                        value
+                        type
+                      }}
+                    }}
+                  }}
+                }}
+                """)
+            batched_query = "query {\n" + "\n".join(query_parts) + "\n}"
+            try:
+                res2 = requests.post(GRAPHQL_URL, json={"query": batched_query}, headers=HEADERS)
+                res2.raise_for_status()
+                data2 = res2.json()
+                for alias, result in data2.get("data", {}).items():
+                    d = alias_map.get(alias)
+                    if d:
+                        for e in result.get("edges", []):
+                            entry = e["node"]
+                            entry["numeric_id"] = entry["id"].split("/")[-1]
+                            raw_time = entry.get("updatedAt", "")
+                            if raw_time:
+                                try:
+                                    dt = datetime.fromisoformat(raw_time.replace("Z", "+00:00"))
+                                    entry["updatedAt_fmt"] = dt.strftime("%d/%m/%Y %H:%M")
+                                except Exception:
+                                    entry["updatedAt_fmt"] = raw_time
+                            else:
+                                entry["updatedAt_fmt"] = ""
+                            d["entries"].append(entry)
+            except Exception as e:
+                print("Error in batched metaobjects query:", e)
+
+        defs.sort(key=lambda d: d.get("name", "").lower())
+        return defs
+    except Exception as e:
+        print("Error fetching metaobject definitions:", e)
+        return []
+
+
+def get_metaobject_definitions():
+    defs = get_metaobject_definitions_data()
+    return defs
+
+
+@app.get("/metaobjects", response_class=HTMLResponse)
+async def metaobjects_page(request: Request, tab: str = "custom", search: str = ""):
+    all_defs = get_metaobject_definitions_data()
+    
+    # Custom definitions (14 definitions matching Shopify Admin settings)
+    custom_defs = [d for d in all_defs if d.get("is_custom")]
+    standard_defs = [d for d in all_defs if not d.get("is_custom")]
+    
+    if tab == "all":
+        display_defs = list(all_defs)
+    elif tab == "standard":
+        display_defs = list(standard_defs)
+    else:
+        tab = "custom"
+        display_defs = list(custom_defs)
+
+    if search and search.strip():
+        q = search.strip().lower()
+        display_defs = [
+            d for d in display_defs
+            if q in d.get("name", "").lower()
+            or q in d.get("type", "").lower()
+            or q in (d.get("description") or "").lower()
+            or any(q in f.get("name", "").lower() or q in f.get("key", "").lower() for f in d.get("fieldDefinitions", []))
+            or any(q in e.get("displayName", "").lower() or q in e.get("handle", "").lower() for e in d.get("entries", []))
+        ]
+
+    total_custom = len(custom_defs)
+    total_all = len(all_defs)
+    total_entries = sum(len(d.get("entries", [])) for d in all_defs)
+
+    return templates.TemplateResponse(request=request, name="metaobjects.html", context={
+        "request": request,
+        "definitions": display_defs,
+        "all_definitions": all_defs,
+        "current_tab": tab,
+        "search": search,
+        "total_custom": total_custom,
+        "total_all": total_all,
+        "total_entries": total_entries,
+        "total_displayed": len(display_defs),
+        "shopify_shop": SHOPIFY_SHOP
+    })
+
+
+@app.post("/api/metaobjects/update")
+async def update_metaobject_entry(request: Request):
+    try:
+        body = await request.json()
+        entry_id = body.get("id")
+        fields = body.get("fields", [])
+        
+        if not entry_id:
+            return JSONResponse({"success": False, "message": "Thiếu ID bản ghi metaobject"}, status_code=400)
+            
+        if not str(entry_id).startswith("gid://shopify/Metaobject/"):
+            gid = f"gid://shopify/Metaobject/{entry_id}"
+        else:
+            gid = str(entry_id)
+            
+        cleaned_fields = []
+        for f in fields:
+            k = f.get("key")
+            v = f.get("value")
+            if k is not None and v is not None:
+                cleaned_fields.append({"key": str(k), "value": str(v)})
+                
+        mutation = """
+        mutation updateMetaobject($id: ID!, $metaobject: MetaobjectUpdateInput!) {
+          metaobjectUpdate(id: $id, metaobject: $metaobject) {
+            metaobject {
+              id
+              handle
+              displayName
+              updatedAt
+              fields {
+                key
+                value
+                type
+              }
+            }
+            userErrors {
+              field
+              message
+              code
+            }
+          }
+        }
+        """
+        
+        res = requests.post(GRAPHQL_URL, json={
+            "query": mutation,
+            "variables": {
+                "id": gid,
+                "metaobject": {
+                    "fields": cleaned_fields
+                }
+            }
+        }, headers=HEADERS)
+        res.raise_for_status()
+        data = res.json()
+        
+        if "errors" in data:
+            return JSONResponse({"success": False, "message": str(data["errors"])}, status_code=400)
+            
+        update_res = data.get("data", {}).get("metaobjectUpdate", {})
+        user_errors = update_res.get("userErrors", [])
+        if user_errors:
+            error_msgs = [e.get("message", "Lỗi không xác định") for e in user_errors]
+            return JSONResponse({"success": False, "message": "; ".join(error_msgs), "errors": user_errors}, status_code=400)
+            
+        updated_obj = update_res.get("metaobject")
+        return JSONResponse({"success": True, "message": "Đã lưu bản ghi thành công!", "metaobject": updated_obj})
+    except Exception as e:
+        return JSONResponse({"success": False, "message": f"Lỗi hệ thống: {str(e)}"}, status_code=500)
+
+
+@app.post("/api/metaobjects/definitions/create")
+async def create_metaobject_definition(request: Request):
+    try:
+        body = await request.json()
+        name = (body.get("name") or "").strip()
+        type_key = (body.get("type") or "").strip()
+        description = (body.get("description") or "").strip()
+        storefront = body.get("storefront", True)
+        fields = body.get("fields", [])
+        
+        if not name:
+            return JSONResponse({"success": False, "message": "Vui lòng nhập Tên Metaobject (Name)."}, status_code=400)
+            
+        if not type_key:
+            clean_name = re.sub(r'[^a-zA-Z0-9\s]', '', name).lower().strip()
+            type_key = re.sub(r'\s+', '_', clean_name)
+            
+        # Chuẩn hóa type_key: chỉ chữ thường, số và dấu gạch dưới
+        type_key = re.sub(r'[^a-z0-9_]', '_', type_key.lower()).strip('_')
+        if not type_key:
+            return JSONResponse({"success": False, "message": "Mã định dạng (Type) không hợp lệ."}, status_code=400)
+
+        cleaned_field_definitions = []
+        for f in fields:
+            k = (f.get("key") or "").strip().lower()
+            k = re.sub(r'[^a-z0-9_]', '_', k).strip('_')
+            fn = (f.get("name") or "").strip() or k
+            ft = (f.get("type") or "single_line_text_field").strip()
+            req = bool(f.get("required", False))
+            desc = (f.get("description") or "").strip()
+            
+            if k:
+                field_obj = {
+                    "key": k,
+                    "name": fn,
+                    "type": ft,
+                    "required": req
+                }
+                if desc:
+                    field_obj["description"] = desc
+                cleaned_field_definitions.append(field_obj)
+                
+        if not cleaned_field_definitions:
+            return JSONResponse({"success": False, "message": "Metaobject cần ít nhất 1 trường dữ liệu (Field) có key hợp lệ."}, status_code=400)
+            
+        mutation = """
+        mutation createDefinition($definition: MetaobjectDefinitionCreateInput!) {
+          metaobjectDefinitionCreate(definition: $definition) {
+            metaobjectDefinition {
+              id
+              name
+              type
+              metaobjectsCount
+            }
+            userErrors {
+              field
+              message
+              code
+            }
+          }
+        }
+        """
+        
+        definition_input = {
+            "name": name,
+            "type": type_key,
+            "access": {
+                "storefront": "PUBLIC_READ" if storefront else "NONE"
+            },
+            "fieldDefinitions": cleaned_field_definitions
+        }
+        if description:
+            definition_input["description"] = description
+            
+        text_field = next((f["key"] for f in cleaned_field_definitions if "text" in f["type"]), None)
+        if text_field:
+            definition_input["displayNameKey"] = text_field
+        elif cleaned_field_definitions:
+            definition_input["displayNameKey"] = cleaned_field_definitions[0]["key"]
+
+        res = requests.post(GRAPHQL_URL, json={
+            "query": mutation,
+            "variables": {
+                "definition": definition_input
+            }
+        }, headers=HEADERS)
+        res.raise_for_status()
+        data = res.json()
+        
+        if "errors" in data:
+            return JSONResponse({"success": False, "message": str(data["errors"])}, status_code=400)
+            
+        create_res = data.get("data", {}).get("metaobjectDefinitionCreate", {})
+        user_errors = create_res.get("userErrors", [])
+        if user_errors:
+            error_msgs = [e.get("message", "Lỗi không xác định") for e in user_errors]
+            return JSONResponse({"success": False, "message": "; ".join(error_msgs), "errors": user_errors}, status_code=400)
+            
+        created_def = create_res.get("metaobjectDefinition")
+        return JSONResponse({"success": True, "message": "Đã tạo mới Metaobject thành công trên Shopify!", "definition": created_def})
+    except Exception as e:
+        return JSONResponse({"success": False, "message": f"Lỗi hệ thống: {str(e)}"}, status_code=500)
+
+
+TYPE_TO_HANDLE = {
+    "CONTACT_INFORMATION": "contact-information",
+    "LEGAL_NOTICE": "legal-notice",
+    "PRIVACY_POLICY": "privacy-policy",
+    "REFUND_POLICY": "refund-policy",
+    "SHIPPING_POLICY": "shipping-policy",
+    "TERMS_OF_SERVICE": "terms-of-service",
+    "TERMS_OF_SALE": "terms-of-sale",
+    "SUBSCRIPTION_POLICY": "subscription-policy"
+}
+
+def get_store_policies():
+    query = """
+    query {
+      shop {
+        shopPolicies {
+          id
+          title
+          body
+          type
+          url
+          createdAt
+          updatedAt
+        }
+      }
+    }
+    """
+    res = requests.post(GRAPHQL_URL, json={"query": query}, headers=HEADERS)
+    res.raise_for_status()
+    data = res.json()
+    raw_policies = data.get("data", {}).get("shop", {}).get("shopPolicies", [])
+
+    rest_url = f"https://{SHOPIFY_SHOP}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/policies.json"
+    rest_map = {}
+    try:
+        r_rest = requests.get(rest_url, headers=HEADERS, timeout=10)
+        if r_rest.status_code == 200:
+            for p in r_rest.json().get("policies", []):
+                h = p.get("handle")
+                t = (p.get("title") or "").strip().lower()
+                if h:
+                    rest_map[h] = p
+                if t:
+                    rest_map[t] = p
+    except Exception as e:
+        print(f"Error fetching REST policies: {e}")
+
+    policies = []
+    for item in raw_policies:
+        p_type = item.get("type", "")
+        handle = TYPE_TO_HANDLE.get(p_type, "")
+        title = item.get("title", "")
+        body = item.get("body", "") or ""
+
+        rest_info = rest_map.get(handle) or rest_map.get(title.lower()) or {}
+        storefront_url = rest_info.get("url")
+        if not storefront_url and handle:
+            storefront_url = f"https://{SHOPIFY_SHOP}.myshopify.com/policies/{handle}"
+            
+        actual_handle = rest_info.get("handle") or handle
+
+        updated_at = item.get("updatedAt", "")
+        formatted_date = ""
+        if updated_at:
+            try:
+                dt = datetime.fromisoformat(updated_at.replace("Z", "+00:00"))
+                formatted_date = dt.strftime("%d/%m/%Y %H:%M")
+            except Exception:
+                formatted_date = updated_at[:16].replace("T", " ")
+
+        policies.append({
+            "id": item.get("id"),
+            "title": title,
+            "type": p_type,
+            "handle": actual_handle,
+            "body": body,
+            "char_count": len(body),
+            "word_count": len(body.split()),
+            "url": item.get("url"),
+            "storefront_url": storefront_url,
+            "created_at": item.get("createdAt"),
+            "updated_at": updated_at,
+            "formatted_updated_at": formatted_date
+        })
+
+    # Sort policies by standard order if desired, or keep Shopify order
+    return policies
+
+
+@app.get("/policies", response_class=HTMLResponse)
+async def policies_page(request: Request):
+    try:
+        policies = get_store_policies()
+        return templates.TemplateResponse(request=request, name="policies.html", context={
+            "request": request,
+            "policies": policies,
+            "shop_name": SHOPIFY_SHOP
+        })
+    except Exception as e:
+        return HTMLResponse(f"Lỗi tải danh sách chính sách (Policies): {str(e)}", status_code=500)
+
+
+@app.get("/api/policies")
+async def api_get_policies():
+    try:
+        policies = get_store_policies()
+        return JSONResponse({"success": True, "policies": policies})
+    except Exception as e:
+        return JSONResponse({"success": False, "message": str(e)}, status_code=500)
+
+
+class PolicyUpdateRequest(BaseModel):
+    type: str
+    body: str
+
+
+@app.post("/api/policies/update")
+async def api_update_policy(payload: PolicyUpdateRequest):
+    try:
+        p_type = payload.type.strip()
+        body = payload.body
+
+        if not p_type:
+            return JSONResponse({"success": False, "message": "Mã loại chính sách (type) là bắt buộc."}, status_code=400)
+
+        mutation = """
+        mutation updateShopPolicy($shopPolicy: ShopPolicyInput!) {
+          shopPolicyUpdate(shopPolicy: $shopPolicy) {
+            shopPolicy {
+              id
+              title
+              type
+              body
+              url
+              updatedAt
+            }
+            userErrors {
+              field
+              message
+            }
+          }
+        }
+        """
+
+        res = requests.post(GRAPHQL_URL, json={
+            "query": mutation,
+            "variables": {
+                "shopPolicy": {
+                    "type": p_type,
+                    "body": body
+                }
+            }
+        }, headers=HEADERS)
+        res.raise_for_status()
+        data = res.json()
+
+        if "errors" in data:
+            return JSONResponse({"success": False, "message": str(data["errors"])}, status_code=400)
+
+        update_res = data.get("data", {}).get("shopPolicyUpdate", {})
+        user_errors = update_res.get("userErrors", [])
+        if user_errors:
+            error_msgs = [e.get("message", "Lỗi cập nhật") for e in user_errors]
+            return JSONResponse({"success": False, "message": "; ".join(error_msgs), "errors": user_errors}, status_code=400)
+
+        updated_policy = update_res.get("shopPolicy")
+        return JSONResponse({
+            "success": True,
+            "message": f"Đã lưu chính sách '{updated_policy.get('title')}' thành công vào store!",
+            "policy": updated_policy
+        })
+    except Exception as e:
+        return JSONResponse({"success": False, "message": f"Lỗi hệ thống: {str(e)}"}, status_code=500)
+
+

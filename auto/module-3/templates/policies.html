@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Quản lý Chính sách Cửa hàng (Policies)</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <link rel="icon" type="image/png" sizes="96x96" href="/static/favicon-96x96.png">
+    <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+    <link rel="manifest" href="/static/site.webmanifest">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS v4 CDN -->
+    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .code-font {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        /* Single Active Row Indicator - Màu xanh tím (Indigo / Violet) */
+        .policy-row {
+            cursor: pointer;
+            transition: background-color 0.15s ease, border-color 0.15s ease;
+        }
+        .policy-row:hover {
+            background-color: #f8fafc;
+        }
+        .policy-row.active-row {
+            background-color: #f0f3ff !important;
+            border-left: 4px solid #4f46e5 !important;
+        }
+        .policy-row.active-row .row-stt-badge {
+            background-color: #4f46e5 !important;
+            color: #ffffff !important;
+            font-weight: 700 !important;
+            box-shadow: 0 1px 3px rgba(79, 70, 229, 0.3);
+        }
+        .policy-row.active-row .row-indicator-dot {
+            opacity: 1 !important;
+            transform: scale(1) !important;
+        }
+        .policy-row .row-indicator-dot {
+            opacity: 0;
+            transform: scale(0.6);
+            transition: opacity 0.15s ease, transform 0.15s ease;
+        }
+        /* Preview container styling */
+        .policy-preview-content h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.75rem; color: #111827; }
+        .policy-preview-content h2 { font-size: 1.25rem; font-weight: 600; margin-top: 1.25rem; margin-bottom: 0.5rem; color: #1f2937; }
+        .policy-preview-content h3 { font-size: 1.1rem; font-weight: 600; margin-top: 1rem; margin-bottom: 0.5rem; color: #374151; }
+        .policy-preview-content p { margin-bottom: 0.75rem; line-height: 1.625; color: #4b5563; }
+        .policy-preview-content ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 0.75rem; color: #4b5563; }
+        .policy-preview-content ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 0.75rem; color: #4b5563; }
+        .policy-preview-content li { margin-bottom: 0.25rem; }
+        .policy-preview-content a { color: #4f46e5; text-decoration: underline; }
+        .policy-preview-content table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; font-size: 0.875rem; }
+        .policy-preview-content th, .policy-preview-content td { border: 1px solid #e5e7eb; padding: 0.5rem 0.75rem; text-align: left; }
+        .policy-preview-content th { background-color: #f9fafb; font-weight: 600; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
+        <div class="mx-auto px-4 sm:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo -->
+                <div class="flex-shrink-0">
+                    <a target="_blank" rel="noopener noreferrer" href="/" class="flex items-center gap-2 text-indigo-600 font-bold text-xl hover:text-indigo-700 transition-colors">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                        <span>Shopify Admin Manager</span>
+                    </a>
+                </div>
+                <!-- Nav Links -->
+                <nav class="flex items-center gap-6">
+                    <a target="_blank" rel="noopener noreferrer" href="/" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Sản phẩm</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/collections" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Collections</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/metaobjects" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Meta Objects</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/create" class="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">Tạo sản phẩm</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/edit-variants" class="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">Sửa hàng loạt</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/blogs" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path></svg>Blog</a>
+                    <!-- Nút Policy Active -->
+                    <a target="_blank" rel="noopener noreferrer" href="/policies" class="text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 pb-0.5 flex items-center gap-1">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                        <span>Policy</span>
+                    </a>
+                    <button id="drawer-toggle-btn" type="button" onclick="toggleDrawer()" class="p-1.5 text-gray-600 hover:text-indigo-600 hover:bg-gray-100 rounded-lg transition-colors flex items-center justify-center focus:outline-none" title="Menu tiện ích">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 max-w-[104rem] w-full mx-auto px-4 sm:px-8 py-8 space-y-6">
+        <!-- Toast Notification Alert -->
+        <div id="toast-alert" class="hidden transition-all duration-300 transform translate-y-[-10px] fixed top-20 right-8 z-50 max-w-md p-4 rounded-xl shadow-xl flex items-center gap-3 border">
+            <div id="toast-icon" class="flex-shrink-0"></div>
+            <div class="text-sm font-medium flex-1" id="toast-message"></div>
+            <button type="button" onclick="hideToast()" class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
+        </div>
+
+        <!-- Top Header & Actions -->
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+                <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-indigo-600 mb-1">
+                    <span>CỬA HÀNG: {{ shop_name | upper }}</span>
+                    <span>•</span>
+                    <span>PHÁP LÝ & CHÍNH SÁCH (POLICIES)</span>
+                </div>
+                <h1 class="text-2xl font-bold text-gray-900 flex items-center gap-2.5">
+                    <span>Quản lý Chính sách Cửa hàng</span>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800">
+                        {{ policies | length }} chính sách
+                    </span>
+                </h1>
+                <p class="text-sm text-gray-500 mt-1">
+                    Danh sách các chính sách quy định của store. Nhấn vào bất kỳ hàng nào để xem thông tin và chỉnh sửa nội dung chính sách.
+                </p>
+            </div>
+            
+            <div class="flex items-center gap-3 flex-wrap">
+                <!-- Nút mở Shopify Legal Settings -->
+                <a target="_blank" rel="noopener noreferrer" href="https://admin.shopify.com/store/{{ shop_name }}/settings/legal" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-semibold rounded-xl shadow-xs transition-colors">
+                    <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                    <span>Mở Shopify Policies</span>
+                </a>
+
+                <!-- Nút Tải lại -->
+                <button type="button" onclick="window.location.reload()" class="inline-flex items-center justify-center p-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-600 rounded-xl shadow-xs transition-colors" title="Tải lại trang">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div class="flex items-center gap-2 text-sm text-gray-600">
+                <span class="font-medium text-gray-700">Hiển thị:</span>
+                <span class="px-2.5 py-1 bg-indigo-50 text-indigo-700 font-semibold rounded-lg text-xs">
+                    Tất cả ({{ policies | length }})
+                </span>
+                <span class="text-xs text-gray-400">| Nhấn vào hàng bất kỳ để chỉnh sửa</span>
+            </div>
+            
+            <div class="relative w-full sm:w-80">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </div>
+                <input type="text" id="policy-search" oninput="filterPolicies()" placeholder="Tìm kiếm chính sách theo tên, loại, slug..." class="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all">
+            </div>
+        </div>
+
+        <!-- Policies Table -->
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse" id="policies-table">
+                    <thead>
+                        <tr class="bg-gray-50/80 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                            <th class="py-3.5 px-4 text-center w-16">STT</th>
+                            <th class="py-3.5 px-6">Tên Chính Sách (Title)</th>
+                            <th class="py-3.5 px-4">Loại (Type)</th>
+                            <th class="py-3.5 px-4">Đường Dẫn (Handle)</th>
+                            <th class="py-3.5 px-4 text-right">Độ Dài Nội Dung</th>
+                            <th class="py-3.5 px-4">Cập Nhật Lần Cuối</th>
+                            <th class="py-3.5 px-6 text-center w-36">Thao Tác</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200 text-sm">
+                        {% for p in policies %}
+                        <tr class="policy-row group" 
+                            id="policy-row-{{ loop.index }}"
+                            data-type="{{ p.type }}"
+                            data-title="{{ p.title }}"
+                            data-handle="{{ p.handle }}"
+                            data-stt="{{ loop.index }}"
+                            onclick="selectPolicyRow({{ loop.index }})">
+                            
+                            <!-- STT với Indicator Chấm tròn màu xanh tím -->
+                            <td class="py-4 px-4 text-center whitespace-nowrap">
+                                <div class="inline-flex items-center justify-center gap-1">
+                                    <span class="row-indicator-dot w-2 h-2 rounded-full bg-indigo-600"></span>
+                                    <span class="row-stt-badge w-7 h-7 rounded-full bg-gray-100 text-gray-700 font-semibold text-xs inline-flex items-center justify-center transition-all">
+                                        {{ loop.index }}
+                                    </span>
+                                </div>
+                            </td>
+
+                            <!-- Title -->
+                            <td class="py-4 px-6 whitespace-nowrap">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0 group-hover:bg-indigo-100 transition-colors">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                    </div>
+                                    <div>
+                                        <div class="font-bold text-gray-900 group-hover:text-indigo-600 transition-colors text-base flex items-center gap-2">
+                                            <span>{{ p.title }}</span>
+                                            {% if p.char_count > 0 %}
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                                Đang hoạt động
+                                            </span>
+                                            {% else %}
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                                                Chưa có nội dung
+                                            </span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
+                                            <span>ID:</span>
+                                            <span class="code-font">{{ p.id }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+
+                            <!-- Type -->
+                            <td class="py-4 px-4 whitespace-nowrap">
+                                <span class="code-font px-2.5 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200">
+                                    {{ p.type }}
+                                </span>
+                            </td>
+
+                            <!-- Handle & URL -->
+                            <td class="py-4 px-4 whitespace-nowrap">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="code-font text-xs text-gray-600 bg-gray-50 px-2 py-0.5 rounded border border-gray-200">
+                                        /policies/{{ p.handle }}
+                                    </span>
+                                </div>
+                            </td>
+
+                            <!-- Độ dài nội dung -->
+                            <td class="py-4 px-4 whitespace-nowrap text-right">
+                                <div class="font-semibold text-gray-900">{{ "{:,}".format(p.char_count) }} <span class="text-xs font-normal text-gray-500">ký tự</span></div>
+                                <div class="text-xs text-gray-400">{{ "{:,}".format(p.word_count) }} từ</div>
+                            </td>
+
+                            <!-- Cập nhật lần cuối -->
+                            <td class="py-4 px-4 whitespace-nowrap">
+                                <div class="text-xs text-gray-700 font-medium">{{ p.formatted_updated_at or 'Chưa cập nhật' }}</div>
+                                <div class="text-[11px] text-gray-400">Shopify Cloud</div>
+                            </td>
+
+                            <!-- Thao tác -->
+                            <td class="py-4 px-6 text-center whitespace-nowrap" onclick="event.stopPropagation()">
+                                <div class="flex items-center justify-center gap-2">
+                                    <!-- Nút Chỉnh sửa -->
+                                    <button type="button" 
+                                        onclick="openPolicyEditModal({{ loop.index }})" 
+                                        class="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold text-xs rounded-lg transition-colors"
+                                        title="Chỉnh sửa nội dung policy">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                        <span>Sửa</span>
+                                    </button>
+
+                                    <!-- Nút Xem Storefront Link -->
+                                    {% if p.storefront_url %}
+                                    <a target="_blank" rel="noopener noreferrer" href="{{ p.storefront_url }}" class="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-gray-100 rounded-lg transition-colors" title="Xem trên website cửa hàng">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="py-12 text-center text-gray-500">
+                                <div class="flex flex-col items-center justify-center">
+                                    <svg class="w-12 h-12 text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                    <p class="text-base font-semibold text-gray-700">Không tìm thấy chính sách nào trên store</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal Chỉnh Sửa Policy -->
+    <div id="policy-modal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-xs transition-opacity" onclick="closePolicyModal()"></div>
+
+        <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-6">
+            <div class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-2xl transition-all w-full max-w-5xl border border-gray-200 flex flex-col max-h-[90vh]">
+                
+                <!-- Modal Header -->
+                <div class="px-6 py-4 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center flex-shrink-0">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2" id="modal-policy-title">
+                                Chỉnh sửa Chính sách
+                            </h3>
+                            <div class="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
+                                <span>Mã Loại:</span>
+                                <span class="code-font font-semibold text-indigo-600" id="modal-policy-type">TYPE</span>
+                                <span>•</span>
+                                <a id="modal-policy-link" href="#" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline inline-flex items-center gap-0.5">
+                                    <span>Xem trên store</span>
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button type="button" onclick="closePolicyModal()" class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-xl transition-colors focus:outline-none">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+
+                <!-- Modal Sub-header & Tabs -->
+                <div class="px-6 py-2.5 bg-white border-b border-gray-100 flex items-center justify-between flex-wrap gap-2 flex-shrink-0">
+                    <!-- Tabs -->
+                    <div class="flex items-center gap-2">
+                        <button type="button" id="tab-btn-editor" onclick="switchPolicyTab('editor')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 transition-colors flex items-center gap-1.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+                            <span>Soạn thảo HTML / Nội dung</span>
+                        </button>
+                        <button type="button" id="tab-btn-preview" onclick="switchPolicyTab('preview')" class="px-3.5 py-1.5 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors flex items-center gap-1.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                            <span>Xem trước (Preview)</span>
+                        </button>
+                    </div>
+
+                    <!-- Statistics & Shortcuts -->
+                    <div class="flex items-center gap-3 text-xs text-gray-500">
+                        <span id="modal-char-counter" class="font-medium text-gray-700">0 ký tự</span>
+                        <span>•</span>
+                        <span id="modal-word-counter">0 từ</span>
+                    </div>
+                </div>
+
+                <!-- Modal Body (Scrollable) -->
+                <div class="p-6 flex-1 overflow-y-auto bg-gray-50/50">
+                    <!-- Tab 1: Editor -->
+                    <div id="policy-editor-panel" class="space-y-3">
+                        <div class="flex items-center justify-between text-xs text-gray-500">
+                            <label for="modal-policy-body" class="font-semibold text-gray-700">Nội dung Chính sách (HTML hoặc Văn bản thuần):</label>
+                            <span class="text-gray-400">Shopify hỗ trợ đầy đủ các thẻ HTML: &lt;p&gt;, &lt;h2&gt;, &lt;ul&gt;, &lt;strong&gt;,...</span>
+                        </div>
+                        <textarea id="modal-policy-body" 
+                            rows="18" 
+                            oninput="updatePolicyCounters()"
+                            placeholder="Nhập nội dung chính sách tại đây..." 
+                            class="w-full p-4 border border-gray-300 rounded-xl code-font text-xs leading-relaxed text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-y shadow-inner"></textarea>
+                    </div>
+
+                    <!-- Tab 2: Live Preview -->
+                    <div id="policy-preview-panel" class="hidden">
+                        <div class="p-6 bg-white rounded-xl border border-gray-200 shadow-xs policy-preview-content min-h-[350px] overflow-y-auto" id="modal-policy-preview">
+                            <!-- Rendered HTML will be injected here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between flex-shrink-0">
+                    <div class="text-xs text-gray-500">
+                        Nội dung mới sẽ được lưu trực tiếp vào Shopify Store.
+                    </div>
+                    
+                    <div class="flex items-center gap-3">
+                        <button type="button" onclick="closePolicyModal()" class="px-4 py-2 bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 text-sm font-semibold rounded-xl transition-colors">
+                            Hủy
+                        </button>
+                        
+                        <button type="button" id="btn-save-policy" onclick="savePolicyContent()" class="inline-flex items-center gap-2 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-sm font-bold rounded-xl shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <svg id="btn-save-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+                            <svg id="btn-save-spinner" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white hidden" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span id="btn-save-text">Save</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include Drawer -->
+    {% include 'drawer.html' %}
+
+    <!-- Dữ liệu policies dạng JSON an toàn -->
+    <script>
+        const POLICIES_DATA = {{ policies | tojson }};
+        let currentSelectedSTT = null;
+        let activePolicy = null;
+
+        // 1. Khi nhấn vào 1 row: Hiện indicator cho row đó, ẩn indicator của row khác đi, và mở popup chỉnh sửa
+        function selectPolicyRow(stt) {
+            // Bỏ active ở tất cả các row
+            document.querySelectorAll('.policy-row').forEach(row => {
+                row.classList.remove('active-row');
+            });
+
+            // Active row hiện tại
+            const targetRow = document.getElementById('policy-row-' + stt);
+            if (targetRow) {
+                targetRow.classList.add('active-row');
+            }
+            currentSelectedSTT = stt;
+
+            // Mở modal popup chỉnh sửa policy
+            openPolicyEditModal(stt);
+        }
+
+        // 2. Mở Modal Chỉnh Sửa
+        function openPolicyEditModal(stt) {
+            const policy = POLICIES_DATA[stt - 1];
+            if (!policy) return;
+
+            activePolicy = policy;
+
+            // Gắn dữ liệu vào modal
+            document.getElementById('modal-policy-title').textContent = 'Chỉnh sửa: ' + policy.title;
+            document.getElementById('modal-policy-type').textContent = policy.type;
+            
+            const linkEl = document.getElementById('modal-policy-link');
+            if (policy.storefront_url) {
+                linkEl.href = policy.storefront_url;
+                linkEl.style.display = 'inline-flex';
+            } else {
+                linkEl.style.display = 'none';
+            }
+
+            // Gán body vào textarea
+            const bodyEl = document.getElementById('modal-policy-body');
+            bodyEl.value = policy.body || '';
+
+            // Cập nhật thống kê ký tự
+            updatePolicyCounters();
+
+            // Mặc định về tab Editor
+            switchPolicyTab('editor');
+
+            // Mở modal
+            const modal = document.getElementById('policy-modal');
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+
+            // Đảm bảo row tương ứng được highlight
+            if (currentSelectedSTT !== stt) {
+                document.querySelectorAll('.policy-row').forEach(row => row.classList.remove('active-row'));
+                const targetRow = document.getElementById('policy-row-' + stt);
+                if (targetRow) targetRow.classList.add('active-row');
+                currentSelectedSTT = stt;
+            }
+        }
+
+        // 3. Đóng Modal
+        function closePolicyModal() {
+            const modal = document.getElementById('policy-modal');
+            modal.classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        // 4. Chuyển Tab trong Modal (Editor / Preview)
+        function switchPolicyTab(tab) {
+            const editorPanel = document.getElementById('policy-editor-panel');
+            const previewPanel = document.getElementById('policy-preview-panel');
+            const tabBtnEditor = document.getElementById('tab-btn-editor');
+            const tabBtnPreview = document.getElementById('tab-btn-preview');
+
+            if (tab === 'editor') {
+                editorPanel.classList.remove('hidden');
+                previewPanel.classList.add('hidden');
+                
+                tabBtnEditor.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 transition-colors flex items-center gap-1.5';
+                tabBtnPreview.className = 'px-3.5 py-1.5 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors flex items-center gap-1.5';
+            } else {
+                editorPanel.classList.add('hidden');
+                previewPanel.classList.remove('hidden');
+
+                // Render preview
+                const bodyContent = document.getElementById('modal-policy-body').value;
+                document.getElementById('modal-policy-preview').innerHTML = bodyContent || '<p class="text-gray-400 italic">Chưa có nội dung chính sách để xem trước.</p>';
+
+                tabBtnPreview.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 transition-colors flex items-center gap-1.5';
+                tabBtnEditor.className = 'px-3.5 py-1.5 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors flex items-center gap-1.5';
+            }
+        }
+
+        // 5. Cập nhật số ký tự và từ
+        function updatePolicyCounters() {
+            const val = document.getElementById('modal-policy-body').value || '';
+            const charCount = val.length;
+            const wordCount = val.trim() ? val.trim().split(/\s+/).length : 0;
+            
+            document.getElementById('modal-char-counter').textContent = charCount.toLocaleString() + ' ký tự';
+            document.getElementById('modal-word-counter').textContent = wordCount.toLocaleString() + ' từ';
+        }
+
+        // 6. Lưu nội dung Policy lên Shopify qua backend
+        async function savePolicyContent() {
+            if (!activePolicy) return;
+
+            const saveBtn = document.getElementById('btn-save-policy');
+            const saveIcon = document.getElementById('btn-save-icon');
+            const saveSpinner = document.getElementById('btn-save-spinner');
+            const saveText = document.getElementById('btn-save-text');
+
+            const newBody = document.getElementById('modal-policy-body').value;
+
+            // Bật trạng thái Loading
+            saveBtn.disabled = true;
+            saveIcon.classList.add('hidden');
+            saveSpinner.classList.remove('hidden');
+            saveText.textContent = 'Đang lưu...';
+
+            try {
+                const response = await fetch('/api/policies/update', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        type: activePolicy.type,
+                        body: newBody
+                    })
+                });
+
+                const resData = await response.json();
+
+                if (response.ok && resData.success) {
+                    // Cập nhật bộ nhớ cục bộ
+                    activePolicy.body = newBody;
+                    activePolicy.char_count = newBody.length;
+                    activePolicy.word_count = newBody.trim() ? newBody.trim().split(/\s+/).length : 0;
+
+                    // Cập nhật lại UI bảng row
+                    const row = document.getElementById('policy-row-' + currentSelectedSTT);
+                    if (row) {
+                        const lenCell = row.querySelector('td:nth-child(5)');
+                        if (lenCell) {
+                            lenCell.innerHTML = `
+                                <div class="font-semibold text-gray-900">${activePolicy.char_count.toLocaleString()} <span class="text-xs font-normal text-gray-500">ký tự</span></div>
+                                <div class="text-xs text-gray-400">${activePolicy.word_count.toLocaleString()} từ</div>
+                            `;
+                        }
+                    }
+
+                    showToast('Đã lưu chính sách "' + activePolicy.title + '" thành công vào Store!', 'success');
+                    
+                    setTimeout(() => {
+                        closePolicyModal();
+                    }, 800);
+                } else {
+                    showToast(resData.message || 'Không thể lưu chính sách. Vui lòng thử lại!', 'error');
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('Lỗi kết nối máy chủ: ' + err.message, 'error');
+            } finally {
+                // Tắt trạng thái Loading
+                saveBtn.disabled = false;
+                saveIcon.classList.remove('hidden');
+                saveSpinner.classList.add('hidden');
+                saveText.textContent = 'Save';
+            }
+        }
+
+        // 7. Tìm kiếm & Lọc Policies
+        function filterPolicies() {
+            const query = (document.getElementById('policy-search').value || '').trim().toLowerCase();
+            const rows = document.querySelectorAll('.policy-row');
+
+            rows.forEach(row => {
+                const title = (row.getAttribute('data-title') || '').toLowerCase();
+                const type = (row.getAttribute('data-type') || '').toLowerCase();
+                const handle = (row.getAttribute('data-handle') || '').toLowerCase();
+
+                if (!query || title.includes(query) || type.includes(query) || handle.includes(query)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        // 8. Toast Helper
+        let toastTimeout;
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast-alert');
+            const toastMsg = document.getElementById('toast-message');
+            const toastIcon = document.getElementById('toast-icon');
+
+            clearTimeout(toastTimeout);
+
+            toastMsg.textContent = message;
+
+            if (type === 'success') {
+                toast.className = 'fixed top-20 right-8 z-50 max-w-md p-4 rounded-xl shadow-xl flex items-center gap-3 border bg-emerald-50 border-emerald-200 text-emerald-800 transition-all duration-300';
+                toastIcon.innerHTML = '<svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
+            } else {
+                toast.className = 'fixed top-20 right-8 z-50 max-w-md p-4 rounded-xl shadow-xl flex items-center gap-3 border bg-red-50 border-red-200 text-red-800 transition-all duration-300';
+                toastIcon.innerHTML = '<svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>';
+            }
+
+            toast.classList.remove('hidden');
+            toast.classList.remove('translate-y-[-10px]');
+            toast.classList.add('translate-y-0');
+
+            toastTimeout = setTimeout(() => {
+                hideToast();
+            }, 4000);
+        }
+
+        function hideToast() {
+            const toast = document.getElementById('toast-alert');
+            toast.classList.add('hidden');
+        }
+
+        // Lắng nghe phím ESC để đóng Modal
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closePolicyModal();
+            }
+        });
+    </script>
+</body>
+</html>
