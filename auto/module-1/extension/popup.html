@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wrydeco Amazon Scraper</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="brand">
+        <img src="icons/icon32.png" alt="Wrydeco Logo" class="brand-logo">
+        <div class="brand-info">
+          <h1 class="brand-title">Wrydeco Scraper</h1>
+          <span class="brand-sub">Amazon to Shopify Module-1</span>
+        </div>
+      </div>
+      <div id="statusBadge" class="status-badge status-ready">Sẵn sàng</div>
+    </header>
+
+    <!-- Mode Switcher -->
+    <section class="mode-section">
+      <div class="mode-tabs">
+        <button type="button" class="tab-btn active" data-mode="preset">
+          <span class="tab-icon">🏷️</span> Preset Tier Mode
+        </button>
+        <button type="button" class="tab-btn" data-mode="dynamic">
+          <span class="tab-icon">⚡</span> Dynamic Mode
+        </button>
+      </div>
+    </section>
+
+    <!-- Preset Tier Form -->
+    <div id="presetPanel" class="mode-panel active">
+      <div class="form-group">
+        <label for="furnitureType" class="form-label">Loại sản phẩm (Furniture Type):</label>
+        <select id="furnitureType" class="form-select">
+          <option value="corner">🪵 Corner Bookshelf (Kệ góc)</option>
+          <option value="standing">📚 Standing Bookshelf (Kệ đứng)</option>
+          <option value="floating">☁️ Floating Bookshelf (Kệ treo)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="priceTier" class="form-label">Phân cấp giá (Price Tier):</label>
+        <select id="priceTier" class="form-select">
+          <!-- Options dynamically updated by JS -->
+        </select>
+      </div>
+
+      <!-- Live Tier Preview -->
+      <div class="tier-preview-card" id="tierPreviewCard">
+        <div class="preview-header">Bảng kích thước & giá áp dụng:</div>
+        <ul class="preview-list" id="tierPreviewList">
+          <!-- Dynamic items -->
+        </ul>
+      </div>
+    </div>
+
+    <!-- Dynamic Mode Form -->
+    <div id="dynamicPanel" class="mode-panel">
+      <div class="info-callout">
+        <p><strong>Cào động từ Customization:</strong> Trích xuất tự động các tùy chọn từ form tùy biến của Amazon (hỗ trợ <code>#gc-iframe</code>), tính tổ hợp Cartesian, bỏ qua các trường ghi chú seller và tự động loại bỏ option mặc định không tăng giá.</p>
+      </div>
+
+      <div class="form-group">
+        <label for="priceRangeStrategy" class="form-label">Chiến lược xử lý khoảng giá:</label>
+        <select id="priceRangeStrategy" class="form-select">
+          <option value="error">Error (Dừng nếu gặp khoảng giá)</option>
+          <option value="min">Min (Lấy giá tối thiểu)</option>
+          <option value="max">Max (Lấy giá tối đa)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="timeoutMs" class="form-label">Thời gian chờ Customization (ms):</label>
+        <input type="number" id="timeoutMs" class="form-input" value="30000" min="5000" max="60000" step="5000">
+      </div>
+    </div>
+
+    <!-- Main Action Buttons -->
+    <div class="action-section">
+      <button type="button" id="btnScrape" class="btn btn-primary">
+        <span class="btn-spinner hidden" id="scrapeSpinner"></span>
+        <span class="btn-text" id="scrapeBtnText">🚀 Bắt đầu cào dữ liệu</span>
+      </button>
+
+      <div class="btn-row">
+        <button type="button" id="btnCopyJson" class="btn btn-secondary" disabled>
+          📋 Sao chép JSON
+        </button>
+        <button type="button" id="btnDownloadJson" class="btn btn-secondary" disabled>
+          💾 Tải config.prepare.json
+        </button>
+      </div>
+    </div>
+
+    <!-- Summary Stats Bar -->
+    <div id="summaryBar" class="summary-bar hidden">
+      <div class="stat-item">
+        <span class="stat-label">Tiêu đề:</span>
+        <span class="stat-val" id="statTitle">--</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Bullet points:</span>
+        <span class="stat-val" id="statBullets">0</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Ảnh gallery:</span>
+        <span class="stat-val" id="statImages">0</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Variants:</span>
+        <span class="stat-val" id="statVariants">0</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">A+ Rich:</span>
+        <span class="stat-val" id="statAplus">--</span>
+      </div>
+    </div>
+
+    <!-- Logs Box -->
+    <section class="log-section">
+      <div class="log-header">
+        <span class="log-title">Nhật ký tiến trình (Status Logs)</span>
+        <button type="button" id="btnClearLogs" class="btn-text-link">Xóa log</button>
+      </div>
+      <div id="logBox" class="log-box">
+        <div class="log-item log-info">
+          <span class="log-time">--:--:--</span>
+          <span class="log-msg">Sẵn sàng cào dữ liệu từ trang sản phẩm Amazon.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Collapsible JSON Preview -->
+    <details class="json-details" id="jsonDetails">
+      <summary class="json-summary">Xem chi tiết JSON output</summary>
+      <pre id="jsonPreview" class="json-preview">Chưa có dữ liệu.</pre>
+    </details>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

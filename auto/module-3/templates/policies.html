@@ -72,10 +72,14 @@
         <div class="mx-auto px-4 sm:px-8">
             <div class="flex items-center justify-between h-16">
                 <!-- Logo -->
-                <div class="flex-shrink-0">
+                <div class="flex-shrink-0 flex items-center gap-3">
                     <a target="_blank" rel="noopener noreferrer" href="/" class="flex items-center gap-2 text-indigo-600 font-bold text-xl hover:text-indigo-700 transition-colors">
                         <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
                         <span>Shopify Admin Manager</span>
+                    </a>
+                    <a target="_blank" rel="noopener noreferrer" href="https://admin.shopify.com/store/wrydeco" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-black hover:bg-neutral-800 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors" title="Mở Shopify Admin Store">
+                        <span>Shopify Store</span>
+                        <svg class="w-3.5 h-3.5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
                     </a>
                 </div>
                 <!-- Nav Links -->
@@ -339,6 +343,7 @@
 
                     <!-- Statistics & Shortcuts -->
                     <div class="flex items-center gap-3 text-xs text-gray-500">
+                        <span id="modal-policy-modified-badge" class="hidden px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">(Modified)</span>
                         <span id="modal-char-counter" class="font-medium text-gray-700">0 ký tự</span>
                         <span>•</span>
                         <span id="modal-word-counter">0 từ</span>
@@ -401,6 +406,7 @@
         const POLICIES_DATA = {{ policies | tojson }};
         let currentSelectedSTT = null;
         let activePolicy = null;
+        let originalPolicyContent = '';
 
         // 1. Khi nhấn vào 1 row: Hiện indicator cho row đó, ẩn indicator của row khác đi, và mở popup chỉnh sửa
         function selectPolicyRow(stt) {
@@ -426,6 +432,7 @@
             if (!policy) return;
 
             activePolicy = policy;
+            originalPolicyContent = policy.body || '';
 
             // Gắn dữ liệu vào modal
             document.getElementById('modal-policy-title').textContent = 'Chỉnh sửa: ' + policy.title;
@@ -441,9 +448,9 @@
 
             // Gán body vào textarea
             const bodyEl = document.getElementById('modal-policy-body');
-            bodyEl.value = policy.body || '';
+            bodyEl.value = originalPolicyContent;
 
-            // Cập nhật thống kê ký tự
+            // Cập nhật thống kê ký tự và trạng thái Modified
             updatePolicyCounters();
 
             // Mặc định về tab Editor
@@ -496,7 +503,7 @@
             }
         }
 
-        // 5. Cập nhật số ký tự và từ
+        // 5. Cập nhật số ký tự, từ và trạng thái (Modified)
         function updatePolicyCounters() {
             const val = document.getElementById('modal-policy-body').value || '';
             const charCount = val.length;
@@ -504,6 +511,16 @@
             
             document.getElementById('modal-char-counter').textContent = charCount.toLocaleString() + ' ký tự';
             document.getElementById('modal-word-counter').textContent = wordCount.toLocaleString() + ' từ';
+
+            // Nhãn (Modified) nằm bên trái text hiển thị số lượng ký tự
+            const modifiedBadge = document.getElementById('modal-policy-modified-badge');
+            if (modifiedBadge) {
+                if (val !== originalPolicyContent) {
+                    modifiedBadge.classList.remove('hidden');
+                } else {
+                    modifiedBadge.classList.add('hidden');
+                }
+            }
         }
 
         // 6. Lưu nội dung Policy lên Shopify qua backend
@@ -540,8 +557,12 @@
                 if (response.ok && resData.success) {
                     // Cập nhật bộ nhớ cục bộ
                     activePolicy.body = newBody;
+                    originalPolicyContent = newBody;
                     activePolicy.char_count = newBody.length;
                     activePolicy.word_count = newBody.trim() ? newBody.trim().split(/\s+/).length : 0;
+
+                    // Cập nhật counters và ẩn nhãn (Modified)
+                    updatePolicyCounters();
 
                     // Cập nhật lại UI bảng row
                     const row = document.getElementById('policy-row-' + currentSelectedSTT);

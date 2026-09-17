@@ -133,7 +133,7 @@ Other body sections observed:
 - Crafted by Khoi Hoang / PRINCIPAL ARTISAN
 - Artisan quote about raw wood and handmade wooden pieces
 - Trust/process claims: CARVED WITH PRECISION, ONE OF A KIND, MADE ENTIRELY BY HAND, DIRECT FROM THE WORKSHOP, 27+ YEARS OF CRAFTSMANSHIP
-- OUR PROCESS / Handcrafted with Purpose.
+- OUR PROCESS / Handcrafted with Care.
 - SOUL OF SOLID WOOD / No Two Pieces Are Ever Truly Alike
 - Order Process & Delivery with steps:
   1. Receive Order
@@ -149,7 +149,7 @@ Other body sections observed:
   - Day 2-7: create sketch design and raw sample; photos/video sent for approval.
   - Next 5 days: final finishing completed; final photos/video sent before packing.
   - Next 7-10 days: after confirmation and packing, standard shipping coordinated to eligible destination.
-- Related section: "CURATED FOR HARMONY" / "Pairs Beautifully With"
+- Related section: "CURATED FOR HARMONY" / "You May Also Like"
 
 ## Product Data And UX Integrity
 

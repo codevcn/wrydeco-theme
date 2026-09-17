@@ -54,11 +54,8 @@ function showCopyJsonButton(json) {
       console.warn(">>> Không thể copy JSON vào clipboard.", error);
 
       button.textContent = "Copy failed — try again";
+    } finally {
       button.disabled = false;
-
-      setTimeout(() => {
-        button.textContent = originalText;
-      }, 2000);
     }
   });
 

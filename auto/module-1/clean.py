@@ -40,7 +40,8 @@ KEEP_CONTENT = [
     "config.update-product.json",
     "script.fixed.js",
     "module-1.zip",
-    "saved.txt"
+    "saved.txt",
+    "extension"
 ]
 
 
