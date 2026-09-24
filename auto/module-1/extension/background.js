@@ -3,12 +3,28 @@
  * Chrome Extension Manifest V3
  */
 
+// Danh sách Customization Types mặc định cần bỏ qua trong Dynamic Mode
+const DEFAULT_IGNORE_TYPES = [
+  "Customization Confirmation",
+  "Note to seller (Optional)",
+  "Other requirements",
+  "Review Photo Before Final Finish",
+  "Additional Note for Seller",
+  "Custom Tier Size Confirmation",
+  "Driftwood may differ from photos. We'll message the best raw piece. Check messages?",
+  "Select Package",
+  "Communication",
+  "Comunication",
+  "Product will slightly different as shown in pictures, please check your MESSAGES to confirm order!",
+  "Live edge wood may differ from photos. We'll message the best raw piece. Check messages?",
+];
+
 chrome.runtime.onInstalled.addListener(() => {
   console.log("[Wrydeco Scraper] Extension installed successfully.");
 
   // Thiết lập cấu hình mặc định trong storage nếu chưa có
   chrome.storage.local.get(
-    ["mode", "furnitureType", "priceTier", "priceRangeStrategy", "timeoutMs"],
+    ["mode", "furnitureType", "priceTier", "priceRangeStrategy", "timeoutMs", "ignoreTypes"],
     (result) => {
       const defaults = {};
 
@@ -17,6 +33,9 @@ chrome.runtime.onInstalled.addListener(() => {
       if (!result.priceTier) defaults.priceTier = "LUXURY";
       if (!result.priceRangeStrategy) defaults.priceRangeStrategy = "error";
       if (!result.timeoutMs) defaults.timeoutMs = 30000;
+      if (result.ignoreTypes === undefined) {
+        defaults.ignoreTypes = DEFAULT_IGNORE_TYPES.join("\n");
+      }
 
       if (Object.keys(defaults).length > 0) {
         chrome.storage.local.set(defaults);

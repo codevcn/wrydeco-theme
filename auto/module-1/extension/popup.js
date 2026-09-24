@@ -16,6 +16,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const priceRangeStrategySelect = document.getElementById("priceRangeStrategy");
   const timeoutMsInput = document.getElementById("timeoutMs");
+  const ignoreTypesInput = document.getElementById("ignoreTypes");
+  const btnResetIgnoreTypes = document.getElementById("btnResetIgnoreTypes");
 
   const btnScrape = document.getElementById("btnScrape");
   const scrapeSpinner = document.getElementById("scrapeSpinner");
@@ -39,6 +41,31 @@ document.addEventListener("DOMContentLoaded", async () => {
   // State
   let currentMode = "preset";
   let lastScrapedOutput = null;
+
+  // Danh sách Customization Types mặc định cần bỏ qua trong Dynamic Mode
+  const DEFAULT_IGNORE_TYPES = [
+    "Customization Confirmation",
+    "Note to seller (Optional)",
+    "Other requirements",
+    "Review Photo Before Final Finish",
+    "Additional Note for Seller",
+    "Custom Tier Size Confirmation",
+    "Driftwood may differ from photos. We'll message the best raw piece. Check messages?",
+    "Select Package",
+    "Communication",
+    "Comunication",
+    "Product will slightly different as shown in pictures, please check your MESSAGES to confirm order!",
+    "Live edge wood may differ from photos. We'll message the best raw piece. Check messages?",
+  ];
+
+  const parseIgnoreTypes = (text) => {
+    if (typeof text !== "string") return [];
+    const lines = text
+      .split(/\r?\n/)
+      .map((line) => line.trim().replace(/^["']/, "").replace(/["'],?$/, "").trim())
+      .filter((line) => line.length > 0);
+    return Array.from(new Set(lines));
+  };
 
   // Bảng giá xem trước
   const PREVIEW_SIZES = {
@@ -207,15 +234,40 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   });
 
+  let isStorageLoaded = false;
+
+  // Khởi tạo ngay giá trị mặc định cho textarea nếu DOM chưa có giá trị
+  if (ignoreTypesInput && !ignoreTypesInput.value.trim()) {
+    ignoreTypesInput.value = DEFAULT_IGNORE_TYPES.join("\n");
+  }
+
   const saveSettings = () => {
+    if (!isStorageLoaded) return;
     chrome.storage.local.set({
       mode: currentMode,
       furnitureType: furnitureTypeSelect.value,
       priceTier: priceTierSelect.value,
       priceRangeStrategy: priceRangeStrategySelect.value,
       timeoutMs: timeoutMsInput.value,
+      ignoreTypes: ignoreTypesInput ? ignoreTypesInput.value : "",
     });
   };
+
+  // Event listeners for Dynamic Mode settings
+  priceRangeStrategySelect.addEventListener("change", saveSettings);
+  timeoutMsInput.addEventListener("input", saveSettings);
+
+  if (ignoreTypesInput) {
+    ignoreTypesInput.addEventListener("input", saveSettings);
+  }
+
+  if (btnResetIgnoreTypes && ignoreTypesInput) {
+    btnResetIgnoreTypes.addEventListener("click", () => {
+      ignoreTypesInput.value = DEFAULT_IGNORE_TYPES.join("\n");
+      saveSettings();
+      addLog("Đã khôi phục danh sách IGNORE_TYPES mặc định.", "info");
+    });
+  }
 
   // Load saved state
   chrome.storage.local.get(
@@ -225,6 +277,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       "priceTier",
       "priceRangeStrategy",
       "timeoutMs",
+      "ignoreTypes",
       "lastScrapedOutput",
     ],
     (data) => {
@@ -248,10 +301,22 @@ document.addEventListener("DOMContentLoaded", async () => {
         timeoutMsInput.value = data.timeoutMs;
       }
 
+      if (ignoreTypesInput) {
+        if (typeof data.ignoreTypes === "string") {
+          ignoreTypesInput.value = data.ignoreTypes;
+        } else if (Array.isArray(data.ignoreTypes)) {
+          ignoreTypesInput.value = data.ignoreTypes.join("\n");
+        } else {
+          ignoreTypesInput.value = DEFAULT_IGNORE_TYPES.join("\n");
+        }
+      }
+
       if (data.lastScrapedOutput) {
         renderScrapeResult(data.lastScrapedOutput);
         addLog("Đã khôi phục dữ liệu cào lần gần nhất.", "info");
       }
+
+      isStorageLoaded = true;
     }
   );
 
@@ -325,13 +390,25 @@ document.addEventListener("DOMContentLoaded", async () => {
         await new Promise((r) => setTimeout(r, 400));
       }
 
+      saveSettings();
+
       // Cấu hình cào
+      const ignoreTypesList = parseIgnoreTypes(ignoreTypesInput ? ignoreTypesInput.value : "");
+
+      if (currentMode === "dynamic") {
+        addLog(
+          `⚡ Dynamic Mode: Áp dụng ${ignoreTypesList.length} customization types cần bỏ qua.`,
+          "info"
+        );
+      }
+
       const scrapeConfig = {
         mode: currentMode,
         furnitureType: furnitureTypeSelect.value,
         priceTier: priceTierSelect.value,
         priceRangeStrategy: priceRangeStrategySelect.value,
         timeoutMs: Number(timeoutMsInput.value) || 30000,
+        ignoreTypes: ignoreTypesList,
       };
 
       // Gửi lệnh cào đến content script (chỉ định frameId: 0 để giao tiếp trực tiếp với top frame)

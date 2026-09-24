@@ -43,13 +43,6 @@
       </div>
 
       <div class="article-editorial__hero-panel">
-        <nav class="article-editorial__breadcrumbs" aria-label="Breadcrumb">
-          <a href="{{ routes.root_url }}">Home</a>
-          <span aria-hidden="true">/</span>
-          <a href="{{ blog.url }}">{{ blog.title | escape }}</a>
-        </nav>
-
-        <p class="article-editorial__eyebrow">{{ blog.title | escape }}</p>
         <h1 id="ArticleTitle-{{ section.id }}" class="article-editorial__title" itemprop="headline">
           {{ article.title | escape }}
         </h1>
@@ -59,18 +52,16 @@
         {% endif %}
 
         <div class="article-editorial__meta" aria-label="Article details">
-          <span itemprop="author">{{ article.author | escape }}</span>
-          <span aria-hidden="true"></span>
-          {{ article.published_at | time_tag: format: 'date' }}
+          <span class="article-editorial__meta-item">
+            <svg class="article-editorial__meta-icon" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></g></svg>
+            <span itemprop="author">{{ article.author | escape }}</span>
+          </span>
+          <span class="article-editorial__meta-divider" aria-hidden="true"></span>
+          <span class="article-editorial__meta-item">
+            <svg class="article-editorial__meta-icon" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M8 2v3m8-3v3"/><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/></g></svg>
+            {{ article.published_at | time_tag: format: 'date' }}
+          </span>
         </div>
-
-        {% if article.tags.size > 0 %}
-          <ul class="article-editorial__tags" aria-label="Topics">
-            {% for tag in article.tags limit: 3 %}
-              <li>{{ tag | escape }}</li>
-            {% endfor %}
-          </ul>
-        {% endif %}
       </div>
     </section>
 
@@ -86,7 +77,6 @@
     <section class="article-editorial__related" aria-labelledby="ArticleRelated-{{ section.id }}">
       <div class="article-editorial__related-header">
         <p class="article-editorial__eyebrow">Continue Reading</p>
-        <h2 id="ArticleRelated-{{ section.id }}">More from the journal</h2>
       </div>
 
       <div class="article-editorial__related-grid">
@@ -203,26 +193,6 @@
     );
   }
 
-  .article-editorial__breadcrumbs {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: var(--sp-2);
-    font-size: var(--font-size-caption);
-    letter-spacing: var(--letter-spacing-wide);
-    text-transform: uppercase;
-    color: var(--text-secondary);
-  }
-
-  .article-editorial__breadcrumbs a {
-    color: inherit;
-    text-decoration: none;
-  }
-
-  .article-editorial__breadcrumbs a:hover {
-    color: var(--color-earth-brown);
-  }
-
   .article-editorial__eyebrow {
     display: inline-flex;
     align-items: center;
@@ -250,7 +220,6 @@
     font-weight: var(--font-weight-regular);
     line-height: var(--line-height-display);
     letter-spacing: var(--letter-spacing-normal);
-    text-wrap: balance;
   }
 
   .article-editorial__dek {
@@ -271,6 +240,20 @@
     font-weight: var(--font-weight-semibold);
   }
 
+  .article-editorial__meta-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .article-editorial__meta-icon {
+    width: 1.4em;
+    height: 1.4em;
+    flex-shrink: 0;
+    color: var(--color-clay);
+  }
+
+  .article-editorial__meta-divider,
   .article-editorial__meta > span[aria-hidden='true'] {
     width: var(--sp-1);
     height: var(--sp-1);
@@ -278,31 +261,12 @@
     background: var(--color-clay);
   }
 
-  .article-editorial__tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--sp-2);
-    margin: var(--sp-2) 0 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  .article-editorial__tags li {
-    padding: var(--sp-2) var(--sp-3);
-    border: var(--border-width) solid color-mix(in srgb, var(--color-earth-brown) 16%, transparent);
-    border-radius: var(--radius-full);
-    color: var(--text-secondary);
-    font-size: var(--font-size-caption);
-    letter-spacing: var(--letter-spacing-wide);
-    text-transform: uppercase;
-  }
-
   .article-editorial__body-shell {
     display: grid;
     grid-template-columns: minmax(var(--sp-0), 1fr);
     width: min(calc(100% - (var(--layout-padding-desktop) * 2)), 860px);
     margin-inline: auto;
-    padding-block: var(--sp-6) var(--sp-0);
+    padding-block: var(--sp-6-bigger) var(--sp-6-bigger);
   }
 
   .article-editorial__content {
@@ -480,17 +444,22 @@
     }
 
     .article-editorial__hero-panel {
-      padding: var(--sp-6) var(--layout-padding-mobile) var(--sp-7);
+      padding: var(--sp-6) var(--layout-padding-mobile) var(--sp-4-bigger);
     }
 
     .article-editorial__title {
       max-width: none;
-      font-size: clamp(var(--font-size-display-md), 12vw, var(--font-size-display-xl));
+      font-size: clamp(var(--font-size-body-3xl), 6vw, var(--font-size-body-5xl));
+      text-align: center;
     }
 
     .article-editorial__dek,
     .article-editorial__content {
       font-size: var(--font-size-body-md);
+    }
+
+    .article-editorial__dek {
+      text-align: center;
     }
 
     .article-editorial__body-shell,
@@ -499,7 +468,7 @@
     }
 
     .article-editorial__body-shell {
-      padding-block: var(--sp-7);
+      padding-block: var(--sp-4-bigger) var(--sp-7);
     }
 
     .article-editorial__content h2 {
@@ -522,6 +491,10 @@
     .article-editorial__content blockquote {
       padding: var(--sp-5);
       font-size: var(--font-size-body-xl);
+    }
+
+    .article-editorial__meta {
+      justify-content: center;
     }
   }
 {% endstylesheet %}

@@ -38,6 +38,16 @@
         .prose ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1rem; }
         .prose ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 1rem; }
         .prose p { margin-bottom: 1rem; }
+
+        /* Rich Description clickable images */
+        #rich-description-content img {
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, outline 0.2s ease;
+        }
+        #rich-description-content img:hover {
+            outline: 3px solid #6366f1;
+            box-shadow: 0 4px 14px rgba(99, 102, 241, 0.3);
+        }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-900 min-h-screen">
@@ -450,10 +460,15 @@
         {% if mf.namespace == 'custom' and mf.key == 'rich_description' %}
         <div class="mt-8 bg-white rounded-xl shadow-sm border border-gray-100 p-6 sm:p-8">
             <div class="mb-4 border-b border-gray-100 pb-3 flex items-center justify-between">
-                <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
-                    <svg class="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"></path></svg>
-                    Rich Description (custom.rich_description)
-                </h2>
+                <div class="flex items-center gap-3">
+                    <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                        <svg class="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"></path></svg>
+                        Rich Description (custom.rich_description)
+                    </h2>
+                    <span class="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full hidden sm:inline-flex items-center gap-1">
+                        <iconify-icon icon="mdi:cursor-default-click-outline"></iconify-icon> Click vào ảnh để copy URL
+                    </span>
+                </div>
                 <button type="button" data-val="{{ mf.value | escape }}" onclick="openInternalEditor('metafield:{{ mf.namespace }}:{{ mf.key }}:{{ mf.type }}', this.getAttribute('data-val'), 'Metafield {{ mf.namespace }}.{{ mf.key }}')" class="p-2 px-4 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-lg transition-colors flex items-center gap-1 text-base font-medium">
                     <iconify-icon icon="mdi:pencil"></iconify-icon> Chỉnh sửa
                 </button>
@@ -462,8 +477,11 @@
                 {{ mf.value | safe }}
             </div>
             <script>
-                document.querySelectorAll('#rich-description-content img[data-src]').forEach(img => {
-                    img.src = img.getAttribute('data-src');
+                document.querySelectorAll('#rich-description-content img').forEach(img => {
+                    if (img.getAttribute('data-src')) {
+                        img.src = img.getAttribute('data-src');
+                    }
+                    img.setAttribute('title', 'Nhấn để copy URL ảnh');
                 });
             </script>
         </div>
@@ -492,12 +510,27 @@
                 <input type="hidden" id="internal-editor-target">
                 
                 <div class="space-y-3">
-                    <label class="block text-sm font-semibold text-gray-700">Giá trị mới</label>
+                    <div class="flex items-center justify-between">
+                        <label class="block text-sm font-semibold text-gray-700">Giá trị mới</label>
+                        <!-- Nút copy nằm bên cuối hàng thẳng hàng so với label "Giá trị mới" -->
+                        <div id="rich-desc-copy-container" class="hidden relative flex items-center">
+                            <span id="rich-desc-copy-indicator" class="mr-2 text-xs font-semibold text-green-700 bg-green-50 px-2.5 py-1 rounded-md border border-green-200 opacity-0 transition-opacity pointer-events-none duration-200">Đã copy!</span>
+                            <button type="button" onclick="copyRichDescriptionContent()" class="text-xs font-medium text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 focus:outline-none border border-indigo-200 cursor-pointer" title="Copy toàn bộ nội dung metafield">
+                                <iconify-icon icon="mdi:content-copy" class="text-base"></iconify-icon>
+                                <span>Copy</span>
+                            </button>
+                        </div>
+                    </div>
                     <textarea id="internal-editor-input" rows="3" class="w-full p-3.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-800 outline-none transition-all resize-y shadow-sm" placeholder="Nhập giá trị mới..."></textarea>
                 </div>
             </div>
             
             <div class="px-6 py-4 border-t border-gray-100 bg-gray-50/80 flex items-center justify-end gap-3 rounded-b-2xl">
+                <!-- Nút "Chuyển thành text 1 dòng" bên cạnh nút "Hủy bỏ" -->
+                <button type="button" id="btn-single-line-text" onclick="convertToSingleLine()" class="hidden px-4 py-2.5 rounded-xl font-medium text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 hover:text-amber-800 transition-all shadow-sm flex items-center gap-1.5 text-sm cursor-pointer" title="Chuyển đổi toàn bộ nội dung trong thẻ textarea thành single line text">
+                    <iconify-icon icon="mdi:format-text-wrapping-clip" class="text-lg"></iconify-icon>
+                    <span>Chuyển thành text 1 dòng</span>
+                </button>
                 <button onclick="closeInternalEditor()" class="px-5 py-2.5 rounded-xl font-medium text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 hover:text-gray-800 transition-all shadow-sm">Hủy bỏ</button>
                 <button onclick="submitInternalEditor()" id="internal-editor-submit-btn" class="px-6 py-2.5 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-all shadow-md hover:shadow-lg flex items-center gap-2">
                     <iconify-icon icon="mdi:content-save-outline" class="text-lg"></iconify-icon>
@@ -749,11 +782,112 @@
             const alertBox = document.getElementById('internal-editor-alert');
             alertBox.classList.add('hidden');
             
+            const isRichDesc = targetField.includes('rich_description');
+            const singleLineBtn = document.getElementById('btn-single-line-text');
+            const copyContainer = document.getElementById('rich-desc-copy-container');
+            const copyIndicator = document.getElementById('rich-desc-copy-indicator');
+            if (copyIndicator) {
+                copyIndicator.classList.add('opacity-0');
+                copyIndicator.classList.remove('opacity-100');
+            }
+
+            if (isRichDesc) {
+                if (singleLineBtn) singleLineBtn.classList.remove('hidden');
+                if (copyContainer) copyContainer.classList.remove('hidden');
+                document.getElementById('internal-editor-input').rows = 8;
+            } else {
+                if (singleLineBtn) singleLineBtn.classList.add('hidden');
+                if (copyContainer) copyContainer.classList.add('hidden');
+                document.getElementById('internal-editor-input').rows = (targetField === 'descriptionHtml' ? 8 : 3);
+            }
+            
             const modal = document.getElementById('internal-editor-modal');
             modal.classList.remove('hidden');
             
             setTimeout(() => { document.getElementById('internal-editor-input').focus(); }, 100);
         }
+
+        function convertToSingleLine() {
+            const textarea = document.getElementById('internal-editor-input');
+            if (!textarea) return;
+            let val = textarea.value;
+            // Chuyển toàn bộ các dòng và khoảng trắng liên tiếp thành text 1 dòng
+            val = val.replace(/[\r\n]+/g, ' ').replace(/\s{2,}/g, ' ').trim();
+            textarea.value = val;
+            
+            textarea.classList.add('ring-2', 'ring-amber-400');
+            setTimeout(() => {
+                textarea.classList.remove('ring-2', 'ring-amber-400');
+            }, 600);
+        }
+
+        let richDescCopyTimeout;
+        function copyRichDescriptionContent() {
+            const textarea = document.getElementById('internal-editor-input');
+            if (!textarea) return;
+            const textToCopy = textarea.value;
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                const ind = document.getElementById('rich-desc-copy-indicator');
+                if (ind) {
+                    clearTimeout(richDescCopyTimeout);
+                    ind.classList.remove('opacity-0');
+                    ind.classList.add('opacity-100');
+                    richDescCopyTimeout = setTimeout(() => {
+                        ind.classList.remove('opacity-100');
+                        ind.classList.add('opacity-0');
+                    }, 2000);
+                }
+            }).catch(err => {
+                console.error('Lỗi khi copy:', err);
+            });
+        }
+
+        let copyToastTimeout;
+        function showCopyToast(message) {
+            let toast = document.getElementById('floating-copy-toast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'floating-copy-toast';
+                toast.className = 'fixed bottom-8 left-1/2 -translate-x-1/2 z-[110] bg-gray-900/95 backdrop-blur-sm text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-2.5 text-sm font-medium transition-all duration-300 pointer-events-none opacity-0 translate-y-2 border border-gray-700';
+                toast.innerHTML = `<iconify-icon icon="mdi:check-circle" class="text-green-400 text-lg flex-shrink-0"></iconify-icon> <span id="floating-copy-toast-msg"></span>`;
+                document.body.appendChild(toast);
+            }
+            
+            const msgEl = document.getElementById('floating-copy-toast-msg');
+            if (msgEl) msgEl.textContent = message;
+            
+            clearTimeout(copyToastTimeout);
+            toast.classList.remove('opacity-0', 'translate-y-2');
+            toast.classList.add('opacity-100', 'translate-y-0');
+            
+            copyToastTimeout = setTimeout(() => {
+                toast.classList.remove('opacity-100', 'translate-y-0');
+                toast.classList.add('opacity-0', 'translate-y-2');
+            }, 2000);
+        }
+
+        function showToast(titleOrMsg, msg, type = 'success') {
+            const finalMsg = msg ? `${titleOrMsg}: ${msg}` : titleOrMsg;
+            showCopyToast(finalMsg);
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            const richDescEl = document.getElementById('rich-description-content');
+            if (richDescEl) {
+                richDescEl.addEventListener('click', function(e) {
+                    const img = e.target.closest('img');
+                    if (!img) return;
+                    const url = img.getAttribute('data-src') || img.currentSrc || img.src;
+                    if (url) {
+                        navigator.clipboard.writeText(url).then(() => {
+                            showCopyToast('Đã copy URL ảnh vào clipboard!');
+                        }).catch(err => {
+                            console.error('Lỗi khi copy URL ảnh:', err);
+                        });
+                    }
+                });
+            }
+        });
 
         function closeInternalEditor() {
             document.getElementById('internal-editor-modal').classList.add('hidden');

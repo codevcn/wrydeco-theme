@@ -80,6 +80,7 @@
     "Communication",
     "Comunication",
     "Product will slightly different as shown in pictures, please check your MESSAGES to confirm order!",
+    "Live edge wood may differ from photos. We'll message the best raw piece. Check messages?",
   ];
 
   /**
@@ -95,7 +96,11 @@
       .trim();
 
   const normalizeForComparison = (value) =>
-    normalizeText(value).toLocaleLowerCase();
+    normalizeText(value)
+      .toLocaleLowerCase()
+      .replace(/[\u2018\u2019]/g, "'")
+      .replace(/[\u201C\u201D]/g, '"')
+      .replace(/:\s*$/, "");
 
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -945,7 +950,11 @@
       throw new Error(`Không tìm thấy "${TYPE_SELECTOR}" trong Customization document.`);
     }
 
-    const normalizedIgnoreTypes = ignoreTypes
+    const effectiveIgnoreTypes = Array.isArray(ignoreTypes)
+      ? ignoreTypes
+      : DEFAULT_IGNORE_TYPES;
+
+    const normalizedIgnoreTypes = effectiveIgnoreTypes
       .map((t) => normalizeForComparison(t))
       .filter(Boolean);
 
@@ -962,6 +971,12 @@
         const normalizedType = normalizeForComparison(type);
 
         if (!type || normalizedIgnoreTypes.includes(normalizedType)) {
+          if (type && normalizedIgnoreTypes.includes(normalizedType)) {
+            sendLog(
+              `[Dynamic Mode] Bỏ qua customization type: "${type}" (trùng khớp danh sách IGNORE_TYPES).`,
+              "info"
+            );
+          }
           return null;
         }
 
@@ -1082,24 +1097,28 @@
             }
           } catch {}
 
-          event.source.postMessage(
-            {
-              type: "WRYDECO_EXTRACT_CUSTOMIZATION_RES",
-              success: true,
-              variant_data: variantData,
-              base_price: footerPrice,
-            },
-            "*"
-          );
+          if (event.source) {
+            event.source.postMessage(
+              {
+                type: "WRYDECO_EXTRACT_CUSTOMIZATION_RES",
+                success: true,
+                variant_data: variantData,
+                base_price: footerPrice,
+              },
+              "*"
+            );
+          }
         } catch (err) {
-          event.source.postMessage(
-            {
-              type: "WRYDECO_EXTRACT_CUSTOMIZATION_RES",
-              success: false,
-              error: getErrorMessage(err),
-            },
-            "*"
-          );
+          if (event.source) {
+            event.source.postMessage(
+              {
+                type: "WRYDECO_EXTRACT_CUSTOMIZATION_RES",
+                success: false,
+                error: getErrorMessage(err),
+              },
+              "*"
+            );
+          }
         }
       }
     });
@@ -1180,7 +1199,7 @@
         // Nếu DOM bị chặn (cross-origin / sandbox), gửi message tới content script trong iframe
         if (iframeElement.contentWindow) {
           try {
-            const crossFrameResult = await new Promise((resolve, reject) => {
+            const crossFrameResult = await new Promise((resolve) => {
               const timer = setTimeout(() => {
                 window.removeEventListener("message", onMsg);
                 resolve(null); // Timeout cho lần thăm dò này
@@ -1190,11 +1209,7 @@
                 if (event.data?.type === "WRYDECO_EXTRACT_CUSTOMIZATION_RES") {
                   clearTimeout(timer);
                   window.removeEventListener("message", onMsg);
-                  if (event.data.success) {
-                    resolve(event.data);
-                  } else {
-                    reject(new Error(event.data.error || "Lỗi cào từ iframe"));
-                  }
+                  resolve(event.data);
                 }
               };
 
@@ -1209,6 +1224,10 @@
             });
 
             if (crossFrameResult) {
+              if (!crossFrameResult.success) {
+                throw new Error(crossFrameResult.error || "Lỗi cào từ iframe");
+              }
+
               sendLog(
                 "Đã nhận thành công variant data từ #gc-iframe qua cross-frame messaging.",
                 "success"
@@ -1219,6 +1238,10 @@
               };
             }
           } catch (err) {
+            // Nếu là lỗi nghiệp vụ thực tế từ iframe trả về thì báo lỗi ngay lập tức, không chờ timeout vô ích
+            if (err.message && !err.message.includes("postMessage")) {
+              throw err;
+            }
             sendLog(`Lỗi giao tiếp iframe: ${err.message}`, "warn");
           }
         }
@@ -1297,6 +1320,9 @@
         const dynamicResult = await extractDynamicVariantData({
           timeoutMs: config.timeoutMs || 30000,
           priceRangeStrategy: config.priceRangeStrategy || "error",
+          ignoreTypes: Array.isArray(config.ignoreTypes)
+            ? config.ignoreTypes
+            : DEFAULT_IGNORE_TYPES,
         });
         product.variant_data = dynamicResult.variant_data;
         customizationDoc = dynamicResult.customizationDoc || null;

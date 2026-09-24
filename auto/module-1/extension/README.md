@@ -46,7 +46,7 @@ Extension chuyên dụng dành cho quy trình tự động hóa cập nhật s�
 1. Truy cập vào trang sản phẩm Amazon cần lấy dữ liệu (ví dụ: `https://www.amazon.com/dp/...`).
 2. Nhấp vào icon **Wrydeco Scraper** trên thanh công cụ trình duyệt:
    - **Nếu dùng Preset Tier**: Chọn loại kệ (`corner` / `standing` / `floating`) và phân cấp giá (`LUXURY` / `PREM` / `LOW`). Bảng kích thước xem trước sẽ hiển thị ngay bên dưới.
-   - **Nếu dùng Dynamic Mode**: Mở form "Customize Now" trên trang Amazon (hoặc extension sẽ tự động kích hoạt), chọn chiến lược giá (`error`, `min`, hoặc `max`).
+   - **Nếu dùng Dynamic Mode**: Mở form "Customize Now" trên trang Amazon (hoặc extension sẽ tự động kích hoạt), chọn chiến lược giá (`error`, `min`, hoặc `max`), tùy chỉnh danh sách loại bỏ qua (`IGNORE_TYPES`) trực tiếp trên textarea (mỗi dòng một type). Bấm "Khôi phục" nếu muốn reset về danh sách mặc định.
 3. Bấm **"🚀 Bắt đầu cào dữ liệu"**.
 4. Theo dõi log tiến trình chạy. Khi hoàn tất:
    - Dữ liệu JSON đã tự động được sao chép vào Clipboard.

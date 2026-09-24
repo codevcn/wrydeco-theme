@@ -38,4 +38,3 @@
 | 34  | Wall Decorative Sculptures                      | wall-decorative-sculpture     | TYPE EQUALS wall-decorative-sculpture                                                        |
 | 35  | Wall-Mounted Tree Bookshelves                   | wall-mounted-tree-bookshelves | TAG EQUALS wall-mounted-tree-bookshelves                                                     |
 | 36  | Wall-Mounted Wood Wine Racks                    | wall-mounted-wine-rack        | TYPE EQUALS wall-mounted-wine-rack                                                           |
-| 37  | Solid Wood Bathroom Vanities                    | bathroom-vanities             | TYPE EQUALS bathroom-vanity OR TYPE EQUALS bathroom-vanities                                 |

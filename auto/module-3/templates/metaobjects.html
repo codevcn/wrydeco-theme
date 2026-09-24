@@ -416,8 +416,10 @@
     </div>
 
     <!-- Modal Popup Chỉnh Sửa Bản Ghi (Edit Metaobject Entry Modal) -->
-    <div id="edit-entry-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs hidden">
-        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+    <div id="edit-entry-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity cursor-pointer" onclick="closeEditEntryModal()" title="Nhấn vào nền để đóng"></div>
+        <div class="relative z-10 bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             <!-- Modal Header -->
             <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
                 <div class="flex items-center gap-3">
@@ -1400,6 +1402,16 @@
         window.addEventListener('DOMContentLoaded', () => {
             if (definitionsData.length > 0) {
                 selectMetaobjectRow(definitionsData[0].type);
+            }
+        });
+
+        // Đóng popup khi nhấn phím Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const editModal = document.getElementById('edit-entry-modal');
+                if (editModal && !editModal.classList.contains('hidden')) {
+                    closeEditEntryModal();
+                }
             }
         });
     </script>

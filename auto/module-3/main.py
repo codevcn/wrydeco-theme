@@ -1790,6 +1790,7 @@ def get_all_collections():
                 title
                 handle
                 descriptionHtml
+                createdAt
                 image {
                   url
                 }
@@ -1841,7 +1842,8 @@ def get_all_collections():
                 "description": node.get("descriptionHtml", ""),
                 "image": node.get("image", {}).get("url") if node.get("image") else None,
                 "products_count": node.get("productsCount", {}).get("count", 0) if node.get("productsCount") else 0,
-                "published_online": is_published
+                "published_online": is_published,
+                "created_at": node.get("createdAt", "")
             })
             
         page_info = collections_data.get("pageInfo", {})
@@ -2283,6 +2285,8 @@ async def read_collections(request: Request,
             collections.sort(key=lambda x: x["products_count"])
         elif sort_by == "count_desc":
             collections.sort(key=lambda x: x["products_count"], reverse=True)
+        elif sort_by == "created_desc":
+            collections.sort(key=lambda x: x.get("created_at", ""), reverse=True)
             
         return templates.TemplateResponse(request=request, name="collections.html", context={
             "request": request, 

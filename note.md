@@ -21,13 +21,13 @@ Tôi sẽ nêu vấn đề với responsive trên màn hình điện thoại (v�
 ở trang chi tiết sản phẩm, tại sao khi vừa vào nó lại chọn ảnh thứ 2 làm ảnh lớn mà ko phải ảnh đầu? fix nó đi
 
 
-tôi muốn nút "View Craftsmanship" khi nhấn vào sẽ random chạy vào 1 trong các route 
+tôi muốn nút "View Craftsmanship" khi nhấn vào sẽ random chạy vào 1 trong các route
 
 check file @Tiêu chí chấm điểm mức độ hoàn thành.txt - Notepad so với project hiện tại xem project có thiếu gì ko? bạn có thể hỏi lại tui nếu muốn, bạn có thể dùng playwright để check lại nếu cần (playwright đã được cài trong project này).
 
 
 
-tôi cần 1 trang Care Guide, bạn hãy viết 1 bài blog về Care Guide, blog chia thành các mục 
+tôi cần 1 trang Care Guide, bạn hãy viết 1 bài blog về Care Guide, blog chia thành các mục
 
 
 <div class="description-root"></div>
@@ -101,3 +101,8 @@ thống store của bạn, kèm theo ID (GID) của từng đối tượng:
 ## Sản phẩm có checkmark trong biến thể
 
 B0H6BRT2WD
+
+## Sản phẩm có thêm variant lạ
+
+- https://www.amazon.com/dp/B0H8D3HNTM?lv=shuf&channelId=500&plpRedirect=mhFallback&th=1
+- https://www.amazon.com/dp/B0H8D6J8YJ?lv=shuf&channelId=500&plpRedirect=mhFallback&th=1
