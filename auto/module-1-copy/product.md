@@ -1,6 +1,6 @@
 # Task cập nhật sản phẩm đang có sẵn trong store
 
-> Dùng access token được mô tả trong file `./access-token.md` để truy cập vào store, sau đó bạn hãy cập nhật sản phẩm có ID là `8455462191161` theo các yêu cầu bên dưới.
+> Dùng access token được mô tả trong file `./access-token.md` để truy cập vào store, sau đó bạn hãy cập nhật sản phẩm có ID là `10324512112697` theo các yêu cầu bên dưới.
 > Lưu ý: Bạn phải tự làm công việc cập nhật sản phẩm chứ ko phải để cho tôi làm. Trong suốt quá trình cập nhật tuyệt đối ko được chạy script lấy access token mới, nếu access token hết hạn thì dừng toàn bộ quá trình cập nhật và báo lỗi cho tôi biết để tôi cấp lại access token mới.
 > QUAN TRỌNG: Trong quá trình cập nhật, nếu có bất kỳ lỗi nào xảy ra thì dừng toàn bộ quá trình cập nhật và báo lỗi cho tôi biết.
 
@@ -9,7 +9,7 @@
 Product Title gốc:
 
 ```text
-Handcraft Live Edge Solid Wood Floating Bathroom Vanity Base with Open Storage Shelf - Wall Mounted Rustic Natural Wood Console for Vessel Sinks, The Yellowstone Lodge, The Montana Cabin
+Handcrafted Wooden Wall Shelf with Organic Bowl Design, Rustic Floating Display Shelf for Entryway, Living Room & Boho Home Decor (Option 3)
 ```
 
 - Viết lại product title gốc trên thành product title mới.
@@ -25,15 +25,19 @@ Handcraft Live Edge Solid Wood Floating Bathroom Vanity Base with Open Storage S
 Mô tả sản phẩm gốc:
 
 ```text
-🌳 PREMIUM SOLID WOOD: Features a natural live edge for a unique, rustic wabi-sabi aesthetic. Each piece has distinct, one-of-a-kind wood grains.
+🌿 Organic bowl-shaped wall shelf – A sculptural wooden wall shelf with a softly curved tray-style surface and flowing support form, designed to add natural warmth, texture, and artistic character to your wall decor.
 
-☁️ FLOATING DESIGN: Wall-mounted console frees up floor space, making your bathroom feel larger. Allows easy cleaning and creates a spa-like vibe.
+🪵 Natural wood grain statement piece – The rich wood tone, visible grain movement, rounded edges, and carved organic shape create a handcrafted look that feels rustic, warm, and beautifully unique.
 
-🧺 OPEN STORAGE: Spacious lower shelf offers functional storage for plush towels, baskets, and toiletries, keeping essentials neatly organized.
+🏡 Perfect for small-space display – Use it as an entryway shelf, living room accent shelf, bedroom wall shelf, hallway display shelf, plant shelf, candle shelf, or decorative floating shelf for cozy home styling.
 
-💧 WATER-RESISTANT: Treated with a protective coating to withstand bathroom humidity and splashes, ensuring long-lasting durability and beauty.
+✨ Functional decor with artisan appeal – The shallow bowl-style surface is ideal for displaying small vases, mini planters, candles, crystals, decorative bowls, keepsakes, keys, or seasonal accents while keeping your wall space stylish.
 
-⚠️ BASE ONLY: Includes wooden vanity & mounting hardware. Sink, faucet, mirror & accessories are NOT included. Verify dimensions before buying.
+🧡 Great for boho, rustic & organic modern homes – Pairs beautifully with farmhouse, bohemian, Mediterranean, vintage, woodland, natural, cottage, cabin, and organic modern interiors.
+
+🎁 Thoughtful home gift idea – A meaningful choice for housewarming gifts, weddings, new homes, apartment makeovers, entryway refreshes, or anyone who loves natural wood decor with sculptural handmade-style charm.
+
+📦 Carefully packed for delivery – Each shelf is prepared with protective packing to help safeguard the wood surface, curved tray edge, support base, and carved details during shipping.
 ```
 
 Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết lại mô tả sản phẩm gốc trên.
@@ -74,10 +78,10 @@ Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết
 - rich_description:
 
 ```html
-<div class="description-root"></div>
+<div class="description-root"><img alt="B0H44RKD1X" src="https://via.placeholder.com/800" class="" data-src="https://cdn.shopify.com/s/files/1/0829/7968/4580/files/Handcrafted-Wooden-Wall-Shelf-with-Organic-Bowl-Design-Rustic-Floating-Display-Shelf-for-Entryway-Living-Room-Boho-Home-Decor-Option-3-rich-001-270bfd11a576.jpg?v=1790276598"> <img alt="B0H44RKD1X" src="https://via.placeholder.com/800" class="" data-src="https://cdn.shopify.com/s/files/1/0829/7968/4580/files/Handcrafted-Wooden-Wall-Shelf-with-Organic-Bowl-Design-Rustic-Floating-Display-Shelf-for-Entryway-Living-Room-Boho-Home-Decor-Option-3-rich-002-eef709b4fd1b.jpg?v=1790276602"> <img alt="B0H44RKD1X" src="https://via.placeholder.com/800" class="" data-src="https://cdn.shopify.com/s/files/1/0829/7968/4580/files/Handcrafted-Wooden-Wall-Shelf-with-Organic-Bowl-Design-Rustic-Floating-Display-Shelf-for-Entryway-Living-Room-Boho-Home-Decor-Option-3-rich-003-4c3598992be5.jpg?v=1790276606"> <img alt="B0H44RKD1X" src="https://via.placeholder.com/800" class="" data-src="https://cdn.shopify.com/s/files/1/0829/7968/4580/files/Handcrafted-Wooden-Wall-Shelf-with-Organic-Bowl-Design-Rustic-Floating-Display-Shelf-for-Entryway-Living-Room-Boho-Home-Decor-Option-3-rich-004-28b8896afc39.jpg?v=1790276609"> <img alt="B0H44RKD1X" src="https://via.placeholder.com/800" class="" data-src="https://cdn.shopify.com/s/files/1/0829/7968/4580/files/Handcrafted-Wooden-Wall-Shelf-with-Organic-Bowl-Design-Rustic-Floating-Display-Shelf-for-Entryway-Living-Room-Boho-Home-Decor-Option-3-rich-005-317bb3a75ae1.jpg?v=1790276613"> <img alt="B0H44RKD1X" src="https://via.placeholder.com/800" class="" data-src="https://cdn.shopify.com/s/files/1/0829/7968/4580/files/Handcrafted-Wooden-Wall-Shelf-with-Organic-Bowl-Design-Rustic-Floating-Display-Shelf-for-Entryway-Living-Room-Boho-Home-Decor-Option-3-rich-006-7d4ec2eeff71.jpg?v=1790276617"></div>
 ```
 
-- amazon_link: "https://www.amazon.com/dp/B0H8D6J8YJ"
+- amazon_link: "https://www.amazon.com/dp/B0H82PGDCZ"
 - author_info: "gid://shopify/Metaobject/194643198009"
 - product_material: "wood"
 - seo_product_title:
@@ -122,7 +126,7 @@ Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết
 
 ### 10. Cập nhật product type
 
-- Cập nhật product type cho sản phẩm là `bathroom-vanities`.
+- Cập nhật product type cho sản phẩm là `floating-shelves`.
 
 ### 11. Cập nhật vendor
 
@@ -134,4 +138,4 @@ Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết
 
 ### 13. Cập nhật handle của sản phẩm
 
-- Handle của sản phẩm sẽ được suy ra từ `Handcraft Live Edge Solid Wood Floating Bathroom Vanity Base with Open Storage Shelf - Wall Mounted Rustic Natural Wood Console for Vessel Sinks, The Yellowstone Lodge, The Montana Cabin`, handle của sản phẩm phải được viết dưới dạng kebab-case.
+- Handle của sản phẩm sẽ được suy ra từ `Handcrafted Wooden Wall Shelf with Organic Bowl Design, Rustic Floating Display Shelf for Entryway, Living Room & Boho Home Decor (Option 3)`, handle của sản phẩm phải được viết dưới dạng kebab-case.

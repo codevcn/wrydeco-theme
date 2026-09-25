@@ -10,6 +10,28 @@ document.addEventListener("DOMContentLoaded", async () => {
   const presetPanel = document.getElementById("presetPanel");
   const dynamicPanel = document.getElementById("dynamicPanel");
 
+  // Navigation & Sections
+  const btnToolsToggle = document.getElementById("btnToolsToggle");
+  const scraperSection = document.getElementById("scraperSection");
+  const toolsSection = document.getElementById("toolsSection");
+  const scraperBottomBar = document.getElementById("scraperBottomBar");
+  const btnBackToScraper = document.getElementById("btnBackToScraper");
+
+  // Tools: ASINs Crawler Elements
+  const btnCrawlAsins = document.getElementById("btnCrawlAsins");
+  const asinsSpinner = document.getElementById("asinsSpinner");
+  const asinsBtnText = document.getElementById("asinsBtnText");
+  const asinsResultPanel = document.getElementById("asinsResultPanel");
+  const asinsCountBadge = document.getElementById("asinsCountBadge");
+  const asinsOutputTextarea = document.getElementById("asinsOutputTextarea");
+  const btnCopyAsinsLines = document.getElementById("btnCopyAsinsLines");
+  const btnCopyAsinsComma = document.getElementById("btnCopyAsinsComma");
+  const btnCopyAsinsJson = document.getElementById("btnCopyAsinsJson");
+  const btnCopyAsinsCommaMain = document.getElementById("btnCopyAsinsCommaMain");
+  const btnCopyAsinsIcon = document.getElementById("btnCopyAsinsIcon");
+  const btnCopyAsinsText = document.getElementById("btnCopyAsinsText");
+  const toolsStatusBox = document.getElementById("toolsStatusBox");
+
   const furnitureTypeSelect = document.getElementById("furnitureType");
   const priceTierSelect = document.getElementById("priceTier");
   const tierPreviewList = document.getElementById("tierPreviewList");
@@ -40,7 +62,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // State
   let currentMode = "preset";
+  let currentSection = "scraper";
   let lastScrapedOutput = null;
+  let lastCrawledAsins = [];
 
   // Danh sách Customization Types mặc định cần bỏ qua trong Dynamic Mode
   const DEFAULT_IGNORE_TYPES = [
@@ -234,6 +258,44 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   });
 
+  // Section Navigation (Scraper vs Tools)
+  const switchSection = (sectionName) => {
+    currentSection = sectionName;
+    if (sectionName === "tools") {
+      btnToolsToggle?.classList.add("active");
+      if (btnToolsToggle) btnToolsToggle.title = "Quay lại Scraper";
+      scraperSection?.classList.add("hidden");
+      scraperSection?.classList.remove("active");
+      scraperBottomBar?.classList.add("hidden");
+      toolsSection?.classList.remove("hidden");
+      toolsSection?.classList.add("active");
+      addLog("Đã chuyển sang mục Công cụ hỗ trợ (Tools).", "info");
+    } else {
+      btnToolsToggle?.classList.remove("active");
+      if (btnToolsToggle) btnToolsToggle.title = "Chuyển sang mục Tools";
+      scraperSection?.classList.remove("hidden");
+      scraperSection?.classList.add("active");
+      scraperBottomBar?.classList.remove("hidden");
+      toolsSection?.classList.add("hidden");
+      toolsSection?.classList.remove("active");
+    }
+  };
+
+  btnToolsToggle?.addEventListener("click", () => {
+    switchSection(currentSection === "scraper" ? "tools" : "scraper");
+  });
+
+  btnBackToScraper?.addEventListener("click", () => {
+    switchSection("scraper");
+  });
+
+  const showToolsStatus = (msg, type = "info") => {
+    if (!toolsStatusBox) return;
+    toolsStatusBox.className = `tools-status-box ${type}`;
+    toolsStatusBox.textContent = msg;
+    toolsStatusBox.classList.remove("hidden");
+  };
+
   let isStorageLoaded = false;
 
   // Khởi tạo ngay giá trị mặc định cho textarea nếu DOM chưa có giá trị
@@ -350,6 +412,26 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
+  // Helper: Đảm bảo content script đã được nạp vào tab
+  const ensureContentScriptReady = async (tabId) => {
+    let ready = false;
+    try {
+      const ping = await chrome.tabs.sendMessage(tabId, { action: "PING" }, { frameId: 0 });
+      if (ping?.status === "PONG") ready = true;
+    } catch {
+      ready = false;
+    }
+
+    if (!ready) {
+      addLog("Đang nạp bộ cào dữ liệu (content script) vào trang...", "info");
+      await chrome.scripting.executeScript({
+        target: { tabId, allFrames: true },
+        files: ["content.js"],
+      });
+      await new Promise((r) => setTimeout(r, 400));
+    }
+  };
+
   // Action: Scrape
   btnScrape.addEventListener("click", async () => {
     try {
@@ -372,23 +454,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       scrapeBtnText.textContent = "Đang xử lý...";
       addLog(`🚀 Khởi động cào dữ liệu (Chế độ: ${currentMode.toUpperCase()})...`, "info");
 
-      // Kiểm tra và inject content script nếu trang chưa có listener
-      let ready = false;
-      try {
-        const ping = await chrome.tabs.sendMessage(tab.id, { action: "PING" }, { frameId: 0 });
-        if (ping?.status === "PONG") ready = true;
-      } catch {
-        ready = false;
-      }
-
-      if (!ready) {
-        addLog("Đang nạp bộ cào dữ liệu (content script) vào trang...", "info");
-        await chrome.scripting.executeScript({
-          target: { tabId: tab.id, allFrames: true },
-          files: ["content.js"],
-        });
-        await new Promise((r) => setTimeout(r, 400));
-      }
+      // Đảm bảo content script đã sẵn sàng
+      await ensureContentScriptReady(tab.id);
 
       saveSettings();
 
@@ -515,5 +582,145 @@ document.addEventListener("DOMContentLoaded", async () => {
   btnClearLogs.addEventListener("click", () => {
     logBox.innerHTML = "";
     addLog("Đã xóa nhật ký.", "info");
+  });
+
+  // ============================================================
+  // Tools Action: Crawl Unordered-List ASINs
+  // ============================================================
+  btnCrawlAsins?.addEventListener("click", async () => {
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (!tab || !tab.id) {
+        showToolsStatus("❌ Không tìm thấy tab trình duyệt đang hoạt động.", "error");
+        return;
+      }
+
+      if (!tab.url || !tab.url.includes("amazon.com")) {
+        showToolsStatus("⚠️ Vui lòng mở trang sản phẩm Amazon (*.amazon.com) trước khi cào ASINs.", "warn");
+        return;
+      }
+
+      btnCrawlAsins.disabled = true;
+      asinsSpinner?.classList.remove("hidden");
+      if (asinsBtnText) asinsBtnText.textContent = "Đang cào ASINs...";
+      toolsStatusBox?.classList.add("hidden");
+      addLog("🔍 Đang quét danh sách .a-unordered-list.dimension-values-list.dimension-values-carousel...", "info");
+
+      await ensureContentScriptReady(tab.id);
+
+      const response = await chrome.tabs.sendMessage(
+        tab.id,
+        { action: "CRAWL_UNORDERED_LIST_ASINS" },
+        { frameId: 0 }
+      );
+
+      if (!response || !response.success) {
+        throw new Error(response?.error || "Không nhận được phản hồi từ trang Amazon.");
+      }
+
+      lastCrawledAsins = response.asins || [];
+      if (lastCrawledAsins.length > 0) {
+        asinsResultPanel?.classList.remove("hidden");
+        if (asinsCountBadge) asinsCountBadge.textContent = `${lastCrawledAsins.length} ASINs`;
+        if (asinsOutputTextarea) asinsOutputTextarea.value = lastCrawledAsins.join("\n");
+        showToolsStatus(`✅ Đã cào thành công ${lastCrawledAsins.length} mã ASIN từ swatch carousel.`, "success");
+        addLog(`✅ Đã trích xuất ${lastCrawledAsins.length} mã ASIN từ danh sách dimension-values.`, "success");
+
+        // Tự động sao chép danh sách ASINs (cách nhau bởi dấu phẩy) vào clipboard
+        const commaSeparated = lastCrawledAsins.join(", ");
+        try {
+          await navigator.clipboard.writeText(commaSeparated);
+          addLog("📋 Đã tự động sao chép danh sách ASINs (dấu phẩy) vào Clipboard!", "success");
+          triggerMainCopyIndicator(2000);
+        } catch (clipErr) {
+          console.warn("Auto copy clipboard failed:", clipErr);
+        }
+      } else {
+        asinsResultPanel?.classList.add("hidden");
+        showToolsStatus("⚠️ Không tìm thấy element .a-unordered-list.dimension-values-list.dimension-values-carousel hoặc không có mã ASIN nào trong các phần tử con .inline-twister-swatch.", "warn");
+        addLog("⚠️ Không tìm thấy element carousel hoặc không có mã ASIN nào.", "warn");
+      }
+    } catch (err) {
+      console.error(err);
+      showToolsStatus(`❌ Lỗi: ${err.message}`, "error");
+      addLog(`❌ Thất bại khi cào ASINs: ${err.message}`, "error");
+    } finally {
+      btnCrawlAsins.disabled = false;
+      asinsSpinner?.classList.add("hidden");
+      if (asinsBtnText) asinsBtnText.textContent = "🔍 Crawl Unordered-List ASINs";
+    }
+  });
+
+  let mainCopyTimer = null;
+  const triggerMainCopyIndicator = (duration = 2000) => {
+    if (!btnCopyAsinsCommaMain) return;
+    if (mainCopyTimer) clearTimeout(mainCopyTimer);
+
+    btnCopyAsinsCommaMain.classList.add("copied-success");
+    if (btnCopyAsinsIcon) btnCopyAsinsIcon.textContent = "✅";
+    if (btnCopyAsinsText) btnCopyAsinsText.textContent = "Đã sao chép vào Clipboard (2s)!";
+
+    mainCopyTimer = setTimeout(() => {
+      btnCopyAsinsCommaMain.classList.remove("copied-success");
+      if (btnCopyAsinsIcon) btnCopyAsinsIcon.textContent = "📋";
+      if (btnCopyAsinsText) btnCopyAsinsText.textContent = "Sao chép ASINs (dấu phẩy)";
+    }, duration);
+  };
+
+  const handleCopyFeedback = (btn, originalText) => {
+    btn.classList.add("btn-copied");
+    btn.textContent = "✅ Đã copy!";
+    setTimeout(() => {
+      btn.classList.remove("btn-copied");
+      btn.textContent = originalText;
+    }, 2000);
+  };
+
+  // Nút chính: Sao chép ASINs cách nhau bởi dấu phẩy với 2s indicator
+  btnCopyAsinsCommaMain?.addEventListener("click", async () => {
+    if (!lastCrawledAsins.length) return;
+    try {
+      const commaSeparated = lastCrawledAsins.join(", ");
+      await navigator.clipboard.writeText(commaSeparated);
+      triggerMainCopyIndicator(2000);
+      addLog("Đã sao chép danh sách ASINs (cách nhau bởi dấu phẩy).", "success");
+    } catch (err) {
+      addLog(`Lỗi sao chép: ${err.message}`, "error");
+    }
+  });
+
+  btnCopyAsinsLines?.addEventListener("click", async () => {
+    if (!lastCrawledAsins.length) return;
+    try {
+      await navigator.clipboard.writeText(lastCrawledAsins.join("\n"));
+      handleCopyFeedback(btnCopyAsinsLines, "📋 Dòng");
+      addLog("Đã sao chép danh sách ASINs (mỗi mã 1 dòng).", "success");
+    } catch (err) {
+      addLog(`Lỗi sao chép: ${err.message}`, "error");
+    }
+  });
+
+  btnCopyAsinsComma?.addEventListener("click", async () => {
+    if (!lastCrawledAsins.length) return;
+    try {
+      const commaSeparated = lastCrawledAsins.join(", ");
+      await navigator.clipboard.writeText(commaSeparated);
+      handleCopyFeedback(btnCopyAsinsComma, "📋 Phẩy");
+      triggerMainCopyIndicator(2000);
+      addLog("Đã sao chép danh sách ASINs (cách nhau bởi dấu phẩy).", "success");
+    } catch (err) {
+      addLog(`Lỗi sao chép: ${err.message}`, "error");
+    }
+  });
+
+  btnCopyAsinsJson?.addEventListener("click", async () => {
+    if (!lastCrawledAsins.length) return;
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(lastCrawledAsins, null, 2));
+      handleCopyFeedback(btnCopyAsinsJson, "📋 JSON");
+      addLog("Đã sao chép danh sách ASINs dạng JSON Array.", "success");
+    } catch (err) {
+      addLog(`Lỗi sao chép: ${err.message}`, "error");
+    }
   });
 });

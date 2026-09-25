@@ -458,8 +458,8 @@
 
         {% for mf in product.metafields %}
         {% if mf.namespace == 'custom' and mf.key == 'rich_description' %}
-        <div class="mt-8 bg-white rounded-xl shadow-sm border border-gray-100 p-6 sm:p-8">
-            <div class="mb-4 border-b border-gray-100 pb-3 flex items-center justify-between">
+        <div id="rich-description-section" class="mt-8 bg-white rounded-xl shadow-sm border border-gray-100 p-6 sm:p-8 relative">
+            <div id="rich-desc-header" class="mb-4 border-b border-gray-100 pb-3 flex items-center justify-between">
                 <div class="flex items-center gap-3">
                     <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
                         <svg class="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"></path></svg>
@@ -476,6 +476,15 @@
             <div class="prose max-w-none text-gray-700" id="rich-description-content">
                 {{ mf.value | safe }}
             </div>
+
+            <!-- Nút Chỉnh sửa neo góc dưới bên trái section Rich Description khi cuộn qua section title -->
+            <div id="rich-desc-floating-wrapper" class="sticky bottom-8 left-0 z-30 pointer-events-none flex justify-start -mt-12 h-12 ml-2 sm:ml-0 transition-all duration-300 opacity-0 translate-y-3">
+                <button type="button" data-val="{{ mf.value | escape }}" onclick="openInternalEditor('metafield:{{ mf.namespace }}:{{ mf.key }}:{{ mf.type }}', this.getAttribute('data-val'), 'Metafield {{ mf.namespace }}.{{ mf.key }}')" class="pointer-events-auto bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center gap-2 text-sm border border-indigo-500/30 cursor-pointer group" title="Chỉnh sửa Rich Description">
+                    <iconify-icon icon="mdi:pencil" class="text-base group-hover:rotate-12 transition-transform"></iconify-icon>
+                    <span>Chỉnh sửa</span>
+                </button>
+            </div>
+
             <script>
                 document.querySelectorAll('#rich-description-content img').forEach(img => {
                     if (img.getAttribute('data-src')) {
@@ -642,6 +651,28 @@
             }
         }
 
+        function toggleRichDescFloatingBtn() {
+            const header = document.getElementById('rich-desc-header');
+            const section = document.getElementById('rich-description-section');
+            const wrapper = document.getElementById('rich-desc-floating-wrapper');
+            if (!header || !section || !wrapper) return;
+            
+            const headerRect = header.getBoundingClientRect();
+            const sectionRect = section.getBoundingClientRect();
+            
+            // Thanh navigation header có chiều cao 64px (h-16 sticky top-0)
+            const isPastTitle = headerRect.bottom <= 64;
+            const isSectionVisible = sectionRect.bottom > 80 && sectionRect.top < window.innerHeight;
+            
+            if (isPastTitle && isSectionVisible) {
+                wrapper.classList.remove('opacity-0', 'translate-y-3', 'pointer-events-none');
+                wrapper.classList.add('opacity-100', 'translate-y-0');
+            } else {
+                wrapper.classList.add('opacity-0', 'translate-y-3', 'pointer-events-none');
+                wrapper.classList.remove('opacity-100', 'translate-y-0');
+            }
+        }
+
         
         function showIndicator(indicatorId, text, isError = false) {
             const indicator = document.getElementById(indicatorId);
@@ -729,6 +760,9 @@
 
         window.addEventListener('scroll', toggleScrollButtons);
         window.addEventListener('load', toggleScrollButtons);
+        window.addEventListener('scroll', toggleRichDescFloatingBtn);
+        window.addEventListener('load', toggleRichDescFloatingBtn);
+        document.addEventListener('DOMContentLoaded', toggleRichDescFloatingBtn);
 
         const lightbox = document.getElementById('lightbox');
         const lightboxImg = document.getElementById('lightbox-img');

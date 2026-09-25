@@ -19,10 +19,20 @@
             <span class="brand-sub">Amazon to Shopify Module-1</span>
           </div>
         </div>
-        <div id="statusBadge" class="status-badge status-ready">Sẵn sàng</div>
+        <div class="header-actions">
+          <button type="button" id="btnToolsToggle" class="btn-tools-toggle" title="Chuyển sang mục Tools">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+            </svg>
+            <span>Tools</span>
+          </button>
+          <div id="statusBadge" class="status-badge status-ready">Sẵn sàng</div>
+        </div>
       </header>
 
-      <!-- Mode Switcher -->
+      <!-- Main Scraper Section -->
+      <div id="scraperSection" class="section-view active">
+        <!-- Mode Switcher -->
       <section class="mode-section">
         <div class="mode-tabs">
           <button type="button" class="tab-btn active" data-mode="preset">
@@ -157,10 +167,67 @@ Live edge wood may differ from photos. We'll message the best raw piece. Check m
         <summary class="json-summary">Xem chi tiết JSON output</summary>
         <pre id="jsonPreview" class="json-preview">Chưa có dữ liệu.</pre>
       </details>
+      </div><!-- /#scraperSection -->
+
+      <!-- Tools Section View -->
+      <div id="toolsSection" class="section-view hidden">
+        <div class="tools-top-bar">
+          <button type="button" id="btnBackToScraper" class="btn-back-link">
+            ← Quay lại Scraper
+          </button>
+          <span class="tools-heading">🛠️ Extension Tools</span>
+        </div>
+
+        <div class="tool-card">
+          <div class="tool-card-header">
+            <h3 class="tool-card-title">Cào Unordered-List ASINs</h3>
+            <span class="tool-badge">Twister Carousel</span>
+          </div>
+          <p class="tool-card-desc">
+            Trích xuất toàn bộ mã ASIN (thuộc tính <code>data-asin</code>) trong các element con <code>.inline-twister-swatch</code> thuộc <code>.a-unordered-list.dimension-values-list.dimension-values-carousel</code>.
+          </p>
+
+          <button type="button" id="btnCrawlAsins" class="btn btn-primary btn-tool-action">
+            <span class="btn-spinner hidden" id="asinsSpinner"></span>
+            <span class="btn-text" id="asinsBtnText">🔍 Crawl Unordered-List ASINs</span>
+          </button>
+        </div>
+
+        <!-- Tool Results Area -->
+        <div id="asinsResultPanel" class="asins-result-panel hidden">
+          <div class="asins-result-header">
+            <div class="asins-result-meta">
+              <span class="asins-result-label">Danh sách ASINs:</span>
+              <span id="asinsCountBadge" class="asins-count-badge">0 ASINs</span>
+            </div>
+            <div class="asins-action-btns">
+              <button type="button" id="btnCopyAsinsLines" class="btn-sm btn-secondary" title="Sao chép mỗi mã 1 dòng">
+                📋 Dòng
+              </button>
+              <button type="button" id="btnCopyAsinsComma" class="btn-sm btn-secondary" title="Sao chép cách nhau bởi dấu phẩy">
+                📋 Phẩy
+              </button>
+              <button type="button" id="btnCopyAsinsJson" class="btn-sm btn-secondary" title="Sao chép mảng JSON">
+                📋 JSON
+              </button>
+            </div>
+          </div>
+
+          <textarea id="asinsOutputTextarea" class="form-textarea asins-textarea" rows="7" readonly spellcheck="false" placeholder="Danh sách mã ASIN cào được sẽ xuất hiện ở đây..."></textarea>
+
+          <button type="button" id="btnCopyAsinsCommaMain" class="btn btn-copy-asins-main" title="Sao chép tất cả mã ASIN thành chuỗi cách nhau bởi dấu phẩy">
+            <span class="btn-copy-icon" id="btnCopyAsinsIcon">📋</span>
+            <span class="btn-copy-text" id="btnCopyAsinsText">Sao chép ASINs (dấu phẩy)</span>
+          </button>
+        </div>
+
+        <!-- Tool Status Message -->
+        <div id="toolsStatusBox" class="tools-status-box hidden"></div>
+      </div>
     </div>
 
     <!-- Pinned Bottom Action Bar -->
-    <footer class="bottom-bar">
+    <footer class="bottom-bar" id="scraperBottomBar">
       <button type="button" id="btnScrape" class="btn btn-primary btn-scrape">
         <span class="btn-spinner hidden" id="scrapeSpinner"></span>
         <span class="btn-text" id="scrapeBtnText">🚀 Bắt đầu cào dữ liệu</span>

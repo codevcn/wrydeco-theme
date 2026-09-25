@@ -182,10 +182,20 @@
                     </thead>
                     <tbody class="divide-y divide-gray-200 text-sm">
                         {% for p in policies %}
+                        {% set display_title = p.title %}
+                        {% if p.type == 'CONTACT_INFORMATION' or (p.title | lower) == 'contact' %}
+                            {% set display_title = 'Contact information' %}
+                        {% elif p.type == 'REFUND_POLICY' or (p.title | lower) in ['refund', 'refund policy'] %}
+                            {% set display_title = 'Return and refund policy' %}
+                        {% elif p.type == 'SHIPPING_POLICY' or (p.title | lower) == 'shipping' %}
+                            {% set display_title = 'Shipping policy' %}
+                        {% elif p.type == 'CANCEL_ORDER' or (p.title | lower) in ['cancel order', 'modify/cancel order', 'modify and cancel order'] %}
+                            {% set display_title = 'Cancel Order' %}
+                        {% endif %}
                         <tr class="policy-row group" 
                             id="policy-row-{{ loop.index }}"
                             data-type="{{ p.type }}"
-                            data-title="{{ p.title }}"
+                            data-title="{{ display_title }}"
                             data-handle="{{ p.handle }}"
                             data-stt="{{ loop.index }}"
                             onclick="selectPolicyRow({{ loop.index }})">
@@ -208,9 +218,9 @@
                                     </div>
                                     <div>
                                         <div class="font-bold text-gray-900 group-hover:text-indigo-600 transition-colors text-base flex items-center gap-2">
-                                            <span>{{ p.title }}</span>
+                                            <span>{{ display_title }}</span>
                                             {% if p.char_count > 0 %}
-                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                             <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
                                                 Đang hoạt động
                                             </span>
                                             {% else %}
@@ -238,7 +248,7 @@
                             <td class="py-4 px-4 whitespace-nowrap">
                                 <div class="flex items-center gap-1.5">
                                     <span class="code-font text-xs text-gray-600 bg-gray-50 px-2 py-0.5 rounded border border-gray-200">
-                                        /policies/{{ p.handle }}
+                                        {{ p.url_path or ('/policies/' ~ p.handle) }}
                                     </span>
                                 </div>
                             </td>
@@ -408,6 +418,24 @@
         let activePolicy = null;
         let originalPolicyContent = '';
 
+        const TITLE_DISPLAY_MAP = {
+            'CONTACT_INFORMATION': 'Contact information',
+            'REFUND_POLICY': 'Return and refund policy',
+            'SHIPPING_POLICY': 'Shipping policy',
+            'CANCEL_ORDER': 'Cancel Order'
+        };
+
+        function getPolicyDisplayTitle(policy) {
+            if (!policy) return '';
+            if (TITLE_DISPLAY_MAP[policy.type]) return TITLE_DISPLAY_MAP[policy.type];
+            const raw = (policy.title || '').trim().toLowerCase();
+            if (raw === 'contact') return 'Contact information';
+            if (['refund', 'refund policy'].includes(raw)) return 'Return and refund policy';
+            if (raw === 'shipping') return 'Shipping policy';
+            if (['cancel order', 'modify/cancel order', 'modify and cancel order'].includes(raw)) return 'Cancel Order';
+            return policy.title || '';
+        }
+
         // 1. Khi nhấn vào 1 row: Hiện indicator cho row đó, ẩn indicator của row khác đi, và mở popup chỉnh sửa
         function selectPolicyRow(stt) {
             // Bỏ active ở tất cả các row
@@ -435,7 +463,7 @@
             originalPolicyContent = policy.body || '';
 
             // Gắn dữ liệu vào modal
-            document.getElementById('modal-policy-title').textContent = 'Chỉnh sửa: ' + policy.title;
+            document.getElementById('modal-policy-title').textContent = 'Chỉnh sửa: ' + getPolicyDisplayTitle(policy);
             document.getElementById('modal-policy-type').textContent = policy.type;
             
             const linkEl = document.getElementById('modal-policy-link');
@@ -576,7 +604,7 @@
                         }
                     }
 
-                    showToast('Đã lưu chính sách "' + activePolicy.title + '" thành công vào Store!', 'success');
+                    showToast('Đã lưu chính sách "' + getPolicyDisplayTitle(activePolicy) + '" thành công vào Store!', 'success');
                     
                     setTimeout(() => {
                         closePolicyModal();

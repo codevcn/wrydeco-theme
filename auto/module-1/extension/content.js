@@ -1375,12 +1375,83 @@
   };
 
   // ============================================================
+  // CRAWL UNORDERED-LIST ASINs
+  // ============================================================
+  const extractUnorderedListAsins = () => {
+    sendLog("Đang quét element .a-unordered-list.dimension-values-list.dimension-values-carousel...", "info");
+
+    const primarySelector = ".a-unordered-list.dimension-values-list.dimension-values-carousel";
+    let lists = Array.from(document.querySelectorAll(primarySelector));
+
+    if (lists.length === 0) {
+      // Fallback selector phòng khi Amazon lược bớt class utility a-unordered-list
+      const fallbackSelector = "ul.dimension-values-list.dimension-values-carousel, .dimension-values-list.dimension-values-carousel";
+      lists = Array.from(document.querySelectorAll(fallbackSelector));
+    }
+
+    if (lists.length === 0) {
+      sendLog("Không tìm thấy element .a-unordered-list.dimension-values-list.dimension-values-carousel trên trang hiện tại.", "warn");
+      return [];
+    }
+
+    sendLog(`Tìm thấy ${lists.length} carousel/list element(s). Đang bóc tách mã ASIN từ các element con .inline-twister-swatch...`, "info");
+
+    const asinsSet = new Set();
+
+    lists.forEach((list, listIndex) => {
+      const swatches = list.querySelectorAll(".inline-twister-swatch");
+      sendLog(`Danh sách [${listIndex + 1}/${lists.length}]: tìm thấy ${swatches.length} phần tử .inline-twister-swatch.`, "info");
+
+      swatches.forEach((swatch) => {
+        let asin = swatch.getAttribute("data-asin");
+        if (!asin) {
+          const childWithAsin = swatch.querySelector("[data-asin]");
+          if (childWithAsin) {
+            asin = childWithAsin.getAttribute("data-asin");
+          } else {
+            const parentWithAsin = swatch.closest("[data-asin]");
+            if (parentWithAsin) {
+              asin = parentWithAsin.getAttribute("data-asin");
+            }
+          }
+        }
+
+        if (asin) {
+          const cleanAsin = asin.trim();
+          if (cleanAsin) {
+            asinsSet.add(cleanAsin);
+          }
+        }
+      });
+    });
+
+    const asins = Array.from(asinsSet);
+    sendLog(`Hoàn tất cào ASINs: Đã trích xuất được ${asins.length} mã ASIN duy nhất.`, "success");
+    return asins;
+  };
+
+  // ============================================================
   // MESSAGE LISTENER
   // ============================================================
 
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "PING") {
       sendResponse({ status: "PONG", isTopFrame });
+      return false;
+    }
+
+    if (request.action === "CRAWL_UNORDERED_LIST_ASINS") {
+      if (!isTopFrame) {
+        return false;
+      }
+
+      try {
+        const asins = extractUnorderedListAsins();
+        sendResponse({ success: true, asins, count: asins.length });
+      } catch (err) {
+        sendLog(`Lỗi khi cào ASINs: ${err.message}`, "error");
+        sendResponse({ success: false, error: err.message, asins: [], count: 0 });
+      }
       return false;
     }
 

@@ -71,11 +71,12 @@
                 <div class="flex items-center gap-3">
                     <label class="text-sm font-semibold text-gray-700 whitespace-nowrap">Sắp xếp:</label>
                     <select name="sort_by" onchange="document.getElementById('filter-form').submit()" class="bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5 outline-none transition-colors cursor-pointer hover:border-gray-300">
-                        <option value="created_desc" {% if sort_by == 'created_desc' %}selected{% endif %}>Đã tạo mới nhất</option>
                         <option value="title_asc" {% if sort_by == 'title_asc' %}selected{% endif %}>Tên: A-Z (Tăng dần)</option>
                         <option value="title_desc" {% if sort_by == 'title_desc' %}selected{% endif %}>Tên: Z-A (Giảm dần)</option>
-                        <option value="count_asc" {% if sort_by == 'count_asc' %}selected{% endif %}>Số lượng SP (Tăng dần)</option>
+                        <option value="created_desc" {% if sort_by == 'created_desc' %}selected{% endif %}>Đã tạo mới nhất</option>
+                        <option value="created_asc" {% if sort_by == 'created_asc' %}selected{% endif %}>Đã tạo cũ nhất</option>
                         <option value="count_desc" {% if sort_by == 'count_desc' %}selected{% endif %}>Số lượng SP (Giảm dần)</option>
+                        <option value="count_asc" {% if sort_by == 'count_asc' %}selected{% endif %}>Số lượng SP (Tăng dần)</option>
                     </select>
                 </div>
                 
@@ -123,7 +124,20 @@
                     <a href="/collections/{{ collection.id }}" target="_blank" rel="noopener noreferrer" class="hover:text-indigo-600 transition-colors">
                         <h2 class="text-lg font-bold text-gray-900 mb-1 line-clamp-1 hover:text-indigo-600 transition-colors">{{ collection.title }}</h2>
                     </a>
-                    <p class="text-xs font-mono text-indigo-600 mb-3 bg-indigo-50 px-2 py-0.5 rounded inline-block self-start">{{ collection.handle }}</p>
+                    
+                    <div class="flex items-center gap-2 mb-3 flex-wrap">
+                        <button type="button" 
+                                data-title="{{ collection.title }}" 
+                                onclick="copyCollectionTitle(this)" 
+                                class="copy-title-btn inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-gray-700 hover:text-indigo-600 bg-gray-100 hover:bg-indigo-50 border border-gray-200 hover:border-indigo-200 rounded-md transition-all cursor-pointer shadow-xs focus:outline-none" 
+                                title="Copy tên collection vào clipboard">
+                            <svg class="w-3.5 h-3.5 text-gray-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                            </svg>
+                            <span class="copy-text">Copy Title</span>
+                        </button>
+                        <span class="text-xs font-mono text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded inline-block truncate max-w-full" title="{{ collection.handle }}">{{ collection.handle }}</span>
+                    </div>
                     
                     <div class="text-sm text-gray-600 line-clamp-3 mb-4 prose prose-sm flex-grow">
                         {{ collection.description | safe if collection.description else '<span class="italic text-gray-400">Không có mô tả</span>'|safe }}
@@ -304,6 +318,62 @@
 
 
     <script>
+        function copyCollectionTitle(btn) {
+            const title = btn.getAttribute('data-title') || '';
+            if (!title) return;
+
+            function onSuccess() {
+                if (btn._copyTimeout) {
+                    clearTimeout(btn._copyTimeout);
+                }
+                if (!btn._originalHTML) {
+                    btn._originalHTML = btn.innerHTML;
+                    btn._originalClass = btn.className;
+                }
+
+                btn.innerHTML = `
+                    <svg class="w-3.5 h-3.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <span class="copy-text text-green-700 font-semibold">Đã copy!</span>
+                `;
+                btn.className = "copy-title-btn inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-green-700 bg-green-50 border border-green-300 rounded-md transition-all cursor-pointer shadow-xs focus:outline-none";
+
+                btn._copyTimeout = setTimeout(() => {
+                    btn.innerHTML = btn._originalHTML;
+                    btn.className = btn._originalClass;
+                    delete btn._originalHTML;
+                    delete btn._originalClass;
+                    delete btn._copyTimeout;
+                }, 2000);
+            }
+
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(title).then(onSuccess).catch(() => fallbackCopy(title));
+            } else {
+                fallbackCopy(title);
+            }
+
+            function fallbackCopy(text) {
+                const textArea = document.createElement("textarea");
+                textArea.value = text;
+                textArea.style.position = "fixed";
+                textArea.style.left = "-999999px";
+                textArea.style.top = "-999999px";
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                try {
+                    const successful = document.execCommand('copy');
+                    if (successful) {
+                        onSuccess();
+                    }
+                } catch (err) {
+                    console.error('Lỗi khi copy:', err);
+                }
+                document.body.removeChild(textArea);
+            }
+        }
         
         function previewCollectionCover(event) {
             const file = event.target.files[0];

@@ -118,6 +118,10 @@
                     <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
                     <span>Mở Shopify Custom Data</span>
                 </a>
+                <a target="_blank" rel="noopener noreferrer" href="https://admin.shopify.com/store/{{ shopify_shop }}/content/metaobjects" class="inline-flex items-center gap-1.5 px-3 py-2 bg-black text-white text-xs font-medium rounded-lg border border-gray-300 hover:border-indigo-300 shadow-sm transition-colors" title="Mở trang quản lý Metaobjects trên Shopify Admin">
+                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                    <span>Shopify Metaobjects</span>
+                </a>
                 <button type="button" onclick="window.location.reload()" class="p-2 text-gray-600 hover:text-indigo-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm" title="Tải lại dữ liệu">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
                 </button>
@@ -173,6 +177,7 @@
                                 <th class="py-3 px-3">Người Tạo</th>
                                 <th class="py-3 px-3 text-center">Số Trường</th>
                                 <th class="py-3 px-3 text-center">Số Bản Ghi</th>
+                                <th class="py-3 px-3 text-center">Cập Nhật Lần Cuối</th>
                                 <th class="py-3 px-3 text-right">Thao Tác</th>
                             </tr>
                         </thead>
@@ -247,6 +252,18 @@
                                     {% endif %}
                                 </td>
 
+                                <!-- Cột Cập Nhật Lần Cuối -->
+                                <td class="py-3.5 px-3 text-center whitespace-nowrap">
+                                    {% if d.latest_updated_at_fmt and d.latest_updated_at_fmt != '--' %}
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium bg-gray-100 text-gray-700 rounded-md border border-gray-200 font-mono" title="{{ d.latest_updated_at }}">
+                                        <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                        <span>{{ d.latest_updated_at_fmt }}</span>
+                                    </span>
+                                    {% else %}
+                                    <span class="text-[11px] text-gray-400 font-mono">--</span>
+                                    {% endif %}
+                                </td>
+
                                 <!-- Cột Thao tác -->
                                 <td class="py-3.5 px-3 text-right whitespace-nowrap">
                                     <div class="flex items-center justify-end gap-1.5" onclick="event.stopPropagation()">
@@ -272,7 +289,7 @@
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="7" class="py-12 text-center text-gray-500">
+                                <td colspan="8" class="py-12 text-center text-gray-500">
                                     <div class="flex flex-col items-center justify-center">
                                         <svg class="w-10 h-10 text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                                         <p class="text-sm font-medium">Không tìm thấy Metaobject nào phù hợp</p>
@@ -315,6 +332,15 @@
                             <div class="text-xs text-gray-500 uppercase font-semibold tracking-wider">Tên Metaobject</div>
                             <div id="panel-name" class="text-base font-bold text-gray-900 mt-0.5">--</div>
                             <div id="panel-type" class="text-xs font-mono text-indigo-600 mt-0.5">--</div>
+                        </div>
+
+                        <!-- Thời điểm cập nhật lần cuối -->
+                        <div class="flex items-center justify-between text-xs bg-gray-50 p-2.5 rounded-lg border border-gray-100">
+                            <span class="text-gray-500 font-medium flex items-center gap-1.5">
+                                <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                <span>Cập nhật lần cuối:</span>
+                            </span>
+                            <span id="panel-updated-at" class="font-mono text-gray-800">--</span>
                         </div>
 
                         <div id="panel-desc-container" class="hidden">
@@ -390,6 +416,10 @@
                             <span class="text-gray-500">Số bản ghi (Entries):</span>
                             <span id="modal-entries-count" class="font-semibold text-gray-800 ml-1">--</span>
                         </div>
+                        <div class="col-span-2 pt-2 border-t border-gray-200 flex items-center justify-between">
+                            <span class="text-gray-500">Cập nhật lần cuối:</span>
+                            <span id="modal-latest-updated" class="font-semibold text-gray-800 font-mono">--</span>
+                        </div>
                     </div>
                 </div>
 
@@ -419,7 +449,7 @@
     <div id="edit-entry-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
         <!-- Backdrop -->
         <div class="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity cursor-pointer" onclick="closeEditEntryModal()" title="Nhấn vào nền để đóng"></div>
-        <div class="relative z-10 bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div class="relative z-10 bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[96vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             <!-- Modal Header -->
             <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
                 <div class="flex items-center gap-3">
@@ -686,6 +716,10 @@
             const entriesCount = def.entries ? def.entries.length : 0;
             document.getElementById('panel-fields-count').textContent = fieldsCount;
             document.getElementById('panel-entries-count').textContent = entriesCount;
+            const panelUpdatedEl = document.getElementById('panel-updated-at');
+            if (panelUpdatedEl) {
+                panelUpdatedEl.textContent = def.latest_updated_at_fmt || '--';
+            }
 
             // Render Tab Fields
             const fieldsContent = document.getElementById('panel-fields-content');
@@ -772,6 +806,10 @@
             document.getElementById('modal-storefront').textContent = def.storefront_access || 'NONE';
             document.getElementById('modal-fields-count').textContent = `${def.fields_count || 0} trường`;
             document.getElementById('modal-entries-count').textContent = `${def.entries ? def.entries.length : 0} bản ghi`;
+            const modalUpdatedEl = document.getElementById('modal-latest-updated');
+            if (modalUpdatedEl) {
+                modalUpdatedEl.textContent = def.latest_updated_at_fmt || '--';
+            }
             document.getElementById('modal-admin-link').href = `https://admin.shopify.com/store/{{ shopify_shop }}/content/metaobjects/entries/${def.type}`;
 
             const fieldsList = document.getElementById('modal-fields-list');
@@ -931,10 +969,21 @@
             return `
                 <div class="bg-gray-50/80 p-3 rounded-xl border border-gray-200 focus-within:border-indigo-400 focus-within:bg-indigo-50/20 transition-all">
                     <div class="flex items-center justify-between mb-1.5">
-                        <label class="font-bold text-gray-800 text-xs flex items-center gap-1.5">
-                            <span>${name}</span>
-                            ${isRequired ? '<span class="text-red-500 font-bold" title="Trường bắt buộc">*</span>' : ''}
-                        </label>
+                        <div class="flex items-center gap-2">
+                            <label class="font-bold text-gray-800 text-xs flex items-center gap-1.5">
+                                <span>${name}</span>
+                                ${isRequired ? '<span class="text-red-500 font-bold" title="Trường bắt buộc">*</span>' : ''}
+                            </label>
+                            <button 
+                                type="button" 
+                                onclick="copyFieldValue('${key}', this)" 
+                                class="copy-field-btn inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium text-gray-500 hover:text-indigo-600 bg-white hover:bg-indigo-50 border border-gray-200 hover:border-indigo-300 rounded transition-all cursor-pointer shadow-2xs focus:outline-none"
+                                title="Copy giá trị của trường ${name} vào clipboard"
+                            >
+                                <svg class="copy-field-icon w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                <span class="copy-field-text">Copy</span>
+                            </button>
+                        </div>
                         <div class="flex items-center gap-1.5">
                             <span class="font-mono text-[10px] text-gray-400">key: ${key}</span>
                             <span class="px-1.5 py-0.2 bg-gray-200/70 text-gray-700 rounded text-[10px] font-mono">
@@ -946,6 +995,60 @@
                     <div>${inputHtml}</div>
                 </div>
             `;
+        }
+
+        // Sao chép giá trị của trường vào clipboard kèm 2s indicator
+        function copyFieldValue(key, btn) {
+            const inputEl = document.querySelector(`[name="field_${key}"]`);
+            let val = '';
+            if (inputEl) {
+                val = inputEl.value !== undefined && inputEl.value !== null ? inputEl.value : '';
+            } else if (currentEditingEntry && currentEditingEntry.fields) {
+                const found = currentEditingEntry.fields.find(f => f.key === key);
+                val = found && found.value !== null && found.value !== undefined ? found.value : '';
+            }
+
+            function onSuccess() {
+                const originalHtml = btn.innerHTML;
+                const originalClass = btn.className;
+
+                btn.className = "copy-field-btn inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-300 rounded transition-all shadow-2xs";
+                btn.innerHTML = `
+                    <svg class="w-3 h-3 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+                    <span class="text-[10px]">Đã chép!</span>
+                `;
+
+                setTimeout(() => {
+                    btn.innerHTML = originalHtml;
+                    btn.className = originalClass;
+                }, 2000);
+            }
+
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(val)
+                    .then(onSuccess)
+                    .catch(() => fallbackCopyField(val, onSuccess));
+            } else {
+                fallbackCopyField(val, onSuccess);
+            }
+        }
+
+        function fallbackCopyField(text, cb) {
+            try {
+                const textArea = document.createElement("textarea");
+                textArea.value = text || '';
+                textArea.style.position = "fixed";
+                textArea.style.left = "-999999px";
+                textArea.style.top = "-999999px";
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                const successful = document.execCommand('copy');
+                document.body.removeChild(textArea);
+                if (successful && cb) cb();
+            } catch (err) {
+                console.error('Fallback copy failed: ', err);
+            }
         }
 
         function closeEditEntryModal() {
@@ -1057,8 +1160,8 @@
                     }
 
                     setTimeout(() => {
-                        closeEditEntryModal();
-                    }, 1200);
+                        window.location.reload();
+                    }, 1000);
 
                 } else {
                     const errMsg = result.message || (result.errors ? result.errors.map(e => e.message).join('; ') : 'Có lỗi xảy ra khi lưu vào Shopify.');

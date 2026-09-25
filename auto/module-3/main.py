@@ -19,9 +19,9 @@ app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
-SHOPIFY_SHOP = os.getenv("SHOPIFY_SHOP")
-SHOPIFY_ADMIN_TOKEN = os.getenv("SHOPIFY_ADMIN_TOKEN")
-SHOPIFY_API_VERSION = os.getenv("SHOPIFY_API_VERSION", "2024-04") # Fallback to 2024-04 if not set
+SHOPIFY_SHOP = (os.getenv("SHOPIFY_SHOP") or "").strip().strip('"').strip("'")
+SHOPIFY_ADMIN_TOKEN = (os.getenv("SHOPIFY_ADMIN_TOKEN") or "").strip().strip('"').strip("'")
+SHOPIFY_API_VERSION = (os.getenv("SHOPIFY_API_VERSION") or "2024-04").strip().strip('"').strip("'")
 
 GRAPHQL_URL = f"https://{SHOPIFY_SHOP}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/graphql.json"
 HEADERS = {
@@ -118,113 +118,8 @@ def get_products(first=50, after=None, before=None, last=None, filter_query=None
         print("GraphQL Errors:", data["errors"])
         return {"products": {"edges": [], "pageInfo": {}}, "productsCount": {"count": 0}}
     return data["data"]
-
 def get_products_by_metafield_amazon_link(keyword, sort_by="created_desc"):
-    query = """
-    query getProducts($after: String) {
-      products(first: 25, after: $after) {
-        pageInfo {
-          hasNextPage
-          endCursor
-        }
-        edges {
-          node {
-            id
-            handle
-            title
-            descriptionHtml
-            createdAt
-            productType
-            category {
-              name
-            }
-            priceRangeV2 {
-              minVariantPrice {
-                amount
-              }
-            }
-            options {
-              name
-            }
-            collections(first: 20) {
-              edges {
-                node {
-                  title
-                }
-              }
-            }
-            metafield(namespace: "custom", key: "amazon_link") {
-              value
-            }
-            media(first: 50) {
-              edges {
-                node {
-                  ... on MediaImage {
-                    id
-                    image {
-                      url
-                    }
-                  }
-                  ... on Video {
-                    id
-                    preview {
-                      image {
-                        url
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-    """
-    all_matched_edges = []
-    has_next = True
-    cursor = None
-    
-    while has_next:
-        variables = {}
-        if cursor:
-            variables["after"] = cursor
-            
-        res = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=HEADERS)
-        res.raise_for_status()
-        data = res.json()
-        if "errors" in data:
-            print("GraphQL Errors:", data["errors"])
-            break
-            
-        products_data = data["data"]["products"]
-        for edge in products_data["edges"]:
-            mf = edge["node"].get("metafield")
-            if mf and mf.get("value") and keyword.lower() in mf["value"].lower():
-                all_matched_edges.append(edge)
-                
-        page_info = products_data.get("pageInfo", {})
-        has_next = page_info.get("hasNextPage", False)
-        cursor = page_info.get("endCursor")
-        
-    def get_sort_key(edge):
-        if sort_by in ["price_asc", "price_desc"]:
-            price_data = edge["node"].get("priceRangeV2")
-            if price_data and price_data.get("minVariantPrice"):
-                return float(price_data["minVariantPrice"].get("amount", 0))
-            return 0.0
-        return edge["node"].get("createdAt", "")
-        
-    reverse_sort = sort_by in ["created_desc", "price_desc"]
-    all_matched_edges.sort(key=get_sort_key, reverse=reverse_sort)
-        
-    return {
-        "products": {
-            "edges": all_matched_edges,
-            "pageInfo": {"hasNextPage": False, "hasPreviousPage": False}
-        },
-        "productsCount": {"count": len(all_matched_edges)}
-    }
+    return get_products_by_metafield_amazon_link_list(keyword, sort_by=sort_by)
 
 def get_products_by_metafield_amazon_link_list(keywords_str, sort_by="created_desc"):
     query = """
@@ -291,7 +186,7 @@ def get_products_by_metafield_amazon_link_list(keywords_str, sort_by="created_de
     all_matched_edges = []
     has_next = True
     cursor = None
-    keyword_list = [k.strip().lower() for k in keywords_str.split(',') if k.strip()]
+    keyword_list = [k.strip().lower() for k in re.split(r'[\r\n,]+', keywords_str) if k.strip()]
     
     while has_next:
         variables = {}
@@ -1466,9 +1361,7 @@ async def read_root(request: Request, after: str = None, before: str = None, fil
             data = get_products_by_rich_description_status(special_filter == "has_rich", sort_by=sort_by)
         elif special_filter and special_filter == "duplicate_asin":
             data = get_products_by_duplicate_asin(sort_by=sort_by)
-        elif filter_value and filter_type == "metafield_amazon_link":
-            data = get_products_by_metafield_amazon_link(filter_value, sort_by=sort_by)
-        elif filter_value and filter_type == "metafield_amazon_link_list":
+        elif filter_value and filter_type in ["metafield_amazon_link", "metafield_amazon_link_list"]:
             data = get_products_by_metafield_amazon_link_list(filter_value, sort_by=sort_by)
         elif filter_value and filter_type == "metafield_rich_description":
             data = get_products_by_metafield_rich_description(filter_value, sort_by=sort_by)
@@ -1875,6 +1768,29 @@ def get_collection_by_id(collection_id: str):
             condition
           }
         }
+        metafield_buying_guide: metafield(namespace: "custom", key: "buying_guide") {
+          id
+          value
+          type
+        }
+        metafield_related: metafield(namespace: "custom", key: "related_collections") {
+          id
+          value
+          type
+          references(first: 20) {
+            edges {
+              node {
+                ... on Collection {
+                  id
+                  title
+                  handle
+                  image { url }
+                  productsCount { count }
+                }
+              }
+            }
+          }
+        }
       }
     }
     """
@@ -1918,6 +1834,46 @@ def get_collection_by_id(collection_id: str):
     else:
         rules_str = "Manual collection (Thêm sản phẩm thủ công)"
         
+    # Parse Metafields
+    buying_guide_node = node.get("metafield_buying_guide")
+    buying_guide_val = buying_guide_node.get("value") if buying_guide_node else ""
+    
+    related_node = node.get("metafield_related")
+    related_list = []
+    if related_node and related_node.get("references"):
+        for ref_edge in related_node["references"].get("edges", []):
+            ref_col = ref_edge.get("node", {})
+            if ref_col:
+                rel_raw_id = ref_col.get("id", "")
+                rel_num_id = rel_raw_id.split("/")[-1] if "/" in rel_raw_id else rel_raw_id
+                related_list.append({
+                    "id": rel_num_id,
+                    "title": ref_col.get("title", ""),
+                    "handle": ref_col.get("handle", ""),
+                    "image": ref_col.get("image", {}).get("url") if ref_col.get("image") else None,
+                    "products_count": ref_col.get("productsCount", {}).get("count", 0) if ref_col.get("productsCount") else 0
+                })
+                
+    metafields_data = {
+        "buying_guide": {
+            "name": "Collection Buying Guide",
+            "key": "custom.buying_guide",
+            "type": "multi_line_text_field",
+            "has_value": bool(buying_guide_val),
+            "value": buying_guide_val or "",
+            "char_count": len(buying_guide_val) if buying_guide_val else 0,
+            "kb_size": round(len(buying_guide_val.encode('utf-8')) / 1024, 1) if buying_guide_val else 0
+        },
+        "related_collections": {
+            "name": "Related Collections",
+            "key": "custom.related_collections",
+            "type": "list.collection_reference",
+            "has_value": len(related_list) > 0,
+            "collections": related_list,
+            "count": len(related_list)
+        }
+    }
+
     return {
         "id": node["id"].split("/")[-1],
         "handle": node["handle"],
@@ -1930,7 +1886,8 @@ def get_collection_by_id(collection_id: str):
         "channels": channels,
         "publications_data": publications_data,
         "rules_str": rules_str,
-        "rules_data": rules_data
+        "rules_data": rules_data,
+        "metafields": metafields_data
     }
 
 
@@ -2000,6 +1957,12 @@ import base64
 @app.post("/api/collections/{collection_id}/image")
 async def update_collection_image(collection_id: str, request: Request, image: UploadFile = File(...)):
     try:
+        clean_token = (SHOPIFY_ADMIN_TOKEN or os.getenv("SHOPIFY_ADMIN_TOKEN", "")).strip().strip('"').strip("'")
+        req_headers = {
+            "X-Shopify-Access-Token": clean_token,
+            "Content-Type": "application/json"
+        }
+        
         # Check if collection is smart or custom
         query = '''
         query getCollection($id: ID!) {
@@ -2009,7 +1972,7 @@ async def update_collection_image(collection_id: str, request: Request, image: U
         }
         '''
         variables = {"id": f"gid://shopify/Collection/{collection_id}"}
-        res = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=HEADERS)
+        res = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=req_headers)
         res.raise_for_status()
         data = res.json()
         
@@ -2020,23 +1983,12 @@ async def update_collection_image(collection_id: str, request: Request, image: U
         is_smart = bool(node.get("ruleSet"))
         collection_type = "smart_collection" if is_smart else "custom_collection"
         
-        shop = os.getenv("SHOPIFY_SHOP")
-        api_version = os.getenv("SHOPIFY_API_VERSION")
+        shop = (SHOPIFY_SHOP or os.getenv("SHOPIFY_SHOP", "")).strip().strip('"').strip("'")
+        api_version = (SHOPIFY_API_VERSION or os.getenv("SHOPIFY_API_VERSION", "2024-04")).strip().strip('"').strip("'")
         rest_base_url = f"https://{shop}.myshopify.com/admin/api/{api_version}"
+        target_url = f"{rest_base_url}/{collection_type}s/{collection_id}.json"
         
-        # 1. Delete existing image
-        delete_url = f"{rest_base_url}/{collection_type}s/{collection_id}.json"
-        delete_payload = {
-            collection_type: {
-                "id": collection_id,
-                "image": None
-            }
-        }
-        res_delete = requests.put(delete_url, json=delete_payload, headers=HEADERS)
-        if not res_delete.ok:
-            return JSONResponse(status_code=400, content={"success": False, "message": f"Không thể xóa ảnh gốc: {res_delete.text}"})
-            
-        # 2. Upload new image
+        # Read and encode uploaded image
         contents = await image.read()
         encoded = base64.b64encode(contents).decode("utf-8")
         
@@ -2049,8 +2001,22 @@ async def update_collection_image(collection_id: str, request: Request, image: U
                 }
             }
         }
-        res_upload = requests.put(delete_url, json=upload_payload, headers=HEADERS)
+        res_upload = requests.put(target_url, json=upload_payload, headers=req_headers)
         if not res_upload.ok:
+            # Fallback: if direct update failed, try clearing image then upload again
+            try:
+                delete_payload = {
+                    collection_type: {
+                        "id": collection_id,
+                        "image": None
+                    }
+                }
+                requests.put(target_url, json=delete_payload, headers=req_headers)
+                res_retry = requests.put(target_url, json=upload_payload, headers=req_headers)
+                if res_retry.ok:
+                    return JSONResponse(content={"success": True})
+            except Exception:
+                pass
             return JSONResponse(status_code=400, content={"success": False, "message": f"Không thể upload ảnh mới: {res_upload.text}"})
             
         return JSONResponse(content={"success": True})
@@ -2260,13 +2226,13 @@ async def create_collection(request: Request):
 
 @app.get("/collections", response_class=HTMLResponse)
 async def read_collections(request: Request, 
-                           sort_by: str = "count_desc", 
+                           sort_by: str = "created_desc", 
                            filter_mode: str = "all"):
     try:
         collections = get_all_collections()
         total_collections_count = len(collections)
         
-        # 1. Filter
+        # 1. Filter (Lọc theo)
         if filter_mode == "empty":
             collections = [c for c in collections if c["products_count"] == 0]
         elif filter_mode == "not_empty":
@@ -2276,7 +2242,7 @@ async def read_collections(request: Request,
         elif filter_mode == "unpublished":
             collections = [c for c in collections if not c.get("published_online")]
             
-        # 2. Sort
+        # 2. Sort (Sắp xếp)
         if sort_by == "title_asc":
             collections.sort(key=lambda x: x["title"].lower())
         elif sort_by == "title_desc":
@@ -2285,8 +2251,11 @@ async def read_collections(request: Request,
             collections.sort(key=lambda x: x["products_count"])
         elif sort_by == "count_desc":
             collections.sort(key=lambda x: x["products_count"], reverse=True)
-        elif sort_by == "created_desc":
-            collections.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+        elif sort_by == "created_asc":
+            collections.sort(key=lambda x: int(x["id"]) if str(x.get("id", "")).isdigit() else 0)
+        else: # created_desc (mặc định)
+            collections.sort(key=lambda x: int(x["id"]) if str(x.get("id", "")).isdigit() else 0, reverse=True)
+            sort_by = "created_desc"
             
         return templates.TemplateResponse(request=request, name="collections.html", context={
             "request": request, 
@@ -4661,7 +4630,7 @@ def get_metaobject_definitions_data():
                 alias_map[alias] = d
                 safe_type = d["type"].replace('"', '\\"')
                 query_parts.append(f"""
-                {alias}: metaobjects(type: "{safe_type}", first: 50) {{
+                {alias}: metaobjects(type: "{safe_type}", first: 50, sortKey: "updated_at", reverse: true) {{
                   edges {{
                     node {{
                       id
@@ -4702,7 +4671,25 @@ def get_metaobject_definitions_data():
             except Exception as e:
                 print("Error in batched metaobjects query:", e)
 
+        for d in defs:
+            latest_time = ""
+            if d.get("entries"):
+                latest_time = max((e.get("updatedAt", "") for e in d["entries"]), default="")
+            d["latest_updated_at"] = latest_time
+            if latest_time:
+                try:
+                    dt = datetime.fromisoformat(latest_time.replace("Z", "+00:00"))
+                    d["latest_updated_at_fmt"] = dt.strftime("%d/%m/%Y %H:%M")
+                except Exception:
+                    d["latest_updated_at_fmt"] = latest_time
+            else:
+                d["latest_updated_at_fmt"] = "--"
+
+        # Sắp xếp theo thời điểm cập nhật metaobject:
+        # Bước 1: Sắp xếp theo tên A-Z
         defs.sort(key=lambda d: d.get("name", "").lower())
+        # Bước 2: Sắp xếp theo latest_updated_at giảm dần (thời điểm mới nhất đưa lên đầu)
+        defs.sort(key=lambda d: d.get("latest_updated_at") or "", reverse=True)
         return defs
     except Exception as e:
         print("Error fetching metaobject definitions:", e)
@@ -4946,6 +4933,13 @@ TYPE_TO_HANDLE = {
     "SUBSCRIPTION_POLICY": "subscription-policy"
 }
 
+POLICY_DISPLAY_TITLES = {
+    "CONTACT_INFORMATION": "Contact information",
+    "REFUND_POLICY": "Return and refund policy",
+    "SHIPPING_POLICY": "Shipping policy",
+    "CANCEL_ORDER": "Cancel Order"
+}
+
 def get_store_policies():
     query = """
     query {
@@ -4986,15 +4980,26 @@ def get_store_policies():
     for item in raw_policies:
         p_type = item.get("type", "")
         handle = TYPE_TO_HANDLE.get(p_type, "")
-        title = item.get("title", "")
+        raw_title = item.get("title", "")
         body = item.get("body", "") or ""
 
-        rest_info = rest_map.get(handle) or rest_map.get(title.lower()) or {}
+        rest_info = rest_map.get(handle) or rest_map.get(raw_title.lower()) or {}
         storefront_url = rest_info.get("url")
         if not storefront_url and handle:
             storefront_url = f"https://{SHOPIFY_SHOP}.myshopify.com/policies/{handle}"
             
         actual_handle = rest_info.get("handle") or handle
+
+        # Ánh xạ tên chính sách (Title) theo yêu cầu hiển thị
+        display_title = raw_title
+        if p_type in POLICY_DISPLAY_TITLES:
+            display_title = POLICY_DISPLAY_TITLES[p_type]
+        elif raw_title.strip().lower() == "contact":
+            display_title = "Contact information"
+        elif raw_title.strip().lower() in ["refund", "refund policy"]:
+            display_title = "Return and refund policy"
+        elif raw_title.strip().lower() == "shipping":
+            display_title = "Shipping policy"
 
         updated_at = item.get("updatedAt", "")
         formatted_date = ""
@@ -5007,7 +5012,7 @@ def get_store_policies():
 
         policies.append({
             "id": item.get("id"),
-            "title": title,
+            "title": display_title,
             "type": p_type,
             "handle": actual_handle,
             "body": body,
@@ -5019,6 +5024,61 @@ def get_store_policies():
             "updated_at": updated_at,
             "formatted_updated_at": formatted_date
         })
+
+    # Bổ sung trang chính sách "Cancel Order" (/pages/modify-cancel-order)
+    try:
+        page_url = f"https://{SHOPIFY_SHOP}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/pages.json?handle=modify-cancel-order"
+        r_page = requests.get(page_url, headers=HEADERS, timeout=10)
+        page_item = None
+        if r_page.status_code == 200:
+            pages = r_page.json().get("pages", [])
+            if pages:
+                page_item = pages[0]
+
+        if page_item:
+            p_id = page_item.get("id")
+            body = page_item.get("body_html", "") or ""
+            handle = page_item.get("handle", "modify-cancel-order")
+            updated_at = page_item.get("updated_at", "")
+            created_at = page_item.get("created_at", "")
+        else:
+            p_id = 165869846585
+            body = ""
+            local_doc = os.path.join(os.path.dirname(__file__), "..", "..", "doc", "policy", "public", "Modify and cancel order policy.html")
+            if os.path.exists(local_doc):
+                with open(local_doc, "r", encoding="utf-8") as f:
+                    body = f.read()
+            handle = "modify-cancel-order"
+            updated_at = ""
+            created_at = ""
+
+        formatted_date = ""
+        if updated_at:
+            try:
+                dt = datetime.fromisoformat(updated_at.replace("Z", "+00:00"))
+                formatted_date = dt.strftime("%d/%m/%Y %H:%M")
+            except Exception:
+                formatted_date = updated_at[:16].replace("T", " ")
+
+        policies.append({
+            "id": f"gid://shopify/Page/{p_id}",
+            "page_id": p_id,
+            "title": "Cancel Order",
+            "type": "CANCEL_ORDER",
+            "handle": handle,
+            "url_path": f"/pages/{handle}",
+            "body": body,
+            "char_count": len(body),
+            "word_count": len(body.split()),
+            "url": f"https://{SHOPIFY_SHOP}.myshopify.com/pages/{handle}",
+            "storefront_url": f"https://{SHOPIFY_SHOP}.myshopify.com/pages/{handle}",
+            "created_at": created_at,
+            "updated_at": updated_at,
+            "formatted_updated_at": formatted_date,
+            "is_page": True
+        })
+    except Exception as e:
+        print(f"Error fetching Cancel Order page: {e}")
 
     # Sort policies by standard order if desired, or keep Shopify order
     return policies
@@ -5059,6 +5119,35 @@ async def api_update_policy(payload: PolicyUpdateRequest):
 
         if not p_type:
             return JSONResponse({"success": False, "message": "Mã loại chính sách (type) là bắt buộc."}, status_code=400)
+
+        # Xử lý cập nhật cho chính sách dạng Page như CANCEL_ORDER
+        if p_type == "CANCEL_ORDER":
+            page_id = 165869846585
+            page_url = f"https://{SHOPIFY_SHOP}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/pages/{page_id}.json"
+            put_res = requests.put(page_url, json={"page": {"id": page_id, "body_html": body}}, headers=HEADERS, timeout=15)
+            if put_res.status_code not in (200, 201):
+                # Tìm lại ID qua handle nếu cần
+                search_url = f"https://{SHOPIFY_SHOP}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/pages.json?handle=modify-cancel-order"
+                s_res = requests.get(search_url, headers=HEADERS, timeout=10)
+                if s_res.status_code == 200 and s_res.json().get("pages"):
+                    found_id = s_res.json()["pages"][0]["id"]
+                    put_res = requests.put(f"https://{SHOPIFY_SHOP}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/pages/{found_id}.json", json={"page": {"id": found_id, "body_html": body}}, headers=HEADERS, timeout=15)
+
+            if put_res.status_code in (200, 201):
+                updated_page = put_res.json().get("page", {})
+                return JSONResponse({
+                    "success": True,
+                    "message": "Đã lưu chính sách 'Cancel Order' thành công vào store!",
+                    "policy": {
+                        "id": f"gid://shopify/Page/{updated_page.get('id', page_id)}",
+                        "title": "Cancel Order",
+                        "type": "CANCEL_ORDER",
+                        "body": updated_page.get("body_html", body),
+                        "updatedAt": updated_page.get("updated_at")
+                    }
+                })
+            else:
+                return JSONResponse({"success": False, "message": f"Lỗi cập nhật trang Cancel Order: {put_res.text}"}, status_code=400)
 
         mutation = """
         mutation updateShopPolicy($shopPolicy: ShopPolicyInput!) {
@@ -5101,9 +5190,21 @@ async def api_update_policy(payload: PolicyUpdateRequest):
             return JSONResponse({"success": False, "message": "; ".join(error_msgs), "errors": user_errors}, status_code=400)
 
         updated_policy = update_res.get("shopPolicy")
+        if updated_policy:
+            p_type_ret = updated_policy.get("type", "")
+            raw_t = updated_policy.get("title", "")
+            if p_type_ret in POLICY_DISPLAY_TITLES:
+                updated_policy["title"] = POLICY_DISPLAY_TITLES[p_type_ret]
+            elif raw_t.strip().lower() == "contact":
+                updated_policy["title"] = "Contact information"
+            elif raw_t.strip().lower() in ["refund", "refund policy"]:
+                updated_policy["title"] = "Return and refund policy"
+            elif raw_t.strip().lower() == "shipping":
+                updated_policy["title"] = "Shipping policy"
+
         return JSONResponse({
             "success": True,
-            "message": f"Đã lưu chính sách '{updated_policy.get('title')}' thành công vào store!",
+            "message": f"Đã lưu chính sách '{updated_policy.get('title') if updated_policy else ''}' thành công vào store!",
             "policy": updated_policy
         })
     except Exception as e:

@@ -1,6 +1,6 @@
 # Task cập nhật sản phẩm đang có sẵn trong store
 
-> Dùng access token được mô tả trong file `./access-token.md` để truy cập vào store, sau đó bạn hãy cập nhật sản phẩm có ID là `8455462125625` theo các yêu cầu bên dưới.
+> Dùng access token được mô tả trong file `./access-token.md` để truy cập vào store, sau đó bạn hãy cập nhật sản phẩm có ID là `10324646690873` theo các yêu cầu bên dưới.
 > Lưu ý: Bạn phải tự làm công việc cập nhật sản phẩm chứ ko phải để cho tôi làm. Trong suốt quá trình cập nhật tuyệt đối ko được chạy script lấy access token mới, nếu access token hết hạn thì dừng toàn bộ quá trình cập nhật và báo lỗi cho tôi biết để tôi cấp lại access token mới.
 > QUAN TRỌNG: Trong quá trình cập nhật, nếu có bất kỳ lỗi nào xảy ra thì dừng toàn bộ quá trình cập nhật và báo lỗi cho tôi biết.
 
@@ -9,7 +9,7 @@
 Product Title gốc:
 
 ```text
-Handcrafted Personalized Rustic Wood Bed Frame - Solid Wood Frame Bed with Branch Canopy Headboard, Natural Wood Bed Frame Full Size
+Handcrafted Wooden Wall Shelf with Organic Bowl Design, Rustic Floating Display Shelf for Entryway, Living Room & Boho Home Decor (Option 2)
 ```
 
 - Viết lại product title gốc trên thành product title mới.
@@ -25,15 +25,19 @@ Handcrafted Personalized Rustic Wood Bed Frame - Solid Wood Frame Bed with Branc
 Mô tả sản phẩm gốc:
 
 ```text
-🌿 SOLID WOOD FRAME BED: Handcrafted from premium natural wood for exceptional durability. Each bed features a unique organic grain, making it a stunning, one-of-a-kind centerpiece for your bedroom.
+🌿 Organic bowl-shaped wall shelf – A sculptural wooden wall shelf with a softly curved tray-style surface and flowing support form, designed to add natural warmth, texture, and artistic character to your wall decor.
 
-✨ RUSTIC WOOD BED FRAME: Embrace nature with an intricate branch-style headboard and canopy. The organic, free-flowing design perfectly complements rustic, farmhouse, or bohemian bedroom decors.
+🪵 Natural wood grain statement piece – The rich wood tone, visible grain movement, rounded edges, and carved organic shape create a handcrafted look that feels rustic, warm, and beautifully unique.
 
-✨ NATURAL WOOD BED FRAME FULL: Perfectly sized for full mattresses. This sturdy platform bed provides excellent support for a restful night's sleep while preserving a beautiful, earthy aesthetic.
+🏡 Perfect for small-space display – Use it as an entryway shelf, living room accent shelf, bedroom wall shelf, hallway display shelf, plant shelf, candle shelf, or decorative floating shelf for cozy home styling.
 
-🔨 ARTISAN CRAFTED: Masterfully handmade by skilled Vietnamese artisans. Every curve and detail is carefully shaped to preserve the raw, natural beauty and texture of the authentic timber.
+✨ Functional decor with artisan appeal – The shallow bowl-style surface is ideal for displaying small vases, mini planters, candles, crystals, decorative bowls, keepsakes, keys, or seasonal accents while keeping your wall space stylish.
 
-🛠️ EASY TO ASSEMBLE: Comes with all necessary assembly tools and clear instructions. Set up your stunning natural wood bed quickly and effortlessly to instantly transform your sleeping space.
+🧡 Great for boho, rustic & organic modern homes – Pairs beautifully with farmhouse, bohemian, Mediterranean, vintage, woodland, natural, cottage, cabin, and organic modern interiors.
+
+🎁 Thoughtful home gift idea – A meaningful choice for housewarming gifts, weddings, new homes, apartment makeovers, entryway refreshes, or anyone who loves natural wood decor with sculptural handmade-style charm.
+
+📦 Carefully packed for delivery – Each shelf is prepared with protective packing to help safeguard the wood surface, curved tray edge, support base, and carved details during shipping.
 ```
 
 Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết lại mô tả sản phẩm gốc trên.
@@ -74,10 +78,10 @@ Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết
 - rich_description:
 
 ```html
-<div class="description-root"><img alt="Live Edge Rustic furniture" src="https://via.placeholder.com/800" class="a-spacing-base" data-src="https://cdn.shopify.com/s/files/1/0829/7968/4580/files/Handcrafted-Personalized-Rustic-Wood-Bed-Frame---Solid-Wood-Frame-Bed-with-Branch-Canopy-Headboard-Natural-Wood-Bed-Frame-Full-Size-rich-001-227664f36a04.jpg?v=1789675269"> <img alt="Live Edge Rustic furniture" src="https://via.placeholder.com/800" class="a-spacing-base" data-src="https://cdn.shopify.com/s/files/1/0829/7968/4580/files/Handcrafted-Personalized-Rustic-Wood-Bed-Frame---Solid-Wood-Frame-Bed-with-Branch-Canopy-Headboard-Natural-Wood-Bed-Frame-Full-Size-rich-002-122223491515.jpg?v=1789675273"> <img alt="Live Edge Rustic furniture" src="https://via.placeholder.com/800" class="a-spacing-base" data-src="https://cdn.shopify.com/s/files/1/0829/7968/4580/files/Handcrafted-Personalized-Rustic-Wood-Bed-Frame---Solid-Wood-Frame-Bed-with-Branch-Canopy-Headboard-Natural-Wood-Bed-Frame-Full-Size-rich-003-47a718f7e67e.jpg?v=1789675277"> <img alt="Live Edge Rustic furniture" src="https://via.placeholder.com/800" class="a-spacing-base" data-src="https://cdn.shopify.com/s/files/1/0829/7968/4580/files/Handcrafted-Personalized-Rustic-Wood-Bed-Frame---Solid-Wood-Frame-Bed-with-Branch-Canopy-Headboard-Natural-Wood-Bed-Frame-Full-Size-rich-004-94802f8b5e41.jpg?v=1789675281"> <img alt="Live Edge Rustic furniture" src="https://via.placeholder.com/800" class="a-spacing-base" data-src="https://cdn.shopify.com/s/files/1/0829/7968/4580/files/Handcrafted-Personalized-Rustic-Wood-Bed-Frame---Solid-Wood-Frame-Bed-with-Branch-Canopy-Headboard-Natural-Wood-Bed-Frame-Full-Size-rich-005-f48256469cfb.jpg?v=1789675285"> <img alt="Live Edge Rustic furniture" src="https://via.placeholder.com/800" class="a-spacing-base" data-src="https://cdn.shopify.com/s/files/1/0829/7968/4580/files/Handcrafted-Personalized-Rustic-Wood-Bed-Frame---Solid-Wood-Frame-Bed-with-Branch-Canopy-Headboard-Natural-Wood-Bed-Frame-Full-Size-rich-006-d38f376f5b93.jpg?v=1789675289"> <img alt="Live Edge Rustic furniture" src="https://via.placeholder.com/800" class="a-spacing-base" data-src="https://cdn.shopify.com/s/files/1/0829/7968/4580/files/Handcrafted-Personalized-Rustic-Wood-Bed-Frame---Solid-Wood-Frame-Bed-with-Branch-Canopy-Headboard-Natural-Wood-Bed-Frame-Full-Size-rich-007-827cdc84a06c.jpg?v=1789675293"> <img alt="" src="https://via.placeholder.com/800" class="" data-src="https://cdn.shopify.com/s/files/1/0829/7968/4580/files/Handcrafted-Personalized-Rustic-Wood-Bed-Frame---Solid-Wood-Frame-Bed-with-Branch-Canopy-Headboard-Natural-Wood-Bed-Frame-Full-Size-rich-008-edb9b73e7a64.jpg?v=1789675297"> <img alt="" src="https://via.placeholder.com/800" class="" data-src="https://cdn.shopify.com/s/files/1/0829/7968/4580/files/Handcrafted-Personalized-Rustic-Wood-Bed-Frame---Solid-Wood-Frame-Bed-with-Branch-Canopy-Headboard-Natural-Wood-Bed-Frame-Full-Size-rich-009-a7c570745568.png?v=1789675301"> <img alt="WAZARO Handcrafted Natural Wood Corner Tree Shelf, Rustic Tree Branch Bookshelf for Living Room B..." src="https://via.placeholder.com/800" class="apm-brand-story-image-img" data-src="https://cdn.shopify.com/s/files/1/0829/7968/4580/files/Handcrafted-Personalized-Rustic-Wood-Bed-Frame---Solid-Wood-Frame-Bed-with-Branch-Canopy-Headboard-Natural-Wood-Bed-Frame-Full-Size-rich-010-71b109d07b7c.jpg?v=1789675305"> <img alt="WAZARO Handcrafted Personalized Rustic Wood Bed Frame - Solid Wood Frame Bed with Branch Canopy H..." src="https://via.placeholder.com/800" class="apm-brand-story-image-img" data-src="https://cdn.shopify.com/s/files/1/0829/7968/4580/files/Handcrafted-Personalized-Rustic-Wood-Bed-Frame---Solid-Wood-Frame-Bed-with-Branch-Canopy-Headboard-Natural-Wood-Bed-Frame-Full-Size-rich-011-9a2ef2958169.jpg?v=1789675308"> <img alt="WAZARO Handcrafted Tree Branch Bookshelf - 3.75ft x 3.75ft Wall Mounted Natural Wood Floating She..." src="https://via.placeholder.com/800" class="apm-brand-story-image-img" data-src="https://cdn.shopify.com/s/files/1/0829/7968/4580/files/Handcrafted-Personalized-Rustic-Wood-Bed-Frame---Solid-Wood-Frame-Bed-with-Branch-Canopy-Headboard-Natural-Wood-Bed-Frame-Full-Size-rich-012-ef3afa789a73.jpg?v=1789675312"> <img alt="WAZARO Rustic Driftwood Floating Shelf - Natural Solid Wood Wall Mounted Bookshelf &amp;amp; Console Tabl..." src="https://via.placeholder.com/800" class="apm-brand-story-image-img" data-src="https://cdn.shopify.com/s/files/1/0829/7968/4580/files/Handcrafted-Personalized-Rustic-Wood-Bed-Frame---Solid-Wood-Frame-Bed-with-Branch-Canopy-Headboard-Natural-Wood-Bed-Frame-Full-Size-rich-013-c62ce45b6588.jpg?v=1789675316"> <img alt="" src="https://via.placeholder.com/800" class="" data-src="https://cdn.shopify.com/s/files/1/0829/7968/4580/files/Handcrafted-Personalized-Rustic-Wood-Bed-Frame---Solid-Wood-Frame-Bed-with-Branch-Canopy-Headboard-Natural-Wood-Bed-Frame-Full-Size-rich-014-082de14d4e16.png?v=1789675320"> <img alt="WAZARO Personalized Handcrafted Natural Unique Wood Coffee Table - Organic Sculptural Wave Design..." src="https://via.placeholder.com/800" class="apm-brand-story-image-img" data-src="https://cdn.shopify.com/s/files/1/0829/7968/4580/files/Handcrafted-Personalized-Rustic-Wood-Bed-Frame---Solid-Wood-Frame-Bed-with-Branch-Canopy-Headboard-Natural-Wood-Bed-Frame-Full-Size-rich-015-25ee12b1d87b.jpg?v=1789675323"> <img alt="Handcrafted Curved Oak Unique Wood Coffee Table for Living Room, Modern Minimalist Centerpiece, C..." src="https://via.placeholder.com/800" class="apm-brand-story-image-img" data-src="https://cdn.shopify.com/s/files/1/0829/7968/4580/files/Handcrafted-Personalized-Rustic-Wood-Bed-Frame---Solid-Wood-Frame-Bed-with-Branch-Canopy-Headboard-Natural-Wood-Bed-Frame-Full-Size-rich-016-df506ebb30f6.jpg?v=1789675327"> <img alt="WAZARO Handcrafted Natura Live Edge Root Wood Coffee Table with Sculptural Root Base - Solid Rust..." src="https://via.placeholder.com/800" class="apm-brand-story-image-img" data-src="https://cdn.shopify.com/s/files/1/0829/7968/4580/files/Handcrafted-Personalized-Rustic-Wood-Bed-Frame---Solid-Wood-Frame-Bed-with-Branch-Canopy-Headboard-Natural-Wood-Bed-Frame-Full-Size-rich-017-93cf6d31b713.jpg?v=1789675330"> <img alt="WAZARO Personalized Handcrafted Natural Wood Coffee Table - Organic Sculptural Wave Design, Solid..." src="https://via.placeholder.com/800" class="apm-brand-story-image-img" data-src="https://cdn.shopify.com/s/files/1/0829/7968/4580/files/Handcrafted-Personalized-Rustic-Wood-Bed-Frame---Solid-Wood-Frame-Bed-with-Branch-Canopy-Headboard-Natural-Wood-Bed-Frame-Full-Size-rich-018-17f282a08973.jpg?v=1789675334"></div>
+<div class="description-root"><img alt="B0H44RKD1X" src="https://via.placeholder.com/800" class="" data-src="https://cdn.shopify.com/s/files/1/0829/7968/4580/files/Handcrafted-Wooden-Wall-Shelf-with-Organic-Bowl-Design-Rustic-Floating-Display-Shelf-for-Entryway-Living-Room-Boho-Home-Decor-Option-2-rich-001-270bfd11a576_e2432cf2-626b-4e23-9fad-c1.jpg?v=1790277077"> <img alt="B0H44RKD1X" src="https://via.placeholder.com/800" class="" data-src="https://cdn.shopify.com/s/files/1/0829/7968/4580/files/Handcrafted-Wooden-Wall-Shelf-with-Organic-Bowl-Design-Rustic-Floating-Display-Shelf-for-Entryway-Living-Room-Boho-Home-Decor-Option-2-rich-002-eef709b4fd1b_79646392-7327-4db3-9804-af.jpg?v=1790277082"> <img alt="B0H44RKD1X" src="https://via.placeholder.com/800" class="" data-src="https://cdn.shopify.com/s/files/1/0829/7968/4580/files/Handcrafted-Wooden-Wall-Shelf-with-Organic-Bowl-Design-Rustic-Floating-Display-Shelf-for-Entryway-Living-Room-Boho-Home-Decor-Option-2-rich-003-4c3598992be5_579a1070-0328-40ee-876d-a1.jpg?v=1790277086"> <img alt="B0H44RKD1X" src="https://via.placeholder.com/800" class="" data-src="https://cdn.shopify.com/s/files/1/0829/7968/4580/files/Handcrafted-Wooden-Wall-Shelf-with-Organic-Bowl-Design-Rustic-Floating-Display-Shelf-for-Entryway-Living-Room-Boho-Home-Decor-Option-2-rich-004-28b8896afc39_453159c7-cec9-4f95-b0d1-01.jpg?v=1790277090"> <img alt="B0H44RKD1X" src="https://via.placeholder.com/800" class="" data-src="https://cdn.shopify.com/s/files/1/0829/7968/4580/files/Handcrafted-Wooden-Wall-Shelf-with-Organic-Bowl-Design-Rustic-Floating-Display-Shelf-for-Entryway-Living-Room-Boho-Home-Decor-Option-2-rich-005-317bb3a75ae1_b3d07186-8681-4da7-b06e-da.jpg?v=1790277094"> <img alt="B0H44RKD1X" src="https://via.placeholder.com/800" class="" data-src="https://cdn.shopify.com/s/files/1/0829/7968/4580/files/Handcrafted-Wooden-Wall-Shelf-with-Organic-Bowl-Design-Rustic-Floating-Display-Shelf-for-Entryway-Living-Room-Boho-Home-Decor-Option-2-rich-006-7d4ec2eeff71_9f1b2ba7-0623-4032-8eaf-76.jpg?v=1790277098"></div>
 ```
 
-- amazon_link: "https://www.amazon.com/dp/B0H5PSD155"
+- amazon_link: "https://www.amazon.com/dp/B0H82ZCNSG"
 - author_info: "gid://shopify/Metaobject/195646947385"
 - product_material: "wood"
 - seo_product_title:
@@ -122,7 +126,7 @@ Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết
 
 ### 10. Cập nhật product type
 
-- Cập nhật product type cho sản phẩm là `bed-frame-with-headboard`.
+- Cập nhật product type cho sản phẩm là `floating-shelves`.
 
 ### 11. Cập nhật vendor
 
@@ -134,4 +138,4 @@ Tham khảo cấu trúc HTML mẫu được cung cấp bên dưới để viết
 
 ### 13. Cập nhật handle của sản phẩm
 
-- Handle của sản phẩm sẽ được suy ra từ `Handcrafted Personalized Rustic Wood Bed Frame - Solid Wood Frame Bed with Branch Canopy Headboard, Natural Wood Bed Frame Full Size`, handle của sản phẩm phải được viết dưới dạng kebab-case.
+- Handle của sản phẩm sẽ được suy ra từ `Handcrafted Wooden Wall Shelf with Organic Bowl Design, Rustic Floating Display Shelf for Entryway, Living Room & Boho Home Decor (Option 2)`, handle của sản phẩm phải được viết dưới dạng kebab-case.

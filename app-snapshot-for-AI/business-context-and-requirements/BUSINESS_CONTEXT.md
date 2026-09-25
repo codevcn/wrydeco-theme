@@ -1,10 +1,10 @@
-# CONTEXT.md — WRYDECO Business & Website Context
+# BUSINESS_CONTEXT.md — WRYDECO Business & Website Context
 
-Purpose: Reference file for AI Coding Agents building the WRYDECO website.
+**Purpose:** Comprehensive business, functional, and architectural reference for AI Coding Agents and developers building and maintaining the WRYDECO Shopify store.
 
-Scope: Business context, product strategy, audience, content structure, routes, data models, conversion goals, SEO, analytics, and implementation constraints.
+**Scope:** Brand positioning, product strategy, audience, Shopify architecture, live store routes, content data models (Products, Metaobjects, Collections), consultation service flow, external API integration, discount promotion architecture, SEO, and technical constraints.
 
-Out of scope: Visual design, theme, colors, typography, spacing, animation style, and aesthetic direction. Use `DESIGN.md` for all visual/UI decisions.
+**Out of scope:** Visual design styling rules (colors, fonts, spacing). Refer to `assets/base.css` and `CODING_RULES.md` for styling tokens and implementation standards.
 
 ---
 
@@ -12,619 +12,278 @@ Out of scope: Visual design, theme, colors, typography, spacing, animation style
 
 WRYDECO is a premium handcrafted natural wood furniture brand positioned between organic art, sculptural furniture, and luxury bespoke interiors.
 
-Core idea:
+**Core Tagline:**
+> *Nature wrote the prologue. You write the legacy.*
 
-> Nature wrote the prologue. You write the legacy.
+WRYDECO is deliberately designed to feel less like a conventional mass-market e-commerce store and more like a curated, serene **gallery of functional wooden artworks**.
 
-WRYDECO should feel less like a normal furniture store and more like a curated gallery of functional wooden artworks.
-
-The brand sells statement pieces for high-income homeowners, collectors, and interior designers who want furniture with material authenticity, craft story, rarity, and long-term value.
+The brand sells statement pieces to high-income homeowners, collectors, interior architects, and design studios seeking material authenticity, craft narrative, distinct grain individuality, and long-term heirloom value.
 
 ---
 
 ## 2. Brand Positioning
 
-WRYDECO is not positioned as cheap, mass-market, or generic home decor.
+WRYDECO rejects cheap, mass-market, flat-pack, or discount-first furniture archetypes.
 
-Positioning:
+### Strategic Positioning:
+- **Luxury artisan furniture**: Solid wood exclusively; no cheap veneers, composites, or flimsy hardware.
+- **Handcrafted natural solid wood**: Embracing natural grain lines, live edges, organic curves, and burls.
+- **Bespoke and made-to-order capability**: Flexible sizing, customized finishes, and tailored space adaptations.
+- **Organic & sculptural product DNA**: Furniture inspired by natural tree branches, flowing water, and biophilic shapes.
+- **Gallery-style product storytelling**: Highlighting each item as an art piece attributed to its creator.
+- **Dual-conversion engine**: Direct e-commerce purchase (DTC) paired with high-touch consultation lead capture.
 
-- Luxury artisan furniture
-- Handcrafted natural solid wood
-- Bespoke and made-to-order capability
-- Organic + sculptural product DNA
-- Gallery-style product storytelling
-- High-touch consultation for premium buyers
-- DTC first, then designer/B2B expansion
-
-Primary difference from mid-market competitors:
-
-- Higher price tier
-- Stronger craft story
-- More artistic product framing
-- More emphasis on bespoke commissions
-- More premium customer consultation
+### Key Differentiators:
+- High price tier ($1,000 to $10,000+).
+- Authentic workshop and maker storytelling.
+- Two-tier product naming (Artwork Title vs Commercial/SEO Title).
+- Private design consultation and custom sizing support.
 
 ---
 
 ## 3. Business Goals
 
-The website must support these goals:
-
-1. Build trust for a new premium furniture brand.
-2. Convert visitors into consultation leads, product inquiries, or purchases.
-3. Present products as collectible functional art, not commodity furniture.
-4. Explain craftsmanship, materials, provenance, and customization clearly.
-5. Make it easy to browse by category, style, room, artist, and product type.
-6. Support future scaling into interior designer and trade customers.
-7. Keep the technical structure simple enough to maintain and extend.
+The website and theme must support these core business goals:
+1. **Instill deep trust** for a high-ticket DTC furniture brand through transparent workshop evidence and verified craftsmanship.
+2. **Drive high conversion** via two balanced paths: direct checkout for ready designs and consultation inquiries for custom/high-ticket commissions.
+3. **Present products as collectible functional art**, elevating perception above commodity retail.
+4. **Clarify craftsmanship, materials, dimensions, and bespoke options** with rich interactive media and detailed specifications.
+5. **Enable intuitive discovery** across collections, rooms, wood species, finishes, and individual artisans.
+6. **Support trade and designer scaling** (interior designers, boutique hospitality, custom residential projects).
+7. **Maintain a lean, robust Shopify Liquid architecture** supported by a centralized backend API for custom requests.
 
 ---
 
 ## 4. Target Audiences
 
 ### 4.1 Primary: High-Income DTC Homeowners
+- **Profile:** Age ~28–55; upper-middle to high-income; owners of custom homes, penthouses, or luxury apartments.
+- **Mindset:** Value craftsmanship, organic materials, tactile warmth, and uniqueness over mass production.
+- **Conversion triggers:**
+  - Gallery lifestyle photography and close-up video of handcrafting.
+  - Transparent dimensions, wood types, and freight packaging proof.
+  - Responsive consultation support (Email, Phone, WhatsApp) before committing to a purchase.
 
-Profile:
-
-- Age: roughly 28–55
-- Household income: upper-middle to high-income
-- Own or design premium homes
-- Care about natural materials, interiors, and uniqueness
-
-Needs:
-
-- Statement furniture that feels personal
-- Trust in craftsmanship and durability
-- Clear product sizing and material details
-- Confidence before buying expensive furniture online
-- Option to ask for design advice before purchase
-
-Content that works:
-
-- Lifestyle imagery
-- Product story
-- Artist/maker story
-- Process video/photo
-- Customer testimonials
-- Room inspiration
-- Clear consultation CTA
-
-### 4.2 Secondary: Interior Designers / Design Studios
-
-Profile:
-
-- Residential or boutique commercial designers
-- Need reliable custom furniture partners
-- Care about specs, materials, timelines, and customization options
-
-Needs:
-
-- Trade-friendly product information
-- Custom sizing and finish options
-- Project inquiry flow
-- Reliable communication
-- Portfolio/inspiration references
+### 4.2 Secondary: Interior Designers & Studios
+- **Profile:** Residential and boutique commercial interior designers seeking statement pieces for client projects.
+- **Needs:** Custom sizing feasibility, finish swatches, technical dimensions, reliable lead times, and trade-friendly communication.
 
 ### 4.3 Tertiary: Art Furniture Collectors
-
-Profile:
-
-- Buyers who see furniture as collectible functional art
-- Value rarity, sculptural form, provenance, and artistic authorship
-
-Needs:
-
-- Gallery-style presentation
-- Artwork name separate from SEO/product name
-- Artist attribution
-- Limited/unique piece framing
-- Premium storytelling
+- **Profile:** Connoisseurs seeking functional sculptures.
+- **Needs:** Artist attribution, piece inspiration narrative, limited craft volume, and distinct material character.
 
 ---
 
-## 5. Product Strategy
+## 5. Product Strategy & Categories
 
 ### 5.1 Product DNA
+- Organic form, sculptural contours, solid timber (Walnut, Oak, Ash, Cherry, Maple).
+- Finishes: Natural Oil, Smoked, Dark Brown, Matte Black.
+- Craft features: Live Edge, Curved Edge, Hand-Carved Joinery, Brass Inlay.
 
-Core DNA:
+### 5.2 Hero Category: Handcrafted Tree-Branch Furniture
+- Visually striking, emotionally resonant statement pieces for living rooms, libraries, and entryways.
+- Includes freestanding tree bookcases, corner tree shelves, and wall-mounted branch displays.
+- Price tier: ~$1,000 – $6,000.
 
-- Organic
-- Sculptural
-- Natural wood
-- Functional art
-- Bespoke-capable
-- Long-lasting heirloom quality
+### 5.3 Supporting Category: Sculptural Tables, Beds & Accents
+- Organic wave solid wood coffee tables, live-edge root tables, platform beds with branch canopy headboards, and floor sculptures.
+- Price tier: ~$1,500 – $8,000+.
 
-### 5.2 Hero Category: Rustic Tree-Branch Furniture
-
-Hero products include tree-inspired shelves, branch-style shelving, coat racks, and wall storage.
-
-Why this category matters:
-
-- Visually distinctive
-- Easier for customers to understand
-- Strong craft and nature story
-- Good entry point into the WRYDECO world
-
-Expected price range:
-
-- Roughly `$2K–$6K`
-
-### 5.3 Supporting Category: Organic & Sculptural Furniture
-
-Supporting products include live-edge consoles, sculptural shelves, organic tables, and asymmetrical carved pieces.
-
-Expected price range:
-
-- Roughly `$2K–$15K+`
-
-### 5.4 Custom Commission
-
-Custom projects can include modified dimensions, finish changes, wood selection, custom forms, and project-specific design.
-
-Expected price range:
-
-- Roughly `$6K–$25K+`
+### 5.4 Bespoke Commissions
+- Custom dimensions, adapted shelf angles, special wood finishes, and architectural integration.
+- Custom pricing quoted individually via consultation.
 
 ---
 
-## 6. Value Proposition
+## 6. Live Store Structure & URL Routes
 
-Every key page should support at least some of these proof points:
+The WRYDECO storefront operates on Shopify's native JSON template architecture with specialized custom sections:
 
-- Handcrafted by skilled artisans
-- Solid natural wood, not cheap composite furniture
-- Organic forms guided by the wood itself
-- Each piece has unique grain, shape, and character
-- Designed to last for decades and become an heirloom
-- Customization available for serious buyers
-- Consultation available before purchase
-- Transparent material and process storytelling
+### 6.1 Core Storefront Routes
+| Route | Template File | Business Purpose |
+| :--- | :--- | :--- |
+| `/` | `templates/index.json` | Brand story, curated pieces, workshop proof, consultation CTA, reviews |
+| `/collections/all` | `templates/collection.json` | Complete catalog of available pieces with sorting and filtering |
+| `/collections/[handle]` | `templates/collection.json` | Dedicated category collections (e.g. `tree-bookshelves`, `coffee-tables`) |
+| `/products/[handle]` | `templates/product.json` | Comprehensive product gallery, artist attribution, customizer, buy box |
+| `/pages/customization` | `templates/page.customization.json` | Bespoke consultation flow, 5-step process, custom inquiry form |
+| `/pages/about-us` | `templates/page.about-us.json` | Brand heritage, artisan team, sustainable sourcing, Vietnamese craft |
+| `/pages/showroom` | `templates/page.showroom.json` | Visual space gallery showcasing pieces in real interior settings |
+| `/pages/care-guide` | `templates/page.care-guide.json` | Comprehensive maintenance guide for natural wood furniture |
+| `/pages/faq` | `templates/page.faq.json` | In-depth customer care, shipping, transit protection, warranty, returns |
+| `/pages/contact` | `templates/page.contact.json` | Contact form, hotline, email, support hours, and US business address |
+| `/pages/product-author/[handle]` | `templates/metaobject/product_author.json` | Dedicated biography, philosophy, and works of an individual artisan |
+| `/blogs/[blog-handle]` | `templates/blog.json` | Editorial blogs (`news`, `buying-guides`, `design-comparisons`) |
+| `/blogs/[blog-handle]/[slug]` | `templates/article.json` | In-depth editorial guide, styling tips, craftsmanship breakdowns |
+| `/apps/page/wishlist` | `snippets/wishlist-page-custom.liquid` | Customer wishlist page for saving favorite gallery pieces |
 
-Avoid sounding like a generic furniture warehouse.
+### 6.2 Rooms Navigation
+In addition to traditional categories, the header navigation features a dedicated **Rooms Navigation** to guide homeowners by space:
+1. **Living Room** (Coffee tables, end tables, floor sculptures, floating shelves, mirrors)
+2. **Bedroom** (Platform beds with headboards, nightstands, wall mirrors)
+3. **Kitchen & Dining** (Wall-mounted wine racks, rustic wine displays, fruit bowls)
+4. **Home Office & Library** (Freestanding tree bookshelves, curved modern bookcases, corner shelves)
+5. **Nursery & Kids' Room** (Whimsical tree bookshelves, mushroom shelves)
 
----
-
-## 7. Brand Voice
-
-Tone:
-
-- Premium
-- Calm
-- Poetic but not vague
-- Confident
-- Craft-focused
-- Gallery-like
-- Trustworthy
-
-Use phrases like:
-
-- handcrafted natural wood furniture
-- sculptural wood furniture
-- organic form
-- functional art
-- bespoke commission
-- made for your space
-- crafted to last generations
-- curated piece
-- artist / maker / artisan
-
-Avoid phrases like:
-
-- cheap
-- budget
-- mass-produced
-- factory-style
-- trendy fast furniture
-- discount-first messaging
+### 6.3 Policy Routes
+- `/policies/shipping-policy` — Freight delivery, wood crating details, transit timelines.
+- `/policies/refund-policy` — Transit damage claims, inspection window, returns.
+- `/policies/terms-of-service` — Made-to-order commitments, natural wood grain variance.
+- `/policies/privacy-policy` — Customer data protection and encryption.
+- `/policies/legal-notice` & `/pages/warranty-policy` — Business disclosures and warranty terms.
 
 ---
 
-## 8. Website Pages
+## 7. Homepage Architecture & Experience Flow
 
-Required core routes:
+The homepage (`templates/index.json`) is structured as an editorial gallery experience:
 
-- `/` — Home
-- `/shop` — Shop / Collections
-- `/collections/[slug]` — Collection page
-- `/products/[slug]` — Product detail
-- `/inspiration` — Room ideas / inspiration
-- `/inspiration/[slug]` — Room detail
-- `/customization` — Custom design service
-- `/artists` — Artist / maker listing
-- `/artists/[slug]` — Artist profile
-- `/about` — Brand story
-- `/contact` — Contact form
-- `/faq` — FAQ
-- `/blog` — Blog listing
-- `/blog/[slug]` — Blog article
-
-Optional later routes:
-
-- `/trade` — Interior designer / trade program
-- `/commissions` — Past custom projects
-- `/materials` — Wood and finish guide
-
----
-
-## 9. Home Page Requirements
-
-Home page must communicate the brand quickly and push users toward product browsing or consultation.
-
-Required sections:
-
-1. Hero with brand story and primary CTA.
-2. Featured products: 3–5 key products.
-3. Gallery/product spotlight with artwork name + artist attribution.
-4. Meet the Makers / Artists preview.
-5. Customer testimonials.
-6. Customization / consultation CTA.
-7. FAQ snapshot.
-
-Primary CTAs:
-
-- Shop the Collection
-- Request a Consultation
-- Explore Custom Work
+1. **Announcement Bar:** Free US freight shipping notification and policy link.
+2. **Hero Banner (`hero-banner`):**
+   - Brand statement: *"Handcrafted Sculptural Solid Wood Furniture"*.
+   - Subtext highlighting natural grain and made-to-order adaptability.
+   - Primary CTA: *Explore Now* (`/collections/all`) & *Book Consultation* (`/pages/customization`).
+   - Trust highlights: Solid Wood Only, Made to Measure, 4.9/5 Rating.
+3. **Credibility Record:** 400+ Homes Styled, 372 Verified Reviews, 4.7 Average Rating, 27+ Years Craft.
+4. **Welcome Video (`welcome-video`):** Highlighting the journey *"From Nature to Artful Living"*.
+5. **Curated Collections (`shop-collections`):** Visual navigation across 5 core categories.
+6. **Signature Pieces (`signature-pieces`):**
+   - 12 flagship artworks displayed with Artwork Name, Artisan Attribution (`by [Artist]`), starting price, Wishlist toggle, and quick "Customize" trigger.
+7. **Custom Order Process (`made-to-order-steps`):**
+   - Clear **5-step transparent workflow**:
+     - *01. Book Consultation* — Submit space photos & requirements.
+     - *02. Review Scope & Quote* — Agree on dimensions, species, and quote.
+     - *03. Approve & Pay* — Formalize order and production queue.
+     - *04. Proof, Craft & Confirm* — Workshop shaping with pre-shipment photo approval.
+     - *05. Pack & Ship* — Heavy-duty timber crating and insured freight delivery.
+8. **Workshop Evidence (`workshop-evidence`):** Real-world video/photo proof of handcrafting, assembly, and crating protection.
+9. **Materials & Personalization (`materials-craftsmanship`):** Species selection, wood finishes, and edge profiles.
+10. **Design Consultation Showcase (`styling-consultation`):** Introduction of Lead Consultant Mr. Dan, response SLA (24–48h).
+11. **Meet the Makers (`meet-the-makers`):** Carousel featuring the 6 official studio artisans.
+12. **Client Reviews (`client-reviews`):** Verified customer reviews with home installation photos.
+13. **Journal & Wood Care (`home-blog`):** Editorial articles linking design questions to product solutions.
+14. **FAQ Snapshot (`faq-editorial-page` & `faq-editorial-trust`):** Quick answers to high-consideration shipping and care questions.
 
 ---
 
-## 10. Shop / Collections Requirements
+## 8. Artisans & Makers Data Architecture
 
-Shop pages must support browsing and filtering.
+WRYDECO features **6 official master artisans** modeled as Shopify Metaobjects (`type: product_author`):
 
-Required features:
+| Artisan Name | Handle / Slug | Title / Specialty | Metaobject GID |
+| :--- | :--- | :--- | :--- |
+| **Khoi Hoang** | `khoi-hoang` | Principal Artisan / Curved Forms | `gid://shopify/Metaobject/194643198009` |
+| **Lam Nguyen** | `lam-nguyen` | Master Wood Sculptor / Intricate Carving | `gid://shopify/Metaobject/194643165241` |
+| **Nhan Pham** | `nhan-pham` | Bespoke Commission Director / Floor Sculptures | `gid://shopify/Metaobject/195646947385` |
+| **Nhien Le** | `nhien-le` | Organic Form Specialist / Whimsical Tree Shelves | `gid://shopify/Metaobject/195647275065` |
+| **Son Tran** | `son-tran` | Natural Grain Curator / Raw Timber Selection | `gid://shopify/Metaobject/195647701049` |
+| **Tin Dang** | `tin-dang` (or `alex-nguyen`) | Master Surface Finisher / Tree Bookshelves | `gid://shopify/Metaobject/194643296313` |
 
-- Product grid
-- Collection/category navigation
-- Filters by category, room, style, material, artist, price range
-- Sort by relevance, price, newest
-- Breadcrumbs
-- Product cards with quick view or quick action
-
-Product card should show:
-
-- Artwork name
-- Product/SEO name
-- Artist/maker
-- Price or starting price
-- Main image
-- Material/style tags
+### Two-Tier Product Naming Rule:
+1. **Artwork Name (Tên tác phẩm nghệ thuật):**
+   - Evocative, gallery-style title displayed prominently on cards and product headers (e.g., *Canyon Spirit Arbor*, *Golden Bough Bookshelf*, *The Infinity Wave Table*).
+   - Displayed together with artisan attribution: `by [Artist Name]`.
+2. **Commercial / SEO Title (Tên thương mại/SEO):**
+   - Keyword-optimized title used for page meta titles, search engine results, Google Merchant Center, and catalog indexing (e.g., *Handcrafted Natural Wood Corner Tree Branch Bookshelf*).
 
 ---
 
-## 11. Product Detail Requirements
+## 9. Product Page Conversion Architecture
 
-Product detail pages are critical for conversion.
-
-Required content:
-
-- Product gallery with multiple angles and lifestyle images
-- Artwork name
-- Product/SEO title
-- Artist/maker attribution
-- Price or starting price
-- Dimensions
-- Materials
-- Finish
-- Availability / made-to-order status
-- Add to Cart or Inquiry CTA
-- Quantity selector if product is purchasable
-- Private Design Consultant CTA
-- Process video or process image carousel
-- Materials & care section
-- Shipping & returns summary
-- Related products
-- Customer reviews
-
-Important: For premium or custom-heavy products, consultation/inquiry can be more important than direct checkout.
+The product detail template (`templates/product.json`) provides a high-converting, trust-rich layout:
+- **Media Gallery:** Multi-angle lifestyle photography, close-up grain shots, zoom capability, and process video embeds.
+- **Dual Title & Maker Attribution:** Prominent artwork name, linked author badge leading to the maker's profile.
+- **Variant Picker:** Swatches for wood finishes (Natural, Walnut Tone, Warm Oak, Dark Rustic) and dimensional variants.
+- **Dual Conversion Actions:**
+  - Primary button: *Add to Cart* / *Buy It Now* for standard specifications.
+  - Secondary button: *Quick Custom Size* / *Request Customization* (`snippets/quick-customize.liquid`) for modified dimensions.
+- **Sticky Buy Bar:** Mobile and desktop sticky bar ensuring friction-free checkout or inquiry.
+- **Trust Elements:**
+  - Wood authenticity badge (100% Solid Natural Wood).
+  - Free insured freight shipping badge.
+  - White-glove crating guarantee.
+- **Accordions & Rich Specs:** Detailed dimensions, assembly guidelines, wood care, warranty, and freight lead time.
+- **Social Proof:** Verified customer reviews and related pieces from the same collection or maker.
 
 ---
 
-## 12. Inspiration Requirements
+## 10. External API & Service Architecture
 
-The Inspiration section helps users imagine products in rooms.
+To maintain high performance and avoid hardcoded endpoints, all custom requests route through a centralized client service ([`assets/api-service.js`](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/assets/api-service.js) via `window.WrydecoApi`) communicating with the dedicated backend server ([`auto/module-3`](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/auto/module-3) at `admin.wrydeco.com`):
 
-Required features:
+### 10.1 Key Endpoints
+1. **`POST /api/consultations`**
+   - **Content-Type:** `multipart/form-data`
+   - **Payload:** `name`, `phone_or_email`, `message`, `consultation_time` (optional), and multiple room/space attachments (`JPEG`, `PNG`, `PDF` up to 10MB each, total max 30MB).
+   - **Response:** `{ "success": true }`.
+2. **`POST /api/custom-size-requests`**
+   - **Content-Type:** `multipart/form-data`
+   - **Payload:** `product_id`, `product_handle`, `product_name`, `custom_size_description`, `customer_contact`.
+   - **Response:** `{ "success": true, "id": ..., "message": "Custom size request received." }`.
+3. **`POST /api/upload-image`**
+   - **Payload:** Single image file for customer reference finishes.
 
-- Room idea cards
-- Filters by room and style
-- Room detail pages
-- Linked products used in each room
-- Styling tips
-
-Room types:
-
-- Living Room
-- Dining Room
-- Bedroom
-- Home Office
-- Entryway
-- Bathroom
-- Boutique Commercial
-
-Style tags:
-
-- Organic Modern
-- Rustic
-- Japandi
-- Minimalist
-- Biophilic
-- Farmhouse
-- Gallery Home
-
----
-
-## 13. Customization Requirements
-
-Customization page must generate qualified leads.
-
-Required sections:
-
-1. Hero explaining custom design for a specific space.
-2. Three-step process: Consultation → Production → Delivery.
-3. Past custom examples or before/after gallery.
-4. Customization FAQ.
-5. Consultation form.
-
-Consultation form fields:
-
-- Name
-- Email
-- Phone
-- Country / location
-- Room type
-- Desired product type
-- Approximate dimensions
-- Budget range
-- Timeline
-- Message
-- File/image upload optional
-
-Lead form must be easy to connect to email/CRM later.
-
----
-
-## 14. About Page Requirements
-
-About page must build trust.
-
-Required sections:
-
-- Brand story
-- Philosophy of natural wood and craft
-- Artisan/team profiles
-- Material sourcing statement
-- Vietnam craftsmanship story
-- Transparency/process explanation
-
-No fake certificates or unsupported claims.
-
----
-
-## 15. Contact & FAQ Requirements
-
-FAQ categories:
-
-- Shipping
-- Custom orders
-- Materials and care
-- Returns
-- Payments
-- Production timeline
-- Consultation
-
-Contact page should include:
-
-- Contact form
-- Email block
-- Support hours
-- Business/location note if available
-
----
-
-## 16. Blog Requirements
-
-Blog should support SEO and trust-building.
-
-Topics:
-
-- Behind the scenes
-- Wood care guides
-- Styling tips
-- Customer stories
-- Artist/maker stories
-- Room inspiration
-- Custom project breakdowns
-
-Blog posts should link to relevant products, collections, inspiration pages, and consultation CTA.
-
----
-
-## 17. Suggested Content Models
-
-### Product
-
-```ts
-type Product = {
-  id: string;
-  slug: string;
-  artworkName: string;
-  seoTitle: string;
-  description: string;
-  price: number | null;
-  startingPrice: number | null;
-  category: string;
-  roomTypes: string[];
-  styles: string[];
-  materials: string[];
-  artistId: string;
-  dimensions: string;
-  finishOptions: string[];
-  images: string[];
-  processMedia?: string[];
-  isCustomizable: boolean;
-  availability: "in_stock" | "made_to_order" | "custom_only";
-};
-```
-
-### Artist
-
-```ts
-type Artist = {
-  id: string;
-  slug: string;
-  name: string;
-  role: string;
-  specialties: string[];
-  bio: string;
-  portraitUrl: string;
-};
-```
-
-### RoomIdea
-
-```ts
-type RoomIdea = {
-  id: string;
-  slug: string;
-  title: string;
-  roomType: string;
-  style: string;
-  image: string;
-  productIds: string[];
-  tips: string[];
-};
-```
-
-### ConsultationRequest
-
-```ts
-type ConsultationRequest = {
-  name: string;
-  email: string;
-  phone?: string;
-  location?: string;
-  roomType?: string;
-  productType?: string;
-  dimensions?: string;
-  budgetRange?: string;
-  timeline?: string;
-  message: string;
-  attachments?: string[];
-};
+### 10.2 Notification Architecture
+All client-side user feedback, form submission responses, and cart alerts must strictly use the unified toast system:
+```javascript
+window.showToast({
+  message: "Your consultation request has been submitted successfully!",
+  type: "success", // 'success' | 'error' | 'info'
+  position: "top-right",
+  duration: 4000
+});
 ```
 
 ---
 
-## 18. SEO Requirements
+## 11. Tiered Spending Discount Promotion Architecture
 
-Every indexable page should include:
+While maintaining luxury positioning, WRYDECO utilizes a structured **Tiered Spending Discount Architecture** to reward high-order volume without appearing "cheap":
 
-- Unique title
-- Meta description
-- Canonical URL
-- Open Graph title/description/image
-- Structured data where relevant
+### Fixed Tiered Codes:
+| Code | Discount Amount | Minimum Order Subtotal |
+| :--- | :--- | :--- |
+| `WRY100` | $100 off | $900 |
+| `WRY200` | $200 off | $1,900 |
+| `WRY300` | $300 off | $2,900 |
+| `WRY400` | $400 off | $3,900 |
+| `WRY500` | $500 off | $4,900 |
+| `WRY600` | $600 off | $5,900 |
+| `WRY700` | $700 off | $6,900 |
+| `WRY800` | $800 off | $7,900 |
+| `WRY900` | $900 off | $8,900 |
+| `WRY1000` | $1,000 off | $9,900 |
 
-Recommended schema:
-
-- Product schema for product pages
-- Organization schema for brand
-- FAQPage schema for FAQ sections
-- BlogPosting schema for blog articles
-- BreadcrumbList schema for product/collection/blog pages
-
-SEO keyword themes:
-
-- handcrafted wood furniture
-- sculptural wood furniture
-- organic wood furniture
-- live edge furniture
-- tree branch shelf
-- bespoke wood furniture
-- luxury artisan furniture
-- custom natural wood furniture
+### Promotion Implementation:
+- **Lead Capture Popup (`snippets/lead-capture-popup.liquid`):** Offers first-time visitors a welcome tiered incentive in exchange for email newsletter subscription.
+- **Auto-Apply Engine (`assets/wry-discount-auto-apply-v2.js`):** Automatically evaluates cart value in real time and applies the highest eligible discount tier directly at checkout.
 
 ---
 
-## 19. Analytics Events
+## 12. SEO & SSR-First Standards
 
-Track these events:
-
-- Page view
-- Product view
-- Collection filter used
-- Product quick view
-- Add to cart
-- Checkout started
-- Consultation CTA clicked
-- Consultation form submitted
-- Contact form submitted
-- Inspiration room viewed
-- Artist profile viewed
-- Blog post viewed
+All pages are optimized for search engines via Server-Side Rendering (Liquid SSR):
+- **Canonical URLs:** Dynamically generated to prevent duplicate content across collection handles.
+- **Structured Data (JSON-LD):**
+  - `Organization` & `WebSite` schemas on the index page.
+  - `Product` schema (with price, currency, availability, reviews, and high-res image list) on product pages.
+  - `BreadcrumbList` on catalog and article pages.
+  - `FAQPage` schema on FAQ sections.
+  - `Article` schema on blog posts.
+- **Image Optimization:** Explicit `alt` descriptions on all lifestyle and product photography; `file_url` filter utilized for CDN-hosted media assets.
 
 ---
 
-## 20. Technical Requirements
+## 13. AI Agent Operating Guidelines
 
-General:
-
-- Mobile responsive from the beginning
-- Simple and maintainable architecture
-- Fast image loading with optimized responsive images
-- Product data should be easy to edit later
-- Forms should be ready for email/CRM integration
-- Avoid hardcoding product data inside components when possible
-- Keep business content separate from visual design config
-
-E-commerce:
-
-- Support direct product purchase where product is purchasable
-- Support inquiry/consultation flow where product is custom or high-ticket
-- Allow future integration with Shopify, headless commerce, or custom backend
-
-Forms:
-
-- Validate required fields
-- Show success/error states
-- Prevent duplicate submissions
-- Store or send consultation/contact request payloads cleanly
-
----
-
-## 21. Business Rules for AI Agent
-
-Do:
-
-- Build the website around premium trust and lead generation.
-- Treat products as gallery pieces with artist attribution.
-- Keep artwork name separate from SEO/product name.
-- Make consultation CTA visible on key pages.
-- Use product/artist/style/room data models consistently.
-- Keep the system flexible for future product expansion.
-
-Do not:
-
-- Make WRYDECO look like a budget furniture shop.
-- Replace business context with visual assumptions.
-- Invent certificates, awards, reviews, or sustainability claims.
-- Hide important price, size, material, or shipping information.
-- Put all content directly inside UI components.
-- Overcomplicate the backend before the store needs it.
-
----
-
-## 22. Acceptance Checklist
-
-The implementation is on-context if:
-
-- The site clearly presents WRYDECO as luxury handcrafted natural wood furniture.
-- The site supports both shopping and consultation lead generation.
-- Product pages include material, sizing, maker, story, and consultation CTA.
-- Shop pages support useful filtering by room, style, category, artist, and price.
-- Inspiration pages connect room ideas back to products.
-- Customization page captures qualified project leads.
-- SEO metadata and analytics events are planned.
-- Design decisions are left to `DESIGN.md`.
+When developing or modifying code in this repository:
+1. **Preserve the Gallery Aesthetic:** Keep typography elegant, whitespace generous, and avoid garish badges, flashing countdown timers, or low-tier ecommerce clutters.
+2. **Respect the Dual-Title Model:** Never overwrite an artwork title with a generic SEO name on user-facing cards.
+3. **Adhere to `CODING_RULES.md`:**
+   - Desktop-first responsive layout (touch targets $\ge 44\times 44\text{px}$).
+   - Keep `.shopify-section` wrappers as `display: block`.
+   - Use `window.WrydecoApi` for backend calls.
+   - Use `window.showToast` for all notification dialogs.
+   - User-facing text must be 100% in English.
+   - Use inline SVGs via the internal Iconify tool (`my-tools/iconify`).

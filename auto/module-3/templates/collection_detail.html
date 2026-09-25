@@ -6,6 +6,7 @@
     <link rel="icon" type="image/png" href="/static/favicon-96x96.png" sizes="96x96" />
     <title>{{ collection.title if collection else 'Collection Details' }} - Admin</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/collection-buying-guide.css">
     <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
     <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
     <style>
@@ -253,6 +254,131 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Metafields Section -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                        <div class="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
+                            <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                                <iconify-icon icon="mdi:database-outline" class="text-indigo-600 text-xl"></iconify-icon>
+                                Metafields
+                            </h2>
+                            <span class="text-xs bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full font-semibold border border-indigo-100">
+                                2 Metafields
+                            </span>
+                        </div>
+
+                        <div class="space-y-4">
+                            <!-- 1. Collection Buying Guide -->
+                            <div class="bg-gray-50/70 border border-gray-200/80 rounded-xl p-4">
+                                <div class="flex items-center justify-between mb-1.5">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-7 h-7 rounded-lg bg-indigo-100/70 text-indigo-600 flex items-center justify-center">
+                                            <iconify-icon icon="mdi:book-open-page-variant-outline" class="text-base"></iconify-icon>
+                                        </div>
+                                        <span class="text-sm font-bold text-gray-800">Collection Buying Guide</span>
+                                    </div>
+                                    {% if collection.metafields and collection.metafields.buying_guide.has_value %}
+                                    <span class="inline-flex items-center gap-1 text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80 px-2 py-0.5 rounded-full">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                        {{ collection.metafields.buying_guide.kb_size }} KB
+                                    </span>
+                                    {% else %}
+                                    <span class="text-[11px] font-medium bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+                                        Chưa có dữ liệu
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                <div class="text-[11px] text-gray-400 font-mono mb-3 pl-9">
+                                    custom.buying_guide <span class="text-gray-300">•</span> multi_line_text_field
+                                </div>
+
+                                {% if collection.metafields and collection.metafields.buying_guide.has_value %}
+                                <div class="bg-white rounded-lg border border-gray-200 p-3 text-xs text-gray-600 shadow-2xs">
+                                    <div class="text-gray-500 line-clamp-3 text-[12px] leading-relaxed mb-3 font-normal">
+                                        {{ collection.metafields.buying_guide.value | striptags | truncate(160) }}
+                                    </div>
+                                    <button type="button" onclick="openBuyingGuideModal()" class="w-full py-2 px-3 bg-indigo-50 hover:bg-indigo-100/80 text-indigo-700 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 border border-indigo-100 cursor-pointer">
+                                        <iconify-icon icon="mdi:eye-outline" class="text-base"></iconify-icon>
+                                        <span>Xem chi tiết Buying Guide (Preview & Code)</span>
+                                    </button>
+                                </div>
+                                {% else %}
+                                <div class="p-3 text-xs text-gray-400 italic bg-white rounded-lg border border-dashed border-gray-200 text-center">
+                                    Chưa có nội dung Buying Guide cho collection này.
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- 2. Related Collection -->
+                            <div class="bg-gray-50/70 border border-gray-200/80 rounded-xl p-4">
+                                <div class="flex items-center justify-between mb-1.5">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-7 h-7 rounded-lg bg-teal-100/70 text-teal-600 flex items-center justify-center">
+                                            <iconify-icon icon="mdi:link-variant" class="text-base"></iconify-icon>
+                                        </div>
+                                        <span class="text-sm font-bold text-gray-800">Related Collection</span>
+                                    </div>
+                                    {% if collection.metafields and collection.metafields.related_collections.has_value %}
+                                    <span class="inline-flex items-center gap-1 text-[11px] font-semibold bg-teal-50 text-teal-700 border border-teal-200/80 px-2 py-0.5 rounded-full">
+                                        {{ collection.metafields.related_collections.count }} collections
+                                    </span>
+                                    {% else %}
+                                    <span class="text-[11px] font-medium bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+                                        0 collection
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                <div class="text-[11px] text-gray-400 font-mono mb-3 pl-9">
+                                    custom.related_collections <span class="text-gray-300">•</span> list.collection_reference
+                                </div>
+
+                                {% if collection.metafields and collection.metafields.related_collections.has_value %}
+                                <div class="space-y-2 max-h-72 overflow-y-auto pr-1">
+                                    {% for item in collection.metafields.related_collections.collections %}
+                                    <div class="flex items-center justify-between p-2.5 bg-white hover:bg-indigo-50/40 rounded-xl border border-gray-200/80 hover:border-indigo-200 transition-all group shadow-2xs">
+                                        <div class="flex items-center gap-3 min-w-0 flex-grow">
+                                            <div class="w-10 h-10 rounded-lg bg-gray-100 border border-gray-100 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                                                {% if item.image %}
+                                                <img src="{{ item.image }}" alt="{{ item.title }}" class="w-full h-full object-cover">
+                                                {% else %}
+                                                <iconify-icon icon="mdi:image-outline" class="text-gray-400 text-lg"></iconify-icon>
+                                                {% endif %}
+                                            </div>
+                                            <div class="min-w-0 flex-grow">
+                                                <a href="/collections/{{ item.id }}" class="text-xs font-bold text-gray-800 hover:text-indigo-600 truncate block transition-colors" title="{{ item.title }}">
+                                                    {{ item.title }}
+                                                </a>
+                                                <div class="flex items-center gap-2 text-[11px] text-gray-400 mt-0.5">
+                                                    <span class="font-mono text-gray-500">{{ item.handle }}</span>
+                                                    <span>•</span>
+                                                    <span class="text-gray-600 font-medium">{{ item.products_count }} sp</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
+                                            <button type="button" 
+                                                    data-title="{{ item.title | escape }}" 
+                                                    onclick="copyRelatedTitle(this)" 
+                                                    class="copy-rel-title-btn inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-gray-700 hover:text-indigo-600 bg-gray-100 hover:bg-indigo-50 border border-gray-200 hover:border-indigo-200 rounded-md transition-all cursor-pointer shadow-xs focus:outline-none" 
+                                                    title="Copy tên collection vào clipboard">
+                                                <iconify-icon icon="mdi:content-copy" class="copy-rel-icon text-xs text-gray-500"></iconify-icon>
+                                                <span class="copy-rel-text">Copy Title</span>
+                                            </button>
+                                            <a href="/collections/{{ item.id }}" class="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors border border-transparent hover:border-indigo-100" title="Mở trang chi tiết">
+                                                <iconify-icon icon="mdi:arrow-top-right" class="text-base"></iconify-icon>
+                                            </a>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% else %}
+                                <div class="p-3 text-xs text-gray-400 italic bg-white rounded-lg border border-dashed border-gray-200 text-center">
+                                    Chưa liên kết collection nào.
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
             {% endif %}
@@ -451,6 +577,14 @@
             const file = input.files[0];
             if (!file) return;
             
+            // Client-side file size check (max 25MB)
+            const maxSizeMB = 25;
+            if (file.size > maxSizeMB * 1024 * 1024) {
+                alert(`Dung lượng file quá lớn (${(file.size / (1024 * 1024)).toFixed(1)}MB). Vui lòng chọn ảnh nhỏ hơn ${maxSizeMB}MB.`);
+                input.value = '';
+                return;
+            }
+            
             const btnText = document.getElementById('change-image-text');
             const originalText = btnText.innerText;
             btnText.innerText = 'Đang tải lên...';
@@ -465,14 +599,23 @@
                     body: formData
                 });
                 
-                const data = await res.json();
-                if (res.ok && data.success) {
+                let data = null;
+                try {
+                    data = await res.json();
+                } catch (parseErr) {
+                    console.error("JSON parse error:", parseErr);
+                }
+                
+                if (res.ok && data && data.success) {
                     window.location.reload();
+                } else if (res.status === 413) {
+                    alert("Dung lượng file ảnh vượt quá giới hạn tải lên của máy chủ (tối đa 25MB).");
                 } else {
-                    alert(data.message || "Lỗi khi cập nhật ảnh.");
+                    const msg = (data && data.message) ? data.message : `Lỗi khi cập nhật ảnh (Mã phản hồi: ${res.status})`;
+                    alert(msg);
                 }
             } catch (e) {
-                alert("Lỗi mạng khi tải lên ảnh.");
+                alert("Lỗi kết nối khi tải lên ảnh: " + (e.message || "Vui lòng thử lại."));
             } finally {
                 btnText.innerText = originalText;
                 input.disabled = false;
@@ -660,7 +803,149 @@
         </div>
     </div>
 
+    <!-- Buying Guide Modal -->
+    <div id="buyingGuideModal" class="fixed inset-0 z-[100] flex items-center justify-center hidden">
+        <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" onclick="closeBuyingGuideModal()"></div>
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-6xl mx-4 relative z-10 overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/80">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                        <iconify-icon icon="mdi:book-open-page-variant-outline" class="text-xl"></iconify-icon>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-800">Collection Buying Guide</h3>
+                        <p class="text-xs text-gray-500 font-mono">custom.buying_guide • {{ collection.metafields.buying_guide.kb_size if collection.metafields else '' }} KB</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-2">
+                    <!-- Tab Switcher -->
+                    <div class="flex bg-gray-200/80 p-1 rounded-xl text-xs font-semibold">
+                        <button id="bg-tab-preview" onclick="switchBgTab('preview')" class="px-3 py-1.5 rounded-lg bg-white text-indigo-700 shadow-xs transition-all cursor-pointer">
+                            Xem trực quan
+                        </button>
+                        <button id="bg-tab-code" onclick="switchBgTab('code')" class="px-3 py-1.5 rounded-lg text-gray-600 hover:text-gray-900 transition-all cursor-pointer">
+                            HTML Code
+                        </button>
+                    </div>
+
+                    <!-- Copy Button -->
+                    <button onclick="copyBuyingGuideCode()" class="px-3 py-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-all cursor-pointer">
+                        <iconify-icon icon="mdi:content-copy" class="text-sm text-gray-500"></iconify-icon>
+                        <span id="copy-bg-btn-text">Copy Code</span>
+                    </button>
+
+                    <button onclick="closeBuyingGuideModal()" class="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 transition-colors ml-1 cursor-pointer">
+                        <iconify-icon icon="mdi:close" class="text-2xl"></iconify-icon>
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex-grow overflow-y-auto p-4 sm:p-6 bg-gray-50/50">
+                <!-- Preview Tab -->
+                <div id="bg-content-preview" class="col-guide-preview-scope">
+                    {{ collection.metafields.buying_guide.value | safe if collection.metafields else '' }}
+                </div>
+
+                <!-- Code Tab -->
+                <div id="bg-content-code" class="hidden">
+                    <pre class="bg-gray-900 text-gray-100 p-4 rounded-xl text-xs font-mono overflow-x-auto whitespace-pre-wrap leading-relaxed max-h-[60vh] select-all"><code id="bg-raw-code">{{ collection.metafields.buying_guide.value | escape if collection.metafields else '' }}</code></pre>
+                </div>
+            </div>
+
+            <div class="px-6 py-3 border-t border-gray-100 bg-gray-50/50 flex justify-between items-center text-xs text-gray-500">
+                <span>Độ dài: <strong class="text-gray-700 font-semibold">{{ collection.metafields.buying_guide.char_count if collection.metafields else 0 }}</strong> ký tự</span>
+                <button onclick="closeBuyingGuideModal()" class="px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white font-semibold rounded-xl transition-colors cursor-pointer">
+                    Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
+
+        // Buying Guide Modal Logic
+        function openBuyingGuideModal() {
+            document.getElementById('buyingGuideModal').classList.remove('hidden');
+        }
+        function closeBuyingGuideModal() {
+            document.getElementById('buyingGuideModal').classList.add('hidden');
+        }
+        function switchBgTab(tab) {
+            const previewEl = document.getElementById('bg-content-preview');
+            const codeEl = document.getElementById('bg-content-code');
+            const tabPreview = document.getElementById('bg-tab-preview');
+            const tabCode = document.getElementById('bg-tab-code');
+
+            if (tab === 'preview') {
+                previewEl.classList.remove('hidden');
+                codeEl.classList.add('hidden');
+                tabPreview.className = "px-3 py-1.5 rounded-lg bg-white text-indigo-700 shadow-xs transition-all cursor-pointer";
+                tabCode.className = "px-3 py-1.5 rounded-lg text-gray-600 hover:text-gray-900 transition-all cursor-pointer";
+            } else {
+                previewEl.classList.add('hidden');
+                codeEl.classList.remove('hidden');
+                tabCode.className = "px-3 py-1.5 rounded-lg bg-white text-indigo-700 shadow-xs transition-all cursor-pointer";
+                tabPreview.className = "px-3 py-1.5 rounded-lg text-gray-600 hover:text-gray-900 transition-all cursor-pointer";
+            }
+        }
+        function copyBuyingGuideCode() {
+            const rawCode = document.getElementById('bg-raw-code').innerText;
+            navigator.clipboard.writeText(rawCode).then(() => {
+                const btnText = document.getElementById('copy-bg-btn-text');
+                const orig = btnText.innerText;
+                btnText.innerText = "Đã Copy!";
+                setTimeout(() => { btnText.innerText = orig; }, 2000);
+            });
+        }
+
+        // Copy Related Collection Title with 2s indicator
+        function copyRelatedTitle(btn) {
+            const title = btn.getAttribute('data-title');
+            if (!title) return;
+
+            function onSuccess() {
+                const icon = btn.querySelector('.copy-rel-icon');
+                const text = btn.querySelector('.copy-rel-text');
+                const originalBg = btn.className;
+
+                if (icon) icon.setAttribute('icon', 'mdi:check-circle');
+                if (text) text.innerText = 'Đã chép!';
+                btn.className = "copy-rel-title-btn inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-300 rounded-md transition-all shadow-xs";
+
+                setTimeout(() => {
+                    if (icon) icon.setAttribute('icon', 'mdi:content-copy');
+                    if (text) text.innerText = 'Copy Title';
+                    btn.className = originalBg;
+                }, 2000);
+            }
+
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(title).then(onSuccess).catch(() => {
+                    fallbackCopyRelatedTitle(title, onSuccess);
+                });
+            } else {
+                fallbackCopyRelatedTitle(title, onSuccess);
+            }
+        }
+
+        function fallbackCopyRelatedTitle(text, cb) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            textArea.style.left = "-999999px";
+            textArea.style.top = "-999999px";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                const successful = document.execCommand('copy');
+                if (successful && cb) cb();
+            } catch (err) {
+                console.error('Lỗi khi copy:', err);
+            }
+            document.body.removeChild(textArea);
+        }
 
         function openUpdateRulesPopup() {
             document.getElementById('updateRulesModal').classList.remove('hidden');

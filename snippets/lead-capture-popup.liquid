@@ -21,29 +21,7 @@
 
 
 
-<!-- [DEV-TEST-START:HTML] -->
-<button
-  type="button"
-  class="lead-capture-test-toggle"
-  data-lead-capture-test-toggle
-  aria-controls="LeadCaptureDialog"
-  aria-expanded="false"
-  hidden
->
-  Test lead popup
-</button>
 
-<button
-  type="button"
-  class="lead-capture-test-toggle lead-capture-test-toggle--success"
-  data-lead-capture-test-success-toggle
-  aria-controls="LeadCaptureDialog"
-  aria-expanded="false"
-  hidden
->
-  Test success popup
-</button>
-<!-- [DEV-TEST-END:HTML] -->
 
 <div
   class="lead-capture"
@@ -349,42 +327,7 @@
 </div>
 
 {% stylesheet %}
-  /* [DEV-TEST-START:CSS] */
-  .lead-capture-test-toggle[hidden] {
-    display: none;
-  }
 
-  .lead-capture-test-toggle {
-    position: fixed;
-    z-index: calc(var(--z-drawer) + 11);
-    bottom: var(--sp-12);
-    left: var(--sp-4);
-    min-height: var(--sp-7);
-    padding: var(--sp-2) var(--sp-4);
-    border: var(--border-width) solid var(--color-clay);
-    border-radius: var(--radius-full);
-    background: var(--color-brown-dark);
-    box-shadow: var(--shadow-elevation-2);
-    color: var(--text-inverse);
-    cursor: pointer;
-    font-family: var(--font-body);
-    font-size: var(--font-size-body-sm);
-    font-weight: var(--font-weight-semibold);
-  }
-
-  .lead-capture-test-toggle--success {
-    bottom: calc(var(--sp-4) * 2 + var(--sp-7));
-  }
-
-  .lead-capture-test-toggle:hover {
-    background: var(--color-brown);
-  }
-
-  .lead-capture-test-toggle:focus-visible {
-    outline: var(--border-width) solid var(--color-sage);
-    outline-offset: var(--sp-1);
-  }
-  /* [DEV-TEST-END:CSS] */
 
 
 
@@ -1276,8 +1219,10 @@
       document.body.classList.add('lead-capture-is-open');
       window.requestAnimationFrame(function () {
         root.classList.add('is-open');
-        var initialFocus = successState.hidden ? emailInput : root.querySelector('[data-lead-capture-shop]');
-        initialFocus.focus({ preventScroll: true });
+        if (!successState.hidden) {
+          var shopButton = root.querySelector('[data-lead-capture-shop]');
+          if (shopButton) shopButton.focus({ preventScroll: true });
+        }
       });
     }
 
@@ -1329,6 +1274,11 @@
       if (!focusable.length) return;
       var first = focusable[0];
       var last = focusable[focusable.length - 1];
+      if (!dialog.contains(document.activeElement)) {
+        event.preventDefault();
+        (event.shiftKey ? last : first).focus();
+        return;
+      }
       if (event.shiftKey && document.activeElement === first) {
         event.preventDefault();
         last.focus();
@@ -1494,37 +1444,7 @@
 
 
 
-    /* [DEV-TEST-START:JS] */
-    (function initDevTestControls() {
-      var testToggle = document.querySelector('[data-lead-capture-test-toggle]');
-      var testSuccessToggle = document.querySelector('[data-lead-capture-test-success-toggle]');
-      if (!testToggle) return;
 
-      if (new URLSearchParams(window.location.search).get('lead_popup_test') === '1') {
-        testToggle.hidden = false;
-        testToggle.addEventListener('click', function () {
-          if (isOpen) {
-            closePopup();
-            testToggle.setAttribute('aria-expanded', 'false');
-          } else {
-            openPopup(true);
-            testToggle.setAttribute('aria-expanded', 'true');
-          }
-        });
-
-        if (testSuccessToggle) {
-          testSuccessToggle.hidden = false;
-          testSuccessToggle.addEventListener('click', function () {
-            showSuccess();
-            if (!isOpen) {
-              openPopup(true);
-              testToggle.setAttribute('aria-expanded', 'true');
-            }
-          });
-        }
-      }
-    })();
-    /* [DEV-TEST-END:JS] */
 
     var responseParameters = new URLSearchParams(window.location.search);
     var redirectedSuccessfully =

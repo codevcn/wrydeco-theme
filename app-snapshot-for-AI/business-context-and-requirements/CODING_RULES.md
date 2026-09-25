@@ -71,3 +71,20 @@ The technical implementation must align with the brand's luxury positioning.
   - `submitConsultation(formData, [customEndpoint])`: Submits bespoke design consultation inquiries to `https://admin.wrydeco.com/api/consultations`.
 - **Rationale:** Centralizing API logic ensures maintainability, seamless scalability, unified CORS/error handling, and eliminates bug risks from fragmented hardcoded URLs across the codebase.
 
+## 11. Cart Interaction & Drawer Architecture
+
+- **Primary Interface:** WRYDECO strictly uses a slide-out Cart Drawer (`sections/cart-drawer.liquid`) instead of a traditional standalone cart page.
+- **Global Redirect:** Direct access or navigation to `/cart` is automatically intercepted and redirected to `/collections/all` while programmatically opening the Cart Drawer (configured in `layout/theme.liquid`).
+- **Implementation Standard:** Any new components, buy buttons, quick-add triggers, or cart count links MUST trigger or update the Cart Drawer directly. Do NOT create links or redirects sending users to `/cart`.
+
+## 12. Tiered Spending Discount & Promotion System
+
+- **Architecture:** The store implements a structured 10-tier spending discount system (`WRY100` to `WRY1000` corresponding to order subtotals from $900 to $9,900).
+- **Centralized Engine:** Discount eligibility evaluation, session caching, and automated checkout application are strictly handled by `assets/wry-discount-auto-apply-v2.js` and the global customer eligibility flag `window.WrydecoCustomerDiscountEligible`.
+- **Implementation Standard:** AI agents and developers must NOT create duplicate discount application scripts, hardcode conflicting promotion codes, or bypass the centralized auto-apply mechanism.
+
+## 13. Theme Build & Release Cleanup
+
+- **Clean Release Rule:** Before packing or archiving the theme for production upload via `compress-store-src.cmd`, all local development and test hooks (such as lead-capture popup debug toggles) MUST be thoroughly purged.
+- **Execution Script:** Always ensure the test code removal script (`scripts/lead-capture-test/remove-test-src.cmd`) is invoked prior to generating uploadable zip archives to ensure debug elements never leak into production.
+

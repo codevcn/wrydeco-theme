@@ -1,0 +1,2 @@
+# Access token để truy cập vào store
+access token được lưu vào file `./.product.env` trong cùng folder này, nếu token hết hạn thì dùng file `./get_access_token.cmd` trong cùng folder này để lấy access token mới.
