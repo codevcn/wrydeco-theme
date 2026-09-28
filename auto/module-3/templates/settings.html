@@ -20,7 +20,7 @@
 <body class="bg-gray-50 text-gray-900 min-h-screen">
     <!-- Header -->
     <header class="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
-        <div class="max-w-7xl mx-auto px-4 sm:px-8">
+        <div class="mx-auto px-4 sm:px-8">
             <div class="flex items-center justify-between h-16">
                 <!-- Logo -->
                 <div class="flex-shrink-0 flex items-center gap-3">
@@ -53,7 +53,7 @@
     </header>
     {% include 'drawer.html' %}
 
-    <main class="max-w-4xl mx-auto p-4 sm:p-8">
+    <main class="max-w-7xl mx-auto p-4 sm:p-8">
         <div class="mb-8">
             <h1 class="text-3xl font-bold text-gray-800 tracking-tight flex items-center gap-2">
                 <iconify-icon icon="mdi:cog-outline" class="text-indigo-600"></iconify-icon>
@@ -82,6 +82,90 @@
                     </button>
                     <div id="status-message" class="text-sm font-medium transition-opacity"></div>
                 </div>
+            </form>
+        </div>
+
+        <!-- Section Cấu hình Shopify App Riêng cho Trang Cập nhật Logo -->
+        <div class="mt-8 bg-white p-4 sm:p-6 rounded-2xl shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07)] border border-gray-100">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-gray-100 gap-2 mb-4">
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                        <iconify-icon icon="mdi:shield-key-outline" class="text-indigo-600 text-xl"></iconify-icon>
+                        <span>Cấu hình Shopify App Riêng cho Trang Cập nhật Logo (Kích hoạt khi Bật Proxy)</span>
+                    </h2>
+                </div>
+                <!-- Status Badge -->
+                <div id="logo-config-mode-badge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 border border-gray-200">
+                    <span class="w-2 h-2 rounded-full bg-gray-400"></span>
+                    <span>Đang dùng mặc định server (Loại 1)</span>
+                </div>
+            </div>
+
+            <!-- Warning / Instruction Banner -->
+            <div class="p-3.5 bg-indigo-50 border border-indigo-100 rounded-xl mb-6 text-xs text-indigo-900 leading-relaxed flex items-start gap-2.5">
+                <iconify-icon icon="mdi:information-outline" class="text-indigo-600 text-lg flex-shrink-0 mt-0.5"></iconify-icon>
+                <div>
+                    <strong>Cơ chế hoạt động:</strong> Bộ credentials này (Client ID, Client Secret, Access Token) <em>chỉ được áp dụng khi trang Cập nhật logo BẬT kết nối Proxy Gateway</em>. Khi TẮT Proxy, trang sẽ <strong>bắt buộc fallback 100%</strong> về sử dụng credentials mặc định của server từ file <code>.env</code> (kết nối trực tiếp từ VPS).
+                </div>
+            </div>
+
+            <form id="logo-updater-form" class="space-y-4" onsubmit="return false;">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="logo_shop_domain" class="block text-sm font-medium text-gray-700">Shop Domain (Tùy chọn)</label>
+                        <p class="text-xs text-gray-500 mt-0.5 mb-1.5">Để trống sẽ sử dụng store mặc định của server (<span id="default_shop_label" class="font-mono">wrydeco.myshopify.com</span>).</p>
+                        <input type="text" id="logo_shop_domain" name="shop_domain" class="w-full rounded-lg border-gray-300 shadow-xs focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border" placeholder="Ví dụ: wrydeco hoặc wrydeco.myshopify.com">
+                    </div>
+
+                    <div>
+                        <label for="logo_client_id" class="block text-sm font-medium text-gray-700">Client ID (Tùy chọn)</label>
+                        <p class="text-xs text-gray-500 mt-0.5 mb-1.5">Client ID của App được cấp quyền trong Shopify Partner/Admin.</p>
+                        <input type="text" id="logo_client_id" name="client_id" class="w-full rounded-lg border-gray-300 shadow-xs focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border" placeholder="Nhập Client ID...">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="logo_client_secret" class="block text-sm font-medium text-gray-700">Client Secret (Tùy chọn)</label>
+                        <p class="text-xs text-gray-500 mt-0.5 mb-1.5">Client Secret của App (để trống nếu không muốn thay đổi).</p>
+                        <div class="relative">
+                            <input type="password" id="logo_client_secret" name="client_secret" class="w-full rounded-lg border-gray-300 shadow-xs focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border pr-10" placeholder="shpss_...">
+                            <button type="button" onclick="togglePasswordVisibility('logo_client_secret')" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer">
+                                <iconify-icon icon="mdi:eye-outline"></iconify-icon>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="logo_access_token" class="block text-sm font-medium text-gray-700">Admin Access Token <span class="text-red-500">*</span></label>
+                        <p class="text-xs text-gray-500 mt-0.5 mb-1.5">Bắt buộc để gọi Admin REST & GraphQL API (để trống nếu không đổi).</p>
+                        <div class="relative">
+                            <input type="password" id="logo_access_token" name="access_token" class="w-full rounded-lg border-gray-300 shadow-xs focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border pr-10 font-mono" placeholder="shpat_...">
+                            <button type="button" onclick="togglePasswordVisibility('logo_access_token')" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer">
+                                <iconify-icon icon="mdi:eye-outline"></iconify-icon>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Last updated label if any -->
+                <div id="logo-config-last-updated" class="text-xs text-gray-400 hidden pt-1"></div>
+
+                <div class="pt-4 flex flex-wrap items-center gap-3">
+                    <button type="button" id="btnSaveLogoConfig" onclick="saveLogoUpdaterConfig()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 px-6 rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer">
+                        <iconify-icon icon="mdi:content-save-outline" class="text-base" id="saveBtnIcon"></iconify-icon>
+                        <span id="saveBtnText">Lưu Cấu Hình (Loại 2)</span>
+                    </button>
+                    
+
+                    <button type="button" id="btnResetLogoConfig" onclick="resetLogoUpdaterConfig()" class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 font-semibold py-2.5 px-5 rounded-xl shadow-2xs transition-all flex items-center gap-1.5 sm:ml-auto cursor-pointer">
+                        <iconify-icon icon="mdi:restore" class="text-base" id="resetBtnIcon"></iconify-icon>
+                        <span id="resetBtnText">Khôi phục Mặc định (Xóa cấu hình riêng)</span>
+                    </button>
+                </div>
+
+                <!-- Status Feedback Message -->
+                <div id="logo-config-feedback" class="text-sm font-medium pt-2 transition-all"></div>
             </form>
         </div>
     </main>
@@ -123,6 +207,175 @@
             
             submitBtn.disabled = false;
             submitBtn.innerText = 'Cập nhật mật khẩu';
+        });
+
+        // Toggle password visibility
+        function togglePasswordVisibility(id) {
+            const input = document.getElementById(id);
+            if (!input) return;
+            input.type = input.type === 'password' ? 'text' : 'password';
+        }
+
+        // Logo Updater Config logic
+        let hasStoredToken = false;
+        let hasStoredSecret = false;
+
+        async function loadLogoUpdaterConfig() {
+            try {
+                const res = await fetch('/api/settings/logo-updater');
+                if (!res.ok) return;
+                const data = await res.json();
+                if (!data.success) return;
+
+                const cfg = data.config || {};
+                const badge = document.getElementById('logo-config-mode-badge');
+                const lastUpdated = document.getElementById('logo-config-last-updated');
+                const defaultShopLabel = document.getElementById('default_shop_label');
+
+                if (data.default_shop && defaultShopLabel) {
+                    defaultShopLabel.textContent = data.default_shop;
+                }
+
+                document.getElementById('logo_shop_domain').value = cfg.shop_domain || '';
+                document.getElementById('logo_client_id').value = cfg.client_id || '';
+
+                hasStoredSecret = !!cfg.has_secret;
+                hasStoredToken = !!cfg.has_token;
+
+                const secretInput = document.getElementById('logo_client_secret');
+                if (hasStoredSecret) {
+                    secretInput.placeholder = `Đã lưu (${cfg.client_secret_masked || '********'}) - để trống nếu không đổi`;
+                } else {
+                    secretInput.placeholder = 'shpss_...';
+                }
+
+                const tokenInput = document.getElementById('logo_access_token');
+                if (hasStoredToken) {
+                    tokenInput.placeholder = `Đã lưu (${cfg.access_token_masked || '********'}) - để trống nếu không đổi`;
+                } else {
+                    tokenInput.placeholder = 'shpat_...';
+                }
+
+                if (badge) {
+                    if (cfg.is_custom) {
+                        badge.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200';
+                        badge.innerHTML = `
+                            <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
+                            <span>Đã cấu hình App Riêng (Loại 2)</span>
+                        `;
+                    } else {
+                        badge.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 border border-gray-200';
+                        badge.innerHTML = `
+                            <span class="w-2 h-2 rounded-full bg-gray-400"></span>
+                            <span>Đang dùng mặc định server (Loại 1)</span>
+                        `;
+                    }
+                }
+
+                if (lastUpdated && cfg.updated_at) {
+                    try {
+                        const d = new Date(cfg.updated_at);
+                        lastUpdated.textContent = `Cập nhật lần cuối: ${d.toLocaleString('vi-VN')}`;
+                        lastUpdated.classList.remove('hidden');
+                    } catch (e) {
+                        lastUpdated.classList.add('hidden');
+                    }
+                } else if (lastUpdated) {
+                    lastUpdated.classList.add('hidden');
+                }
+            } catch (err) {
+                console.warn('Lỗi tải cấu hình logo-updater:', err);
+            }
+        }
+
+        async function saveLogoUpdaterConfig() {
+            const saveBtn = document.getElementById('btnSaveLogoConfig');
+            const saveBtnText = document.getElementById('saveBtnText');
+            const feedback = document.getElementById('logo-config-feedback');
+
+            const shopDomain = document.getElementById('logo_shop_domain').value.trim();
+            const clientId = document.getElementById('logo_client_id').value.trim();
+            const clientSecret = document.getElementById('logo_client_secret').value.trim();
+            const accessToken = document.getElementById('logo_access_token').value.trim();
+
+            if (!accessToken && !hasStoredToken) {
+                feedback.innerHTML = '<span class="text-rose-600">Vui lòng nhập Admin Access Token (bắt buộc khi lưu cấu hình riêng).</span>';
+                return;
+            }
+
+            saveBtn.disabled = true;
+            saveBtnText.textContent = 'Đang xác thực & lưu...';
+            feedback.innerHTML = '<span class="text-indigo-600">Đang gọi Shopify API xác thực token...</span>';
+
+            try {
+                const res = await fetch('/api/settings/logo-updater', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        shop_domain: shopDomain,
+                        client_id: clientId,
+                        client_secret: clientSecret,
+                        access_token: accessToken
+                    })
+                });
+
+                const data = await res.json();
+                if (data.success) {
+                    feedback.innerHTML = `<span class="text-emerald-600 font-semibold">✓ ${data.message}</span>`;
+                    document.getElementById('logo_client_secret').value = '';
+                    document.getElementById('logo_access_token').value = '';
+                    await loadLogoUpdaterConfig();
+                } else {
+                    feedback.innerHTML = `<span class="text-rose-600 font-semibold">✕ ${data.message}</span>`;
+                }
+            } catch (err) {
+                feedback.innerHTML = `<span class="text-rose-600">Lỗi kết nối: ${err.message}</span>`;
+            } finally {
+                saveBtn.disabled = false;
+                saveBtnText.textContent = 'Lưu Cấu Hình (Loại 2)';
+            }
+        }
+
+
+        async function resetLogoUpdaterConfig() {
+            if (!confirm('Bạn có chắc chắn muốn xóa cấu hình riêng và khôi phục về Credentials Mặc định của Server?')) {
+                return;
+            }
+
+            const resetBtn = document.getElementById('btnResetLogoConfig');
+            const resetBtnText = document.getElementById('resetBtnText');
+            const feedback = document.getElementById('logo-config-feedback');
+
+            resetBtn.disabled = true;
+            resetBtnText.textContent = 'Đang khôi phục...';
+
+            try {
+                const res = await fetch('/api/settings/logo-updater/reset', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await res.json();
+                if (data.success) {
+                    feedback.innerHTML = `<span class="text-emerald-600 font-semibold">✓ ${data.message}</span>`;
+                    document.getElementById('logo_shop_domain').value = '';
+                    document.getElementById('logo_client_id').value = '';
+                    document.getElementById('logo_client_secret').value = '';
+                    document.getElementById('logo_access_token').value = '';
+                    await loadLogoUpdaterConfig();
+                } else {
+                    feedback.innerHTML = `<span class="text-rose-600">✕ Lỗi: ${data.message || 'Không thể khôi phục'}</span>`;
+                }
+            } catch (err) {
+                feedback.innerHTML = `<span class="text-rose-600">Lỗi kết nối: ${err.message}</span>`;
+            } finally {
+                resetBtn.disabled = false;
+                resetBtnText.textContent = 'Khôi phục Mặc định (Xóa cấu hình riêng)';
+            }
+        }
+
+        // Tự động load config khi vào trang
+        document.addEventListener('DOMContentLoaded', () => {
+            loadLogoUpdaterConfig();
         });
     </script>
 </body>

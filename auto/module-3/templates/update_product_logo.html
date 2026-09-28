@@ -1,0 +1,2941 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="/static/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+    <link rel="shortcut icon" href="/static/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png" />
+    <link rel="manifest" href="/static/site.webmanifest" />
+    <title>Cập nhật Logo Ảnh Sản Phẩm - Shopify Admin Manager</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <style>
+        .hidden { display: none !important; }
+        body { font-family: 'Inter', sans-serif; }
+        .trans-checkerboard {
+            background-color: #f3f4f6;
+            background-image: 
+                linear-gradient(45deg, #e5e7eb 25%, transparent 25%), 
+                linear-gradient(-45deg, #e5e7eb 25%, transparent 25%), 
+                linear-gradient(45deg, transparent 75%, #e5e7eb 75%), 
+                linear-gradient(-45deg, transparent 75%, #e5e7eb 75%);
+            background-size: 16px 16px;
+            background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+        }
+        .canvas-container {
+            max-width: 100%;
+            max-height: 75vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            user-select: none;
+            touch-action: none;
+        }
+        #editorCanvas {
+            max-width: 100%;
+            max-height: 72vh;
+            object-fit: contain;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            border-radius: 0.5rem;
+            cursor: grab;
+        }
+        #editorCanvas:active {
+            cursor: grabbing;
+        }
+        @keyframes pulse-ring {
+            0% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.7); }
+            70% { box-shadow: 0 0 0 8px rgba(79, 70, 229, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0); }
+        }
+        .btn-ready-pulse {
+            animation: pulse-ring 2s infinite;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
+        <div class="mx-auto px-4 sm:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo & Store Link -->
+                <div class="flex-shrink-0 flex items-center gap-3">
+                    <a target="_blank" rel="noopener noreferrer" href="/" class="flex items-center gap-2 text-indigo-600 font-bold text-xl hover:text-indigo-700 transition-colors">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                        <span>Shopify Admin Manager</span>
+                    </a>
+                    <a target="_blank" rel="noopener noreferrer" href="https://admin.shopify.com/store/wrydeco" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-black hover:bg-neutral-800 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors" title="Mở Shopify Admin Store" id="headerShopifyStoreLink">
+                        <span>Shopify Store</span>
+                        <svg class="w-3.5 h-3.5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                    </a>
+                </div>
+                <!-- Nav Links -->
+                <nav class="flex items-center gap-6">
+                    <a target="_blank" rel="noopener noreferrer" href="/" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Sản phẩm</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/collections" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Collections</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/metaobjects" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Meta Objects</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/create" class="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">Tạo sản phẩm</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/edit-variants" class="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">Sửa hàng loạt</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/blogs" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path></svg>Blog</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/policies" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>Policy</a>
+                    <button id="drawer-toggle-btn" type="button" onclick="toggleDrawer()" class="p-1.5 text-gray-600 hover:text-indigo-600 hover:bg-gray-100 rounded-lg transition-colors flex items-center justify-center focus:outline-none" title="Menu tiện ích">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    {% include 'drawer.html' %}
+
+    <main class="max-w-[88rem] mx-auto px-4 sm:px-8 py-8 space-y-8">
+        <!-- SECTION PROXY GATEWAY: Bảo vệ kết nối Proxy -->
+        <section id="proxyGatewaySection" class="bg-white rounded-2xl border border-gray-200 p-5 sm:p-6 shadow-sm transition-all duration-300">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <!-- Tiêu đề & Thông tin -->
+                <div class="flex items-start sm:items-center gap-3.5">
+                    <div class="p-3 bg-indigo-50 text-indigo-600 rounded-xl text-2xl flex-shrink-0 flex items-center justify-center">
+                        <iconify-icon icon="mdi:shield-lock-outline"></iconify-icon>
+                    </div>
+                    <div>
+                        <div class="flex flex-wrap items-center gap-2.5">
+                            <h3 class="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2">
+                                Bảo vệ Kết nối Proxy (Proxy Gateway)
+                            </h3>
+                            <!-- Trạng thái Badge -->
+                            <div id="proxyStatusBadge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600 border border-gray-200 transition-all">
+                                <span class="w-2 h-2 rounded-full bg-gray-400"></span>
+                                <span>Proxy đang Tắt (Kết nối trực tiếp từ VPS)</span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1 leading-relaxed">
+                            Định tuyến toàn bộ GraphQL API, REST API và CDN tải ảnh Shopify qua Proxy US (<span class="font-mono font-semibold text-gray-700">185.124.63.174</span>) với chốt chặn an toàn 2 lớp nghiêm ngặt.
+                        </p>
+                        <!-- Thông tin Vị trí & Quốc gia Live Egress -->
+                        <div id="proxyGeoInfoBadge" class="hidden mt-2 flex flex-wrap items-center gap-2 text-xs">
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 font-medium">
+                                <span id="proxyGeoFlag" class="text-sm">🇺🇸</span>
+                                <span id="proxyGeoLocation">United States</span>
+                            </span>
+                            <span id="proxyGeoIspWrapper" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-gray-100 text-gray-700 border border-gray-200">
+                                <iconify-icon icon="mdi:server-network" class="text-gray-500"></iconify-icon>
+                                <span id="proxyGeoIsp">ISP: Verizon Business</span>
+                            </span>
+                            <span class="text-[11px] text-emerald-600 font-medium flex items-center gap-1">
+                                <iconify-icon icon="mdi:check-decagram" class="text-emerald-500"></iconify-icon>
+                                <span>Live Egress Verified</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Điều khiển: Toggle switch & Nút kiểm tra -->
+                <div class="flex items-center gap-3 sm:gap-4 self-end md:self-center flex-shrink-0">
+                    <!-- Toggle Switch -->
+                    <label class="relative inline-flex items-center cursor-pointer select-none" title="Bật/Tắt định tuyến Proxy">
+                        <input type="checkbox" id="proxyToggleSwitch" class="sr-only peer" onchange="toggleProxyGateway(this.checked)">
+                        <div class="w-12 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                        <span id="proxyToggleLabel" class="ml-2.5 text-xs font-semibold text-gray-700">Tắt</span>
+                    </label>
+
+                    <!-- Nút Kiểm tra Proxy -->
+                    <button id="btnCheckProxy" type="button" onclick="checkProxyHealth()" class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-700 font-semibold text-xs rounded-xl border border-gray-300 transition-all shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" title="Kiểm tra kết nối Proxy tới Shopify">
+                        <iconify-icon icon="mdi:refresh" id="btnCheckProxyIcon" class="text-base text-gray-600"></iconify-icon>
+                        <span id="btnCheckProxyText">Kiểm tra Proxy</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Hộp cảnh báo đỏ khi Proxy BẬT nhưng không ổn định -->
+            <div id="proxyUnstableAlert" class="hidden mt-4 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs flex items-start gap-3">
+                <iconify-icon icon="mdi:alert-octagon-outline" class="text-xl text-red-600 flex-shrink-0 mt-0.5"></iconify-icon>
+                <div class="flex-1 space-y-1">
+                    <div class="font-bold text-red-800 text-sm">
+                        CHỐT CHẶN AN TOÀN: Proxy đang BẬT nhưng mất kết nối hoặc không ổn định!
+                    </div>
+                    <div class="text-red-700 leading-relaxed" id="proxyUnstableDetails">
+                        Tất cả các thao tác gọi đến Shopify (Tải sản phẩm, Sao lưu, Cập nhật logo, Rollback) đã bị KHÓA BẢO VỆ để tránh làm gián đoạn hoặc lỗi gian hàng. Vui lòng bấm "Kiểm tra Proxy" để thử lại hoặc TẮT Proxy nếu muốn kết nối trực tiếp.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 1: Cấu hình danh sách sản phẩm & Logo -->
+        <section class="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <iconify-icon icon="mdi:tune-variant" class="text-indigo-600"></iconify-icon>
+                <span>Section 1: Cấu hình Danh sách & Logo</span>
+            </h3>
+
+            <!-- Store Connection Badge in Section 1 -->
+            <div class="mb-6 flex flex-wrap items-center justify-between gap-3 p-3.5 bg-gray-50 rounded-xl border border-gray-200">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-xs font-medium text-gray-500">Store đang kết nối:</span>
+                    <div id="sectionStoreBadge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200 shadow-2xs transition-all">
+                        <span>🏬</span>
+                        <span id="sectionStoreDomain" class="font-mono font-bold text-gray-800">wrydeco.myshopify.com</span>
+                        <span id="sectionStoreBadgeTag" class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-gray-200 text-gray-700">Mặc định Server • Trực tiếp</span>
+                    </div>
+                </div>
+                <a href="/settings" target="_blank" class="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800 hover:underline">
+                    <span>Cấu hình credentials tại Settings</span>
+                    <iconify-icon icon="mdi:arrow-right" class="text-sm"></iconify-icon>
+                </a>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <!-- Cột trái: Nhập danh sách định danh -->
+                <div class="lg:col-span-7 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <label for="identifiersInput" class="text-sm font-semibold text-gray-700">
+                            Danh sách định danh sản phẩm:
+                        </label>
+                        <!-- Radio ID vs Handle -->
+                        <div class="flex items-center gap-4 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200">
+                            <label class="flex items-center gap-2 text-xs font-semibold text-gray-700 cursor-pointer">
+                                <input type="radio" name="id_type" value="handle" checked class="text-indigo-600 focus:ring-indigo-500">
+                                <span>Product Handle</span>
+                            </label>
+                            <label class="flex items-center gap-2 text-xs font-semibold text-gray-700 cursor-pointer">
+                                <input type="radio" name="id_type" value="id" class="text-indigo-600 focus:ring-indigo-500">
+                                <span>Product ID</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <textarea id="identifiersInput" rows="5" placeholder="Nhập Product ID hoặc Handle (phân cách bằng dấu phẩy hoặc xuống dòng)...&#10;Ví dụ:&#10;rustic-wooden-floating-wall-shelf-organic-bowl-design&#10;10324646690873" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm font-mono transition-shadow"></textarea>
+
+                    <div class="flex items-center justify-between pt-2">
+                        <span class="text-xs text-gray-500" id="idCountLabel">Sẵn sàng tải dữ liệu</span>
+                        <div class="flex items-center gap-2">
+                            <button id="btnClearIdentifiers" type="button" onclick="clearIdentifiers()" class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-700 font-medium text-sm rounded-xl transition-all border border-gray-300 cursor-pointer" title="Xóa danh sách định danh đã nhập và trong bộ nhớ lưu trữ">
+                                <iconify-icon icon="mdi:trash-can-outline" class="text-lg text-gray-500"></iconify-icon>
+                                <span>Clear</span>
+                            </button>
+                            <button id="btnLoadProducts" type="button" onclick="loadProducts()" class="inline-flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold rounded-xl shadow transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 cursor-pointer">
+                                <iconify-icon icon="mdi:magnify" class="text-lg" id="btnLoadIcon"></iconify-icon>
+                                <span id="btnLoadText">OK (Tải dữ liệu)</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cột phải: Chọn Logo -->
+                <div class="lg:col-span-5 border-t lg:border-t-0 lg:border-l lg:pl-8 border-gray-200 space-y-4">
+                    <label class="text-sm font-semibold text-gray-700 block">
+                        Chọn Logo đóng dấu:
+                    </label>
+
+                    <div class="flex items-center gap-4">
+                        <!-- Preview Logo Hiện Tại -->
+                        <div class="w-24 h-24 rounded-xl border-2 border-indigo-200 trans-checkerboard flex items-center justify-center p-2 shadow-inner flex-shrink-0">
+                            <img id="currentLogoPreview" src="/assets/store-logo-black-trans.png" alt="Logo Preview" class="max-w-full max-h-full object-contain">
+                        </div>
+
+                        <div class="space-y-2 flex-1">
+                            <div class="text-xs font-medium text-gray-500">Đang chọn:</div>
+                            <div id="currentLogoName" class="text-xs font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-md inline-block border border-indigo-100 break-all">
+                                store-logo-black-trans.png
+                            </div>
+                            <div class="text-[11px] text-gray-400">Logo sẽ được chèn lên ảnh ở góc trên bên phải theo mặc định.</div>
+                        </div>
+                    </div>
+
+                    <!-- Nút chọn Logo có sẵn -->
+                    <div class="grid grid-cols-2 gap-2 pt-2">
+                        <button type="button" onclick="setPresetLogo('/assets/store-logo-black-trans.png', 'store-logo-black-trans.png')" class="flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border border-gray-300 bg-white hover:bg-gray-50 text-gray-800 transition-colors shadow-sm">
+                            <span class="w-3 h-3 rounded-full bg-black inline-block"></span>
+                            <span>Logo Đen (Mặc định)</span>
+                        </button>
+                        <button type="button" onclick="setPresetLogo('/assets/store-logo-white-trans.png', 'store-logo-white-trans.png')" class="flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border border-gray-300 bg-white hover:bg-gray-50 text-gray-800 transition-colors shadow-sm">
+                            <span class="w-3 h-3 rounded-full bg-gray-300 border border-gray-400 inline-block"></span>
+                            <span>Logo Trắng</span>
+                        </button>
+                    </div>
+
+                    <!-- Input upload logo tuỳ biến -->
+                    <div>
+                        <label class="flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-dashed border-gray-300 hover:border-indigo-400 rounded-xl cursor-pointer text-xs font-medium text-gray-600 hover:text-indigo-600 transition-colors bg-gray-50/50">
+                            <iconify-icon icon="mdi:cloud-upload-outline" class="text-lg"></iconify-icon>
+                            <span>Tải ảnh logo tùy chọn từ máy tính...</span>
+                            <input type="file" id="customLogoFileInput" accept="image/*" class="hidden" onchange="handleCustomLogoUpload(event)">
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 2: Danh sách Sản phẩm & Media (Grid 1 cột, vô hạn hàng) -->
+        <section id="sectionProducts" class="space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                    <iconify-icon icon="mdi:view-grid-outline" class="text-indigo-600"></iconify-icon>
+                    <span>Section 2: Danh sách Sản phẩm</span>
+                </h3>
+                <span id="productTotalBadge" class="text-xs font-semibold bg-gray-200 text-gray-700 px-3 py-1 rounded-full">0 sản phẩm</span>
+            </div>
+
+            <!-- Container Grid 1 cột các sản phẩm -->
+            <div id="productsContainer" class="space-y-4">
+                <!-- Placeholder khi chưa nạp -->
+                <div id="emptyStateBox" class="bg-white rounded-2xl border-2 border-dashed border-gray-200 p-12 text-center text-gray-400 space-y-3">
+                    <iconify-icon icon="mdi:image-multiple-outline" class="text-5xl text-gray-300"></iconify-icon>
+                    <p class="text-sm font-medium">Chưa có sản phẩm nào được nạp. Hãy nhập ID/Handle ở Section 1 và nhấn "OK".</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Container lưu trữ Setup Logo Section khi chưa gắn vào card sản phẩm -->
+        <div id="setupSectionHolder" class="hidden">
+            <!-- SECTION "SETUP LOGO": Mở ra ngay bên dưới Card Sản Phẩm khi click vào 1 Thumbnail -->
+            <section id="sectionSetupLogo" class="hidden bg-white rounded-2xl border-2 border-indigo-500 p-6 sm:p-8 shadow-xl space-y-6 transition-all duration-300 ring-4 ring-indigo-50/80 mb-8">
+                <!-- Header Setup Logo -->
+                <div class="flex flex-wrap items-center justify-between gap-4 border-b border-gray-200 pb-2">
+                    <div class="space-y-1">
+                        <div class="flex items-center gap-2">
+                            <span class="px-2.5 py-0.5 rounded text-xs font-bold bg-indigo-100 text-indigo-700 flex items-center gap-1">
+                                <iconify-icon icon="mdi:arrow-up-bold" class="text-xs"></iconify-icon>
+                                Canvas Editor (Sản phẩm trên)
+                            </span>
+                            <h4 class="text-lg font-bold text-gray-900" id="editorTitle">Đang thiết lập logo cho Media</h4>
+                        </div>
+                        <p class="text-xs text-gray-500" id="editorSubtitle">Kéo thả chuột / ngón tay để di chuyển logo. Kích thước tối đa trong khung nhìn 100vw x 100vh.</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button id="btnAddToQueue" type="button" onclick="toggleCurrentMediaInQueue()" 
+                                class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-semibold text-xs rounded-xl shadow transition-all cursor-pointer">
+                            <iconify-icon icon="mdi:playlist-plus" class="text-base" id="btnAddToQueueIcon"></iconify-icon>
+                            <span id="btnAddToQueueText">Chọn để cập nhật</span>
+                        </button>
+                        <button type="button" onclick="closeSetupLogo()" class="px-3 py-1.5 text-xs font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-1 cursor-pointer">
+                            <iconify-icon icon="mdi:close" class="text-base"></iconify-icon>
+                            <span>Đóng khung chỉnh sửa</span>
+                        </button>
+                    </div>
+                </div>
+
+            <!-- Canvas Viewport (100vw x 100vh max, no overflow) -->
+            <div class="bg-gray-900/5 rounded-xl p-3 sm:p-6 flex flex-col items-center justify-center relative overflow-hidden">
+                <div class="canvas-container">
+                    <canvas id="editorCanvas"></canvas>
+                </div>
+                <div class="mt-2 text-center text-[11px] text-gray-500 flex items-center justify-center gap-4">
+                    <span>💡 Nhấn giữ và kéo chuột / chạm để di chuyển logo</span>
+                    <span id="canvasDimsBadge" class="font-mono text-gray-600 bg-white px-2 py-0.5 rounded border border-gray-200">Kích thước ảnh: --</span>
+                </div>
+            </div>
+
+            <!-- Controls: Slider kích thước, Opacity, Reset vị trí -->
+            <div class="bg-gray-50 rounded-xl p-4 sm:p-6 border border-gray-200 grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                <!-- Slider Kích Thước (Scale % chiều rộng ảnh) -->
+                <div class="space-y-1.5">
+                    <div class="flex justify-between text-xs font-semibold text-gray-700">
+                        <span>Kích thước Logo (Scale):</span>
+                        <span id="scaleValLabel" class="text-indigo-600 font-mono">22%</span>
+                    </div>
+                    <input type="range" id="scaleSlider" min="5" max="60" value="22" step="1" oninput="onScaleChange(this.value)" class="w-full accent-indigo-600 cursor-pointer">
+                    <div class="flex justify-between text-[10px] text-gray-400">
+                        <span>5% (Nhỏ)</span>
+                        <span>60% (Lớn)</span>
+                    </div>
+                </div>
+
+                <!-- Slider Opacity -->
+                <div class="space-y-1.5">
+                    <div class="flex justify-between text-xs font-semibold text-gray-700">
+                        <span>Độ mờ đục (Opacity):</span>
+                        <span id="opacityValLabel" class="text-indigo-600 font-mono">1.0</span>
+                    </div>
+                    <input type="range" id="opacitySlider" min="0.1" max="1.0" value="1.0" step="0.05" oninput="onOpacityChange(this.value)" class="w-full accent-indigo-600 cursor-pointer">
+                    <div class="flex justify-between text-[10px] text-gray-400">
+                        <span>10% (Trong suốt)</span>
+                        <span>100% (Rõ nét)</span>
+                    </div>
+                </div>
+
+                <!-- Reset Vị Trí -->
+                <div class="flex justify-start md:justify-end">
+                    <button type="button" onclick="resetLogoPosition()" class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-white hover:bg-gray-100 text-gray-700 font-medium text-xs rounded-xl border border-gray-300 shadow-sm transition-colors">
+                        <iconify-icon icon="mdi:restore" class="text-base text-indigo-600"></iconify-icon>
+                        <span>Đặt lại góc trên bên phải</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- HỘP THOẠI LỖI ĐỎ RỰC (KHI QUY TRÌNH 1 GẶP LỖI) -->
+            <div id="errorAlertBox" class="hidden bg-red-50 border-2 border-red-500 rounded-xl p-4 text-red-900 space-y-2">
+                <div class="flex items-center gap-2 font-bold text-red-700 text-sm">
+                    <iconify-icon icon="mdi:alert-circle" class="text-xl text-red-600"></iconify-icon>
+                    <span>LỖI NGHIÊM TRỌNG TRONG QUY TRÌNH 1 - DỪNG TOÀN BỘ TIẾN TRÌNH:</span>
+                </div>
+                <p id="errorAlertText" class="text-xs font-mono text-red-800 break-all bg-white/70 p-2.5 rounded border border-red-200">
+                    --
+                </p>
+                <div class="text-[11px] text-red-600">
+                    Hệ thống đã tự động chặn Quy trình 2 để bảo vệ dữ liệu gốc của bạn. Vui lòng kiểm tra lại kết nối mạng hoặc thử lại.
+                </div>
+            </div>
+
+            <!-- BOX PREVIEW ẢNH BACKUP THÀNH CÔNG TRÊN VPS (QUY TRÌNH 1 HOÀN TẤT) -->
+            <div id="vpsBackupPreviewBox" class="hidden bg-emerald-50 border-2 border-emerald-500 rounded-xl p-5 space-y-3">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2 text-emerald-800 font-bold text-sm">
+                        <iconify-icon icon="mdi:check-decagram" class="text-2xl text-emerald-600"></iconify-icon>
+                        <span>Quy trình 1: Bản sao lưu gốc đã hoàn hảo & được bảo tồn vĩnh viễn trên VPS!</span>
+                    </div>
+                    <span class="text-[11px] font-semibold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-300">
+                        100% Verified
+                    </span>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-4 bg-white/80 p-3 rounded-lg border border-emerald-200">
+                    <img id="vpsBackupThumb" src="" alt="VPS Backup Preview" class="w-20 h-20 rounded-lg object-cover border border-emerald-400 shadow-sm flex-shrink-0">
+                    <div class="space-y-1 text-xs text-gray-700 flex-1">
+                        <div><strong class="text-gray-900">Đường dẫn VPS:</strong> <code id="vpsBackupPath" class="text-emerald-700 font-mono">--</code></div>
+                        <div><strong class="text-gray-900">Dung lượng:</strong> <span id="vpsBackupSize" class="font-mono">--</span> | <strong class="text-gray-900">Kích thước:</strong> <span id="vpsBackupDims" class="font-mono">--</span> | <strong class="text-gray-900">Vị trí (Position):</strong> <span id="vpsBackupPos" class="font-mono text-indigo-700 font-bold bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">#--</span></div>
+                        <div class="text-[11px] text-emerald-700 italic">Cam kết an toàn: Bản sao lưu này được lưu trữ vĩnh viễn trên đĩa cứng VPS và không bao giờ bị xóa.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- THANH ĐIỀU KHIỂN ROLLBACK VÀ TRẠNG THÁI -->
+            <div class="border-t border-gray-200 pt-6 flex flex-wrap items-center justify-between gap-4">
+                <!-- Khu vực Rollback & Sửa từ bản backup (hiển thị khi media đã từng có logo) -->
+                <div id="rollbackArea" class="hidden flex items-center gap-3">
+                    <button id="btnRollback" type="button" onclick="executeRollback()" class="inline-flex items-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-semibold text-xs rounded-xl shadow transition-colors cursor-pointer">
+                        <iconify-icon icon="mdi:undo-variant" class="text-lg"></iconify-icon>
+                        <span>Khôi phục ảnh gốc (Rollback)</span>
+                    </button>
+                    <button id="btnEditFromBackup" type="button" onclick="loadFromBackupImage()" class="inline-flex items-center gap-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-semibold text-xs rounded-xl shadow transition-colors cursor-pointer">
+                        <iconify-icon icon="mdi:pencil-outline" class="text-lg"></iconify-icon>
+                        <span>Sửa lại từ ảnh gốc</span>
+                    </button>
+                </div>
+
+                <!-- Thông báo trạng thái đã cập nhật logo -->
+                <div id="tagNoticeArea" class="hidden text-xs text-amber-700 font-medium flex items-center gap-1.5 ml-auto">
+                    <iconify-icon icon="mdi:information" class="text-base text-amber-500"></iconify-icon>
+                    <span>Sản phẩm này đã có tag <code class="bg-amber-100 text-amber-800 px-1 py-0.5 rounded font-mono">logo-updated</code>.</span>
+                </div>
+            </div>
+        </section>
+        </div>
+    </main>
+
+    <!-- STICKY BOTTOM ACTION BAR (Hiển thị khi updateQueue.length > 0) -->
+    <aside id="stickyBottomBar" class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-200 shadow-2xl px-4 sm:px-8 py-3.5 transition-all duration-300 transform translate-y-full hidden">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+            <!-- Thông tin hàng đợi -->
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 text-xl flex-shrink-0">
+                    <iconify-icon icon="mdi:tray-full"></iconify-icon>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm font-bold text-gray-900">Hàng đợi cập nhật:</span>
+                        <span id="stickyQueueCount" class="text-xs font-bold bg-indigo-100 text-indigo-800 px-2.5 py-0.5 rounded-full border border-indigo-200">0 media</span>
+                    </div>
+                    <div class="text-[11px] text-gray-500 flex items-center gap-2 mt-0.5">
+                        <button type="button" onclick="toggleQueueModal(true)" class="text-indigo-600 hover:text-indigo-800 font-semibold flex items-center gap-1 cursor-pointer">
+                            <iconify-icon icon="mdi:eye-outline"></iconify-icon>
+                            <span>Xem danh sách (<span id="stickyQueueSubCount">0</span>)</span>
+                        </button>
+                        <span>•</span>
+                        <button type="button" onclick="clearQueue()" class="text-red-500 hover:text-red-700 font-medium cursor-pointer">
+                            Xóa tất cả
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2 Nút hành động đồng bộ -->
+            <div class="flex items-center gap-3 ml-auto" id="stickyActionButtons">
+                <!-- Nút 1: Sao lưu -->
+                <button id="stickyBtnBackup" type="button" onclick="executeBackupPhase()" class="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-black active:scale-95 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md border border-slate-700 transition-all cursor-pointer">
+                    <iconify-icon icon="mdi:cloud-download-outline" class="text-base text-white" id="stickyBackupIcon"></iconify-icon>
+                    <span id="stickyBackupText" class="text-white">1. Sao lưu tất cả trên VPS</span>
+                </button>
+
+                <!-- Nút 2: Tiến hành cập nhật -->
+                <button id="stickyBtnApply" type="button" onclick="executeApplyPhase()" style="display: none;" class="hidden inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold text-xs sm:text-sm rounded-xl shadow-lg transition-all btn-ready-pulse cursor-pointer">
+                    <iconify-icon icon="mdi:cloud-upload" class="text-base text-white" id="stickyApplyIcon"></iconify-icon>
+                    <span id="stickyApplyText" class="text-white">2. Tiến hành cập nhật tất cả lên Shopify</span>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Queue List Modal -->
+    <div id="queueModal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden border border-gray-200">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
+                <div class="flex items-center gap-2">
+                    <iconify-icon icon="mdi:format-list-bulleted-square" class="text-indigo-600 text-xl"></iconify-icon>
+                    <h3 class="font-bold text-gray-800 text-base">Danh sách Media trong Hàng đợi</h3>
+                    <span id="queueModalBadge" class="text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full font-bold">0</span>
+                </div>
+                <button type="button" onclick="toggleQueueModal(false)" class="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100 cursor-pointer">
+                    <iconify-icon icon="mdi:close" class="text-xl"></iconify-icon>
+                </button>
+            </div>
+            <!-- Modal Content -->
+            <div id="queueModalItems" class="p-6 overflow-y-auto space-y-3 flex-1 divide-y divide-gray-100">
+                <!-- Populated by JavaScript -->
+            </div>
+            <!-- Modal Footer -->
+            <div class="px-6 py-3 border-t border-gray-200 flex items-center justify-between bg-gray-50 text-xs">
+                <button type="button" onclick="clearQueue()" class="text-red-600 hover:text-red-800 font-semibold flex items-center gap-1 cursor-pointer">
+                    <iconify-icon icon="mdi:trash-can-outline"></iconify-icon>
+                    <span>Xóa toàn bộ hàng đợi</span>
+                </button>
+                <button type="button" onclick="toggleQueueModal(false)" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold rounded-lg cursor-pointer">
+                    Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Speed Dial Neo Góc Trên Bên Trái (Cách Header 14px: Header h-16 = 64px + 14px = 78px) -->
+    <div id="speedDialLeftContainer" class="fixed top-[78px] left-6 z-30 flex flex-col items-start select-none">
+        <!-- Nút chính Speed Dial Trái (Floating Action Button) -->
+        <button id="speedDialLeftTrigger" type="button" onclick="toggleSpeedDialLeft()" 
+                class="w-12 h-12 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-full shadow-lg hover:shadow-xl flex items-center justify-center cursor-pointer transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-emerald-300 group"
+                title="Quy trình an toàn & Cam kết bảo tồn (Speed Dial)">
+            <iconify-icon id="speedDialLeftIcon" icon="mdi:shield-check" class="text-2xl transition-transform duration-300 group-hover:scale-110"></iconify-icon>
+        </button>
+
+        <!-- Menu Action Con (Mở trôi xuống dưới để không che Header) -->
+        <div id="speedDialLeftMenu" class="mt-2.5 flex flex-col items-start space-y-2.5 hidden opacity-0 transition-all duration-200 transform -translate-y-2">
+            <!-- Nút Action: Quy trình 2 bước An toàn -->
+            <div class="flex items-center gap-2 group cursor-pointer" onclick="handleOpenSafetyPopoverAction()" title="Xem Quy trình 2 bước An toàn Tuyệt đối & Cam kết Bảo tồn Vĩnh viễn">
+                <button type="button" class="w-10 h-10 bg-white hover:bg-emerald-50 active:bg-emerald-100 text-emerald-600 rounded-full shadow-md border border-gray-200 flex items-center justify-center transition-transform group-hover:scale-110 cursor-pointer">
+                    <iconify-icon icon="mdi:shield-check-outline" class="text-xl"></iconify-icon>
+                </button>
+                <span class="bg-gray-900/90 hover:bg-black text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-md whitespace-nowrap transition-colors flex items-center gap-1.5">
+                    <span>Quy trình An toàn</span>
+                    <span class="bg-emerald-500/80 text-white text-[10px] px-1.5 py-0.2 rounded-full font-bold">2 Bước</span>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Popover Quy trình 2 bước An toàn Tuyệt đối & Cam kết Bảo tồn Vĩnh viễn -->
+    <div id="safetyPolicyPopoverWrapper" class="fixed inset-0 z-40 hidden">
+        <!-- Backdrop mờ nhẹ bắt sự kiện click ra ngoài để đóng -->
+        <div class="absolute inset-0 bg-black/30 backdrop-blur-[2px]" onclick="toggleSafetyPopover(false)"></div>
+
+        <!-- Card Popover neo góc trên bên trái -->
+        <div id="safetyPolicyPopover" class="absolute top-[140px] left-6 max-w-lg w-[calc(100vw-48px)] sm:w-[520px] bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl shadow-2xl border border-indigo-500/40 p-6 transition-all duration-300 transform scale-95 opacity-0">
+            <!-- Header Popover -->
+            <div class="flex items-start justify-between gap-3 border-b border-indigo-800/60 pb-4 mb-4">
+                <div class="flex items-center gap-3">
+                    <div class="p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-2xl flex-shrink-0 text-emerald-400 flex items-center justify-center">
+                        <iconify-icon icon="mdi:shield-check-outline"></iconify-icon>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h3 class="text-base font-bold text-white">Quy trình 2 bước An toàn Tuyệt đối</h3>
+                            <span class="text-[11px] bg-emerald-500/20 text-emerald-300 px-2.5 py-0.5 rounded-full border border-emerald-500/30 font-semibold whitespace-nowrap">Zero Data Loss</span>
+                        </div>
+                        <p class="text-xs text-indigo-200/80 mt-0.5">Cam kết bảo tồn vĩnh viễn & Rollback nguyên trạng</p>
+                    </div>
+                </div>
+                <button type="button" onclick="toggleSafetyPopover(false)" class="text-gray-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer" title="Đóng">
+                    <iconify-icon icon="mdi:close" class="text-xl"></iconify-icon>
+                </button>
+            </div>
+
+            <!-- Body Popover -->
+            <div class="space-y-4 text-xs text-indigo-100/90 leading-relaxed">
+                <!-- Bước 1 -->
+                <div class="bg-white/5 border border-indigo-500/20 rounded-xl p-3.5 space-y-1.5">
+                    <div class="flex items-center gap-2 text-emerald-300 font-bold text-xs uppercase tracking-wider">
+                        <iconify-icon icon="mdi:numeric-1-circle" class="text-lg text-emerald-400"></iconify-icon>
+                        <span>Bước 1: Sao lưu gốc an toàn tuyệt đối</span>
+                    </div>
+                    <p class="pl-6 text-[12px] text-gray-200 leading-normal">
+                        Ảnh gốc từ Shopify được tải về và kiểm tra xác thực byte/PIL hoàn hảo trên VPS trước khi cho phép cập nhật. Nếu có bất kỳ lỗi nào, tiến trình sẽ <strong>dừng ngay lập tức</strong>.
+                    </p>
+                    <div class="pl-6 pt-1 text-[11px] text-emerald-400 flex items-center gap-1 font-medium">
+                        <iconify-icon icon="mdi:lock-check"></iconify-icon>
+                        <span>Bản sao lưu trên VPS được bảo tồn vĩnh viễn và không bao giờ bị xóa.</span>
+                    </div>
+                </div>
+
+                <!-- Bước 2 -->
+                <div class="bg-white/5 border border-indigo-500/20 rounded-xl p-3.5 space-y-1.5">
+                    <div class="flex items-center gap-2 text-indigo-300 font-bold text-xs uppercase tracking-wider">
+                        <iconify-icon icon="mdi:numeric-2-circle" class="text-lg text-indigo-400"></iconify-icon>
+                        <span>Bước 2: Cập nhật lên Shopify & Rollback</span>
+                    </div>
+                    <p class="pl-6 text-[12px] text-gray-200 leading-normal">
+                        Chỉ thực hiện khi Bước 1 đã hoàn tất 100%. Hỗ trợ <strong>Khôi phục ảnh gốc (Rollback)</strong> nguyên trạng bất cứ lúc nào từ bản lưu VPS.
+                    </p>
+                </div>
+
+                <!-- Footer thông tin -->
+                <div class="flex items-center justify-between pt-2 border-t border-indigo-800/40 text-[11px] text-indigo-300/80">
+                    <span class="flex items-center gap-1">
+                        <iconify-icon icon="mdi:server-security" class="text-emerald-400 text-sm"></iconify-icon>
+                        Thư mục VPS: <code class="font-mono text-white bg-white/10 px-1.5 py-0.5 rounded text-[11px]">/backups</code>
+                    </span>
+                    <button type="button" onclick="toggleSafetyPopover(false); handleOpenBackupListAction();" class="text-emerald-400 hover:text-emerald-300 font-semibold underline underline-offset-2 cursor-pointer flex items-center gap-1">
+                        <span>Mở Backup List</span>
+                        <iconify-icon icon="mdi:arrow-right" class="text-xs"></iconify-icon>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Speed Dial Neo Góc Trên Bên Phải (Cách Header 14px: Header h-16 = 64px + 14px = 78px) -->
+    <div id="speedDialContainer" class="fixed top-[78px] right-6 z-30 flex flex-col items-end select-none">
+        <!-- Nút chính Speed Dial (Floating Action Button) -->
+        <button id="speedDialTrigger" type="button" onclick="toggleSpeedDial()" 
+                class="w-12 h-12 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white rounded-full shadow-lg hover:shadow-xl flex items-center justify-center cursor-pointer transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-indigo-300 group"
+                title="Tiện ích mở rộng (Speed Dial)">
+            <iconify-icon id="speedDialIcon" icon="mdi:flash" class="text-2xl transition-transform duration-300 group-hover:scale-110"></iconify-icon>
+        </button>
+
+        <!-- Menu Action Con (Mở trôi xuống dưới để không che Header) -->
+        <div id="speedDialMenu" class="mt-2.5 flex flex-col items-end space-y-2.5 hidden opacity-0 transition-all duration-200 transform -translate-y-2">
+            <!-- Nút Action: Backup List -->
+            <div class="flex items-center gap-2 group cursor-pointer" onclick="handleOpenBackupListAction()" title="Xem danh sách ảnh gốc đã sao lưu trên VPS">
+                <span class="bg-gray-900/90 hover:bg-black text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-md whitespace-nowrap transition-colors flex items-center gap-1.5">
+                    <span>Backup List</span>
+                    <span id="speedDialBackupCountBadge" class="bg-indigo-500/80 text-white text-[10px] px-1.5 py-0.2 rounded-full font-bold">VPS</span>
+                </span>
+                <button type="button" class="w-10 h-10 bg-white hover:bg-indigo-50 active:bg-indigo-100 text-indigo-600 rounded-full shadow-md border border-gray-200 flex items-center justify-center transition-transform group-hover:scale-110 cursor-pointer">
+                    <iconify-icon icon="mdi:folder-multiple-image" class="text-xl"></iconify-icon>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- VPS Backup List Modal -->
+    <div id="backupListModal" onclick="if(event.target === this) toggleBackupListModal(false)" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+        <div onclick="event.stopPropagation()" class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[95vh] flex flex-col overflow-hidden border border-gray-200">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-xl flex-shrink-0 shadow-xs">
+                        <iconify-icon icon="mdi:server-network"></iconify-icon>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h3 class="font-bold text-gray-800 text-base">Danh sách Media đã Sao lưu trên VPS</h3>
+                            <span id="backupListCountBadge" class="text-xs bg-indigo-100 text-indigo-800 px-2.5 py-0.5 rounded-full font-bold">0</span>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-0.5">Bản sao lưu gốc mộc được lưu trữ và bảo tồn vĩnh viễn trên thư mục <code class="bg-gray-200/70 px-1 py-0.2 rounded text-[11px] font-mono text-gray-700">/backups</code></p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="loadVpsBackupList(true)" class="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer" title="Làm mới dữ liệu từ VPS">
+                        <iconify-icon icon="mdi:refresh" class="text-xl" id="backupRefreshIcon"></iconify-icon>
+                    </button>
+                    <button type="button" onclick="toggleBackupListModal(false)" class="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 cursor-pointer" title="Đóng">
+                        <iconify-icon icon="mdi:close" class="text-xl"></iconify-icon>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal Sub-bar: Search & Filter & Stats -->
+            <div id="backupListToolbar" class="px-6 py-3 border-b border-gray-100 bg-white flex flex-wrap items-center justify-between gap-3">
+                <div class="relative flex-1 min-w-[220px]">
+                    <iconify-icon icon="mdi:magnify" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-base"></iconify-icon>
+                    <input type="text" id="backupSearchInput" oninput="filterBackupList()" placeholder="Tìm theo Product ID, Media ID, tên file..." class="w-full pl-9 pr-3 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500 focus:bg-white transition-colors">
+                </div>
+                <div class="flex items-center gap-2 text-xs">
+                    <span class="text-gray-500 font-medium">Trạng thái:</span>
+                    <select id="backupFilterStatus" onchange="filterBackupList()" class="px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs font-medium focus:outline-none focus:border-indigo-500 cursor-pointer">
+                        <option value="all">Tất cả file</option>
+                        <option value="applied">Đã gắn logo trên Shopify</option>
+                        <option value="clean">Ảnh mộc ban đầu / Đã rollback</option>
+                    </select>
+                    <div class="h-4 w-px bg-gray-200 mx-1"></div>
+                    <span id="backupTotalSizeBadge" class="text-gray-600 font-medium bg-gray-100 px-2 py-1 rounded-md text-xs">Tổng: --</span>
+                </div>
+            </div>
+
+            <!-- Modal Content: Loading Indicator / Error / Empty / Items List -->
+            <div id="backupListModalBody" class="p-6 overflow-y-auto flex-1">
+                <!-- Loading Indicator (Hiển thị đầu tiên khi mở popup) -->
+                <div id="backupListLoadingIndicator" class="flex flex-col items-center justify-center py-16 space-y-4">
+                    <div class="relative flex items-center justify-center">
+                        <div class="w-14 h-14 rounded-full border-4 border-indigo-100 border-t-indigo-600 animate-spin"></div>
+                        <iconify-icon icon="mdi:server-network" class="absolute text-xl text-indigo-600"></iconify-icon>
+                    </div>
+                    <div class="text-center space-y-1">
+                        <h4 class="font-bold text-gray-800 text-sm">Đang tải danh sách bản sao lưu từ VPS...</h4>
+                        <p class="text-xs text-gray-500">Đang đọc thư mục /backups và đối soát manifest.json</p>
+                    </div>
+                </div>
+
+                <!-- Error Box -->
+                <div id="backupListErrorBox" class="hidden bg-red-50 border border-red-200 rounded-xl p-6 text-center space-y-3 my-4">
+                    <iconify-icon icon="mdi:alert-circle-outline" class="text-4xl text-red-500"></iconify-icon>
+                    <div class="space-y-1">
+                        <h4 class="font-bold text-red-800 text-sm">Không thể tải danh sách bản sao lưu</h4>
+                        <p id="backupListErrorText" class="text-xs text-red-600 font-mono"></p>
+                    </div>
+                    <button type="button" onclick="loadVpsBackupList(true)" class="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg shadow-xs cursor-pointer">
+                        Thử lại
+                    </button>
+                </div>
+
+                <!-- Empty State -->
+                <div id="backupListEmptyBox" class="hidden flex flex-col items-center justify-center py-16 space-y-3 text-center text-gray-400">
+                    <iconify-icon icon="mdi:folder-open-outline" class="text-5xl text-gray-300"></iconify-icon>
+                    <div class="space-y-1">
+                        <h4 class="font-bold text-gray-700 text-sm">Chưa có file sao lưu nào trên VPS</h4>
+                        <p class="text-xs text-gray-500">Các file ảnh gốc sẽ xuất hiện tại đây khi bạn thực hiện sao lưu ảnh gốc.</p>
+                    </div>
+                </div>
+
+                <!-- Items Grid / List -->
+                <div id="backupListItemsContainer" class="hidden space-y-4">
+                    <!-- Populated via Javascript -->
+                </div>
+            </div>
+
+            <!-- Modal Pagination Bar -->
+            <div id="backupListPaginationBar" class="px-6 py-2.5 border-t border-gray-200 bg-gray-50/60 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs select-none">
+                <!-- Thông tin phân trang -->
+                <div class="text-gray-600 font-medium flex items-center gap-1.5">
+                    <iconify-icon icon="mdi:information-outline" class="text-indigo-600 text-sm"></iconify-icon>
+                    <span id="backupPaginationInfo">Hiển thị 0 sản phẩm</span>
+                </div>
+
+                <!-- Điều khiển trang & chọn kích thước trang -->
+                <div class="flex items-center gap-3 flex-wrap justify-center">
+                    <div class="flex items-center gap-1.5 text-gray-600">
+                        <span>Hiển thị:</span>
+                        <select id="backupPageSizeSelect" onchange="changeBackupPageSize(this.value)" class="px-2 py-1 bg-white border border-gray-200 rounded-md text-xs font-semibold focus:outline-none focus:border-indigo-500 cursor-pointer shadow-2xs">
+                            <option value="3">3 sp/trang</option>
+                            <option value="5" selected>5 sp/trang</option>
+                            <option value="10">10 sp/trang</option>
+                            <option value="20">20 sp/trang</option>
+                            <option value="all">Tất cả sp</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-center gap-1" id="backupPaginationControls">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed bottom-20 right-6 z-50 space-y-3 pointer-events-none"></div>
+
+    <script>
+        // =================================================================
+        // PROXY GATEWAY CLIENT STATE & CONTROLLER
+        // =================================================================
+        let proxyState = {
+            enabled: false,
+            isStable: false,
+            latency: 0,
+            ip: "185.124.63.174",
+            lastChecked: null,
+            lastError: null,
+            isChecking: false,
+            geo: null
+        };
+
+        function updateProxyUI(data) {
+            if (!data) return;
+            proxyState.enabled = !!data.enabled;
+            proxyState.isStable = !!data.is_stable;
+            proxyState.latency = data.last_latency_ms || 0;
+            proxyState.ip = data.proxy_ip || "185.124.63.174";
+            proxyState.lastChecked = data.last_checked_at;
+            proxyState.lastError = data.last_error;
+            proxyState.geo = data.geo || null;
+
+            const toggle = document.getElementById('proxyToggleSwitch');
+            const toggleLabel = document.getElementById('proxyToggleLabel');
+            const badge = document.getElementById('proxyStatusBadge');
+            const alertBox = document.getElementById('proxyUnstableAlert');
+            const alertDetails = document.getElementById('proxyUnstableDetails');
+
+            // Geo info elements
+            const geoBadge = document.getElementById('proxyGeoInfoBadge');
+            const geoFlag = document.getElementById('proxyGeoFlag');
+            const geoLoc = document.getElementById('proxyGeoLocation');
+            const geoIsp = document.getElementById('proxyGeoIsp');
+            const geoIspWrapper = document.getElementById('proxyGeoIspWrapper');
+
+            if (toggle) toggle.checked = proxyState.enabled;
+            if (toggleLabel) {
+                toggleLabel.textContent = proxyState.enabled ? 'Bật' : 'Tắt';
+                toggleLabel.className = proxyState.enabled ? 'ml-2.5 text-xs font-semibold text-emerald-700' : 'ml-2.5 text-xs font-semibold text-gray-700';
+            }
+
+        function renderCountryFlag(countryCode, fallbackEmoji = '🇺🇸') {
+            if (!countryCode) return fallbackEmoji || '🌐';
+            const code = String(countryCode).toLowerCase();
+            return `<iconify-icon icon="circle-flags:${code}" class="text-sm inline-block align-middle"></iconify-icon>`;
+        }
+
+        // Hiển thị thông tin Live Egress Geo
+            if (proxyState.enabled && proxyState.isStable && proxyState.geo) {
+                const g = proxyState.geo;
+                if (geoFlag) geoFlag.innerHTML = renderCountryFlag(g.country_code, g.flag);
+                if (geoLoc) {
+                    const locParts = [g.city, g.region, g.country_code || g.country].filter(Boolean);
+                    geoLoc.textContent = locParts.length > 0 ? locParts.join(', ') : (g.country || 'Hoa Kỳ');
+                }
+                if (geoIsp && g.isp) {
+                    geoIsp.textContent = `ISP: ${g.isp}`;
+                    if (geoIspWrapper) geoIspWrapper.classList.remove('hidden');
+                } else if (geoIspWrapper) {
+                    geoIspWrapper.classList.add('hidden');
+                }
+                if (geoBadge) geoBadge.classList.remove('hidden');
+            } else {
+                if (geoBadge) geoBadge.classList.add('hidden');
+            }
+
+            if (badge) {
+                if (!proxyState.enabled) {
+                    badge.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600 border border-gray-200 transition-all';
+                    badge.innerHTML = `
+                        <span class="w-2 h-2 rounded-full bg-gray-400"></span>
+                        <span>Proxy đang Tắt (Kết nối trực tiếp từ VPS)</span>
+                    `;
+                } else if (proxyState.isStable) {
+                    badge.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-300 transition-all';
+                    const g = proxyState.geo;
+                    const flagHtml = g ? renderCountryFlag(g.country_code, g.flag) : '';
+                    const locStr = (g && (g.city || g.region || g.country_code)) ? ` • ${flagHtml} ${[g.city, g.region || g.country_code].filter(Boolean).join(', ')}` : '';
+                    badge.innerHTML = `
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span class="flex items-center gap-1.5 flex-wrap">Proxy Ổn định (Ping: ${proxyState.latency}ms${locStr} • IP: ${proxyState.ip})</span>
+                    `;
+                } else {
+                    badge.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-300 transition-all';
+                    badge.innerHTML = `
+                        <span class="w-2 h-2 rounded-full bg-red-500"></span>
+                        <span>Proxy Không ổn định / Lỗi kết nối (Đang khóa request)</span>
+                    `;
+                }
+            }
+
+            if (alertBox) {
+                if (proxyState.enabled && !proxyState.isStable) {
+                    alertBox.classList.remove('hidden');
+                    if (alertDetails) {
+                        alertDetails.innerHTML = `${proxyState.lastError ? `Chi tiết lỗi: <span class="font-mono bg-red-100 px-1 py-0.5 rounded text-red-800">${proxyState.lastError}</span><br>` : ''}Tất cả các thao tác gọi đến Shopify (Tải sản phẩm, Sao lưu, Cập nhật logo, Rollback) đã bị KHÓA BẢO VỆ để tránh làm gián đoạn hoặc lỗi gian hàng. Vui lòng bấm "Kiểm tra Proxy" để thử lại hoặc TẮT Proxy nếu muốn kết nối trực tiếp.`;
+                    }
+                } else {
+                    alertBox.classList.add('hidden');
+                }
+            }
+
+            // Visual feedback on action buttons when blocked
+            const isBlocked = proxyState.enabled && !proxyState.isStable;
+            const actionButtons = [
+                document.getElementById('btnLoadProducts'),
+                document.getElementById('btnBackupPhase'),
+                document.getElementById('stickyBtnBackup'),
+                document.getElementById('btnApplyPhase'),
+                document.getElementById('stickyBtnApply'),
+                document.getElementById('btnRollback')
+            ];
+
+            actionButtons.forEach(btn => {
+                if (btn) {
+                    if (isBlocked) {
+                        btn.classList.add('opacity-60');
+                    } else {
+                        btn.classList.remove('opacity-60');
+                    }
+                }
+            });
+        }
+
+        function updateStoreInfoUI(info) {
+            if (!info) return;
+            const headerStoreLink = document.getElementById('headerShopifyStoreLink');
+            
+            const sectionBadge = document.getElementById('sectionStoreBadge');
+            const sectionDomain = document.getElementById('sectionStoreDomain');
+            const sectionTag = document.getElementById('sectionStoreBadgeTag');
+
+            const domain = info.shop_domain || 'wrydeco.myshopify.com';
+            const shortShop = domain.replace('.myshopify.com', '');
+            if (headerStoreLink) {
+                headerStoreLink.href = `https://admin.shopify.com/store/${shortShop}`;
+            }
+
+            if (sectionDomain) sectionDomain.textContent = domain;
+
+            let badgeClass = '';
+            let tagClass = '';
+            let tagText = info.status_label || '';
+
+            if (!info.proxy_enabled) {
+                // Proxy TẮT: Mặc định Server • Trực tiếp
+                badgeClass = 'bg-gray-100 text-gray-700 border-gray-200';
+                tagClass = 'bg-gray-200 text-gray-800';
+                tagText = 'Mặc định Server • Trực tiếp';
+            } else if (info.is_custom) {
+                // Proxy BẬT & Cấu hình riêng: Cấu hình riêng • Proxy US 🇺🇸
+                badgeClass = 'bg-indigo-50 text-indigo-800 border-indigo-200';
+                tagClass = 'bg-indigo-600 text-white shadow-2xs';
+                tagText = 'Cấu hình riêng • Proxy US 🇺🇸';
+            } else {
+                // Proxy BẬT & Fallback Loại 1: Mặc định Server • Proxy US 🇺🇸
+                badgeClass = 'bg-amber-50 text-amber-800 border-amber-200';
+                tagClass = 'bg-amber-200 text-amber-900';
+                tagText = 'Mặc định Server • Proxy US 🇺🇸';
+            }
+
+            if (sectionBadge) {
+                sectionBadge.className = `inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium border shadow-2xs transition-all ${badgeClass}`;
+            }
+            if (sectionTag) {
+                sectionTag.className = `px-2 py-0.5 rounded-full text-[11px] font-semibold transition-all ${tagClass}`;
+                sectionTag.textContent = tagText;
+            }
+        }
+
+        async function refreshStoreInfoBadge() {
+            try {
+                const res = await fetch('/api/logo-updater/store-info');
+                if (res.ok) {
+                    const data = await res.json();
+                    updateStoreInfoUI(data);
+                }
+            } catch (e) {
+                console.warn('Lỗi tải store-info:', e);
+            }
+        }
+
+        async function initProxyGateway() {
+            try {
+                const res = await fetch('/api/proxy/status');
+                if (res.ok) {
+                    const data = await res.json();
+                    updateProxyUI(data);
+                }
+            } catch (e) {
+                console.error('Failed to init proxy status:', e);
+            }
+            await refreshStoreInfoBadge();
+        }
+
+        async function toggleProxyGateway(enabled) {
+            proxyState.isChecking = true;
+            const badge = document.getElementById('proxyStatusBadge');
+            if (enabled && badge) {
+                badge.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-300 transition-all';
+                badge.innerHTML = `
+                    <iconify-icon icon="mdi:loading" class="animate-spin text-amber-600 text-sm"></iconify-icon>
+                    <span>◐ Đang kích hoạt & kiểm tra kết nối Proxy...</span>
+                `;
+            }
+
+            try {
+                const res = await fetch('/api/proxy/toggle', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled: enabled })
+                });
+                const data = await res.json();
+                updateProxyUI(data);
+                await refreshStoreInfoBadge();
+                if (enabled) {
+                    if (data.is_stable) {
+                        let geoStr = '';
+                        if (data.geo) {
+                            const g = data.geo;
+                            geoStr = ` • ${g.flag || ''} ${[g.city, g.region || g.country].filter(Boolean).join(', ')}`;
+                        }
+                        showToast(`Proxy đã BẬT và kết nối ổn định! (Ping: ${data.last_latency_ms}ms${geoStr} • IP: ${data.proxy_ip})`, 'success');
+                    } else {
+                        showToast(`Proxy đã BẬT nhưng không ổn định (${data.last_error || 'Lỗi kết nối'})! Đã kích hoạt chốt an toàn.`, 'error');
+                        highlightProxySection();
+                    }
+                } else {
+                    showToast('Proxy đã TẮT. Chuyển sang kết nối trực tiếp từ VPS.', 'info');
+                }
+            } catch (e) {
+                showToast('Lỗi khi chuyển đổi proxy: ' + e.message, 'error');
+                initProxyGateway();
+            } finally {
+                proxyState.isChecking = false;
+            }
+        }
+
+        async function checkProxyHealth() {
+            proxyState.isChecking = true;
+            const btnCheck = document.getElementById('btnCheckProxy');
+            const btnCheckIcon = document.getElementById('btnCheckProxyIcon');
+            const btnCheckText = document.getElementById('btnCheckProxyText');
+            const badge = document.getElementById('proxyStatusBadge');
+
+            if (btnCheck) btnCheck.disabled = true;
+            if (btnCheckIcon) {
+                btnCheckIcon.setAttribute('icon', 'mdi:loading');
+                btnCheckIcon.classList.add('animate-spin');
+            }
+            if (btnCheckText) btnCheckText.textContent = 'Đang kiểm tra...';
+
+            if (badge) {
+                badge.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-300 transition-all';
+                badge.innerHTML = `
+                    <iconify-icon icon="mdi:loading" class="animate-spin text-amber-600 text-sm"></iconify-icon>
+                    <span>◐ Đang kiểm tra kết nối & định danh Proxy...</span>
+                `;
+            }
+
+            try {
+                const res = await fetch('/api/proxy/check', { method: 'POST' });
+                const data = await res.json();
+                updateProxyUI(data);
+                await refreshStoreInfoBadge();
+                if (data.is_stable) {
+                    let geoStr = '';
+                    if (data.geo) {
+                        const g = data.geo;
+                        geoStr = ` • ${g.flag || ''} ${[g.city, g.region || g.country].filter(Boolean).join(', ')}`;
+                    }
+                    showToast(`Proxy phản hồi hoàn hảo! (Ping: ${data.last_latency_ms}ms${geoStr} • IP: ${data.proxy_ip})`, 'success');
+                } else {
+                    showToast(`Proxy không ổn định: ${data.last_error || 'Mất kết nối'}`, 'error');
+                    highlightProxySection();
+                }
+            } catch (e) {
+                showToast('Lỗi kiểm tra proxy: ' + e.message, 'error');
+                initProxyGateway();
+            } finally {
+                proxyState.isChecking = false;
+                if (btnCheck) btnCheck.disabled = false;
+                if (btnCheckIcon) {
+                    btnCheckIcon.setAttribute('icon', 'mdi:refresh');
+                    btnCheckIcon.classList.remove('animate-spin');
+                }
+                if (btnCheckText) btnCheckText.textContent = 'Kiểm tra Proxy';
+            }
+        }
+
+        function highlightProxySection() {
+            const section = document.getElementById('proxyGatewaySection');
+            if (section) {
+                section.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                section.classList.add('ring-4', 'ring-red-500', 'ring-opacity-50');
+                setTimeout(() => {
+                    section.classList.remove('ring-4', 'ring-red-500', 'ring-opacity-50');
+                }, 2500);
+            }
+        }
+
+        function assertProxySafety() {
+            if (proxyState.isChecking) {
+                showToast('Proxy đang kiểm tra kết nối, vui lòng chờ trong giây lát...', 'warning');
+                return false;
+            }
+            if (proxyState.enabled && !proxyState.isStable) {
+                showToast('CHỐT CHẶN AN TOÀN: Proxy đang BẬT nhưng mất kết nối/không ổn định! Đã chặn request đến Shopify để bảo vệ gian hàng.', 'error');
+                highlightProxySection();
+                return false;
+            }
+            return true;
+        }
+
+        // Global State
+        let currentLogoUrl = '/assets/store-logo-black-trans.png';
+        let currentLogoName = 'store-logo-black-trans.png';
+        let logoImageObj = new Image();
+        logoImageObj.crossOrigin = "anonymous";
+        logoImageObj.src = currentLogoUrl;
+
+        let loadedProducts = [];
+        let activeProduct = null;
+        let activeMedia = null;
+        let mainImageObj = null;
+
+        // Hàng đợi cập nhật (Batch Queue)
+        let updateQueue = [];
+
+        // Canvas State
+        const canvas = document.getElementById('editorCanvas');
+        const ctx = canvas.getContext('2d');
+        let isDragging = false;
+        let dragStartX = 0;
+        let dragStartY = 0;
+
+        // Relative coordinates for resolution-independent rendering
+        // logoRelX, logoRelY: top-left corner relative to media width/height (0.0 to 1.0)
+        // logoRelWidth: width relative to media width (e.g. 0.22 = 22%)
+        let logoRelWidth = 0.22;
+        let logoRelX = 0.74; // default top-right: 1.0 - 0.22 - 0.04
+        let logoRelY = 0.04; // default 4% from top
+        let logoOpacity = 1.0;
+
+        // Preset Logo Selection
+        function setPresetLogo(url, name) {
+            currentLogoUrl = url;
+            currentLogoName = name;
+            document.getElementById('currentLogoPreview').src = url;
+            document.getElementById('currentLogoName').innerText = name;
+            logoImageObj = new Image();
+            logoImageObj.crossOrigin = "anonymous";
+            logoImageObj.onload = () => { renderCanvas(); };
+            logoImageObj.src = url;
+            showToast('Đã chọn: ' + name, 'info');
+        }
+
+        // Custom Logo File Upload
+        function handleCustomLogoUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (!file.type.startsWith('image/')) {
+                showToast('Vui lòng chọn một file ảnh hợp lệ (PNG, JPG, SVG, WEBP)!', 'warning');
+                event.target.value = '';
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                currentLogoUrl = e.target.result;
+                currentLogoName = file.name;
+                document.getElementById('currentLogoPreview').src = currentLogoUrl;
+                document.getElementById('currentLogoName').innerText = file.name + ' (Tùy chọn)';
+                logoImageObj = new Image();
+                logoImageObj.onload = () => { renderCanvas(); };
+                logoImageObj.src = currentLogoUrl;
+                showToast('Đã nạp logo tùy chọn: ' + file.name, 'success');
+                event.target.value = '';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Clear danh sách định danh nhập trong textarea và xóa khỏi localStorage
+        function clearIdentifiers() {
+            const input = document.getElementById('identifiersInput');
+            if (input) {
+                input.value = '';
+                input.focus();
+            }
+            try {
+                localStorage.removeItem('wrydeco_product_identifiers');
+                localStorage.removeItem('wrydeco_product_id_type');
+            } catch (storageErr) {}
+            showToast('Đã xóa danh sách định danh.', 'info');
+        }
+
+        // Load Products API Call
+        async function loadProducts() {
+            if (!assertProxySafety()) return;
+
+            const rawText = document.getElementById('identifiersInput').value.trim();
+            if (!rawText) {
+                showToast('Vui lòng nhập ít nhất một ID hoặc Handle sản phẩm!', 'warning');
+                return;
+            }
+
+            const idType = document.querySelector('input[name="id_type"]:checked').value;
+
+            // Lưu danh sách định danh và loại ID vào localStorage để sử dụng lại sau này
+            try {
+                localStorage.setItem('wrydeco_product_identifiers', rawText);
+                localStorage.setItem('wrydeco_product_id_type', idType);
+            } catch (storageErr) {
+                console.warn('Lỗi lưu localStorage:', storageErr);
+            }
+
+            const btnLoad = document.getElementById('btnLoadProducts');
+            const btnIcon = document.getElementById('btnLoadIcon');
+            const btnText = document.getElementById('btnLoadText');
+
+            btnLoad.disabled = true;
+            btnIcon.setAttribute('icon', 'mdi:loading');
+            btnIcon.classList.add('animate-spin');
+            btnText.innerText = 'Đang tải...';
+
+            try {
+                const res = await fetch('/api/products/batch-media', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id_type: idType, identifiers: rawText })
+                });
+                const data = await res.json();
+
+                if (!data.success) {
+                    showToast('Lỗi khi tải sản phẩm: ' + (data.error || 'Không xác định'), 'error');
+                    if (res.status === 503 || (data.error && data.error.includes('CHỐT CHẶN AN TOÀN'))) {
+                        highlightProxySection();
+                        initProxyGateway();
+                    }
+                    return;
+                }
+
+                loadedProducts = data.products || [];
+                renderProductsGrid();
+                showToast(`Đã tìm thấy ${loadedProducts.length} sản phẩm`, 'success');
+            } catch (err) {
+                console.error(err);
+                showToast('Lỗi kết nối tới máy chủ: ' + err.message, 'error');
+            } finally {
+                btnLoad.disabled = false;
+                btnIcon.setAttribute('icon', 'mdi:magnify');
+                btnIcon.classList.remove('animate-spin');
+                btnText.innerText = 'OK (Tải dữ liệu)';
+            }
+        }
+
+        // Render Section 2: Products Grid 1 Column, Infinite Rows
+        function renderProductsGrid() {
+            const container = document.getElementById('productsContainer');
+            const totalBadge = document.getElementById('productTotalBadge');
+            totalBadge.innerText = `${loadedProducts.length} sản phẩm`;
+
+            // Đảm bảo đưa setupSection tạm thời về holder trước khi ghi đè container.innerHTML để không bị mất khỏi DOM
+            const setupSection = document.getElementById('sectionSetupLogo');
+            const holder = document.getElementById('setupSectionHolder') || document.body;
+            if (setupSection && setupSection.parentElement !== holder) {
+                holder.appendChild(setupSection);
+            }
+
+            if (loadedProducts.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-white rounded-2xl border-2 border-dashed border-gray-200 p-12 text-center text-gray-400 space-y-3">
+                        <iconify-icon icon="mdi:image-multiple-outline" class="text-5xl text-gray-300"></iconify-icon>
+                        <p class="text-sm font-medium">Không tìm thấy sản phẩm nào phù hợp với danh sách đã nhập.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = loadedProducts.map((prod, pIdx) => {
+                const isUpdated = prod.is_logo_updated;
+                const mediaItems = prod.media || [];
+
+                const mediaThumbsHtml = mediaItems.map((m, mIdx) => {
+                    const isSelected = activeProduct && activeProduct.raw_id === prod.raw_id && activeMedia && activeMedia.raw_id === m.raw_id;
+                    const inQueue = updateQueue.some(q => q.productId === prod.raw_id && (q.mediaRawId === m.raw_id || q.mediaId === m.id));
+
+                    let borderClass = 'border-gray-200 hover:border-indigo-400';
+                    if (isSelected) {
+                        borderClass = 'border-indigo-600 ring-4 ring-indigo-200';
+                    } else if (inQueue) {
+                        borderClass = 'border-indigo-600 ring-2 ring-indigo-400 shadow-md';
+                    } else if (m.is_logo_applied) {
+                        borderClass = 'border-emerald-500 hover:border-emerald-600';
+                    }
+
+                    return `
+                        <div onclick="selectMediaForSetup(${pIdx}, ${mIdx})" class="relative group cursor-pointer">
+                            <img src="${m.url}" alt="Thumbnail" class="w-24 h-24 sm:w-28 sm:h-28 rounded-xl object-cover border-2 ${borderClass} shadow-sm transition-all">
+                            
+                            ${inQueue ? `
+                                <div class="absolute top-1 left-1 bg-indigo-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow flex items-center gap-0.5 z-10" title="Đang nằm trong hàng đợi">
+                                    <iconify-icon icon="mdi:playlist-check"></iconify-icon>
+                                    <span>Hàng đợi</span>
+                                </div>
+                            ` : ''}
+
+                            ${m.is_logo_applied ? `
+                                <div class="absolute top-1 right-1 bg-emerald-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow flex items-center gap-0.5 z-10" title="Ảnh này đã được gắn logo trên Shopify">
+                                    <iconify-icon icon="mdi:check-bold"></iconify-icon>
+                                    <span>Logo</span>
+                                </div>
+                            ` : ''}
+
+                            ${m.has_backup ? `
+                                <div class="absolute bottom-1 right-1 bg-emerald-500 text-white rounded-full p-1 shadow z-10" title="Đã có bản sao lưu gốc trên VPS">
+                                    <iconify-icon icon="mdi:shield-check" class="text-xs block"></iconify-icon>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                }).join('');
+
+                return `
+                    <div id="product-card-${prod.raw_id}" class="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 shadow-sm space-y-5 transition-shadow hover:shadow-md">
+                        <!-- Product Header Info -->
+                        <div class="flex flex-wrap items-start justify-between gap-4">
+                            <div class="space-y-1">
+                                <div class="flex items-center gap-3">
+                                    <h4 class="text-base sm:text-lg font-bold text-gray-900">${prod.title}</h4>
+                                    ${isUpdated ? `
+                                        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                            <iconify-icon icon="mdi:check-circle"></iconify-icon>
+                                            logo-updated
+                                        </span>
+                                    ` : `
+                                        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                            Chưa gắn logo
+                                        </span>
+                                    `}
+                                </div>
+                                <div class="text-xs text-gray-500 flex flex-wrap items-center gap-4 font-mono">
+                                    <span>Handle: <strong class="text-gray-700">${prod.handle}</strong></span>
+                                    <span>•</span>
+                                    <span>ID: <strong class="text-gray-700">${prod.raw_id}</strong></span>
+                                </div>
+                            </div>
+                            <a target="_blank" rel="noopener noreferrer" href="https://admin.shopify.com/store/wrydeco/products/${prod.raw_id}" class="text-xs font-medium text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
+                                <span>Xem trên Shopify Admin</span>
+                                <iconify-icon icon="mdi:open-in-new"></iconify-icon>
+                            </a>
+                        </div>
+
+                        <!-- Media Gallery: Flex Wrap, No horizontal scroll -->
+                        <div class="space-y-2">
+                            <div class="text-xs font-semibold text-gray-600 flex items-center gap-2">
+                                <span>Danh sách Media (${mediaItems.length} ảnh)</span>
+                                <span class="text-[11px] font-normal text-gray-400">— Nhấp vào ảnh để mở khung setup logo</span>
+                            </div>
+                            <div class="flex flex-wrap gap-3">
+                                ${mediaThumbsHtml}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // CẮM CANVAS EDITOR NGAY DƯỚI CARD SẢN PHẨM ĐANG CHỌN (NẾU ĐANG MỞ)
+            if (activeProduct && setupSection && !setupSection.classList.contains('hidden')) {
+                const activeCard = document.getElementById(`product-card-${activeProduct.raw_id}`);
+                if (activeCard) {
+                    activeCard.after(setupSection);
+                }
+            }
+        }
+
+        // Select Media Thumbnail to Open Setup Logo Section
+        function selectMediaForSetup(productIdx, mediaIdx) {
+            activeProduct = loadedProducts[productIdx];
+            activeMedia = activeProduct.media[mediaIdx];
+            if (!activeMedia.orig_raw_id) {
+                activeMedia.orig_raw_id = activeMedia.raw_id;
+            }
+
+            // Kiểm tra xem media này đã có trong hàng đợi chưa để khôi phục cấu hình
+            const queueItem = updateQueue.find(q => q.productId === activeProduct.raw_id && (q.mediaRawId === activeMedia.raw_id || q.mediaId === activeMedia.id));
+            if (queueItem) {
+                currentLogoUrl = queueItem.logoUrl;
+                currentLogoName = queueItem.logoName || 'Logo đã chọn';
+                document.getElementById('currentLogoPreview').src = currentLogoUrl;
+                document.getElementById('currentLogoName').innerText = currentLogoName;
+                logoImageObj = new Image();
+                logoImageObj.crossOrigin = "anonymous";
+                logoImageObj.onload = () => { renderCanvas(); };
+                logoImageObj.src = currentLogoUrl;
+
+                logoRelWidth = queueItem.logoRelWidth;
+                logoRelX = queueItem.logoRelX;
+                logoRelY = queueItem.logoRelY;
+                logoOpacity = queueItem.logoOpacity !== undefined ? queueItem.logoOpacity : 1.0;
+
+                document.getElementById('scaleSlider').value = Math.round(logoRelWidth * 100);
+                document.getElementById('scaleValLabel').innerText = Math.round(logoRelWidth * 100) + '%';
+                document.getElementById('opacitySlider').value = logoOpacity;
+                document.getElementById('opacityValLabel').innerText = logoOpacity;
+            }
+
+            // Mở section setup logo
+            const setupSection = document.getElementById('sectionSetupLogo');
+            setupSection.classList.remove('hidden');
+
+            renderProductsGrid();
+
+            const activeCard = document.getElementById(`product-card-${activeProduct.raw_id}`);
+            if (activeCard && setupSection) {
+                activeCard.after(setupSection);
+            }
+
+            document.getElementById('editorTitle').innerText = `Chỉnh sửa logo: ${activeProduct.title}`;
+            document.getElementById('editorSubtitle').innerText = `Media ID: ${activeMedia.raw_id} | Handle: ${activeProduct.handle}`;
+
+            // Cập nhật trạng thái nút queue và action buttons
+            updateQueueUI();
+            resetProcessUIState();
+
+            // Load media image into canvas
+            mainImageObj = new Image();
+            mainImageObj.crossOrigin = "anonymous";
+            mainImageObj.onload = function() {
+                initCanvasDimensions();
+                if (!queueItem) {
+                    resetLogoPosition();
+                }
+                renderCanvas();
+            };
+            mainImageObj.onerror = function() {
+                showToast('Không thể tải ảnh media: ' + activeMedia.url, 'error');
+            };
+            mainImageObj.src = activeMedia.url;
+
+            // Scroll nhẹ để Canvas Editor hiển thị thuận tiện nhất ngay dưới dòng sản phẩm
+            setTimeout(() => {
+                setupSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 60);
+        }
+
+        function closeSetupLogo() {
+            const setupSection = document.getElementById('sectionSetupLogo');
+            if (setupSection) {
+                setupSection.classList.add('hidden');
+                const holder = document.getElementById('setupSectionHolder') || document.body;
+                holder.appendChild(setupSection);
+            }
+            activeProduct = null;
+            activeMedia = null;
+            renderProductsGrid();
+        }
+
+        // =================================================================
+        // HÀNG ĐỢI CẬP NHẬT LOGO (BATCH QUEUE MANAGEMENT)
+        // =================================================================
+        function toggleCurrentMediaInQueue() {
+            if (!activeProduct || !activeMedia) return;
+
+            const existingIdx = updateQueue.findIndex(q => q.productId === activeProduct.raw_id && (q.mediaRawId === activeMedia.raw_id || q.mediaId === activeMedia.id));
+            if (existingIdx >= 0) {
+                // Cập nhật lại cấu hình cho media đã có trong queue
+                updateQueue[existingIdx].logoUrl = currentLogoUrl;
+                updateQueue[existingIdx].logoName = currentLogoName;
+                updateQueue[existingIdx].logoRelX = logoRelX;
+                updateQueue[existingIdx].logoRelY = logoRelY;
+                updateQueue[existingIdx].logoRelWidth = logoRelWidth;
+                updateQueue[existingIdx].logoOpacity = logoOpacity;
+                updateQueue[existingIdx].mediaUrl = activeMedia.url;
+                showToast(`Đã cập nhật lại cấu hình cho media #${activeMedia.position || ''} trong hàng đợi!`, 'info');
+            } else {
+                // Thêm mới vào queue
+                updateQueue.push({
+                    productId: activeProduct.raw_id,
+                    productTitle: activeProduct.title,
+                    productHandle: activeProduct.handle,
+                    mediaId: activeMedia.id,
+                    mediaRawId: activeMedia.raw_id,
+                    mediaOrigId: activeMedia.orig_raw_id || activeMedia.raw_id,
+                    mediaUrl: activeMedia.url,
+                    backupUrl: activeMedia.backup_url || (activeMedia.has_backup ? `/backups/${activeProduct.raw_id}/${activeMedia.orig_raw_id || activeMedia.raw_id}_orig.jpg` : null),
+                    position: activeMedia.position || 1,
+                    logoUrl: currentLogoUrl,
+                    logoName: currentLogoName,
+                    logoRelX: logoRelX,
+                    logoRelY: logoRelY,
+                    logoRelWidth: logoRelWidth,
+                    logoOpacity: logoOpacity,
+                    backupDone: false,
+                    applyDone: false,
+                    error: null
+                });
+                showToast(`Đã thêm media #${activeMedia.position || ''} vào hàng đợi!`, 'success');
+            }
+
+            updateQueueUI();
+            renderProductsGrid();
+        }
+
+        function updateQueueUI() {
+            // 1. Nút "Chọn để cập nhật" trên Header Canvas Editor
+            const btnAdd = document.getElementById('btnAddToQueue');
+            const btnAddText = document.getElementById('btnAddToQueueText');
+            const btnAddIcon = document.getElementById('btnAddToQueueIcon');
+
+            if (btnAdd && btnAddText && btnAddIcon) {
+                const inQueue = activeProduct && activeMedia && updateQueue.some(q => q.productId === activeProduct.raw_id && (q.mediaRawId === activeMedia.raw_id || q.mediaId === activeMedia.id));
+                if (inQueue) {
+                    btnAdd.className = "inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-semibold text-xs rounded-xl shadow transition-all cursor-pointer";
+                    btnAddIcon.setAttribute('icon', 'mdi:check-circle');
+                    btnAddText.innerText = '✓ Đã thêm vào hàng đợi (Nhấn để cập nhật lại cấu hình)';
+                } else {
+                    btnAdd.className = "inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-semibold text-xs rounded-xl shadow transition-all cursor-pointer";
+                    btnAddIcon.setAttribute('icon', 'mdi:playlist-plus');
+                    btnAddText.innerText = 'Chọn để cập nhật';
+                }
+            }
+
+            // 2. Cập nhật Sticky Bottom Bar
+            const stickyBar = document.getElementById('stickyBottomBar');
+            const stickyCount = document.getElementById('stickyQueueCount');
+            const stickySubCount = document.getElementById('stickyQueueSubCount');
+
+            if (stickyBar) {
+                if (updateQueue.length > 0) {
+                    stickyBar.classList.remove('hidden');
+                    setTimeout(() => {
+                        stickyBar.classList.remove('translate-y-full');
+                    }, 10);
+                    document.body.classList.add('pb-24');
+                    if (stickyCount) stickyCount.innerText = `${updateQueue.length} media`;
+                    if (stickySubCount) stickySubCount.innerText = updateQueue.length;
+                } else {
+                    stickyBar.classList.add('translate-y-full');
+                    setTimeout(() => {
+                        stickyBar.classList.add('hidden');
+                    }, 300);
+                    document.body.classList.remove('pb-24');
+                    toggleQueueModal(false);
+                }
+            }
+
+            // 3. Đồng bộ trạng thái 2 nút hành động
+            syncProcessActionButtons();
+        }
+
+        function syncProcessActionButtons() {
+            const btnBackup = document.getElementById('btnBackupPhase');
+            const btnApply = document.getElementById('btnApplyPhase');
+            const stickyBtnBackup = document.getElementById('stickyBtnBackup');
+            const stickyBtnApply = document.getElementById('stickyBtnApply');
+
+            if (updateQueue.length > 0) {
+                const total = updateQueue.length;
+                const backedCount = updateQueue.filter(q => q.backupDone).length;
+                const allBacked = (backedCount === total);
+
+                if (allBacked) {
+                    if (btnBackup) {
+                        btnBackup.disabled = true;
+                        btnBackup.className = "inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white font-bold text-sm rounded-xl shadow cursor-not-allowed opacity-95 border border-emerald-500";
+                        btnBackup.innerHTML = `<iconify-icon icon="mdi:check-circle" class="text-white text-lg"></iconify-icon> <span id="backupPhaseText" class="text-white">Đã sao lưu gốc thành công (${total} media)</span>`;
+                    }
+
+                    if (stickyBtnBackup) {
+                        stickyBtnBackup.disabled = true;
+                        stickyBtnBackup.className = "inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white font-bold text-xs sm:text-sm rounded-xl shadow cursor-not-allowed opacity-95 border border-emerald-500";
+                        stickyBtnBackup.innerHTML = `<iconify-icon icon="mdi:check-circle" class="text-white text-base"></iconify-icon> <span id="stickyBackupText" class="text-white">Đã sao lưu (${total} media)</span>`;
+                    }
+
+                    if (btnApply) {
+                        btnApply.classList.remove('hidden');
+                        btnApply.style.display = 'inline-flex';
+                        btnApply.disabled = false;
+                        btnApply.className = "inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold text-sm rounded-xl shadow-lg transition-all btn-ready-pulse cursor-pointer";
+                        btnApply.innerHTML = `<iconify-icon icon="mdi:cloud-upload" class="text-lg text-white" id="applyPhaseIcon"></iconify-icon> <span id="applyPhaseText" class="text-white">2. Tiến hành cập nhật lên Shopify (${total} media)</span>`;
+                    }
+
+                    if (stickyBtnApply) {
+                        stickyBtnApply.classList.remove('hidden');
+                        stickyBtnApply.style.display = 'inline-flex';
+                        stickyBtnApply.disabled = false;
+                        stickyBtnApply.className = "inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold text-xs sm:text-sm rounded-xl shadow-lg transition-all btn-ready-pulse cursor-pointer";
+                        stickyBtnApply.innerHTML = `<iconify-icon icon="mdi:cloud-upload" class="text-base text-white" id="stickyApplyIcon"></iconify-icon> <span id="stickyApplyText" class="text-white">2. Tiến hành cập nhật tất cả (${total})</span>`;
+                    }
+                } else {
+                    if (btnBackup) {
+                        btnBackup.disabled = false;
+                        btnBackup.className = "inline-flex items-center gap-2 px-6 py-3 bg-slate-900 hover:bg-black active:scale-95 text-white font-bold text-sm rounded-xl shadow-md border border-slate-700 transition-all cursor-pointer";
+                        btnBackup.innerHTML = `<iconify-icon icon="mdi:cloud-download-outline" class="text-lg text-white" id="backupPhaseIcon"></iconify-icon> <span id="backupPhaseText" class="text-white">1. Sao lưu tất cả trên VPS (${total} media)</span>`;
+                    }
+
+                    if (stickyBtnBackup) {
+                        stickyBtnBackup.disabled = false;
+                        stickyBtnBackup.className = "inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-black active:scale-95 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md border border-slate-700 transition-all cursor-pointer";
+                        stickyBtnBackup.innerHTML = `<iconify-icon icon="mdi:cloud-download-outline" class="text-base text-white" id="stickyBackupIcon"></iconify-icon> <span id="stickyBackupText" class="text-white">1. Sao lưu tất cả (${total} media)</span>`;
+                    }
+
+                    if (btnApply) {
+                        btnApply.classList.add('hidden');
+                        btnApply.style.display = 'none';
+                    }
+                    if (stickyBtnApply) {
+                        stickyBtnApply.classList.add('hidden');
+                        stickyBtnApply.style.display = 'none';
+                    }
+                }
+            } else {
+                if (btnApply) {
+                    btnApply.classList.add('hidden');
+                    btnApply.style.display = 'none';
+                }
+                if (stickyBtnApply) {
+                    stickyBtnApply.classList.add('hidden');
+                    stickyBtnApply.style.display = 'none';
+                }
+            }
+        }
+
+        function toggleQueueModal(show) {
+            const modal = document.getElementById('queueModal');
+            if (!modal) return;
+            if (show) {
+                renderQueueModalItems();
+                modal.classList.remove('hidden');
+            } else {
+                modal.classList.add('hidden');
+            }
+        }
+
+        function renderQueueModalItems() {
+            const list = document.getElementById('queueModalItems');
+            const badge = document.getElementById('queueModalBadge');
+            if (!list) return;
+
+            badge.innerText = updateQueue.length;
+            if (updateQueue.length === 0) {
+                list.innerHTML = `
+                    <div class="py-8 text-center text-gray-400 space-y-2">
+                        <iconify-icon icon="mdi:tray-remove" class="text-4xl text-gray-300"></iconify-icon>
+                        <p class="text-sm">Hàng đợi đang trống.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            list.innerHTML = updateQueue.map((item, idx) => `
+                <div class="py-3 flex items-center justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                        <img src="${item.mediaUrl}" alt="Thumb" class="w-14 h-14 rounded-lg object-cover border border-gray-300 shadow-sm flex-shrink-0">
+                        <div class="space-y-0.5 text-xs">
+                            <div class="font-bold text-gray-900 line-clamp-1">${item.productTitle}</div>
+                            <div class="text-gray-500 font-mono">Media #${item.position} • ID: ${item.mediaRawId}</div>
+                            <div class="text-gray-600 flex items-center gap-2">
+                                <span>Scale: <strong class="text-indigo-600 font-mono">${Math.round(item.logoRelWidth * 100)}%</strong></span>
+                                <span>•</span>
+                                <span>Opacity: <strong class="text-indigo-600 font-mono">${item.logoOpacity}</strong></span>
+                                <span>•</span>
+                                ${item.backupDone ? `
+                                    <span class="text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded font-semibold text-[10px]">Đã sao lưu VPS</span>
+                                ` : `
+                                    <span class="text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded font-semibold text-[10px]">Chưa sao lưu</span>
+                                `}
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" onclick="removeFromQueue(${idx})" class="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors cursor-pointer" title="Xóa khỏi hàng đợi">
+                        <iconify-icon icon="mdi:close-circle-outline" class="text-xl"></iconify-icon>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function removeFromQueue(idx) {
+            if (idx >= 0 && idx < updateQueue.length) {
+                const removed = updateQueue.splice(idx, 1)[0];
+                showToast(`Đã xóa media #${removed.position} khỏi hàng đợi`, 'info');
+                updateQueueUI();
+                renderProductsGrid();
+                renderQueueModalItems();
+            }
+        }
+
+        function clearQueue() {
+            if (updateQueue.length === 0) return;
+            if (confirm('Bạn có chắc chắn muốn xóa toàn bộ hàng đợi?')) {
+                updateQueue = [];
+                updateQueueUI();
+                renderProductsGrid();
+                toggleQueueModal(false);
+                showToast('Đã xóa toàn bộ hàng đợi', 'info');
+            }
+        }
+
+        // =================================================================
+        // SPEED DIAL (LEFT: SAFETY POLICY | RIGHT: BACKUP LIST)
+        // =================================================================
+        let isSpeedDialOpen = false;
+        let isSpeedDialLeftOpen = false;
+        let vpsBackupsCache = [];
+        let backupCurrentPage = 1;
+        let backupPageSize = 5; // Mặc định 5 sản phẩm mỗi trang
+        let filteredProductGroups = [];
+
+        // Speed Dial Trái: Quy trình An toàn
+        function toggleSpeedDialLeft() {
+            isSpeedDialLeftOpen = !isSpeedDialLeftOpen;
+            const menu = document.getElementById('speedDialLeftMenu');
+            const icon = document.getElementById('speedDialLeftIcon');
+            if (!menu || !icon) return;
+
+            if (isSpeedDialLeftOpen) {
+                if (isSpeedDialOpen) toggleSpeedDial();
+                menu.classList.remove('hidden');
+                requestAnimationFrame(() => {
+                    menu.classList.remove('opacity-0', '-translate-y-2');
+                    icon.classList.add('rotate-45');
+                });
+            } else {
+                menu.classList.add('opacity-0', '-translate-y-2');
+                icon.classList.remove('rotate-45');
+                setTimeout(() => {
+                    if (!isSpeedDialLeftOpen) menu.classList.add('hidden');
+                }, 200);
+            }
+        }
+
+        function handleOpenSafetyPopoverAction() {
+            if (isSpeedDialLeftOpen) toggleSpeedDialLeft();
+            toggleSafetyPopover(true);
+        }
+
+        function toggleSafetyPopover(show) {
+            const wrapper = document.getElementById('safetyPolicyPopoverWrapper');
+            const popover = document.getElementById('safetyPolicyPopover');
+            if (!wrapper || !popover) return;
+
+            if (show) {
+                wrapper.classList.remove('hidden');
+                requestAnimationFrame(() => {
+                    popover.classList.remove('scale-95', 'opacity-0');
+                    popover.classList.add('scale-100', 'opacity-100');
+                });
+            } else {
+                popover.classList.remove('scale-100', 'opacity-100');
+                popover.classList.add('scale-95', 'opacity-0');
+                setTimeout(() => {
+                    wrapper.classList.add('hidden');
+                }, 200);
+            }
+        }
+
+        // Speed Dial Phải: Backup List
+        function toggleSpeedDial() {
+            isSpeedDialOpen = !isSpeedDialOpen;
+            const menu = document.getElementById('speedDialMenu');
+            const icon = document.getElementById('speedDialIcon');
+            if (!menu || !icon) return;
+
+            if (isSpeedDialOpen) {
+                if (isSpeedDialLeftOpen) toggleSpeedDialLeft();
+                menu.classList.remove('hidden');
+                requestAnimationFrame(() => {
+                    menu.classList.remove('opacity-0', '-translate-y-2');
+                    icon.classList.add('rotate-45');
+                });
+            } else {
+                menu.classList.add('opacity-0', '-translate-y-2');
+                icon.classList.remove('rotate-45');
+                setTimeout(() => {
+                    if (!isSpeedDialOpen) menu.classList.add('hidden');
+                }, 200);
+            }
+        }
+
+        // Tự động đóng Speed Dials khi người dùng click ra ngoài
+        document.addEventListener('click', (e) => {
+            const containerRight = document.getElementById('speedDialContainer');
+            if (isSpeedDialOpen && containerRight && !containerRight.contains(e.target)) {
+                toggleSpeedDial();
+            }
+
+            const containerLeft = document.getElementById('speedDialLeftContainer');
+            if (isSpeedDialLeftOpen && containerLeft && !containerLeft.contains(e.target)) {
+                toggleSpeedDialLeft();
+            }
+        });
+
+        function handleOpenBackupListAction() {
+            if (isSpeedDialOpen) toggleSpeedDial();
+            openBackupListPopup();
+        }
+
+        function toggleBackupListModal(show) {
+            const modal = document.getElementById('backupListModal');
+            if (!modal) return;
+            if (show) {
+                modal.classList.remove('hidden');
+            } else {
+                modal.classList.add('hidden');
+            }
+        }
+
+        // Đóng modal và popover khi bấm phím Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('backupListModal');
+                if (modal && !modal.classList.contains('hidden')) {
+                    toggleBackupListModal(false);
+                }
+                const safetyWrapper = document.getElementById('safetyPolicyPopoverWrapper');
+                if (safetyWrapper && !safetyWrapper.classList.contains('hidden')) {
+                    toggleSafetyPopover(false);
+                }
+            }
+        });
+
+        // Đóng popup Backup List khi click vào vùng backdrop bên ngoài
+        document.addEventListener('click', (e) => {
+            const modal = document.getElementById('backupListModal');
+            if (modal && !modal.classList.contains('hidden') && e.target === modal) {
+                toggleBackupListModal(false);
+            }
+        });
+
+        function formatBytes(bytes) {
+            if (!bytes || bytes === 0) return '0 B';
+            if (bytes >= 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+            return (bytes / 1024).toFixed(1) + ' KB';
+        }
+
+        function resolveProductTitle(productId, serverTitle) {
+            if (serverTitle && serverTitle.trim()) return serverTitle.trim();
+            if (Array.isArray(loadedProducts)) {
+                const p = loadedProducts.find(item => String(item.raw_id) === String(productId) || String(item.id).endsWith('/' + productId));
+                if (p && p.title) return p.title;
+            }
+            return `Sản phẩm #${productId}`;
+        }
+
+        function openBackupListPopup() {
+            // 1. Hiển thị popup modal ngay lập tức
+            toggleBackupListModal(true);
+
+            // 2. Thiết lập trạng thái loading indicator trong popup
+            const loading = document.getElementById('backupListLoadingIndicator');
+            const errBox = document.getElementById('backupListErrorBox');
+            const emptyBox = document.getElementById('backupListEmptyBox');
+            const container = document.getElementById('backupListItemsContainer');
+            const paginationBar = document.getElementById('backupListPaginationBar');
+            const searchInput = document.getElementById('backupSearchInput');
+            const filterStatus = document.getElementById('backupFilterStatus');
+
+            if (loading) loading.classList.remove('hidden');
+            if (errBox) errBox.classList.add('hidden');
+            if (emptyBox) emptyBox.classList.add('hidden');
+            if (container) container.classList.add('hidden');
+            if (paginationBar) paginationBar.classList.add('hidden');
+            if (searchInput) searchInput.value = '';
+            if (filterStatus) filterStatus.value = 'all';
+
+            // 3. ĐÚNG YÊU CẦU: Khi popup hiện lên xong xuôi trên giao diện mới bắt đầu load danh sách từ VPS
+            requestAnimationFrame(() => {
+                setTimeout(() => {
+                    loadVpsBackupList();
+                }, 250); // 250ms đảm bảo modal đã hiển thị trọn vẹn trên màn hình trước khi gọi API
+            });
+        }
+
+        async function loadVpsBackupList(forceRefresh = false) {
+            const loading = document.getElementById('backupListLoadingIndicator');
+            const errBox = document.getElementById('backupListErrorBox');
+            const errText = document.getElementById('backupListErrorText');
+            const emptyBox = document.getElementById('backupListEmptyBox');
+            const container = document.getElementById('backupListItemsContainer');
+            const paginationBar = document.getElementById('backupListPaginationBar');
+            const badge = document.getElementById('backupListCountBadge');
+            const speedDialBadge = document.getElementById('speedDialBackupCountBadge');
+            const sizeBadge = document.getElementById('backupTotalSizeBadge');
+            const refreshIcon = document.getElementById('backupRefreshIcon');
+
+            if (refreshIcon) refreshIcon.classList.add('animate-spin');
+            if (loading) loading.classList.remove('hidden');
+            if (errBox) errBox.classList.add('hidden');
+            if (emptyBox) emptyBox.classList.add('hidden');
+            if (container) container.classList.add('hidden');
+            if (paginationBar) paginationBar.classList.add('hidden');
+
+            try {
+                const url = '/api/products/backups' + (forceRefresh ? '?t=' + Date.now() : '');
+                const res = await fetch(url);
+                const data = await res.json();
+
+                if (!res.ok || !data.success) {
+                    throw new Error(data.error || `HTTP ${res.status}`);
+                }
+
+                vpsBackupsCache = data.backups || [];
+                if (badge) badge.innerText = `${vpsBackupsCache.length} file`;
+                if (speedDialBadge) speedDialBadge.innerText = `${vpsBackupsCache.length}`;
+                if (sizeBadge) sizeBadge.innerText = `Tổng: ${data.total_size_formatted || '0 KB'}`;
+
+                if (loading) loading.classList.add('hidden');
+
+                if (vpsBackupsCache.length === 0) {
+                    if (emptyBox) emptyBox.classList.remove('hidden');
+                } else {
+                    filterBackupList();
+                }
+            } catch (err) {
+                console.error('Lỗi khi tải danh sách backup:', err);
+                if (loading) loading.classList.add('hidden');
+                if (errText) errText.innerText = err.message;
+                if (errBox) errBox.classList.remove('hidden');
+            } finally {
+                if (refreshIcon) refreshIcon.classList.remove('animate-spin');
+            }
+        }
+
+        // Nhóm media theo sản phẩm
+        function groupBackupsByProduct(items) {
+            const groupsMap = new Map();
+
+            for (const item of items) {
+                const prodId = String(item.product_id);
+                if (!groupsMap.has(prodId)) {
+                    groupsMap.set(prodId, {
+                        productId: prodId,
+                        productTitle: resolveProductTitle(prodId, item.product_title),
+                        items: [],
+                        totalBytes: 0,
+                        allApplied: true,
+                        hasApplied: false,
+                        latestCreatedAt: item.created_at || ''
+                    });
+                }
+
+                const group = groupsMap.get(prodId);
+                group.items.push(item);
+                group.totalBytes += (item.file_size || 0);
+
+                if (item.is_applied) {
+                    group.hasApplied = true;
+                } else {
+                    group.allApplied = false;
+                }
+
+                if (item.created_at && (!group.latestCreatedAt || item.created_at > group.latestCreatedAt)) {
+                    group.latestCreatedAt = item.created_at;
+                }
+            }
+
+            const groups = Array.from(groupsMap.values());
+
+            // Sắp xếp media trong từng sản phẩm theo position (#1 -> #2 -> #3...)
+            groups.forEach(g => {
+                g.items.sort((a, b) => {
+                    const posA = (a.position !== null && a.position !== undefined) ? parseInt(a.position, 10) : 9999;
+                    const posB = (b.position !== null && b.position !== undefined) ? parseInt(b.position, 10) : 9999;
+                    return posA - posB;
+                });
+            });
+
+            // Sắp xếp các nhóm sản phẩm theo thời gian cập nhật mới nhất
+            groups.sort((a, b) => (b.latestCreatedAt || '').localeCompare(a.latestCreatedAt || ''));
+
+            return groups;
+        }
+
+        function filterBackupList() {
+            if (!vpsBackupsCache) return;
+            const searchVal = (document.getElementById('backupSearchInput').value || '').trim().toLowerCase();
+            const filterVal = document.getElementById('backupFilterStatus').value;
+
+            const filteredItems = vpsBackupsCache.filter(item => {
+                const prodTitle = resolveProductTitle(item.product_id, item.product_title).toLowerCase();
+                const matchSearch = !searchVal || 
+                    (item.product_id && item.product_id.toLowerCase().includes(searchVal)) ||
+                    (item.media_id && item.media_id.toLowerCase().includes(searchVal)) ||
+                    (item.filename && item.filename.toLowerCase().includes(searchVal)) ||
+                    prodTitle.includes(searchVal);
+
+                let matchStatus = true;
+                if (filterVal === 'applied') {
+                    matchStatus = item.is_applied === true;
+                } else if (filterVal === 'clean') {
+                    matchStatus = item.is_applied !== true;
+                }
+
+                return matchSearch && matchStatus;
+            });
+
+            filteredProductGroups = groupBackupsByProduct(filteredItems);
+            backupCurrentPage = 1;
+            renderBackupPage();
+        }
+
+        function goToBackupPage(page) {
+            backupCurrentPage = page;
+            renderBackupPage();
+            const modalBody = document.getElementById('backupListModalBody');
+            if (modalBody) modalBody.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function changeBackupPageSize(val) {
+            backupPageSize = (val === 'all') ? 'all' : parseInt(val, 10);
+            backupCurrentPage = 1;
+            renderBackupPage();
+        }
+
+        function renderBackupPage() {
+            const container = document.getElementById('backupListItemsContainer');
+            const emptyBox = document.getElementById('backupListEmptyBox');
+            const paginationBar = document.getElementById('backupListPaginationBar');
+            const infoElem = document.getElementById('backupPaginationInfo');
+            const controlsElem = document.getElementById('backupPaginationControls');
+
+            if (!container) return;
+
+            if (!filteredProductGroups || filteredProductGroups.length === 0) {
+                container.innerHTML = '';
+                container.classList.add('hidden');
+                if (paginationBar) paginationBar.classList.add('hidden');
+                if (emptyBox) {
+                    emptyBox.innerHTML = `
+                        <iconify-icon icon="mdi:file-search-outline" class="text-5xl text-gray-300"></iconify-icon>
+                        <div class="space-y-1">
+                            <h4 class="font-bold text-gray-700 text-sm">Không tìm thấy sản phẩm nào</h4>
+                            <p class="text-xs text-gray-500">Không có bản sao lưu nào khớp với từ khóa tìm kiếm hoặc bộ lọc hiện tại.</p>
+                        </div>
+                    `;
+                    emptyBox.classList.remove('hidden');
+                }
+                return;
+            }
+
+            if (emptyBox) emptyBox.classList.add('hidden');
+
+            const totalGroups = filteredProductGroups.length;
+            const totalMedia = filteredProductGroups.reduce((acc, g) => acc + g.items.length, 0);
+
+            // Tính toán phân trang
+            const isAll = backupPageSize === 'all';
+            const pageSize = isAll ? totalGroups : backupPageSize;
+            const totalPages = Math.ceil(totalGroups / pageSize) || 1;
+
+            if (backupCurrentPage > totalPages) backupCurrentPage = totalPages;
+            if (backupCurrentPage < 1) backupCurrentPage = 1;
+
+            const startIndex = (backupCurrentPage - 1) * pageSize;
+            const endIndex = Math.min(startIndex + pageSize, totalGroups);
+            const currentGroups = isAll ? filteredProductGroups : filteredProductGroups.slice(startIndex, endIndex);
+
+            // Render Danh sách Nhóm Sản Phẩm
+            container.innerHTML = currentGroups.map((group, gIdx) => {
+                let statusBadge = '';
+                if (group.allApplied) {
+                    statusBadge = `<span class="bg-amber-100 text-amber-800 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-0.5">
+                        <iconify-icon icon="mdi:check-decagram"></iconify-icon> 100% Đã dán logo
+                    </span>`;
+                } else if (group.hasApplied) {
+                    statusBadge = `<span class="bg-blue-100 text-blue-800 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-blue-200 flex items-center gap-0.5">
+                        <iconify-icon icon="mdi:alert-circle-outline"></iconify-icon> Đã dán logo một phần
+                    </span>`;
+                } else {
+                    statusBadge = `<span class="bg-emerald-100 text-emerald-800 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-emerald-200 flex items-center gap-0.5">
+                        <iconify-icon icon="mdi:shield-check"></iconify-icon> Ảnh mộc nguyên bản VPS
+                    </span>`;
+                }
+
+                const mediaCardsHtml = group.items.map((item, mIdx) => `
+                    <div class="bg-white border border-gray-200 hover:border-indigo-400 rounded-xl p-3 flex items-start gap-3 transition-all hover:shadow-xs group">
+                        <!-- Thumbnail Preview -->
+                        <div class="w-16 h-16 rounded-lg overflow-hidden border border-gray-200 flex-shrink-0 trans-checkerboard relative cursor-pointer" onclick="window.open('${item.file_url}', '_blank')">
+                            <img src="${item.file_url}" alt="${item.filename}" class="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy" onerror="this.src='/static/favicon.svg'">
+                            <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-xs">
+                                <iconify-icon icon="mdi:magnify-plus-outline" class="text-base"></iconify-icon>
+                            </div>
+                        </div>
+
+                        <!-- Thông tin File Media con -->
+                        <div class="flex-1 min-w-0 space-y-1 text-xs">
+                            <div class="flex items-center justify-between gap-1">
+                                <span class="font-bold text-gray-900 truncate font-mono text-[11px]" title="${item.filename}">${item.filename}</span>
+                                ${item.position ? `<span class="bg-indigo-50 text-indigo-700 text-[10px] font-semibold px-1.5 py-0.2 rounded-md font-mono flex-shrink-0">#${item.position}</span>` : ''}
+                            </div>
+
+                            <div>
+                                ${item.is_applied ? `
+                                    <span class="text-amber-700 font-semibold inline-flex items-center gap-0.5 text-[10px]">
+                                        <iconify-icon icon="mdi:check-decagram"></iconify-icon> Đã dán logo
+                                    </span>
+                                ` : `
+                                    <span class="text-emerald-700 font-semibold inline-flex items-center gap-0.5 text-[10px]">
+                                        <iconify-icon icon="mdi:shield-check"></iconify-icon> Ảnh mộc VPS
+                                    </span>
+                                `}
+                            </div>
+
+                            <div class="text-[10px] text-gray-500 font-mono truncate">
+                                <span>${item.file_size_formatted}</span> • <span>${item.dimensions || '--'} px</span>
+                            </div>
+
+                            <div class="pt-0.5 flex items-center gap-1.5 text-[11px]">
+                                <a href="${item.file_url}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:text-indigo-800 font-semibold hover:underline inline-flex items-center gap-0.5" title="Mở ảnh gốc toàn màn hình">
+                                    <span>Xem ảnh</span>
+                                    <iconify-icon icon="mdi:open-in-new" class="text-xs"></iconify-icon>
+                                </a>
+                                <span class="text-gray-300">•</span>
+                                <button type="button" onclick="navigator.clipboard.writeText(window.location.origin + '${item.file_url}'); showToast('Đã copy URL file backup', 'success');" class="text-gray-500 hover:text-gray-800 cursor-pointer" title="Sao chép đường dẫn">
+                                    Copy link
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+                return `
+                    <div class="bg-gray-50/70 border border-gray-200 hover:border-gray-300 rounded-2xl p-4 sm:p-5 space-y-3.5 shadow-2xs transition-colors">
+                        <!-- Header của Nhóm Sản Phẩm -->
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-200/80">
+                            <div class="flex items-start sm:items-center gap-3 min-w-0">
+                                <div class="w-10 h-10 rounded-xl bg-white border border-gray-200 text-indigo-600 flex items-center justify-center text-xl flex-shrink-0 mt-0.5 sm:mt-0 shadow-2xs">
+                                    <iconify-icon icon="mdi:package-variant-closed"></iconify-icon>
+                                </div>
+                                <div class="min-w-0 space-y-0.5">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <h4 class="font-bold text-gray-900 text-sm sm:text-base truncate max-w-[420px]" title="${group.productTitle}">
+                                            ${group.productTitle}
+                                        </h4>
+                                        <span class="bg-indigo-100 text-indigo-800 text-[11px] px-2.5 py-0.5 rounded-full font-bold">
+                                            ${group.items.length} media
+                                        </span>
+                                        ${statusBadge}
+                                    </div>
+                                    <div class="text-gray-500 font-mono text-[11px] flex items-center gap-2 flex-wrap">
+                                        <span>Product ID: <strong class="text-gray-800">${group.productId}</strong></span>
+                                        <button type="button" onclick="navigator.clipboard.writeText('${group.productId}'); showToast('Đã copy Product ID', 'success');" class="text-gray-400 hover:text-indigo-600 cursor-pointer" title="Copy Product ID">
+                                            <iconify-icon icon="mdi:content-copy" class="text-xs"></iconify-icon>
+                                        </button>
+                                        <span>•</span>
+                                        <span>Tổng dung lượng: <strong class="text-indigo-600 font-mono">${formatBytes(group.totalBytes)}</strong></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Actions Sản phẩm -->
+                            <div class="flex items-center gap-2 self-end sm:self-center flex-shrink-0">
+                                <a href="https://admin.shopify.com/store/wrydeco/products/${group.productId}" target="_blank" rel="noopener noreferrer" 
+                                   class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-black hover:bg-neutral-800 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer" 
+                                   title="Mở sản phẩm trên Shopify Admin">
+                                    <span>Shopify Store</span>
+                                    <iconify-icon icon="mdi:open-in-new" class="text-xs text-gray-300"></iconify-icon>
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Danh sách Media con thuộc sản phẩm -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            ${mediaCardsHtml}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.classList.remove('hidden');
+
+            // Cập nhật Pagination Bar
+            if (paginationBar) {
+                paginationBar.classList.remove('hidden');
+
+                if (infoElem) {
+                    if (isAll) {
+                        infoElem.innerText = `Hiển thị tất cả ${totalGroups} sản phẩm (${totalMedia} media)`;
+                    } else {
+                        infoElem.innerText = `Hiển thị ${startIndex + 1} - ${endIndex} / ${totalGroups} sản phẩm (${totalMedia} media)`;
+                    }
+                }
+
+                if (controlsElem) {
+                    if (isAll || totalPages <= 1) {
+                        controlsElem.innerHTML = '';
+                    } else {
+                        let btns = '';
+
+                        // Nút Prev
+                        const prevDisabled = backupCurrentPage === 1;
+                        btns += `
+                            <button type="button" onclick="goToBackupPage(${backupCurrentPage - 1})" ${prevDisabled ? 'disabled' : ''} 
+                                    class="px-2.5 py-1 bg-white border border-gray-200 rounded-md font-semibold text-xs ${prevDisabled ? 'opacity-40 cursor-not-allowed text-gray-400' : 'hover:bg-indigo-50 hover:text-indigo-600 cursor-pointer shadow-2xs'}">
+                                ‹ Trước
+                            </button>
+                        `;
+
+                        // Số trang
+                        for (let p = 1; p <= totalPages; p++) {
+                            // Hiển thị trang đầu, trang cuối, và các trang gần current
+                            if (p === 1 || p === totalPages || (p >= backupCurrentPage - 1 && p <= backupCurrentPage + 1)) {
+                                const isActive = p === backupCurrentPage;
+                                btns += `
+                                    <button type="button" onclick="goToBackupPage(${p})" 
+                                            class="w-7 h-7 rounded-md font-bold text-xs flex items-center justify-center transition-colors cursor-pointer ${isActive ? 'bg-indigo-600 text-white shadow-xs' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 shadow-2xs'}">
+                                        ${p}
+                                    </button>
+                                `;
+                            } else if (p === backupCurrentPage - 2 || p === backupCurrentPage + 2) {
+                                btns += `<span class="px-1 text-gray-400 text-xs">...</span>`;
+                            }
+                        }
+
+                        // Nút Next
+                        const nextDisabled = backupCurrentPage === totalPages;
+                        btns += `
+                            <button type="button" onclick="goToBackupPage(${backupCurrentPage + 1})" ${nextDisabled ? 'disabled' : ''} 
+                                    class="px-2.5 py-1 bg-white border border-gray-200 rounded-md font-semibold text-xs ${nextDisabled ? 'opacity-40 cursor-not-allowed text-gray-400' : 'hover:bg-indigo-50 hover:text-indigo-600 cursor-pointer shadow-2xs'}">
+                                Sau ›
+                            </button>
+                        `;
+
+                        controlsElem.innerHTML = btns;
+                    }
+                }
+            }
+        }
+
+        // Reset UI State for 2-Phase Save & Rollback
+        function resetProcessUIState() {
+            document.getElementById('errorAlertBox').classList.add('hidden');
+            document.getElementById('vpsBackupPreviewBox').classList.add('hidden');
+
+            const rollbackArea = document.getElementById('rollbackArea');
+            const tagNoticeArea = document.getElementById('tagNoticeArea');
+            const btnRollback = document.getElementById('btnRollback');
+
+            // Luôn reset lại nút Rollback về trạng thái sẵn sàng
+            if (btnRollback) {
+                btnRollback.disabled = false;
+                btnRollback.innerHTML = `<iconify-icon icon="mdi:undo-variant" class="text-lg"></iconify-icon> <span>Khôi phục ảnh gốc (Rollback)</span>`;
+            }
+
+            // Nút Rollback hiển thị linh hoạt cho từng media nếu media đó đã từng được gắn logo
+            const isMediaApplied = activeMedia && (activeMedia.is_logo_applied || (activeMedia.has_backup && activeProduct && activeProduct.is_logo_updated));
+            if (isMediaApplied) {
+                rollbackArea.classList.remove('hidden');
+                if (activeProduct && activeProduct.is_logo_updated) {
+                    tagNoticeArea.classList.remove('hidden');
+                } else {
+                    tagNoticeArea.classList.add('hidden');
+                }
+            } else {
+                rollbackArea.classList.add('hidden');
+                tagNoticeArea.classList.add('hidden');
+            }
+
+            // Preview backup box nếu ảnh có backup
+            if (activeMedia && activeMedia.has_backup) {
+                const previewBox = document.getElementById('vpsBackupPreviewBox');
+                const origId = activeMedia.orig_raw_id || activeMedia.raw_id;
+                const backupUrl = activeMedia.backup_url || `/backups/${activeProduct.raw_id}/${origId}_orig.jpg`;
+                document.getElementById('vpsBackupThumb').src = backupUrl + '?t=' + Date.now();
+                document.getElementById('vpsBackupPath').innerText = backupUrl;
+                document.getElementById('vpsBackupSize').innerText = 'Đã lưu trên VPS';
+                document.getElementById('vpsBackupDims').innerText = activeMedia.dimensions || '--';
+                document.getElementById('vpsBackupPos').innerText = '#' + (activeMedia.position || 1);
+                previewBox.classList.remove('hidden');
+            }
+
+            syncProcessActionButtons();
+        }
+
+        // Canvas Setup & Aspect Ratio Fitting
+        function initCanvasDimensions() {
+            if (!mainImageObj) return;
+            const nw = mainImageObj.naturalWidth || 800;
+            const nh = mainImageObj.naturalHeight || 800;
+
+            // Set canvas internal resolution to native resolution for crisp display
+            canvas.width = nw;
+            canvas.height = nh;
+
+            document.getElementById('canvasDimsBadge').innerText = `Kích thước gốc: ${nw} x ${nh} px`;
+        }
+
+        // Reset logo to top-right
+        function resetLogoPosition() {
+            logoRelWidth = parseFloat(document.getElementById('scaleSlider').value) / 100.0;
+            logoRelX = Math.max(0, 1.0 - logoRelWidth - 0.04);
+            logoRelY = 0.04;
+            renderCanvas();
+        }
+
+        function onScaleChange(val) {
+            document.getElementById('scaleValLabel').innerText = val + '%';
+            logoRelWidth = parseFloat(val) / 100.0;
+            // Adjust bounds if exceeds right edge
+            if (logoRelX + logoRelWidth > 0.98) {
+                logoRelX = Math.max(0, 0.98 - logoRelWidth);
+            }
+            renderCanvas();
+        }
+
+        function onOpacityChange(val) {
+            document.getElementById('opacityValLabel').innerText = val;
+            logoOpacity = parseFloat(val);
+            renderCanvas();
+        }
+
+        // Render Canvas (Background image + Scaled & Positioned Logo)
+        function renderCanvas() {
+            if (!mainImageObj || !canvas.width) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 1. Draw main product image
+            ctx.drawImage(mainImageObj, 0, 0, canvas.width, canvas.height);
+
+            // 2. Draw logo
+            if (logoImageObj && logoImageObj.complete && logoImageObj.naturalWidth) {
+                const lw = canvas.width * logoRelWidth;
+                const aspect = logoImageObj.naturalHeight / logoImageObj.naturalWidth;
+                const lh = lw * aspect;
+
+                const lx = canvas.width * logoRelX;
+                const ly = canvas.height * logoRelY;
+
+                ctx.save();
+                ctx.globalAlpha = logoOpacity;
+                ctx.drawImage(logoImageObj, lx, ly, lw, lh);
+
+                // Subtle bounding box indicator
+                ctx.strokeStyle = "rgba(99, 102, 241, 0.7)";
+                ctx.lineWidth = Math.max(2, canvas.width * 0.002);
+                ctx.setLineDash([6, 6]);
+                ctx.strokeRect(lx, ly, lw, lh);
+                ctx.restore();
+            }
+        }
+
+        // Canvas Mouse & Touch Dragging Handlers
+        function getCanvasPoint(evt) {
+            const rect = canvas.getBoundingClientRect();
+            if (!rect.width || !rect.height) return { x: 0, y: 0 };
+            const touch = (evt.touches && evt.touches.length > 0) ? evt.touches[0] : (evt.changedTouches && evt.changedTouches.length > 0 ? evt.changedTouches[0] : null);
+            const clientX = touch ? touch.clientX : evt.clientX;
+            const clientY = touch ? touch.clientY : evt.clientY;
+
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+
+            return {
+                x: (clientX - rect.left) * scaleX,
+                y: (clientY - rect.top) * scaleY
+            };
+        }
+
+        function isPointInLogo(pt) {
+            if (!logoImageObj || !logoImageObj.naturalWidth) return false;
+            const lw = canvas.width * logoRelWidth;
+            const aspect = logoImageObj.naturalHeight / logoImageObj.naturalWidth;
+            const lh = lw * aspect;
+            const lx = canvas.width * logoRelX;
+            const ly = canvas.height * logoRelY;
+
+            // Extra generous hit margin for easy dragging
+            const hitMargin = Math.max(15, canvas.width * 0.02);
+            return (pt.x >= lx - hitMargin && pt.x <= lx + lw + hitMargin &&
+                    pt.y >= ly - hitMargin && pt.y <= ly + lh + hitMargin);
+        }
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDragging) {
+                const pt = getCanvasPoint(e);
+                canvas.style.cursor = isPointInLogo(pt) ? 'grab' : 'default';
+            }
+        });
+
+        canvas.addEventListener('mousedown', (e) => {
+            const pt = getCanvasPoint(e);
+            if (isPointInLogo(pt)) {
+                isDragging = true;
+                canvas.style.cursor = 'grabbing';
+                dragStartX = pt.x - (canvas.width * logoRelX);
+                dragStartY = pt.y - (canvas.height * logoRelY);
+            }
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const pt = getCanvasPoint(e);
+            let newX = (pt.x - dragStartX) / canvas.width;
+            let newY = (pt.y - dragStartY) / canvas.height;
+
+            // Clamp inside canvas bounds
+            const lw = logoRelWidth;
+            const aspect = (logoImageObj.naturalHeight || 1) / (logoImageObj.naturalWidth || 1);
+            const lh = (canvas.width * lw * aspect) / canvas.height;
+
+            newX = Math.max(0, Math.min(1.0 - lw, newX));
+            newY = Math.max(0, Math.min(1.0 - lh, newY));
+
+            logoRelX = newX;
+            logoRelY = newY;
+            renderCanvas();
+        });
+
+        window.addEventListener('mouseup', () => { 
+            if (isDragging) {
+                isDragging = false; 
+                canvas.style.cursor = 'grab';
+            }
+        });
+
+        // Touch support
+        canvas.addEventListener('touchstart', (e) => {
+            const pt = getCanvasPoint(e);
+            if (isPointInLogo(pt)) {
+                isDragging = true;
+                dragStartX = pt.x - (canvas.width * logoRelX);
+                dragStartY = pt.y - (canvas.height * logoRelY);
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        window.addEventListener('touchmove', (e) => {
+            if (!isDragging) return;
+            const pt = getCanvasPoint(e);
+            let newX = (pt.x - dragStartX) / canvas.width;
+            let newY = (pt.y - dragStartY) / canvas.height;
+
+            const lw = logoRelWidth;
+            const aspect = (logoImageObj.naturalHeight || 1) / (logoImageObj.naturalWidth || 1);
+            const lh = (canvas.width * lw * aspect) / canvas.height;
+
+            newX = Math.max(0, Math.min(1.0 - lw, newX));
+            newY = Math.max(0, Math.min(1.0 - lh, newY));
+
+            logoRelX = newX;
+            logoRelY = newY;
+            renderCanvas();
+            e.preventDefault();
+        }, { passive: false });
+
+        window.addEventListener('touchend', () => { isDragging = false; });
+
+        // =================================================================
+        // RENDER CANVAS CHO TỪNG MEDIA TRONG HÀNG ĐỢI (OFFSCREEN CANVAS)
+        // =================================================================
+        function renderCanvasForQueueItem(item) {
+            return new Promise((resolve, reject) => {
+                const sourceUrl = (item.backupDone && item.backup_url) || item.backupUrl || item.mediaUrl;
+                const img = new Image();
+                img.crossOrigin = "anonymous";
+                img.onload = () => {
+                    const logoImg = new Image();
+                    logoImg.crossOrigin = "anonymous";
+                    logoImg.onload = () => {
+                        const offCanvas = document.createElement('canvas');
+                        offCanvas.width = img.naturalWidth || 800;
+                        offCanvas.height = img.naturalHeight || 800;
+                        const oCtx = offCanvas.getContext('2d');
+
+                        // 1. Draw clean base image
+                        oCtx.drawImage(img, 0, 0, offCanvas.width, offCanvas.height);
+
+                        // 2. Draw logo at item's exact position & scale
+                        const lw = offCanvas.width * item.logoRelWidth;
+                        const aspect = (logoImg.naturalHeight || 1) / (logoImg.naturalWidth || 1);
+                        const lh = lw * aspect;
+                        const lx = offCanvas.width * item.logoRelX;
+                        const ly = offCanvas.height * item.logoRelY;
+
+                        oCtx.save();
+                        oCtx.globalAlpha = item.logoOpacity !== undefined ? item.logoOpacity : 1.0;
+                        oCtx.drawImage(logoImg, lx, ly, lw, lh);
+                        oCtx.restore();
+
+                        resolve(offCanvas.toDataURL('image/jpeg', 0.95));
+                    };
+                    logoImg.onerror = () => reject(new Error("Không thể tải logo: " + (item.logoName || 'Logo')));
+                    logoImg.src = item.logoUrl;
+                };
+                img.onerror = () => reject(new Error("Không thể tải ảnh media: " + sourceUrl));
+                img.src = sourceUrl;
+            });
+        }
+
+        // =================================================================
+        // QUY TRÌNH 1: SAO LƯU ẢNH GỐC TRÊN VPS (STRICT VERIFICATION BATCH)
+        // =================================================================
+        async function executeBackupPhase() {
+            if (!assertProxySafety()) return;
+
+            // Nếu hàng đợi rỗng nhưng đang mở một media, tự động đưa media hiện tại vào hàng đợi
+            if (updateQueue.length === 0 && activeProduct && activeMedia) {
+                toggleCurrentMediaInQueue();
+            }
+
+            if (updateQueue.length === 0) {
+                showToast('Hàng đợi trống! Vui lòng chọn ít nhất 1 ảnh để cập nhật.', 'warning');
+                return;
+            }
+
+            const errBox = document.getElementById('errorAlertBox');
+            const errText = document.getElementById('errorAlertText');
+            const previewBox = document.getElementById('vpsBackupPreviewBox');
+            const btnBackup = document.getElementById('btnBackupPhase');
+            const stickyBtnBackup = document.getElementById('stickyBtnBackup');
+            const btnApply = document.getElementById('btnApplyPhase');
+            const stickyBtnApply = document.getElementById('stickyBtnApply');
+
+            errBox.classList.add('hidden');
+            previewBox.classList.add('hidden');
+            if (btnApply) {
+                btnApply.classList.add('hidden');
+                btnApply.style.display = 'none';
+            }
+            if (stickyBtnApply) {
+                stickyBtnApply.classList.add('hidden');
+                stickyBtnApply.style.display = 'none';
+            }
+
+            if (btnBackup) btnBackup.disabled = true;
+            if (stickyBtnBackup) stickyBtnBackup.disabled = true;
+
+            const total = updateQueue.length;
+            let failed = false;
+
+            // Duyệt tuần tự qua từng media trong hàng đợi
+            for (let i = 0; i < total; i++) {
+                const item = updateQueue[i];
+                if (item.backupDone) continue;
+
+                const progressMsg = `Đang sao lưu: ${i + 1}/${total}...`;
+                if (btnBackup) {
+                    btnBackup.innerHTML = `<iconify-icon icon="mdi:loading" class="animate-spin text-lg"></iconify-icon> <span>${progressMsg}</span>`;
+                }
+                if (stickyBtnBackup) {
+                    stickyBtnBackup.innerHTML = `<iconify-icon icon="mdi:loading" class="animate-spin text-base"></iconify-icon> <span>${progressMsg}</span>`;
+                }
+
+                try {
+                    const res = await fetch('/api/products/backup-media', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            product_id: item.productId,
+                            product_title: item.productTitle,
+                            media_id: item.mediaRawId,
+                            orig_media_id: item.mediaOrigId,
+                            image_url: item.mediaUrl,
+                            position: item.position
+                        })
+                    });
+
+                    let data;
+                    const textResp = await res.text();
+                    try {
+                        data = JSON.parse(textResp);
+                    } catch (parseErr) {
+                        data = { success: false, error: `Máy chủ phản hồi lỗi (HTTP ${res.status}): ${textResp.slice(0, 150)}` };
+                    }
+
+                    if (!res.ok || !data.success) {
+                        // DỪNG NGAY LẬP TỨC! BÁO LỖI ĐỎ RỰC
+                        failed = true;
+                        const errorMsg = `LỖI SAO LƯU tại "${item.productTitle}" (Media #${item.position}): ${data.error || `HTTP ${res.status}`}`;
+                        errText.innerText = errorMsg;
+                        errBox.classList.remove('hidden');
+                        errBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        showToast(errorMsg, 'error');
+                        if (res.status === 503 || (data.error && data.error.includes('CHỐT CHẶN AN TOÀN'))) {
+                            highlightProxySection();
+                            initProxyGateway();
+                        }
+                        item.error = errorMsg;
+
+                        if (btnBackup) {
+                            btnBackup.disabled = false;
+                            btnBackup.innerHTML = `<iconify-icon icon="mdi:alert" class="text-red-400"></iconify-icon> <span>Thử lại Sao lưu VPS (Save)</span>`;
+                        }
+                        if (stickyBtnBackup) {
+                            stickyBtnBackup.disabled = false;
+                            stickyBtnBackup.innerHTML = `<iconify-icon icon="mdi:alert" class="text-red-400"></iconify-icon> <span>Thử lại Sao lưu</span>`;
+                        }
+                        break;
+                    }
+
+                    // Sao lưu thành công item này
+                    item.backupDone = true;
+                    item.backup_url = data.backup_url;
+
+                    // Cập nhật lại trong loadedProducts
+                    const p = loadedProducts.find(x => x.raw_id === item.productId);
+                    if (p) {
+                        const m = (p.media || []).find(y => y.raw_id === item.mediaRawId || y.id === item.mediaId);
+                        if (m) {
+                            m.has_backup = true;
+                            m.backup_url = data.backup_url;
+                        }
+                    }
+
+                    // Nếu đây là activeMedia hiện tại, cập nhật preview box
+                    if (activeMedia && (activeMedia.raw_id === item.mediaRawId || activeMedia.id === item.mediaId)) {
+                        activeMedia.has_backup = true;
+                        activeMedia.backup_url = data.backup_url;
+                        document.getElementById('vpsBackupThumb').src = data.backup_url + '?t=' + Date.now();
+                        document.getElementById('vpsBackupPath').innerText = data.backup_url;
+                        document.getElementById('vpsBackupSize').innerText = (data.file_size / 1024).toFixed(1) + ' KB';
+                        document.getElementById('vpsBackupDims').innerText = data.dimensions || '--';
+                        document.getElementById('vpsBackupPos').innerText = '#' + (data.position || activeMedia.position || 1);
+                        previewBox.classList.remove('hidden');
+                    }
+
+                } catch (err) {
+                    failed = true;
+                    console.error(err);
+                    const errorMsg = `LỖI KẾT NỐI tại "${item.productTitle}" (Media #${item.position}): ${err.message}`;
+                    errText.innerText = errorMsg;
+                    errBox.classList.remove('hidden');
+                    errBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    showToast(errorMsg, 'error');
+
+                    if (btnBackup) {
+                        btnBackup.disabled = false;
+                        btnBackup.className = "inline-flex items-center gap-2 px-6 py-3 bg-red-700 hover:bg-red-800 text-white font-bold text-sm rounded-xl shadow transition-all cursor-pointer";
+                        btnBackup.innerHTML = `<iconify-icon icon="mdi:alert-circle" class="text-white text-lg"></iconify-icon> <span class="text-white">Thử lại Sao lưu VPS (Save)</span>`;
+                    }
+                    if (stickyBtnBackup) {
+                        stickyBtnBackup.disabled = false;
+                        stickyBtnBackup.innerHTML = `<iconify-icon icon="mdi:alert-circle" class="text-white text-base"></iconify-icon> <span class="text-white">Thử lại</span>`;
+                    }
+                    break;
+                }
+            }
+
+            if (!failed) {
+                showToast(`Sao lưu VPS thành công 100% (${total} media)! Hãy nhấn "Tiến hành cập nhật".`, 'success');
+                updateQueueUI();
+                renderProductsGrid();
+            }
+        }
+
+        // =================================================================
+        // QUY TRÌNH 2: CẬP NHẬT ẢNH MỚI LÊN SHOPIFY & GẮN TAG (BATCH)
+        // =================================================================
+        async function executeApplyPhase() {
+            if (!assertProxySafety()) return;
+
+            if (updateQueue.length === 0 && activeProduct && activeMedia) {
+                // Tự động đưa media hiện tại vào hàng đợi nếu người dùng chưa bấm "Chọn để cập nhật"
+                toggleCurrentMediaInQueue();
+                if (activeMedia.has_backup) {
+                    const queueItem = updateQueue.find(q => q.productId === activeProduct.raw_id && (q.mediaRawId === activeMedia.raw_id || q.mediaId === activeMedia.id));
+                    if (queueItem) queueItem.backupDone = true;
+                }
+            }
+
+            if (updateQueue.length === 0) {
+                showToast('Hàng đợi trống! Vui lòng chọn ít nhất 1 ảnh để cập nhật.', 'warning');
+                return;
+            }
+
+            const unbacked = updateQueue.filter(q => !q.backupDone);
+            if (unbacked.length > 0) {
+                showToast('Chốt an toàn chặn: Còn media chưa sao lưu trên VPS (Bước 1)!', 'error');
+                return;
+            }
+
+            const btnApply = document.getElementById('btnApplyPhase');
+            const stickyBtnApply = document.getElementById('stickyBtnApply');
+            const errBox = document.getElementById('errorAlertBox');
+            const errText = document.getElementById('errorAlertText');
+
+            if (btnApply) {
+                btnApply.disabled = true;
+                btnApply.classList.remove('btn-ready-pulse');
+            }
+            if (stickyBtnApply) {
+                stickyBtnApply.disabled = true;
+                stickyBtnApply.classList.remove('btn-ready-pulse');
+            }
+
+            const total = updateQueue.length;
+            let failed = false;
+
+            for (let i = 0; i < total; i++) {
+                const item = updateQueue[i];
+                if (item.applyDone) continue;
+
+                const progressMsg = `Đang cập nhật lên Shopify: ${i + 1}/${total}...`;
+                if (btnApply) {
+                    btnApply.innerHTML = `<iconify-icon icon="mdi:loading" class="animate-spin text-lg"></iconify-icon> <span>${progressMsg}</span>`;
+                }
+                if (stickyBtnApply) {
+                    stickyBtnApply.innerHTML = `<iconify-icon icon="mdi:loading" class="animate-spin text-base"></iconify-icon> <span>${progressMsg}</span>`;
+                }
+
+                try {
+                    // Render canvas offscreen với cấu hình logo riêng của item
+                    const base64Data = await renderCanvasForQueueItem(item);
+
+                    const res = await fetch('/api/products/apply-media-update', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            product_id: item.productId,
+                            old_media_id: item.mediaId,
+                            orig_media_id: item.mediaOrigId,
+                            position: item.position,
+                            image_base64: base64Data
+                        })
+                    });
+
+                    let data;
+                    const textResp = await res.text();
+                    try {
+                        data = JSON.parse(textResp);
+                    } catch (parseErr) {
+                        data = { success: false, error: `Máy chủ phản hồi lỗi (HTTP ${res.status}): ${textResp.slice(0, 150)}` };
+                    }
+
+                    if (!res.ok || !data.success) {
+                        failed = true;
+                        const errorMsg = `LỖI CẬP NHẬT tại "${item.productTitle}" (Media #${item.position}): ${data.error || 'Unknown error'}`;
+                        showToast(errorMsg, 'error');
+                        if (res.status === 503 || (data.error && data.error.includes('CHỐT CHẶN AN TOÀN'))) {
+                            highlightProxySection();
+                            initProxyGateway();
+                        }
+                        errText.innerText = errorMsg;
+                        errBox.classList.remove('hidden');
+                        errBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+                        if (btnApply) {
+                            btnApply.disabled = false;
+                            btnApply.className = "inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold text-sm rounded-xl shadow-lg transition-all btn-ready-pulse cursor-pointer";
+                            btnApply.innerHTML = `<iconify-icon icon="mdi:cloud-upload" class="text-lg text-white"></iconify-icon> <span class="text-white">Thử lại cập nhật lên Shopify</span>`;
+                        }
+                        if (stickyBtnApply) {
+                            stickyBtnApply.disabled = false;
+                            stickyBtnApply.className = "inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs sm:text-sm rounded-xl shadow-lg transition-all btn-ready-pulse cursor-pointer";
+                            stickyBtnApply.innerHTML = `<iconify-icon icon="mdi:cloud-upload" class="text-base text-white"></iconify-icon> <span class="text-white">Thử lại</span>`;
+                        }
+                        break;
+                    }
+
+                    item.applyDone = true;
+
+                    // Cập nhật thông tin trong loadedProducts
+                    const p = loadedProducts.find(x => x.raw_id === item.productId);
+                    if (p) {
+                        const m = (p.media || []).find(y => y.raw_id === item.mediaRawId || y.id === item.mediaId);
+                        if (m && data.new_media) {
+                            m.id = data.new_media.id;
+                            m.raw_id = data.new_media.raw_id;
+                            m.url = data.new_media.url;
+                            m.is_logo_applied = true;
+                            m.has_backup = true;
+                            m.backup_url = `/backups/${item.productId}/${item.mediaOrigId}_orig.jpg`;
+                        }
+
+                        // Cập nhật trạng thái tag của sản phẩm
+                        if (data.all_media_updated) {
+                            p.is_logo_updated = true;
+                            if (!p.tags.includes('logo-updated')) p.tags.push('logo-updated');
+                        } else {
+                            p.is_logo_updated = false;
+                            p.tags = p.tags.filter(t => t !== 'logo-updated');
+                        }
+                    }
+
+                    // Nếu đang xem media này trong Canvas Editor
+                    if (activeMedia && (activeMedia.raw_id === item.mediaRawId || activeMedia.id === item.mediaId) && data.new_media) {
+                        activeMedia.id = data.new_media.id;
+                        activeMedia.raw_id = data.new_media.raw_id;
+                        activeMedia.url = data.new_media.url;
+                        activeMedia.is_logo_applied = true;
+                        activeMedia.has_backup = true;
+                        activeMedia.backup_url = `/backups/${item.productId}/${item.mediaOrigId}_orig.jpg`;
+
+                        mainImageObj = new Image();
+                        mainImageObj.crossOrigin = "anonymous";
+                        mainImageObj.onload = () => { renderCanvas(); };
+                        mainImageObj.src = activeMedia.backup_url || activeMedia.url;
+                    }
+
+                } catch (err) {
+                    failed = true;
+                    console.error(err);
+                    const errorMsg = `LỖI tại "${item.productTitle}" (Media #${item.position}): ${err.message}`;
+                    showToast(errorMsg, 'error');
+                    errText.innerText = errorMsg;
+                    errBox.classList.remove('hidden');
+
+                    if (btnApply) {
+                        btnApply.disabled = false;
+                        btnApply.innerHTML = `<iconify-icon icon="mdi:cloud-upload" class="text-lg text-white"></iconify-icon> <span class="text-white">Thử lại cập nhật</span>`;
+                    }
+                    if (stickyBtnApply) {
+                        stickyBtnApply.disabled = false;
+                        stickyBtnApply.innerHTML = `<iconify-icon icon="mdi:cloud-upload" class="text-base text-white"></iconify-icon> <span class="text-white">Thử lại</span>`;
+                    }
+                    break;
+                }
+            }
+
+            // Dọn dẹp các media đã apply thành công khỏi hàng đợi
+            updateQueue = updateQueue.filter(q => !q.applyDone);
+            updateQueueUI();
+            renderProductsGrid();
+
+            if (!failed) {
+                showToast('Cập nhật logo thành công cho toàn bộ media trong hàng đợi! File backup VPS được bảo tồn vĩnh viễn.', 'success');
+                resetProcessUIState();
+            }
+        }
+
+        // =================================================================
+        // CƠ CHẾ ROLLBACK (KHÔI PHỤC ẢNH GỐC TỪ VPS)
+        // =================================================================
+        async function executeRollback() {
+            if (!assertProxySafety()) return;
+
+            if (!activeProduct || !activeMedia) return;
+            if (!confirm(`Bạn có chắc chắn muốn khôi phục ảnh gốc từ VPS cho sản phẩm "${activeProduct.title}"?\nThao tác này sẽ tải lại ảnh gốc từ VPS lên Shopify, gỡ ảnh có logo và gỡ bỏ tag logo-updated.`)) {
+                return;
+            }
+
+            const btnRollback = document.getElementById('btnRollback');
+            btnRollback.disabled = true;
+            btnRollback.innerHTML = `<iconify-icon icon="mdi:loading" class="animate-spin"></iconify-icon> <span>Đang khôi phục...</span>`;
+
+            try {
+                const res = await fetch('/api/products/rollback-media', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        product_id: activeProduct.raw_id,
+                        current_media_id: activeMedia.id,
+                        original_media_id: activeMedia.orig_raw_id || activeMedia.raw_id
+                    })
+                });
+
+                let data;
+                const textResp = await res.text();
+                try {
+                    data = JSON.parse(textResp);
+                } catch (parseErr) {
+                    data = { success: false, error: `Máy chủ phản hồi lỗi (HTTP ${res.status}): ${textResp.slice(0, 150)}` };
+                }
+
+                if (!res.ok || !data.success) {
+                    showToast('Lỗi rollback: ' + (data.error || 'Unknown error'), 'error');
+                    if (res.status === 503 || (data.error && data.error.includes('CHỐT CHẶN AN TOÀN'))) {
+                        highlightProxySection();
+                        initProxyGateway();
+                    }
+                    btnRollback.disabled = false;
+                    btnRollback.innerHTML = `<iconify-icon icon="mdi:undo-variant"></iconify-icon> <span>Khôi phục ảnh gốc (Rollback)</span>`;
+                    return;
+                }
+
+                showToast('Khôi phục ảnh gốc thành công và đã gỡ bỏ tag logo-updated!', 'success');
+
+                // Gỡ tag logo-updated khỏi state
+                activeProduct.is_logo_updated = false;
+                activeProduct.tags = activeProduct.tags.filter(t => t !== 'logo-updated');
+
+                if (data.restored_media) {
+                    activeMedia.id = data.restored_media.id;
+                    activeMedia.raw_id = data.restored_media.raw_id;
+                    activeMedia.url = data.restored_media.url;
+                    if (data.restored_media.orig_raw_id) {
+                        activeMedia.orig_raw_id = data.restored_media.orig_raw_id;
+                    }
+                    if (data.restored_media.position) {
+                        activeMedia.position = data.restored_media.position;
+                    }
+                    activeMedia.has_backup = true;
+                    activeMedia.backup_url = `/backups/${activeProduct.raw_id}/${activeMedia.orig_raw_id}_orig.jpg`;
+                    activeMedia.is_logo_applied = false;
+                }
+
+                // Xóa media này khỏi updateQueue nếu đang có
+                const qIdx = updateQueue.findIndex(q => q.productId === activeProduct.raw_id && (q.mediaRawId === activeMedia.raw_id || q.mediaId === activeMedia.id));
+                if (qIdx >= 0) {
+                    updateQueue.splice(qIdx, 1);
+                }
+
+                // Nạp lại ảnh gốc vào Canvas
+                mainImageObj = new Image();
+                mainImageObj.crossOrigin = "anonymous";
+                mainImageObj.onload = () => { renderCanvas(); };
+                mainImageObj.src = activeMedia.url;
+
+                updateQueueUI();
+                resetProcessUIState();
+                renderProductsGrid();
+            } catch (err) {
+                console.error(err);
+                showToast('Lỗi kết nối khi rollback: ' + err.message, 'error');
+            } finally {
+                if (btnRollback) {
+                    btnRollback.disabled = false;
+                    btnRollback.innerHTML = `<iconify-icon icon="mdi:undo-variant" class="text-lg"></iconify-icon> <span>Khôi phục ảnh gốc (Rollback)</span>`;
+                }
+            }
+        }
+
+        // Sửa lại từ bản sao lưu gốc trên VPS
+        function loadFromBackupImage() {
+            if (!activeProduct || !activeMedia) return;
+            const origId = activeMedia.orig_raw_id || activeMedia.raw_id;
+            const backupUrl = activeMedia.backup_url || `/backups/${activeProduct.raw_id}/${origId}_orig.jpg`;
+
+            showToast('Đang nạp ảnh gốc từ VPS...', 'info');
+
+            mainImageObj = new Image();
+            mainImageObj.crossOrigin = "anonymous";
+            mainImageObj.onload = function() {
+                initCanvasDimensions();
+                resetLogoPosition();
+                renderCanvas();
+
+                // Hiển thị khung preview VPS
+                const previewBox = document.getElementById('vpsBackupPreviewBox');
+                document.getElementById('vpsBackupThumb').src = backupUrl + '?t=' + Date.now();
+                document.getElementById('vpsBackupPath').innerText = backupUrl;
+                document.getElementById('vpsBackupSize').innerText = 'Đã lưu trên VPS';
+                document.getElementById('vpsBackupDims').innerText = `${mainImageObj.naturalWidth}x${mainImageObj.naturalHeight}`;
+                document.getElementById('vpsBackupPos').innerText = '#' + (activeMedia.position || 1);
+                previewBox.classList.remove('hidden');
+
+                // Tự động đưa vào hàng đợi với trạng thái backupDone = true
+                toggleCurrentMediaInQueue();
+                showToast('Đã nạp ảnh gốc từ VPS! Bạn có thể chỉnh lại vị trí logo và bấm "Tiến hành cập nhật".', 'success');
+            };
+            mainImageObj.onerror = function() {
+                showToast('Không tìm thấy file sao lưu trên VPS: ' + backupUrl, 'error');
+            };
+            mainImageObj.src = backupUrl;
+        }
+
+        // Toast Helper
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border text-sm font-medium transition-all transform translate-y-2 opacity-0 duration-200 ${
+                type === 'success' ? 'bg-emerald-800 text-white border-emerald-700' :
+                type === 'error' ? 'bg-red-800 text-white border-red-700' :
+                type === 'warning' ? 'bg-amber-800 text-white border-amber-700' :
+                'bg-gray-800 text-white border-gray-700'
+            }`;
+
+            const iconName = 
+                type === 'success' ? 'mdi:check-circle' :
+                type === 'error' ? 'mdi:alert-circle' :
+                type === 'warning' ? 'mdi:alert' :
+                'mdi:information';
+
+            toast.innerHTML = `
+                <iconify-icon icon="${iconName}" class="text-xl flex-shrink-0"></iconify-icon>
+                <span>${message}</span>
+            `;
+
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 200);
+            }, 4000);
+        }
+
+        // Tự động load danh sách định danh đã lưu trong localStorage và khởi tạo Proxy Gateway khi vào lại trang
+        document.addEventListener('DOMContentLoaded', () => {
+            initProxyGateway();
+            try {
+                const savedIdentifiers = localStorage.getItem('wrydeco_product_identifiers');
+                if (savedIdentifiers) {
+                    const input = document.getElementById('identifiersInput');
+                    if (input) input.value = savedIdentifiers;
+                }
+                const savedIdType = localStorage.getItem('wrydeco_product_id_type');
+                if (savedIdType) {
+                    const radio = document.querySelector(`input[name="id_type"][value="${savedIdType}"]`);
+                    if (radio) radio.checked = true;
+                }
+            } catch (e) {
+                console.warn('Không thể đọc localStorage:', e);
+            }
+        });
+    </script>
+</body>
+</html>

@@ -4,6 +4,8 @@ import time
 import uuid
 import csv
 import io
+import json
+import base64
 from datetime import datetime
 from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
@@ -11,12 +13,21 @@ from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 from pydantic import BaseModel
+from PIL import Image
 import requests
+import threading
 
 load_dotenv()
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+os.makedirs("assets", exist_ok=True)
+app.mount("/assets", StaticFiles(directory="assets"), name="assets")
+
+os.makedirs("backups", exist_ok=True)
+app.mount("/backups", StaticFiles(directory="backups"), name="backups")
+
 templates = Jinja2Templates(directory="templates")
 
 SHOPIFY_SHOP = (os.getenv("SHOPIFY_SHOP") or "").strip().strip('"').strip("'")
@@ -28,6 +39,355 @@ HEADERS = {
     "X-Shopify-Access-Token": SHOPIFY_ADMIN_TOKEN,
     "Content-Type": "application/json"
 }
+
+# =====================================================================
+# PROXY GATEWAY CONFIGURATION & HELPERS
+# =====================================================================
+class ProxySafetyException(Exception):
+    """Ném ra khi Proxy Gateway đang bật nhưng mất kết nối hoặc không ổn định"""
+    pass
+
+@app.exception_handler(ProxySafetyException)
+async def proxy_safety_exception_handler(request: Request, exc: ProxySafetyException):
+    return JSONResponse(
+        status_code=503,
+        content={"success": False, "error": str(exc)}
+    )
+
+PROXY_CONFIG_FILE = "proxy_config.json"
+_proxy_lock = threading.Lock()
+DEFAULT_PROXY_CONFIG = {
+    "enabled": False,
+    "proxy_url": "http://nPMZfSl5QX0shvm:hKTQVcQVNAvYHXq@185.124.63.174:55031",
+    "proxy_ip": "185.124.63.174",
+    "is_stable": False,
+    "last_status": "unknown",
+    "last_latency_ms": 0,
+    "last_checked_at": None,
+    "last_error": None
+}
+
+def load_proxy_config() -> dict:
+    with _proxy_lock:
+        if not os.path.exists(PROXY_CONFIG_FILE):
+            tmp_file = f"{PROXY_CONFIG_FILE}.tmp"
+            try:
+                with open(tmp_file, "w", encoding="utf-8") as f:
+                    json.dump(DEFAULT_PROXY_CONFIG, f, indent=2, ensure_ascii=False)
+                    f.flush()
+                    os.fsync(f.fileno())
+                os.replace(tmp_file, PROXY_CONFIG_FILE)
+            except Exception:
+                pass
+            return DEFAULT_PROXY_CONFIG.copy()
+        try:
+            with open(PROXY_CONFIG_FILE, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+                for k, v in DEFAULT_PROXY_CONFIG.items():
+                    if k not in cfg:
+                        cfg[k] = v
+                return cfg
+        except Exception as e:
+            print(f"Error loading proxy config: {e}")
+            return DEFAULT_PROXY_CONFIG.copy()
+
+def save_proxy_config(cfg: dict):
+    with _proxy_lock:
+        tmp_file = f"{PROXY_CONFIG_FILE}.tmp"
+        try:
+            with open(tmp_file, "w", encoding="utf-8") as f:
+                json.dump(cfg, f, indent=2, ensure_ascii=False)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp_file, PROXY_CONFIG_FILE)
+        except Exception as e:
+            if os.path.exists(tmp_file):
+                try:
+                    os.remove(tmp_file)
+                except Exception:
+                    pass
+            print(f"Error saving proxy config: {e}")
+
+def mark_proxy_unstable(err: str, latency: int = 0):
+    try:
+        cfg = load_proxy_config()
+        cfg["is_stable"] = False
+        cfg["last_status"] = "unstable"
+        cfg["last_latency_ms"] = latency
+        cfg["last_checked_at"] = datetime.now().isoformat()
+        cfg["last_error"] = str(err)
+        save_proxy_config(cfg)
+    except Exception as e:
+        print(f"Error marking proxy unstable: {e}")
+
+def test_proxy_connectivity(proxy_url: str = None, timeout: int = 8):
+    if not proxy_url:
+        cfg = load_proxy_config()
+        proxy_url = cfg.get("proxy_url")
+    
+    proxies = {
+        "http": proxy_url,
+        "https": proxy_url
+    }
+    
+    test_url = f"https://{SHOPIFY_SHOP}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/shop.json"
+    test_headers = {
+        "X-Shopify-Access-Token": SHOPIFY_ADMIN_TOKEN
+    }
+    
+    t0 = time.time()
+    try:
+        resp = requests.get(test_url, headers=test_headers, proxies=proxies, timeout=timeout)
+        latency_ms = int((time.time() - t0) * 1000)
+        if resp.status_code == 200:
+            return True, latency_ms, None
+        else:
+            return False, latency_ms, f"Shopify API HTTP {resp.status_code}"
+    except requests.exceptions.Timeout:
+        latency_ms = int((time.time() - t0) * 1000)
+        return False, latency_ms, f"Hết thời gian chờ kết nối (Timeout > {timeout}s)"
+    except Exception as e:
+        latency_ms = int((time.time() - t0) * 1000)
+        return False, latency_ms, str(e)
+
+def fetch_proxy_egress_geo(proxy_url: str = None, timeout: int = 6):
+    """
+    Live Egress Verification: Bắn request xuyên qua Proxy để xác định vị trí thực tế, quốc gia, ISP mà phía ngoài nhìn thấy.
+    """
+    if not proxy_url:
+        cfg = load_proxy_config()
+        proxy_url = cfg.get("proxy_url")
+    
+    proxies = {
+        "http": proxy_url,
+        "https": proxy_url
+    }
+    
+    # Nguồn 1: ipwho.is (rất chi tiết: emoji flag, country, region, city, isp)
+    try:
+        resp = requests.get("https://ipwho.is/", proxies=proxies, timeout=timeout)
+        if resp.status_code == 200:
+            d = resp.json()
+            if d.get("success", False) or "country" in d:
+                flag = "🌐"
+                if isinstance(d.get("flag"), dict) and d.get("flag", {}).get("emoji"):
+                    flag = d["flag"]["emoji"]
+                elif d.get("country_code") == "US":
+                    flag = "🇺🇸"
+                
+                isp = None
+                if isinstance(d.get("connection"), dict):
+                    isp = d["connection"].get("isp")
+                
+                return {
+                    "ip": d.get("ip"),
+                    "country": d.get("country"),
+                    "country_code": d.get("country_code"),
+                    "region": d.get("region"),
+                    "city": d.get("city"),
+                    "flag": flag,
+                    "isp": isp,
+                    "verified_at": datetime.now().isoformat()
+                }
+    except Exception as e:
+        print(f"fetch_proxy_egress_geo (ipwho.is) notice: {e}")
+        
+    # Nguồn 2: ipapi.co fallback
+    try:
+        resp = requests.get("https://ipapi.co/json/", proxies=proxies, timeout=timeout)
+        if resp.status_code == 200:
+            d = resp.json()
+            country_code = d.get("country_code")
+            return {
+                "ip": d.get("ip"),
+                "country": d.get("country_name"),
+                "country_code": country_code,
+                "region": d.get("region"),
+                "city": d.get("city"),
+                "flag": "🇺🇸" if country_code == "US" else "🌐",
+                "isp": d.get("org"),
+                "verified_at": datetime.now().isoformat()
+            }
+    except Exception as e:
+        print(f"fetch_proxy_egress_geo (ipapi.co) notice: {e}")
+        
+    return None
+
+def get_shopify_request_proxies():
+    cfg = load_proxy_config()
+    if not cfg.get("enabled"):
+        return None
+    
+    now = datetime.now()
+    last_check = None
+    if cfg.get("last_checked_at"):
+        try:
+            last_check = datetime.fromisoformat(cfg["last_checked_at"])
+        except Exception:
+            last_check = None
+
+    if not cfg.get("is_stable") or not last_check or (now - last_check).total_seconds() > 60:
+        is_ok, latency, err = test_proxy_connectivity(cfg.get("proxy_url"), timeout=8)
+        if not is_ok:
+            cfg["is_stable"] = False
+            cfg["last_status"] = "unstable"
+            cfg["last_latency_ms"] = latency
+            cfg["last_checked_at"] = now.isoformat()
+            cfg["last_error"] = err
+            save_proxy_config(cfg)
+            raise ProxySafetyException(f"CHỐT CHẶN AN TOÀN: Proxy đang BẬT nhưng mất kết nối/không ổn định! Đã chặn toàn bộ request đi đến Shopify để bảo vệ gian hàng.")
+        else:
+            cfg["is_stable"] = True
+            cfg["last_status"] = "stable"
+            cfg["last_latency_ms"] = latency
+            cfg["last_checked_at"] = now.isoformat()
+            cfg["last_error"] = None
+            save_proxy_config(cfg)
+
+    return {
+        "http": cfg["proxy_url"],
+        "https": cfg["proxy_url"]
+    }
+
+# =====================================================================
+# LOGO UPDATER DEDICATED CREDENTIALS CONFIGURATION & HELPERS
+# =====================================================================
+LOGO_UPDATER_CONFIG_FILE = "logo_updater_config.json"
+_logo_updater_lock = threading.Lock()
+DEFAULT_LOGO_UPDATER_CONFIG = {
+    "shop_domain": "",
+    "shop_name": "",
+    "client_id": "",
+    "client_secret": "",
+    "access_token": "",
+    "is_custom": False,
+    "updated_at": None
+}
+
+def clean_shopify_domain(raw: str) -> str:
+    if not raw:
+        return ""
+    d = str(raw).strip().lower()
+    d = re.sub(r"^https?://", "", d)
+    d = d.split("?")[0].split("#")[0].strip("/")
+    # Hỗ trợ đường dẫn admin Shopify dạng admin.shopify.com/store/{shop_name}
+    m = re.search(r"admin\.shopify\.com/store/([^/]+)", d)
+    if m:
+        return m.group(1).replace(".myshopify.com", "")
+    d = d.split("/")[0].split(":")[0]
+    d = d.replace(".myshopify.com", "")
+    return d
+
+def mask_secret(s: str) -> str:
+    if not s:
+        return ""
+    s = str(s).strip()
+    if len(s) <= 8:
+        return "********"
+    return f"{s[:4]}...{s[-4:]}"
+
+def load_logo_updater_config() -> dict:
+    with _logo_updater_lock:
+        if not os.path.exists(LOGO_UPDATER_CONFIG_FILE):
+            tmp_file = f"{LOGO_UPDATER_CONFIG_FILE}.tmp"
+            try:
+                with open(tmp_file, "w", encoding="utf-8") as f:
+                    json.dump(DEFAULT_LOGO_UPDATER_CONFIG, f, indent=2, ensure_ascii=False)
+                    f.flush()
+                    os.fsync(f.fileno())
+                os.replace(tmp_file, LOGO_UPDATER_CONFIG_FILE)
+            except Exception:
+                pass
+            return DEFAULT_LOGO_UPDATER_CONFIG.copy()
+        try:
+            with open(LOGO_UPDATER_CONFIG_FILE, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+                for k, v in DEFAULT_LOGO_UPDATER_CONFIG.items():
+                    if k not in cfg:
+                        cfg[k] = v
+                return cfg
+        except Exception as e:
+            print(f"Error loading logo updater config: {e}")
+            return DEFAULT_LOGO_UPDATER_CONFIG.copy()
+
+def save_logo_updater_config(cfg: dict):
+    with _logo_updater_lock:
+        tmp_file = f"{LOGO_UPDATER_CONFIG_FILE}.tmp"
+        try:
+            with open(tmp_file, "w", encoding="utf-8") as f:
+                json.dump(cfg, f, indent=2, ensure_ascii=False)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp_file, LOGO_UPDATER_CONFIG_FILE)
+        except Exception as e:
+            if os.path.exists(tmp_file):
+                try:
+                    os.remove(tmp_file)
+                except Exception:
+                    pass
+            print(f"Error saving logo updater config: {e}")
+
+def get_logo_updater_credentials() -> dict:
+    proxy_cfg = load_proxy_config()
+    is_proxy_enabled = bool(proxy_cfg.get("enabled", False))
+    default_shop = clean_shopify_domain(SHOPIFY_SHOP)
+    
+    # 1. NẾU PROXY TẮT: BẮT BUỘC DÙNG LOẠI 1 (MẶC ĐỊNH SERVER TỪ .ENV)
+    if not is_proxy_enabled:
+        return {
+            "type": 1,
+            "is_custom": False,
+            "proxy_enabled": False,
+            "shop": default_shop,
+            "token": SHOPIFY_ADMIN_TOKEN,
+            "client_id": os.getenv("SHOPIFY_CLIENT_ID") or "",
+            "client_secret": os.getenv("SHOPIFY_CLIENT_SECRET") or "",
+            "headers": {
+                "X-Shopify-Access-Token": SHOPIFY_ADMIN_TOKEN,
+                "Content-Type": "application/json"
+            },
+            "graphql_url": f"https://{default_shop}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/graphql.json"
+        }
+        
+    # 2. NẾU PROXY BẬT: ĐỌC LOẠI 2 TỪ logo_updater_config.json
+    custom_cfg = load_logo_updater_config()
+    custom_token = (custom_cfg.get("access_token") or "").strip()
+    if custom_token and custom_cfg.get("is_custom"):
+        raw_shop = custom_cfg.get("shop_domain")
+        shop = clean_shopify_domain(raw_shop) if raw_shop else default_shop
+        if not shop:
+            shop = default_shop
+        return {
+            "type": 2,
+            "is_custom": True,
+            "proxy_enabled": True,
+            "shop": shop,
+            "token": custom_token,
+            "client_id": custom_cfg.get("client_id") or "",
+            "client_secret": custom_cfg.get("client_secret") or "",
+            "headers": {
+                "X-Shopify-Access-Token": custom_token,
+                "Content-Type": "application/json"
+            },
+            "graphql_url": f"https://{shop}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/graphql.json"
+        }
+        
+    # 3. FALLBACK NẾU PROXY BẬT NHƯNG CHƯA CẤU HÌNH LOẠI 2
+    return {
+        "type": 1,
+        "is_custom": False,
+        "proxy_enabled": True,
+        "shop": default_shop,
+        "token": SHOPIFY_ADMIN_TOKEN,
+        "client_id": os.getenv("SHOPIFY_CLIENT_ID") or "",
+        "client_secret": os.getenv("SHOPIFY_CLIENT_SECRET") or "",
+        "headers": {
+            "X-Shopify-Access-Token": SHOPIFY_ADMIN_TOKEN,
+            "Content-Type": "application/json"
+        },
+        "graphql_url": f"https://{default_shop}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/graphql.json"
+    }
+
 
 def get_products(first=50, after=None, before=None, last=None, filter_query=None, sort_key="CREATED_AT", reverse=True):
     query = """
@@ -3146,7 +3506,7 @@ async def api_taxonomy(request: Request, search: str = "", cursor: str = None):
         import json
         return HTMLResponse(content=json.dumps({"success": False, "message": str(e)}), media_type="application/json")
 
-def add_tags_to_product(product_id: str, tags: list):
+def add_tags_to_product(product_id: str, tags: list, headers: dict = None, graphql_url: str = None):
     mutation = """
     mutation tagsAdd($id: ID!, $tags: [String!]!) {
       tagsAdd(id: $id, tags: $tags) {
@@ -3164,7 +3524,16 @@ def add_tags_to_product(product_id: str, tags: list):
         "id": product_id,
         "tags": tags
     }
-    res = requests.post(GRAPHQL_URL, json={"query": mutation, "variables": variables}, headers=HEADERS)
+    proxies = get_shopify_request_proxies()
+    use_headers = headers or HEADERS
+    use_url = graphql_url or GRAPHQL_URL
+    try:
+        res = requests.post(use_url, json={"query": mutation, "variables": variables}, headers=use_headers, proxies=proxies, timeout=30)
+    except (requests.exceptions.ProxyError, requests.exceptions.ConnectTimeout) as pe:
+        if proxies:
+            mark_proxy_unstable(str(pe))
+            raise ProxySafetyException("CHỐT CHẶN AN TOÀN: Proxy đang BẬT nhưng mất kết nối/không ổn định! Đã chặn toàn bộ request đi đến Shopify để bảo vệ gian hàng.")
+        raise
     res.raise_for_status()
     data = res.json()
     if "errors" in data:
@@ -3174,7 +3543,7 @@ def add_tags_to_product(product_id: str, tags: list):
         return False, f"Lỗi từ Shopify: {user_errs[0]['message']}"
     return True, f"Đã thêm tags thành công"
 
-def remove_tags_from_product(product_id: str, tags: list):
+def remove_tags_from_product(product_id: str, tags: list, headers: dict = None, graphql_url: str = None):
     mutation = """
     mutation tagsRemove($id: ID!, $tags: [String!]!) {
       tagsRemove(id: $id, tags: $tags) {
@@ -3192,7 +3561,16 @@ def remove_tags_from_product(product_id: str, tags: list):
         "id": product_id,
         "tags": tags
     }
-    res = requests.post(GRAPHQL_URL, json={"query": mutation, "variables": variables}, headers=HEADERS)
+    proxies = get_shopify_request_proxies()
+    use_headers = headers or HEADERS
+    use_url = graphql_url or GRAPHQL_URL
+    try:
+        res = requests.post(use_url, json={"query": mutation, "variables": variables}, headers=use_headers, proxies=proxies, timeout=30)
+    except (requests.exceptions.ProxyError, requests.exceptions.ConnectTimeout) as pe:
+        if proxies:
+            mark_proxy_unstable(str(pe))
+            raise ProxySafetyException("CHỐT CHẶN AN TOÀN: Proxy đang BẬT nhưng mất kết nối/không ổn định! Đã chặn toàn bộ request đi đến Shopify để bảo vệ gian hàng.")
+        raise
     res.raise_for_status()
     data = res.json()
     if "errors" in data:
@@ -4156,6 +4534,114 @@ async def reset_token(request: Request):
         return HTMLResponse(content=json.dumps({"success": True, "message": "Reset Token thành công!"}), media_type="application/json")
     except Exception as e:
         return HTMLResponse(content=json.dumps({"success": False, "message": f"Lỗi nội bộ: {str(e)}"}), media_type="application/json")
+@app.post("/api/products/duplicate")
+@app.post("/duplicate-product")
+async def duplicate_product_endpoint(request: Request):
+    import json
+    try:
+        product_id = None
+        title = None
+        new_title = None
+
+        content_type = request.headers.get("content-type", "")
+        if "application/json" in content_type:
+            data = await request.json()
+            product_id = data.get("product_id")
+            title = data.get("title")
+            new_title = data.get("new_title")
+        else:
+            form = await request.form()
+            product_id = form.get("product_id")
+            title = form.get("title")
+            new_title = form.get("new_title")
+
+        if not product_id:
+            return JSONResponse({"success": False, "message": "Vui lòng cung cấp ID sản phẩm cần nhân bản."}, status_code=400)
+
+        if not str(product_id).startswith("gid://"):
+            gid = f"gid://shopify/Product/{product_id}"
+        else:
+            gid = str(product_id)
+
+        # Lấy title sản phẩm gốc nếu chưa có
+        if not title:
+            q_title = """
+            query getProd($id: ID!) {
+              product(id: $id) {
+                title
+              }
+            }
+            """
+            res_t = requests.post(GRAPHQL_URL, json={"query": q_title, "variables": {"id": gid}}, headers=HEADERS)
+            if res_t.ok:
+                title = res_t.json().get("data", {}).get("product", {}).get("title", "Product")
+            else:
+                title = "Product"
+
+        if not new_title:
+            new_title = f"Copy of {title}"
+
+        mutation = """
+        mutation productDuplicate($productId: ID!, $newTitle: String!) {
+          productDuplicate(productId: $productId, newTitle: $newTitle, includeImages: true, synchronous: true) {
+            newProduct {
+              id
+              title
+              handle
+              createdAt
+              status
+            }
+            userErrors {
+              field
+              message
+            }
+          }
+        }
+        """
+        variables = {
+            "productId": gid,
+            "newTitle": new_title
+        }
+
+        res = requests.post(GRAPHQL_URL, json={"query": mutation, "variables": variables}, headers=HEADERS)
+        res.raise_for_status()
+        res_data = res.json()
+
+        if "errors" in res_data:
+            err_msg = res_data["errors"][0].get("message", "Lỗi GraphQL từ Shopify")
+            return JSONResponse({"success": False, "message": f"Shopify GraphQL Error: {err_msg}"})
+
+        dup_payload = res_data.get("data", {}).get("productDuplicate", {})
+        user_errors = dup_payload.get("userErrors", [])
+        if user_errors:
+            err_msg = "; ".join([e.get("message", "") for e in user_errors])
+            return JSONResponse({"success": False, "message": f"Lỗi nhân bản từ Shopify: {err_msg}"})
+
+        new_product = dup_payload.get("newProduct")
+        if not new_product:
+            return JSONResponse({"success": False, "message": "Shopify không trả về thông tin sản phẩm mới sau khi nhân bản."})
+
+        new_id = new_product["id"].split("/")[-1]
+        new_handle = new_product.get("handle", "")
+        new_prod_title = new_product.get("title", "")
+
+        # Thêm tag "duplicated-product" cho sản phẩm được nhân bản
+        try:
+            add_tags_to_product(new_product["id"], ["duplicated-product"])
+        except Exception as tag_err:
+            print(f"Lỗi khi thêm tag duplicated-product: {tag_err}")
+
+        return JSONResponse({
+            "success": True,
+            "message": f"Nhân bản sản phẩm thành công! Sản phẩm mới: {new_prod_title} (ID: {new_id}) kèm tag 'duplicated-product'",
+            "newProduct": {
+                "id": new_id,
+                "title": new_prod_title,
+                "handle": new_handle
+            }
+        })
+    except Exception as e:
+        return JSONResponse({"success": False, "message": f"Lỗi hệ thống: {str(e)}"}, status_code=500)
 
 @app.post("/delete-product")
 async def delete_product(request: Request, product_id: str = Form(...), password: str = Form(...)):
@@ -5209,5 +5695,1282 @@ async def api_update_policy(payload: PolicyUpdateRequest):
         })
     except Exception as e:
         return JSONResponse({"success": False, "message": f"Lỗi hệ thống: {str(e)}"}, status_code=500)
+
+
+# =====================================================================
+# PRODUCT LOGO MANAGEMENT ROUTES & APIS
+# =====================================================================
+
+@app.get("/update-product-logo", response_class=HTMLResponse)
+async def update_product_logo_page(request: Request):
+    return templates.TemplateResponse(request=request, name="update_product_logo.html", context={"request": request})
+
+
+# =====================================================================
+# PROXY STATUS & CONTROL ROUTES
+# =====================================================================
+
+@app.get("/api/proxy/status")
+async def get_proxy_status():
+    cfg = load_proxy_config()
+    return JSONResponse({
+        "success": True,
+        "enabled": cfg.get("enabled", False),
+        "proxy_url": cfg.get("proxy_url"),
+        "proxy_ip": cfg.get("proxy_ip", "185.124.63.174"),
+        "is_stable": cfg.get("is_stable", False),
+        "last_status": cfg.get("last_status", "unknown"),
+        "last_latency_ms": cfg.get("last_latency_ms", 0),
+        "last_checked_at": cfg.get("last_checked_at"),
+        "last_error": cfg.get("last_error"),
+        "geo": cfg.get("geo")
+    })
+
+
+@app.post("/api/proxy/toggle")
+async def toggle_proxy(request: Request):
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+    
+    enabled = bool(payload.get("enabled", False))
+    cfg = load_proxy_config()
+    cfg["enabled"] = enabled
+    
+    if enabled:
+        now = datetime.now()
+        is_ok, latency, err = test_proxy_connectivity(cfg.get("proxy_url"), timeout=8)
+        cfg["is_stable"] = is_ok
+        cfg["last_status"] = "stable" if is_ok else "unstable"
+        cfg["last_latency_ms"] = latency
+        cfg["last_checked_at"] = now.isoformat()
+        cfg["last_error"] = err if not is_ok else None
+        if is_ok:
+            geo = fetch_proxy_egress_geo(cfg.get("proxy_url"), timeout=6)
+            if geo:
+                cfg["geo"] = geo
+        save_proxy_config(cfg)
+    else:
+        save_proxy_config(cfg)
+        
+    return JSONResponse({
+        "success": True,
+        "enabled": cfg.get("enabled", False),
+        "proxy_url": cfg.get("proxy_url"),
+        "proxy_ip": cfg.get("proxy_ip", "185.124.63.174"),
+        "is_stable": cfg.get("is_stable", False),
+        "last_status": cfg.get("last_status", "unknown"),
+        "last_latency_ms": cfg.get("last_latency_ms", 0),
+        "last_checked_at": cfg.get("last_checked_at"),
+        "last_error": cfg.get("last_error"),
+        "geo": cfg.get("geo")
+    })
+
+
+@app.post("/api/proxy/check")
+async def check_proxy():
+    cfg = load_proxy_config()
+    now = datetime.now()
+    is_ok, latency, err = test_proxy_connectivity(cfg.get("proxy_url"), timeout=8)
+    cfg["is_stable"] = is_ok
+    cfg["last_status"] = "stable" if is_ok else "unstable"
+    cfg["last_latency_ms"] = latency
+    cfg["last_checked_at"] = now.isoformat()
+    cfg["last_error"] = err if not is_ok else None
+    
+    if is_ok:
+        geo = fetch_proxy_egress_geo(cfg.get("proxy_url"), timeout=6)
+        if geo:
+            cfg["geo"] = geo
+            
+    save_proxy_config(cfg)
+    
+    return JSONResponse({
+        "success": True,
+        "enabled": cfg.get("enabled", False),
+        "proxy_url": cfg.get("proxy_url"),
+        "proxy_ip": cfg.get("proxy_ip", "185.124.63.174"),
+        "is_stable": cfg.get("is_stable", False),
+        "last_status": cfg.get("last_status", "unknown"),
+        "last_latency_ms": cfg.get("last_latency_ms", 0),
+        "last_checked_at": cfg.get("last_checked_at"),
+        "last_error": cfg.get("last_error"),
+        "geo": cfg.get("geo")
+    })
+
+
+@app.get("/api/logo-updater/store-info")
+async def get_logo_updater_store_info():
+    creds = get_logo_updater_credentials()
+    shop = creds["shop"]
+    shop_domain = f"{shop}.myshopify.com" if not shop.endswith(".myshopify.com") else shop
+    proxy_cfg = load_proxy_config()
+    proxy_enabled = bool(proxy_cfg.get("enabled", False))
+    cred_type = creds["type"]
+    is_custom = creds["is_custom"]
+    
+    custom_cfg = load_logo_updater_config()
+    shop_name = custom_cfg.get("shop_name") if is_custom and custom_cfg.get("shop_name") else shop.replace(".myshopify.com", "").title()
+    
+    if not proxy_enabled:
+        status_label = "Mặc định Server • Trực tiếp"
+    elif is_custom:
+        status_label = "Cấu hình riêng • Proxy US 🇺🇸"
+    else:
+        status_label = "Mặc định Server • Proxy US 🇺🇸"
+
+    return JSONResponse({
+        "success": True,
+        "credentials_type": cred_type,
+        "is_custom": is_custom,
+        "proxy_enabled": proxy_enabled,
+        "shop_domain": shop_domain,
+        "shop_name": shop_name,
+        "status_label": status_label
+    })
+
+
+@app.get("/api/settings/logo-updater")
+async def get_settings_logo_updater():
+    cfg = load_logo_updater_config()
+    return JSONResponse({
+        "success": True,
+        "config": {
+            "shop_domain": cfg.get("shop_domain", ""),
+            "shop_name": cfg.get("shop_name", ""),
+            "client_id": cfg.get("client_id", ""),
+            "client_secret_masked": mask_secret(cfg.get("client_secret", "")),
+            "access_token_masked": mask_secret(cfg.get("access_token", "")),
+            "has_secret": bool(cfg.get("client_secret")),
+            "has_token": bool(cfg.get("access_token")),
+            "is_custom": cfg.get("is_custom", False),
+            "updated_at": cfg.get("updated_at")
+        },
+        "default_shop": f"{SHOPIFY_SHOP}.myshopify.com"
+    })
+
+
+@app.post("/api/settings/logo-updater")
+async def save_settings_logo_updater(request: Request):
+    try:
+        payload = await request.json()
+    except Exception:
+        return JSONResponse({"success": False, "message": "Dữ liệu JSON không hợp lệ"}, status_code=400)
+
+    existing_cfg = load_logo_updater_config()
+    
+    raw_shop = payload.get("shop_domain", "").strip()
+    shop = clean_shopify_domain(raw_shop) or clean_shopify_domain(SHOPIFY_SHOP)
+    
+    raw_token = payload.get("access_token", "").strip()
+    if raw_token and not raw_token.startswith("****") and not "..." in raw_token:
+        access_token = raw_token
+    else:
+        access_token = existing_cfg.get("access_token", "")
+        
+    if not access_token:
+        return JSONResponse({"success": False, "message": "Access Token không được để trống khi lưu cấu hình riêng."}, status_code=400)
+
+    raw_client_id = payload.get("client_id", "").strip()
+    client_id = raw_client_id if raw_client_id else existing_cfg.get("client_id", "")
+    
+    raw_secret = payload.get("client_secret", "").strip()
+    if raw_secret and not raw_secret.startswith("****") and not "..." in raw_secret:
+        client_secret = raw_secret
+    else:
+        client_secret = existing_cfg.get("client_secret", "")
+
+    # Xác thực token mới với Shopify API /shop.json
+    test_url = f"https://{shop}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/shop.json"
+    test_headers = {
+        "X-Shopify-Access-Token": access_token,
+        "Content-Type": "application/json"
+    }
+    
+    try:
+        proxies = None
+        proxy_cfg = load_proxy_config()
+        if proxy_cfg.get("enabled"):
+            try:
+                proxies = get_shopify_request_proxies()
+            except ProxySafetyException as pse:
+                return JSONResponse({
+                    "success": False,
+                    "message": f"Proxy Gateway đang BẬT nhưng mất kết nối/không ổn định! Đã chặn request đến Shopify để bảo vệ gian hàng khỏi rò rỉ IP."
+                }, status_code=503)
+            except Exception as pe:
+                return JSONResponse({
+                    "success": False,
+                    "message": f"Lỗi khởi tạo Proxy Gateway: {str(pe)}. Đã chặn request để bảo vệ an toàn."
+                }, status_code=503)
+        
+        resp = requests.get(test_url, headers=test_headers, proxies=proxies, timeout=12)
+        if resp.status_code == 200:
+            shop_data = resp.json().get("shop", {})
+            shop_name = shop_data.get("name", shop.capitalize())
+            myshopify_domain = shop_data.get("myshopify_domain", f"{shop}.myshopify.com")
+            
+            new_cfg = {
+                "shop_domain": myshopify_domain,
+                "shop_name": shop_name,
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "access_token": access_token,
+                "is_custom": True,
+                "updated_at": datetime.now().isoformat()
+            }
+            save_logo_updater_config(new_cfg)
+            return JSONResponse({
+                "success": True,
+                "message": f"Xác thực thành công! Đã kết nối tới store '{shop_name}' ({myshopify_domain}) và lưu cấu hình Loại 2.",
+                "shop_name": shop_name,
+                "shop_domain": myshopify_domain
+            })
+        elif resp.status_code in (401, 403):
+            return JSONResponse({
+                "success": False,
+                "message": f"Shopify từ chối xác thực (HTTP {resp.status_code}): Access Token không hợp lệ hoặc không có quyền truy cập store {shop}."
+            }, status_code=400)
+        else:
+            return JSONResponse({
+                "success": False,
+                "message": f"Shopify trả về mã lỗi HTTP {resp.status_code}: {resp.text}"
+            }, status_code=400)
+    except Exception as e:
+        return JSONResponse({
+            "success": False,
+            "message": f"Không thể kết nối đến Shopify để kiểm tra credentials: {str(e)}"
+        }, status_code=500)
+
+
+
+@app.post("/api/settings/logo-updater/reset")
+async def reset_settings_logo_updater():
+    reset_cfg = {
+        "shop_domain": "",
+        "shop_name": "",
+        "client_id": "",
+        "client_secret": "",
+        "access_token": "",
+        "is_custom": False,
+        "updated_at": datetime.now().isoformat()
+    }
+    save_logo_updater_config(reset_cfg)
+    return JSONResponse({
+        "success": True,
+        "message": "Đã khôi phục về trạng thái mặc định server (Loại 1)."
+    })
+
+
+def fetch_product_with_media_by_id(prod_id: str):
+    clean_id = str(prod_id).strip()
+    if not clean_id.startswith("gid://shopify/Product/"):
+        clean_id = f"gid://shopify/Product/{clean_id}"
+    query = """
+    query getProductMediaById($id: ID!) {
+      product(id: $id) {
+        id
+        title
+        handle
+        tags
+        media(first: 50) {
+          edges {
+            node {
+              ... on MediaImage {
+                id
+                image {
+                  url
+                }
+              }
+              ... on Video {
+                id
+                preview {
+                  image {
+                    url
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    """
+    try:
+        creds = get_logo_updater_credentials()
+        proxies = get_shopify_request_proxies()
+        res = requests.post(creds["graphql_url"], json={"query": query, "variables": {"id": clean_id}}, headers=creds["headers"], proxies=proxies, timeout=15)
+        if res.ok:
+            data = res.json()
+            return data.get("data", {}).get("product")
+    except (requests.exceptions.ProxyError, requests.exceptions.ConnectTimeout) as pe:
+        mark_proxy_unstable(str(pe))
+        raise ProxySafetyException("CHỐT CHẶN AN TOÀN: Proxy đang BẬT nhưng mất kết nối/không ổn định! Đã chặn toàn bộ request đi đến Shopify để bảo vệ gian hàng.")
+    except ProxySafetyException:
+        raise
+    except Exception as e:
+        print(f"Error fetching product by ID {prod_id}: {e}")
+        if "CHỐT CHẶN AN TOÀN" in str(e):
+            raise ProxySafetyException(str(e))
+    return None
+
+
+def fetch_product_with_media_by_handle(handle: str):
+    clean_handle = str(handle).strip()
+    query = """
+    query getProductMediaByHandle($handle: String!) {
+      productByHandle(handle: $handle) {
+        id
+        title
+        handle
+        tags
+        media(first: 50) {
+          edges {
+            node {
+              ... on MediaImage {
+                id
+                image {
+                  url
+                }
+              }
+              ... on Video {
+                id
+                preview {
+                  image {
+                    url
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    """
+    try:
+        creds = get_logo_updater_credentials()
+        proxies = get_shopify_request_proxies()
+        res = requests.post(creds["graphql_url"], json={"query": query, "variables": {"handle": clean_handle}}, headers=creds["headers"], proxies=proxies, timeout=15)
+        if res.ok:
+            data = res.json()
+            return data.get("data", {}).get("productByHandle")
+    except (requests.exceptions.ProxyError, requests.exceptions.ConnectTimeout) as pe:
+        mark_proxy_unstable(str(pe))
+        raise ProxySafetyException("CHỐT CHẶN AN TOÀN: Proxy đang BẬT nhưng mất kết nối/không ổn định! Đã chặn toàn bộ request đi đến Shopify để bảo vệ gian hàng.")
+    except ProxySafetyException:
+        raise
+    except Exception as e:
+        print(f"Error fetching product by handle {handle}: {e}")
+        if "CHỐT CHẶN AN TOÀN" in str(e):
+            raise ProxySafetyException(str(e))
+    return None
+
+
+def get_image_position(clean_prod_id: str, media_or_image_id: str, image_url: str = None) -> int:
+    clean_id = str(media_or_image_id).split("/")[-1].strip() if media_or_image_id else ""
+    try:
+        creds = get_logo_updater_credentials()
+        proxies = get_shopify_request_proxies()
+        list_url = f"https://{creds['shop']}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/products/{clean_prod_id}/images.json"
+        res = requests.get(list_url, headers=creds["headers"], proxies=proxies, timeout=15)
+        if res.ok:
+            images = res.json().get("images", [])
+            for img in images:
+                gid = img.get("admin_graphql_api_id", "")
+                if str(img.get("id")) == clean_id or gid == media_or_image_id or (clean_id and gid.endswith(f"/{clean_id}")):
+                    return img.get("position", 1)
+                if image_url:
+                    fn1 = image_url.split("/")[-1].split("?")[0]
+                    fn2 = img.get("src", "").split("/")[-1].split("?")[0]
+                    if fn1 and fn2 and fn1 == fn2:
+                        return img.get("position", 1)
+    except (requests.exceptions.ProxyError, requests.exceptions.ConnectTimeout) as pe:
+        mark_proxy_unstable(str(pe))
+        raise ProxySafetyException("CHỐT CHẶN AN TOÀN: Proxy đang BẬT nhưng mất kết nối/không ổn định! Đã chặn toàn bộ request đi đến Shopify để bảo vệ gian hàng.")
+    except ProxySafetyException:
+        raise
+    except Exception as e:
+        print(f"Error getting image position: {e}")
+        if "CHỐT CHẶN AN TOÀN" in str(e):
+            raise ProxySafetyException(str(e))
+    return 1
+
+
+def delete_shopify_image_or_media(clean_prod_id: str, media_or_image_id: str) -> bool:
+    clean_id = str(media_or_image_id).split("/")[-1].strip()
+    if not clean_id:
+        return False
+
+    prod_gid = f"gid://shopify/Product/{clean_prod_id}"
+    del_media_gid = media_or_image_id if str(media_or_image_id).startswith("gid://shopify/MediaImage/") else f"gid://shopify/MediaImage/{clean_id}"
+
+    creds = get_logo_updater_credentials()
+    graphql_url = creds["graphql_url"]
+    headers = creds["headers"]
+    shop = creds["shop"]
+
+    # 1. Try GraphQL productDeleteMedia
+    del_mutation = """
+    mutation productDeleteMedia($mediaIds: [ID!]!, $productId: ID!) {
+      productDeleteMedia(mediaIds: $mediaIds, productId: $productId) {
+        deletedMediaIds
+        deletedProductImageIds
+        userErrors {
+          field
+          message
+        }
+      }
+    }
+    """
+    try:
+        proxies = get_shopify_request_proxies()
+        res = requests.post(graphql_url, json={
+            "query": del_mutation,
+            "variables": {"mediaIds": [del_media_gid], "productId": prod_gid}
+        }, headers=headers, proxies=proxies, timeout=15)
+        if res.ok:
+            data = res.json()
+            if not data.get("errors"):
+                pdm = data.get("data", {}).get("productDeleteMedia", {})
+                if not pdm.get("userErrors") and (pdm.get("deletedMediaIds") or pdm.get("deletedProductImageIds")):
+                    return True
+    except (requests.exceptions.ProxyError, requests.exceptions.ConnectTimeout) as pe:
+        mark_proxy_unstable(str(pe))
+        raise ProxySafetyException("CHỐT CHẶN AN TOÀN: Proxy đang BẬT nhưng mất kết nối/không ổn định! Đã chặn toàn bộ request đi đến Shopify để bảo vệ gian hàng.")
+    except ProxySafetyException:
+        raise
+    except Exception as e:
+        print(f"GraphQL delete media exception: {e}")
+        if "CHỐT CHẶN AN TOÀN" in str(e):
+            raise ProxySafetyException(str(e))
+
+    # 2. Try REST API delete: DELETE /products/{clean_prod_id}/images/{clean_id}.json
+    try:
+        proxies = get_shopify_request_proxies()
+        rest_del_url = f"https://{shop}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/products/{clean_prod_id}/images/{clean_id}.json"
+        res_rest = requests.delete(rest_del_url, headers=headers, proxies=proxies, timeout=15)
+        if res_rest.ok:
+            return True
+    except (requests.exceptions.ProxyError, requests.exceptions.ConnectTimeout) as pe:
+        mark_proxy_unstable(str(pe))
+        raise ProxySafetyException("CHỐT CHẶN AN TOÀN: Proxy đang BẬT nhưng mất kết nối/không ổn định! Đã chặn toàn bộ request đi đến Shopify để bảo vệ gian hàng.")
+    except ProxySafetyException:
+        raise
+    except Exception as e:
+        print(f"REST delete image exception: {e}")
+        if "CHỐT CHẶN AN TOÀN" in str(e):
+            raise ProxySafetyException(str(e))
+
+    # 3. Fallback: Lookup image by GraphQL GID or clean_id from products images list
+    try:
+        proxies = get_shopify_request_proxies()
+        list_url = f"https://{shop}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/products/{clean_prod_id}/images.json"
+        res_list = requests.get(list_url, headers=headers, proxies=proxies, timeout=15)
+        if res_list.ok:
+            imgs = res_list.json().get("images", [])
+            for img in imgs:
+                img_gid = img.get("admin_graphql_api_id", "")
+                if str(img.get("id")) == clean_id or img_gid == media_or_image_id or img_gid.split("/")[-1] == clean_id:
+                    del_id = img["id"]
+                    del_url = f"https://{shop}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/products/{clean_prod_id}/images/{del_id}.json"
+                    r = requests.delete(del_url, headers=headers, proxies=proxies, timeout=15)
+                    if r.ok:
+                        return True
+    except (requests.exceptions.ProxyError, requests.exceptions.ConnectTimeout) as pe:
+        mark_proxy_unstable(str(pe))
+        raise ProxySafetyException("CHỐT CHẶN AN TOÀN: Proxy đang BẬT nhưng mất kết nối/không ổn định! Đã chặn toàn bộ request đi đến Shopify để bảo vệ gian hàng.")
+    except ProxySafetyException:
+        raise
+    except Exception as e:
+        print(f"Fallback delete exception: {e}")
+        if "CHỐT CHẶN AN TOÀN" in str(e):
+            raise ProxySafetyException(str(e))
+
+    return False
+
+
+@app.post("/api/products/batch-media")
+async def batch_media_products(request: Request):
+    try:
+        # Chốt chặn an toàn Proxy Gateway
+        get_shopify_request_proxies()
+    except Exception as pe:
+        return JSONResponse({"success": False, "error": str(pe)}, status_code=503)
+
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+
+    id_type = payload.get("id_type", "id")
+    raw_identifiers = payload.get("identifiers", [])
+    if isinstance(raw_identifiers, str):
+        identifiers = [x.strip() for x in re.split(r"[\r\n,]+", raw_identifiers) if x.strip()]
+    elif isinstance(raw_identifiers, list):
+        identifiers = []
+        for item in raw_identifiers:
+            if isinstance(item, str):
+                for part in re.split(r"[\r\n,]+", item):
+                    if part.strip():
+                        identifiers.append(part.strip())
+            elif item is not None:
+                identifiers.append(str(item).strip())
+    else:
+        identifiers = []
+
+    seen = set()
+    unique_identifiers = []
+    for ident in identifiers:
+        # Clean URL if user pasted a URL
+        if "http://" in ident or "https://" in ident:
+            ident = ident.split("?")[0].rstrip("/").split("/")[-1]
+        if ident and ident not in seen:
+            seen.add(ident)
+            unique_identifiers.append(ident)
+
+    results = []
+    try:
+        for ident in unique_identifiers:
+            prod = None
+            if id_type == "handle":
+                prod = fetch_product_with_media_by_handle(ident)
+                if not prod and ident.isdigit():
+                    prod = fetch_product_with_media_by_id(ident)
+            else:
+                prod = fetch_product_with_media_by_id(ident)
+                if not prod and not ident.isdigit():
+                    prod = fetch_product_with_media_by_handle(ident)
+
+            if not prod:
+                continue
+
+            gid = prod.get("id", "")
+            clean_prod_id = gid.split("/")[-1]
+            tags = prod.get("tags", [])
+            is_logo_updated = "logo-updated" in tags
+
+            media_list = []
+            manifest_file = os.path.join("backups", clean_prod_id, "manifest.json")
+            manifest = {}
+            if os.path.exists(manifest_file):
+                try:
+                    with open(manifest_file, "r", encoding="utf-8") as mf:
+                        manifest = json.load(mf)
+                except Exception:
+                    manifest = {}
+
+            edges = prod.get("media", {}).get("edges", [])
+            for pos_idx, edge in enumerate(edges, start=1):
+                node = edge.get("node", {})
+                m_id = node.get("id", "")
+                clean_m_id = m_id.split("/")[-1]
+                url = node.get("image", {}).get("url") or (node.get("preview", {}).get("image", {}).get("url") if node.get("preview") else None)
+                if not url:
+                    continue
+
+                orig_m_id = clean_m_id
+                for k, v in manifest.items():
+                    if v.get("new_image_id") == clean_m_id or v.get("new_media_raw_id") == clean_m_id or v.get("restored_image_id") == clean_m_id or v.get("restored_media_raw_id") == clean_m_id or k == clean_m_id:
+                        orig_m_id = k
+                        break
+
+                backup_rel = f"backups/{clean_prod_id}/{orig_m_id}_orig.jpg"
+                has_backup = os.path.exists(backup_rel) and os.path.getsize(backup_rel) > 0
+
+                # Kiểm tra trạng thái đã gắn logo của từng media
+                is_logo_applied = False
+                if orig_m_id in manifest:
+                    m_info = manifest[orig_m_id]
+                    if m_info.get("is_applied") is True:
+                        is_logo_applied = True
+                    elif m_info.get("is_applied") is False:
+                        is_logo_applied = False
+                    elif m_info.get("applied_at") and not m_info.get("restored_at"):
+                        is_logo_applied = True
+
+                media_list.append({
+                    "id": m_id,
+                    "raw_id": clean_m_id,
+                    "orig_raw_id": orig_m_id,
+                    "position": pos_idx,
+                    "url": url,
+                    "has_backup": has_backup,
+                    "backup_url": f"/{backup_rel}" if has_backup else None,
+                    "is_logo_applied": is_logo_applied
+                })
+
+            results.append({
+                "id": gid,
+                "raw_id": clean_prod_id,
+                "handle": prod.get("handle", ""),
+                "title": prod.get("title", ""),
+                "tags": tags,
+                "is_logo_updated": is_logo_updated,
+                "media": media_list
+            })
+    except ProxySafetyException as pse:
+        return JSONResponse({"success": False, "error": str(pse)}, status_code=503)
+
+    return JSONResponse({"success": True, "products": results})
+
+
+@app.post("/api/products/backup-media")
+async def backup_product_media(request: Request):
+    try:
+        # Chốt chặn an toàn Proxy Gateway
+        proxies = get_shopify_request_proxies()
+    except (ProxySafetyException, Exception) as pe:
+        if "CHỐT CHẶN AN TOÀN" in str(pe) or isinstance(pe, ProxySafetyException):
+            return JSONResponse({"success": False, "error": str(pe)}, status_code=503)
+        return JSONResponse({"success": False, "error": str(pe)}, status_code=500)
+
+    try:
+        payload = await request.json()
+    except Exception:
+        return JSONResponse({"success": False, "error": "Invalid JSON body"}, status_code=400)
+
+    product_id = payload.get("product_id", "")
+    media_id = payload.get("media_id", "")
+    orig_media_id = payload.get("orig_media_id", "")
+    image_url = payload.get("image_url", "")
+    position = payload.get("position")
+    product_title = payload.get("product_title", "")
+
+    if not product_id or not media_id or not image_url:
+        return JSONResponse({"success": False, "error": "Thiếu thông tin product_id, media_id hoặc image_url"}, status_code=400)
+
+    clean_prod_id = str(product_id).split("/")[-1].strip()
+    clean_media_id = str(media_id).split("/")[-1].strip()
+    clean_orig_id = str(orig_media_id).split("/")[-1].strip() if orig_media_id else clean_media_id
+
+    try:
+        if position is None:
+            position = get_image_position(clean_prod_id, media_id)
+    except ProxySafetyException as pse:
+        return JSONResponse({"success": False, "error": str(pse)}, status_code=503)
+
+    target_dir = os.path.join("backups", clean_prod_id)
+    os.makedirs(target_dir, exist_ok=True)
+
+    manifest_file = os.path.join(target_dir, "manifest.json")
+    manifest = {}
+    if os.path.exists(manifest_file):
+        try:
+            with open(manifest_file, "r", encoding="utf-8") as mf:
+                manifest = json.load(mf)
+        except Exception:
+            manifest = {}
+
+    # Tra cứu liên kết trong manifest để luôn bảo tồn đúng ID ảnh gốc ban đầu
+    for k, v in manifest.items():
+        if v.get("new_image_id") in [clean_media_id, clean_orig_id] or v.get("new_media_raw_id") in [clean_media_id, clean_orig_id] or v.get("restored_image_id") in [clean_media_id, clean_orig_id] or v.get("restored_media_raw_id") in [clean_media_id, clean_orig_id] or k in [clean_media_id, clean_orig_id]:
+            clean_orig_id = k
+            break
+
+    backup_file = os.path.join(target_dir, f"{clean_orig_id}_orig.jpg")
+    temp_file = os.path.join(target_dir, f"{clean_orig_id}_orig.tmp")
+
+    # Nếu file tồn tại dưới tên clean_media_id thì chuyển sang sử dụng nó
+    if not os.path.exists(backup_file):
+        alt_cand = os.path.join(target_dir, f"{clean_media_id}_orig.jpg")
+        if os.path.exists(alt_cand) and os.path.getsize(alt_cand) > 0:
+            backup_file = alt_cand
+            clean_orig_id = clean_media_id
+
+    # Chốt bảo tồn vĩnh viễn: Nếu file backup đã tồn tại và hợp lệ trên VPS, xác thực và bảo toàn 100%
+    if os.path.exists(backup_file) and os.path.getsize(backup_file) > 0:
+        try:
+            with open(backup_file, "rb") as f:
+                existing_bytes = f.read()
+            test_img = Image.open(io.BytesIO(existing_bytes))
+            test_img.verify()
+            bio_full = Image.open(io.BytesIO(existing_bytes))
+            img_w, img_h = bio_full.size
+
+            # Cập nhật position và product_title vào manifest nếu có
+            if clean_orig_id in manifest:
+                if position is not None:
+                    manifest[clean_orig_id]["position"] = position
+                if product_title:
+                    manifest[clean_orig_id]["product_title"] = product_title
+                with open(manifest_file, "w", encoding="utf-8") as mf:
+                    json.dump(manifest, mf, indent=2, ensure_ascii=False)
+
+            return JSONResponse({
+                "success": True,
+                "backup_url": f"/backups/{clean_prod_id}/{clean_orig_id}_orig.jpg",
+                "file_size": len(existing_bytes),
+                "dimensions": f"{img_w}x{img_h}",
+                "position": position or manifest.get(clean_orig_id, {}).get("position", 1),
+                "message": "Bản sao lưu gốc trên VPS đã tồn tại, được bảo tồn vĩnh viễn và xác thực hoàn hảo 100%!"
+            })
+        except Exception as e:
+            print(f"Existing backup verification error: {e}, will re-download.")
+
+    try:
+        # 1. Download image from CDN (qua Proxy nếu bật)
+        try:
+            resp = requests.get(image_url, proxies=proxies, timeout=30)
+        except (requests.exceptions.ProxyError, requests.exceptions.ConnectTimeout) as pe:
+            if proxies:
+                mark_proxy_unstable(str(pe))
+                return JSONResponse({"success": False, "error": "CHỐT CHẶN AN TOÀN: Proxy đang BẬT nhưng mất kết nối/không ổn định! Đã chặn toàn bộ request đi đến Shopify để bảo vệ gian hàng."}, status_code=503)
+            raise
+
+        if resp.status_code != 200:
+            raise Exception(f"Không thể tải ảnh từ Shopify CDN (HTTP {resp.status_code})")
+
+        content = resp.content
+        if len(content) == 0:
+            raise Exception("Ảnh tải về từ Shopify CDN có kích thước 0 byte")
+
+        # 2. Strict Verification with PIL
+        bio = io.BytesIO(content)
+        test_img = Image.open(bio)
+        img_format = test_img.format
+        img_width, img_height = test_img.size
+        test_img.verify()
+
+        # Re-check decoding fully
+        bio2 = io.BytesIO(content)
+        test_img2 = Image.open(bio2)
+        test_img2.load()
+
+        # 3. Write to temporary file and atomic rename
+        with open(temp_file, "wb") as f:
+            f.write(content)
+
+        if os.path.exists(backup_file):
+            os.remove(backup_file)
+        os.rename(temp_file, backup_file)
+
+        saved_size = os.path.getsize(backup_file)
+        if saved_size == 0:
+            raise Exception("File sao lưu ghi trên đĩa VPS có kích thước 0 bytes")
+
+        # 4. Update manifest.json với trường position và product_title
+        manifest[clean_orig_id] = {
+            "product_id": clean_prod_id,
+            "product_title": product_title,
+            "media_id": clean_orig_id,
+            "position": position,
+            "original_url": image_url,
+            "backup_file": f"backups/{clean_prod_id}/{clean_orig_id}_orig.jpg",
+            "file_size": saved_size,
+            "width": img_width,
+            "height": img_height,
+            "format": img_format,
+            "created_at": datetime.now().isoformat()
+        }
+        with open(manifest_file, "w", encoding="utf-8") as mf:
+            json.dump(manifest, mf, indent=2, ensure_ascii=False)
+
+        return JSONResponse({
+            "success": True,
+            "backup_url": f"/backups/{clean_prod_id}/{clean_orig_id}_orig.jpg",
+            "file_size": saved_size,
+            "dimensions": f"{img_width}x{img_height}",
+            "position": position,
+            "message": "Đã sao lưu ảnh gốc vĩnh viễn và hoàn hảo trên VPS!"
+        })
+    except ProxySafetyException as pse:
+        return JSONResponse({"success": False, "error": str(pse)}, status_code=503)
+    except Exception as e:
+        if os.path.exists(temp_file):
+            try:
+                os.remove(temp_file)
+            except Exception:
+                pass
+        print(f"Error in backup_product_media: {e}")
+        if "CHỐT CHẶN AN TOÀN" in str(e):
+            return JSONResponse({"success": False, "error": str(e)}, status_code=503)
+        return JSONResponse({"success": False, "error": f"LỖI SAO LƯU VPS (DỪNG BƯỚC 2): {str(e)}"}, status_code=500)
+
+
+@app.post("/api/products/apply-media-update")
+async def apply_media_update(request: Request):
+    try:
+        # Chốt chặn an toàn Proxy Gateway
+        proxies = get_shopify_request_proxies()
+    except Exception as pe:
+        return JSONResponse({"success": False, "error": str(pe)}, status_code=503)
+
+    try:
+        payload = await request.json()
+    except Exception:
+        return JSONResponse({"success": False, "error": "Invalid JSON body"}, status_code=400)
+
+    product_id = payload.get("product_id", "")
+    old_media_id = payload.get("old_media_id", "")
+    orig_media_id = payload.get("orig_media_id", "")
+    image_base64 = payload.get("image_base64", "")
+    position = payload.get("position")
+
+    if not product_id or not old_media_id or not image_base64:
+        return JSONResponse({"success": False, "error": "Thiếu product_id, old_media_id hoặc image_base64"}, status_code=400)
+
+    clean_prod_id = str(product_id).split("/")[-1].strip()
+    clean_media_id = str(old_media_id).split("/")[-1].strip()
+    clean_orig_id = str(orig_media_id).split("/")[-1].strip() if orig_media_id else clean_media_id
+
+    # CHỐT AN TOÀN KÉP: Kiểm tra file backup trên VPS (thử cả orig_id, clean_media_id, và manifest)
+    backup_file = os.path.join("backups", clean_prod_id, f"{clean_orig_id}_orig.jpg")
+    manifest_file = os.path.join("backups", clean_prod_id, "manifest.json")
+    manifest = {}
+    if os.path.exists(manifest_file):
+        try:
+            with open(manifest_file, "r", encoding="utf-8") as mf:
+                manifest = json.load(mf)
+        except Exception:
+            manifest = {}
+
+    if not os.path.exists(backup_file):
+        # Thử fallback qua clean_media_id
+        cand1 = os.path.join("backups", clean_prod_id, f"{clean_media_id}_orig.jpg")
+        if os.path.exists(cand1) and os.path.getsize(cand1) > 0:
+            backup_file = cand1
+            clean_orig_id = clean_media_id
+        else:
+            # Thử lookup qua manifest
+            for k, v in manifest.items():
+                if v.get("new_image_id") in [clean_orig_id, clean_media_id] or v.get("new_media_raw_id") in [clean_orig_id, clean_media_id] or k in [clean_orig_id, clean_media_id]:
+                    cand2 = os.path.join("backups", clean_prod_id, f"{k}_orig.jpg")
+                    if os.path.exists(cand2) and os.path.getsize(cand2) > 0:
+                        backup_file = cand2
+                        clean_orig_id = k
+                        break
+
+    if not os.path.exists(backup_file) or os.path.getsize(backup_file) == 0:
+        return JSONResponse({
+            "success": False,
+            "error": "CHỐT AN TOÀN CHẶN: Chưa có bản sao lưu gốc trên VPS! Vui lòng thực hiện Bước 1 trước."
+        }, status_code=400)
+
+    clean_b64 = re.sub(r"^data:image/[^;]+;base64,", "", image_base64.strip())
+
+    # Xác định position chính xác của media cũ để duy trì nguyên vẹn thứ tự ảnh
+    try:
+        if position is None:
+            position = get_image_position(clean_prod_id, old_media_id)
+    except ProxySafetyException as pse:
+        return JSONResponse({"success": False, "error": str(pse)}, status_code=503)
+
+    # 1. Upload ảnh mới lên Shopify qua REST Admin API (qua Proxy nếu bật)
+    creds = get_logo_updater_credentials()
+    shop = creds["shop"]
+    headers = creds["headers"]
+    graphql_url = creds["graphql_url"]
+
+    rest_url = f"https://{shop}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/products/{clean_prod_id}/images.json"
+    upload_payload = {
+        "image": {
+            "attachment": clean_b64,
+            "filename": f"wrydeco_logo_{clean_media_id}.jpg"
+        }
+    }
+    if position is not None:
+        upload_payload["image"]["position"] = position
+
+    try:
+        res = requests.post(rest_url, json=upload_payload, headers=headers, proxies=proxies, timeout=45)
+        if not res.ok:
+            return JSONResponse({"success": False, "error": f"Lỗi upload ảnh lên Shopify REST API: {res.text}"}, status_code=500)
+        
+        image_data = res.json().get("image", {})
+        new_prod_img_id = image_data.get("id")
+        new_media_gid = image_data.get("admin_graphql_api_id")
+        new_image_url = image_data.get("src")
+        new_raw_id = new_media_gid.split("/")[-1] if new_media_gid else str(new_prod_img_id)
+        if not new_media_gid:
+            new_media_gid = f"gid://shopify/MediaImage/{new_raw_id}"
+    except (requests.exceptions.ProxyError, requests.exceptions.ConnectTimeout) as pe:
+        if proxies:
+            mark_proxy_unstable(str(pe))
+            return JSONResponse({"success": False, "error": "CHỐT CHẶN AN TOÀN: Proxy đang BẬT nhưng mất kết nối/không ổn định! Đã chặn toàn bộ request đi đến Shopify để bảo vệ gian hàng."}, status_code=503)
+        return JSONResponse({"success": False, "error": f"Lỗi kết nối Shopify API: {str(pe)}"}, status_code=500)
+    except ProxySafetyException as pse:
+        return JSONResponse({"success": False, "error": str(pse)}, status_code=503)
+    except Exception as e:
+        if "CHỐT CHẶN AN TOÀN" in str(e):
+            return JSONResponse({"success": False, "error": str(e)}, status_code=503)
+        return JSONResponse({"success": False, "error": f"Lỗi kết nối Shopify API: {str(e)}"}, status_code=500)
+
+    try:
+        # 2. Xóa media cũ khỏi storefront Shopify (thử GraphQL rồi fallback REST)
+        # TUYỆT ĐỐI BẢO TỒN VĨNH VIỄN FILE BACKUP TRÊN VPS!
+        delete_shopify_image_or_media(clean_prod_id, old_media_id)
+
+        # 3. Ghi nhận manifest
+        try:
+            target_k = clean_orig_id if clean_orig_id in manifest else clean_media_id
+            if target_k not in manifest:
+                manifest[target_k] = {
+                    "product_id": clean_prod_id,
+                    "media_id": target_k,
+                    "position": position,
+                    "backup_file": f"backups/{clean_prod_id}/{clean_orig_id}_orig.jpg"
+                }
+            if position is not None:
+                manifest[target_k]["position"] = position
+            manifest[target_k]["new_image_id"] = str(new_prod_img_id)
+            manifest[target_k]["new_media_gid"] = new_media_gid
+            manifest[target_k]["new_media_raw_id"] = str(new_raw_id)
+            manifest[target_k]["new_image_url"] = new_image_url
+            manifest[target_k]["is_applied"] = True
+            manifest[target_k]["applied_at"] = datetime.now().isoformat()
+            manifest[target_k].pop("restored_at", None)
+            manifest[target_k].pop("restored_image_id", None)
+            manifest[target_k].pop("restored_media_gid", None)
+            manifest[target_k].pop("restored_media_raw_id", None)
+            with open(manifest_file, "w", encoding="utf-8") as mf:
+                json.dump(manifest, mf, indent=2, ensure_ascii=False)
+        except Exception as me:
+            print(f"Manifest update warning: {me}")
+
+        # 4. Kiểm tra điều kiện gắn tag 'logo-updated'
+        # Chỉ khi 100% media hình ảnh của sản phẩm đã được update logo thì mới gắn tag!
+        prod_gid = f"gid://shopify/Product/{clean_prod_id}"
+        prod_info = fetch_product_with_media_by_id(clean_prod_id)
+        total_media_count = 0
+        actual_applied_media_count = 0
+        clean_old_id = str(old_media_id).split("/")[-1].strip()
+
+        if prod_info:
+            edges = prod_info.get("media", {}).get("edges", [])
+            # Chỉ xét media hình ảnh (MediaImage), loại trừ old_media_id nếu Shopify chưa kịp gỡ khỏi index
+            active_media_edges = [
+                e for e in edges
+                if e.get("node", {}).get("image", {}).get("url")
+                and str(e.get("node", {}).get("id", "")).split("/")[-1].strip() != clean_old_id
+            ]
+
+            edge_raw_ids = {str(e.get("node", {}).get("id", "")).split("/")[-1].strip() for e in active_media_edges}
+            if str(new_raw_id) not in edge_raw_ids:
+                edge_raw_ids.add(str(new_raw_id))
+
+            total_media_count = len(edge_raw_ids)
+
+            for eid in edge_raw_ids:
+                if eid == str(new_raw_id):
+                    actual_applied_media_count += 1
+                    continue
+                is_edge_applied = False
+                for k, v in manifest.items():
+                    if k == eid or v.get("new_image_id") == eid or v.get("new_media_raw_id") == eid:
+                        if v.get("is_applied") is True or (v.get("applied_at") and not v.get("restored_at")):
+                            is_edge_applied = True
+                            break
+                if is_edge_applied:
+                    actual_applied_media_count += 1
+
+        all_media_updated = False
+        if total_media_count > 0 and actual_applied_media_count >= total_media_count:
+            try:
+                tag_success, tag_msg = add_tags_to_product(prod_gid, ["logo-updated"], headers=headers, graphql_url=graphql_url)
+                all_media_updated = True
+            except ProxySafetyException:
+                raise
+            except Exception as te:
+                print(f"Error adding tag logo-updated: {te}")
+                all_media_updated = False
+        else:
+            # Nếu chưa đủ 100% media có logo: đảm bảo không gắn tag, gỡ bỏ nếu có
+            try:
+                if prod_info and "logo-updated" in prod_info.get("tags", []):
+                    remove_tags_from_product(prod_gid, ["logo-updated"], headers=headers, graphql_url=graphql_url)
+            except ProxySafetyException:
+                raise
+            except Exception as rem_err:
+                print(f"Error removing tag logo-updated: {rem_err}")
+            all_media_updated = False
+    except ProxySafetyException as pse:
+        return JSONResponse({"success": False, "error": str(pse)}, status_code=503)
+
+    return JSONResponse({
+        "success": True,
+        "message": "Cập nhật ảnh có logo lên Shopify thành công. Bản sao lưu gốc trên VPS được bảo tồn vĩnh viễn!",
+        "all_media_updated": all_media_updated,
+        "applied_count": actual_applied_media_count,
+        "total_media_count": total_media_count,
+        "new_media": {
+            "id": new_media_gid,
+            "raw_id": str(new_raw_id),
+            "product_image_id": str(new_prod_img_id),
+            "orig_raw_id": str(clean_orig_id),
+            "url": new_image_url,
+            "position": position
+        }
+    })
+
+
+@app.post("/api/products/rollback-media")
+async def rollback_media(request: Request):
+    try:
+        # Chốt chặn an toàn Proxy Gateway
+        proxies = get_shopify_request_proxies()
+    except (ProxySafetyException, Exception) as pe:
+        if "CHỐT CHẶN AN TOÀN" in str(pe) or isinstance(pe, ProxySafetyException):
+            return JSONResponse({"success": False, "error": str(pe)}, status_code=503)
+        return JSONResponse({"success": False, "error": str(pe)}, status_code=500)
+
+    try:
+        payload = await request.json()
+    except Exception:
+        return JSONResponse({"success": False, "error": "Invalid JSON body"}, status_code=400)
+
+    product_id = payload.get("product_id", "")
+    current_media_id = payload.get("current_media_id", "")
+    original_media_id = payload.get("original_media_id", "")
+
+    if not product_id or not original_media_id:
+        return JSONResponse({"success": False, "error": "Thiếu product_id hoặc original_media_id để rollback"}, status_code=400)
+
+    clean_prod_id = str(product_id).split("/")[-1].strip()
+    clean_orig_id = str(original_media_id).split("/")[-1].strip()
+
+    backup_file = os.path.join("backups", clean_prod_id, f"{clean_orig_id}_orig.jpg")
+    manifest_file = os.path.join("backups", clean_prod_id, "manifest.json")
+    manifest = {}
+    if os.path.exists(manifest_file):
+        try:
+            with open(manifest_file, "r", encoding="utf-8") as mf:
+                manifest = json.load(mf)
+        except Exception:
+            manifest = {}
+    
+    # Fallback resolution 1: check manifest.json if clean_orig_id or current_media_id is mapped
+    if not os.path.exists(backup_file):
+        clean_cur_id = str(current_media_id).split("/")[-1].strip() if current_media_id else ""
+        for k, v in manifest.items():
+            if v.get("new_image_id") in [clean_orig_id, clean_cur_id] or v.get("new_media_raw_id") in [clean_orig_id, clean_cur_id] or k in [clean_orig_id, clean_cur_id]:
+                cand = os.path.join("backups", clean_prod_id, f"{k}_orig.jpg")
+                if os.path.exists(cand):
+                    backup_file = cand
+                    clean_orig_id = k
+                    break
+
+    # Fallback resolution 2: if only one backup exists in product folder
+    if not os.path.exists(backup_file):
+        prod_backup_dir = os.path.join("backups", clean_prod_id)
+        if os.path.exists(prod_backup_dir):
+            orig_files = [f for f in os.listdir(prod_backup_dir) if f.endswith("_orig.jpg")]
+            if len(orig_files) == 1:
+                backup_file = os.path.join(prod_backup_dir, orig_files[0])
+                clean_orig_id = orig_files[0].replace("_orig.jpg", "")
+
+    if not os.path.exists(backup_file):
+        return JSONResponse({"success": False, "error": f"Không tìm thấy bản sao lưu gốc {backup_file} trên ổ cứng VPS!"}, status_code=404)
+
+    try:
+        with open(backup_file, "rb") as f:
+            orig_bytes = f.read()
+        orig_b64 = base64.b64encode(orig_bytes).decode("utf-8")
+
+        # Xác định position ban đầu của ảnh cần thay thế
+        try:
+            pos = get_image_position(clean_prod_id, current_media_id)
+        except ProxySafetyException as pse:
+            return JSONResponse({"success": False, "error": str(pse)}, status_code=503)
+
+        if (pos is None or pos == 1) and clean_orig_id in manifest:
+            pos = manifest[clean_orig_id].get("position", pos or 1)
+
+        # 1. Upload lại ảnh gốc từ VPS lên Shopify đúng vị trí ban đầu (qua Proxy nếu bật)
+        creds = get_logo_updater_credentials()
+        shop = creds["shop"]
+        headers = creds["headers"]
+        graphql_url = creds["graphql_url"]
+
+        rest_url = f"https://{shop}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/products/{clean_prod_id}/images.json"
+        upload_payload = {
+            "image": {
+                "attachment": orig_b64,
+                "filename": f"restored_{clean_orig_id}.jpg",
+                "position": pos
+            }
+        }
+        try:
+            res = requests.post(rest_url, json=upload_payload, headers=headers, proxies=proxies, timeout=45)
+        except (requests.exceptions.ProxyError, requests.exceptions.ConnectTimeout) as pe:
+            if proxies:
+                mark_proxy_unstable(str(pe))
+                return JSONResponse({"success": False, "error": "CHỐT CHẶN AN TOÀN: Proxy đang BẬT nhưng mất kết nối/không ổn định! Đã chặn toàn bộ request đi đến Shopify để bảo vệ gian hàng."}, status_code=503)
+            raise
+
+        if not res.ok:
+            return JSONResponse({"success": False, "error": f"Lỗi tải lại ảnh gốc: {res.text}"}, status_code=500)
+
+        restored_img = res.json().get("image", {})
+        restored_prod_img_id = restored_img.get("id")
+        restored_media_gid = restored_img.get("admin_graphql_api_id")
+        restored_url = restored_img.get("src")
+        restored_raw_id = restored_media_gid.split("/")[-1] if restored_media_gid else str(restored_prod_img_id)
+        if not restored_media_gid:
+            restored_media_gid = f"gid://shopify/MediaImage/{restored_raw_id}"
+
+        # 2. Xóa ảnh có logo hiện tại khỏi Shopify (thử GraphQL rồi fallback REST)
+        if current_media_id:
+            delete_shopify_image_or_media(clean_prod_id, current_media_id)
+
+        # 3. Gỡ bỏ tag 'logo-updated'
+        prod_gid = f"gid://shopify/Product/{clean_prod_id}"
+        try:
+            rem_success, rem_msg = remove_tags_from_product(prod_gid, ["logo-updated"], headers=headers, graphql_url=graphql_url)
+        except ProxySafetyException:
+            raise
+        except Exception as te:
+            print(f"Lỗi khi gỡ tag logo-updated: {te}")
+
+        # 4. Ghi nhận manifest
+        try:
+            if clean_orig_id in manifest:
+                manifest[clean_orig_id]["is_applied"] = False
+                manifest[clean_orig_id]["restored_at"] = datetime.now().isoformat()
+                if pos is not None:
+                    manifest[clean_orig_id]["position"] = pos
+                manifest[clean_orig_id]["restored_image_id"] = str(restored_prod_img_id)
+                manifest[clean_orig_id]["restored_media_gid"] = restored_media_gid
+                manifest[clean_orig_id]["restored_media_raw_id"] = str(restored_raw_id)
+                manifest[clean_orig_id].pop("applied_at", None)
+                manifest[clean_orig_id].pop("new_image_id", None)
+                manifest[clean_orig_id].pop("new_media_gid", None)
+                manifest[clean_orig_id].pop("new_media_raw_id", None)
+                manifest[clean_orig_id].pop("new_image_url", None)
+            with open(manifest_file, "w", encoding="utf-8") as mf:
+                json.dump(manifest, mf, indent=2, ensure_ascii=False)
+        except Exception:
+            pass
+
+        return JSONResponse({
+            "success": True,
+            "message": "Đã khôi phục ảnh gốc thành công và gỡ bỏ tag logo-updated khỏi sản phẩm! Bản sao lưu VPS được bảo tồn vĩnh viễn.",
+            "all_media_updated": False,
+            "is_logo_updated": False,
+            "restored_media": {
+                "id": restored_media_gid,
+                "raw_id": str(restored_raw_id),
+                "product_image_id": str(restored_prod_img_id),
+                "orig_raw_id": str(clean_orig_id),
+                "url": restored_url,
+                "position": pos
+            }
+        })
+    except ProxySafetyException as pse:
+        return JSONResponse({"success": False, "error": str(pse)}, status_code=503)
+    except Exception as e:
+        if "CHỐT CHẶN AN TOÀN" in str(e):
+            return JSONResponse({"success": False, "error": str(e)}, status_code=503)
+        return JSONResponse({"success": False, "error": f"Lỗi khôi phục ảnh gốc: {str(e)}"}, status_code=500)
+
+
+@app.get("/api/products/backups")
+async def list_vps_backups():
+    """Liệt kê danh sách tất cả các file media đã backup trên VPS"""
+    try:
+        backups_dir = "backups"
+        if not os.path.exists(backups_dir):
+            return JSONResponse({
+                "success": True,
+                "total_files": 0,
+                "total_size_bytes": 0,
+                "total_size_formatted": "0 KB",
+                "total_products": 0,
+                "backups": []
+            })
+
+        backup_list = []
+        total_size_bytes = 0
+        product_dirs = [d for d in os.listdir(backups_dir) if os.path.isdir(os.path.join(backups_dir, d))]
+
+        for prod_id in product_dirs:
+            p_dir = os.path.join(backups_dir, prod_id)
+            manifest_file = os.path.join(p_dir, "manifest.json")
+            manifest = {}
+            if os.path.exists(manifest_file):
+                try:
+                    with open(manifest_file, "r", encoding="utf-8") as mf:
+                        manifest = json.load(mf)
+                except Exception:
+                    manifest = {}
+
+            # Quét tất cả file kết thúc bằng _orig.jpg trong thư mục sản phẩm
+            files = [f for f in os.listdir(p_dir) if f.endswith("_orig.jpg")]
+            for f in files:
+                f_path = os.path.join(p_dir, f)
+                try:
+                    f_size = os.path.getsize(f_path)
+                except Exception:
+                    f_size = 0
+                total_size_bytes += f_size
+
+                clean_orig_id = f.replace("_orig.jpg", "")
+                m_info = manifest.get(clean_orig_id, {})
+
+                # Format dung lượng
+                if f_size >= 1024 * 1024:
+                    f_size_fmt = f"{f_size / (1024 * 1024):.2f} MB"
+                else:
+                    f_size_fmt = f"{f_size / 1024:.1f} KB"
+
+                # Kích thước ảnh: ưu tiên manifest, nếu chưa có thì lấy từ PIL
+                dims = ""
+                if m_info.get("width") and m_info.get("height"):
+                    dims = f"{m_info.get('width')}x{m_info.get('height')}"
+                elif f_size > 0:
+                    try:
+                        with Image.open(f_path) as im:
+                            dims = f"{im.width}x{im.height}"
+                    except Exception:
+                        dims = "--"
+
+                # Thời gian tạo
+                mtime = os.path.getmtime(f_path)
+                created_iso = m_info.get("created_at") or datetime.fromtimestamp(mtime).isoformat()
+                try:
+                    dt = datetime.fromisoformat(created_iso)
+                    created_display = dt.strftime("%d/%m/%Y %H:%M:%S")
+                except Exception:
+                    created_display = datetime.fromtimestamp(mtime).strftime("%d/%m/%Y %H:%M:%S")
+
+                backup_list.append({
+                    "product_id": prod_id,
+                    "product_title": m_info.get("product_title", ""),
+                    "media_id": clean_orig_id,
+                    "filename": f,
+                    "file_url": f"/backups/{prod_id}/{f}",
+                    "file_size": f_size,
+                    "file_size_formatted": f_size_fmt,
+                    "dimensions": dims,
+                    "position": m_info.get("position"),
+                    "is_applied": m_info.get("is_applied", False),
+                    "created_at": created_iso,
+                    "created_display": created_display,
+                    "original_url": m_info.get("original_url", "")
+                })
+
+        # Sắp xếp mới nhất lên đầu
+        backup_list.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+
+        if total_size_bytes >= 1024 * 1024:
+            total_size_fmt = f"{total_size_bytes / (1024 * 1024):.2f} MB"
+        else:
+            total_size_fmt = f"{total_size_bytes / 1024:.1f} KB"
+
+        return JSONResponse({
+            "success": True,
+            "total_files": len(backup_list),
+            "total_size_bytes": total_size_bytes,
+            "total_size_formatted": total_size_fmt,
+            "total_products": len(product_dirs),
+            "backups": backup_list
+        })
+    except Exception as e:
+        print(f"Error list_vps_backups: {e}")
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+
+
+
 
 

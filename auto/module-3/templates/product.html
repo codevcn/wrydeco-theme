@@ -88,7 +88,7 @@
 
         <main class="p-4 sm:p-8">
     <div class="mx-auto">
-        <div class="mb-6 flex items-center gap-4">
+        <div class="mb-6 flex items-center justify-between gap-4">
             <a href="/" class="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-800 font-medium transition-colors">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
                 Quay lại danh sách
@@ -217,6 +217,20 @@
 
             <!-- Right column: Metadata (SEO, Metafields, Type, Tags) -->
             <div class="space-y-8">
+                <!-- Duplicate This Product Card -->
+                <div class="bg-white rounded-xl shadow-sm border border-indigo-100 p-6">
+                    <h2 class="text-lg font-bold text-indigo-700 mb-4 border-b border-indigo-50 pb-3 flex items-center gap-2">
+                        <iconify-icon icon="mdi:content-copy" class="text-indigo-600 text-xl"></iconify-icon>
+                        Nhân bản sản phẩm
+                    </h2>
+                    <div class="space-y-4">
+                        <button type="button" onclick="openDuplicatePopup()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-4 rounded-lg flex justify-center items-center gap-2 transition-colors cursor-pointer shadow-sm">
+                            <iconify-icon icon="mdi:content-copy" class="text-lg"></iconify-icon>
+                            <span>DUPLICATE</span>
+                        </button>
+                    </div>
+                </div>
+
                 <!-- Remove This Product -->
                 <div class="bg-white rounded-xl shadow-sm border border-red-100 p-6">
                     <h2 class="text-lg font-bold text-red-600 mb-4 border-b border-red-50 pb-3 flex items-center gap-2">
@@ -567,7 +581,15 @@
             {% set ns.amazon_link = mf.value %}
         {% endif %}
     {% endfor %}
-    <div class="fixed top-24 right-4 sm:right-8 flex flex-row gap-2 z-50">
+    <div class="fixed top-[80px] right-4 sm:right-8 flex flex-row gap-2 z-50">
+        <!-- DUPLICATE Button -->
+        <div class="relative group flex items-center justify-end">
+            <button onclick="openDuplicatePopup()" class="bg-indigo-600 text-white px-3.5 py-3 rounded-full shadow-lg hover:bg-indigo-700 transition-all flex items-center justify-center focus:outline-none cursor-pointer border-none gap-1.5" title="Duplicate Product">
+                <iconify-icon icon="mdi:content-copy" class="text-base"></iconify-icon>
+                <span class="font-bold text-xs uppercase">DUPLICATE</span>
+            </button>
+        </div>
+
         <!-- SHOPIFY Button -->
         <div class="relative group flex items-center justify-end">
             <button onclick="openShopifyUrl()" class="bg-gray-800 text-white p-3 rounded-full shadow-lg hover:bg-black transition-all flex items-center justify-center focus:outline-none cursor-pointer border-none" title="Open in Shopify Admin">
@@ -1101,6 +1123,64 @@
                             Lưu danh mục
                         </button>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Duplicate Product Modal -->
+    <div id="duplicateModal" class="fixed inset-0 z-[100] hidden">
+        <div class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity" onclick="closeDuplicatePopup()"></div>
+        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+            <div class="relative bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:max-w-lg w-full ring-1 ring-gray-900/5">
+                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <div class="sm:flex sm:items-start">
+                        <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-indigo-100 sm:mx-0 sm:h-10 sm:w-10">
+                            <iconify-icon icon="mdi:content-copy" class="text-2xl text-indigo-600"></iconify-icon>
+                        </div>
+                        <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-lg leading-6 font-bold text-gray-900" id="duplicate-modal-title">Xác nhận nhân bản sản phẩm</h3>
+                                <button type="button" onclick="closeDuplicatePopup()" class="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100 transition-colors">
+                                    <iconify-icon icon="mdi:close" class="text-xl"></iconify-icon>
+                                </button>
+                            </div>
+                            <p class="mt-2 text-sm text-gray-600">Bạn có chắc chắn muốn nhân bản sản phẩm này trên Shopify không?</p>
+                            
+                            <!-- Thông tin sản phẩm: Title, Handle, ID -->
+                            <div class="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-xl space-y-2 text-sm">
+                                <div>
+                                    <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Title:</span>
+                                    <p class="font-bold text-gray-900 break-words mt-0.5" id="dup-prod-title">{{ product.title }}</p>
+                                </div>
+                                <div>
+                                    <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Handle:</span>
+                                    <p class="font-mono text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded text-xs inline-block mt-0.5" id="dup-prod-handle">{{ product.handle }}</p>
+                                </div>
+                                <div>
+                                    <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">ID:</span>
+                                    <p class="font-mono text-gray-700 mt-0.5" id="dup-prod-id">{{ product.id }}</p>
+                                </div>
+                            </div>
+
+                            <!-- Message Textbox thông báo -->
+                            <div id="duplicateMessageBoxContainer" class="mt-4">
+                                <label for="duplicateMessageText" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Thông báo kết quả (Message Textbox)</label>
+                                <div id="duplicateMessageStatus" class="hidden mb-2 rounded-lg p-3 text-sm font-medium"></div>
+                                <textarea id="duplicateMessageText" readonly rows="3" class="w-full text-xs font-mono p-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 outline-none resize-none focus:ring-1 focus:ring-indigo-400" placeholder="Nhấn nút xác nhận bên dưới để bắt đầu nhân bản sản phẩm..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse border-t border-gray-100 gap-3">
+                    <!-- Nút xác nhận màu xanh tím -->
+                    <button type="button" id="btnConfirmDuplicate" onclick="submitDuplicateProduct()" class="w-full inline-flex justify-center rounded-xl shadow-md px-5 py-2.5 bg-indigo-600 text-sm font-bold text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:w-auto items-center gap-2 transition-colors cursor-pointer">
+                        <iconify-icon icon="mdi:content-copy" class="text-lg"></iconify-icon>
+                        <span>Xác nhận nhân bản</span>
+                    </button>
+                    <button type="button" onclick="closeDuplicatePopup()" class="mt-3 sm:mt-0 w-full inline-flex justify-center rounded-xl border border-gray-300 shadow-sm px-4 py-2.5 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:w-auto transition-colors cursor-pointer">
+                        Hủy
+                    </button>
                 </div>
             </div>
         </div>
@@ -1740,6 +1820,92 @@
                 alert("Lỗi: " + err);
                 btn.innerHTML = originalText;
                 btn.disabled = false;
+            }
+        }
+
+        // DUPLICATE PRODUCT LOGIC
+        function openDuplicatePopup() {
+            document.getElementById('duplicateModal').classList.remove('hidden');
+            const statusEl = document.getElementById('duplicateMessageStatus');
+            const textBox = document.getElementById('duplicateMessageText');
+            statusEl.classList.add('hidden');
+            statusEl.className = 'hidden mb-2 rounded-lg p-3 text-sm font-medium';
+            statusEl.innerHTML = '';
+            textBox.value = 'Sẵn sàng nhân bản. Nhấn nút "Xác nhận nhân bản" bên dưới để tiến hành.';
+            textBox.className = 'w-full text-xs font-mono p-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 outline-none resize-none focus:ring-1 focus:ring-indigo-400';
+            
+            const btn = document.getElementById('btnConfirmDuplicate');
+            btn.disabled = false;
+            btn.innerHTML = `<iconify-icon icon="mdi:content-copy" class="text-lg"></iconify-icon> <span>Xác nhận nhân bản</span>`;
+            btn.className = 'w-full inline-flex justify-center rounded-xl shadow-md px-5 py-2.5 bg-indigo-600 text-sm font-bold text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:w-auto items-center gap-2 transition-colors cursor-pointer';
+        }
+
+        function closeDuplicatePopup() {
+            document.getElementById('duplicateModal').classList.add('hidden');
+        }
+
+        async function submitDuplicateProduct() {
+            const btn = document.getElementById('btnConfirmDuplicate');
+            const statusEl = document.getElementById('duplicateMessageStatus');
+            const textBox = document.getElementById('duplicateMessageText');
+            
+            btn.disabled = true;
+            btn.innerHTML = `<iconify-icon icon="mdi:loading" class="animate-spin text-lg"></iconify-icon> <span>Đang nhân bản...</span>`;
+            
+            statusEl.className = 'mb-2 rounded-lg p-3 text-sm font-medium bg-blue-50 border border-blue-200 text-blue-700 flex items-center gap-2';
+            statusEl.innerHTML = `<iconify-icon icon="mdi:loading" class="animate-spin text-xl text-blue-600 flex-shrink-0"></iconify-icon> <span>Đang xử lý nhân bản trên Shopify API... Vui lòng đợi trong giây lát.</span>`;
+            statusEl.classList.remove('hidden');
+            
+            textBox.value = 'Đang gửi yêu cầu nhân bản sản phẩm lên Shopify GraphQL Admin API...\nProduct ID: {{ product.id }}\nTitle: {{ product.title | replace("\"", "\\\"") | safe }}';
+            textBox.className = 'w-full text-xs font-mono p-3 bg-blue-50/50 border border-blue-200 rounded-lg text-blue-800 outline-none resize-none';
+
+            try {
+                const response = await fetch('/api/products/duplicate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify({
+                        product_id: '{{ product.id }}',
+                        title: '{{ product.title | replace("\'", "\\\'") | escape }}'
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    const newProd = result.newProduct || {};
+                    statusEl.className = 'mb-2 rounded-lg p-3 text-sm font-medium bg-green-50 border border-green-200 text-green-800 flex items-center gap-2';
+                    statusEl.innerHTML = `<iconify-icon icon="mdi:check-circle" class="text-xl text-green-600 flex-shrink-0"></iconify-icon> <span>Nhân bản thành công!</span>`;
+                    
+                    textBox.value = `[THÀNH CÔNG] ${result.message}\n` +
+                                    `----------------------------------------\n` +
+                                    `ID Mới: ${newProd.id || 'N/A'}\n` +
+                                    `Handle Mới: ${newProd.handle || 'N/A'}\n` +
+                                    `Tiêu Đề: ${newProd.title || 'N/A'}\n` +
+                                    `Link chi tiết: /products/${newProd.handle || ''}`;
+                    textBox.className = 'w-full text-xs font-mono p-3 bg-green-50 border border-green-300 rounded-lg text-green-900 outline-none resize-none font-semibold';
+                    
+                    btn.innerHTML = `<iconify-icon icon="mdi:check-bold" class="text-lg"></iconify-icon> <span>Đã nhân bản thành công</span>`;
+                    btn.className = 'w-full inline-flex justify-center rounded-xl shadow-md px-5 py-2.5 bg-green-600 text-sm font-bold text-white hover:bg-green-700 sm:w-auto items-center gap-2 transition-colors';
+                } else {
+                    statusEl.className = 'mb-2 rounded-lg p-3 text-sm font-medium bg-red-50 border border-red-200 text-red-700 flex items-center gap-2';
+                    statusEl.innerHTML = `<iconify-icon icon="mdi:alert-circle" class="text-xl text-red-600 flex-shrink-0"></iconify-icon> <span>Nhân bản thất bại!</span>`;
+                    
+                    textBox.value = `[THẤT BẠI] Lỗi: ${result.message || 'Không xác định'}\n` +
+                                    `Thời gian: ${new Date().toLocaleTimeString()}`;
+                    textBox.className = 'w-full text-xs font-mono p-3 bg-red-50 border border-red-300 rounded-lg text-red-900 outline-none resize-none';
+                    
+                    btn.disabled = false;
+                    btn.innerHTML = `<iconify-icon icon="mdi:content-copy" class="text-lg"></iconify-icon> <span>Thử lại</span>`;
+                }
+            } catch (error) {
+                statusEl.className = 'mb-2 rounded-lg p-3 text-sm font-medium bg-red-50 border border-red-200 text-red-700 flex items-center gap-2';
+                statusEl.innerHTML = `<iconify-icon icon="mdi:alert-circle" class="text-xl text-red-600 flex-shrink-0"></iconify-icon> <span>Lỗi mạng!</span>`;
+                
+                textBox.value = `[LỖI MẠNG] Không thể kết nối đến máy chủ: ${error.message}`;
+                textBox.className = 'w-full text-xs font-mono p-3 bg-red-50 border border-red-300 rounded-lg text-red-900 outline-none resize-none';
+                
+                btn.disabled = false;
+                btn.innerHTML = `<iconify-icon icon="mdi:content-copy" class="text-lg"></iconify-icon> <span>Thử lại</span>`;
             }
         }
 

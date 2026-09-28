@@ -41,7 +41,7 @@ try:
     print("Kết nối thành công. Đang tải code lên...")
     
     app_dir = f"/home/{user}/shopify-admin-app"
-    ssh.exec_command(f"mkdir -p {app_dir}/templates {app_dir}/static")
+    ssh.exec_command(f"mkdir -p {app_dir}/templates {app_dir}/static {app_dir}/assets {app_dir}/backups")
     
     sftp = ssh.open_sftp()
     
@@ -51,6 +51,28 @@ try:
     
     # Upload main.py
     upload_file("main.py", f"{app_dir}/main.py")
+    
+    # Upload requirements.txt
+    if os.path.exists("requirements.txt"):
+        upload_file("requirements.txt", f"{app_dir}/requirements.txt")
+
+    # Upload .env
+    if os.path.exists(".env"):
+        upload_file(".env", f"{app_dir}/.env")
+    
+    # Upload proxy_config.json if not present on remote
+    if os.path.exists("proxy_config.json"):
+        try:
+            sftp.stat(f"{app_dir}/proxy_config.json")
+        except (FileNotFoundError, IOError):
+            upload_file("proxy_config.json", f"{app_dir}/proxy_config.json")
+
+    # Upload logo_updater_config.json if not present on remote
+    if os.path.exists("logo_updater_config.json"):
+        try:
+            sftp.stat(f"{app_dir}/logo_updater_config.json")
+        except (FileNotFoundError, IOError):
+            upload_file("logo_updater_config.json", f"{app_dir}/logo_updater_config.json")
     
     # Upload templates
     for f in os.listdir("templates"):
@@ -62,6 +84,12 @@ try:
         for f in os.listdir("static"):
             if os.path.isfile(f"static/{f}"):
                 upload_file(f"static/{f}", f"{app_dir}/static/{f}")
+
+    # Upload assets
+    if os.path.exists("assets"):
+        for f in os.listdir("assets"):
+            if os.path.isfile(f"assets/{f}"):
+                upload_file(f"assets/{f}", f"{app_dir}/assets/{f}")
 
     sftp.close()
     print("Đã upload xong code.")
