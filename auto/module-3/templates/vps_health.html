@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/static/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+    <link rel="shortcut icon" href="/static/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png" />
+    <link rel="manifest" href="/static/site.webmanifest" />
+    <title>Kiểm tra sức khỏe VPS - Shopify Admin Manager</title>
+    <!-- Font Inter & Tailwind CSS v4 -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(1.15); }
+        }
+        .pulse-active {
+            animation: pulse-dot 2s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 shadow-xs sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Brand / Logo -->
+                <div class="flex items-center gap-3">
+                    <a target="_blank" rel="noopener noreferrer" href="/" class="flex items-center gap-2 text-indigo-600 font-bold text-xl hover:text-indigo-700 transition-colors">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                        </svg>
+                        <span>Shopify Admin</span>
+                    </a>
+                    <span class="text-gray-300">/</span>
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm font-semibold text-gray-800">Kiểm tra sức khỏe VPS</span>
+                        <span id="badge-top-status" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold {% if data.status == 'healthy' %}bg-emerald-50 text-emerald-700 border border-emerald-200{% elif data.status == 'warning' %}bg-amber-50 text-amber-700 border border-amber-200{% else %}bg-rose-50 text-rose-700 border border-rose-200{% endif %}">
+                            <span class="w-1.5 h-1.5 rounded-full pulse-active {% if data.status == 'healthy' %}bg-emerald-500{% elif data.status == 'warning' %}bg-amber-500{% else %}bg-rose-500{% endif %}"></span>
+                            <span id="badge-top-text">{% if data.status == 'healthy' %}Khỏe mạnh{% elif data.status == 'warning' %}Cần lưu ý{% else %}Cảnh báo cao{% endif %}</span>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Header Actions -->
+                <div class="flex items-center gap-3">
+                    <!-- Nút Refresh -->
+                    <button id="btn-refresh" onclick="refreshData(true)" class="inline-flex items-center gap-2 px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-sm font-medium rounded-xl border border-indigo-200 transition-colors shadow-xs cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                        <svg id="icon-refresh" class="w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                        <span>Làm mới ngay</span>
+                    </button>
+
+                    <!-- Auto-refresh Select -->
+                    <div class="hidden sm:flex items-center gap-1.5 bg-gray-100 px-3 py-1.5 rounded-xl text-xs text-gray-600">
+                        <span>Tự động:</span>
+                        <select id="select-auto-refresh" onchange="changeAutoRefresh(this.value)" class="bg-transparent font-semibold text-gray-800 focus:outline-none cursor-pointer">
+                            <option value="0">Tắt</option>
+                            <option value="10" selected>10s</option>
+                            <option value="30">30s</option>
+                            <option value="60">60s</option>
+                        </select>
+                    </div>
+
+                    <!-- Drawer Toggle -->
+                    <button id="drawer-toggle-btn" type="button" onclick="toggleDrawer()" class="p-2 text-gray-600 hover:text-indigo-600 hover:bg-gray-100 rounded-xl transition-colors focus:outline-none" title="Menu tiện ích">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    {% include 'drawer.html' %}
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-8">
+        <!-- Title & Status Subbar -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+            <div>
+                <h1 class="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight flex items-center gap-2.5">
+                    <svg class="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path>
+                    </svg>
+                    <span>Kiểm Tra Sức Khỏe VPS</span>
+                </h1>
+                <p class="text-sm text-gray-500 mt-1">
+                    Theo dõi trực tiếp tải CPU, trạng thái RAM, ổ đĩa và các dịch vụ nền tảng đảm bảo ứng dụng chạy thông suốt.
+                </p>
+            </div>
+            <div class="flex items-center gap-2 text-xs text-gray-500 bg-white border border-gray-200 px-3.5 py-2 rounded-xl shadow-xs self-start sm:self-auto">
+                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span>Cập nhật lúc: <strong id="lbl-last-update" class="text-gray-700">{{ data.timestamp }}</strong></span>
+                <span class="text-gray-300">|</span>
+                <span class="text-emerald-600 font-medium">Cache 5s an toàn</span>
+            </div>
+        </div>
+
+        <!-- Banner Cảnh Báo (nếu có) -->
+        <div id="box-warnings" class="mb-6 {% if not data.warnings %}hidden{% endif %}">
+            <div class="p-4 rounded-2xl border {% if data.status == 'critical' %}bg-rose-50 border-rose-200 text-rose-800{% else %}bg-amber-50 border-amber-200 text-amber-800{% endif %} flex items-start gap-3 shadow-xs">
+                <svg class="w-5 h-5 flex-shrink-0 mt-0.5 {% if data.status == 'critical' %}text-rose-600{% else %}text-amber-600{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                </svg>
+                <div class="flex-1 text-sm">
+                    <h4 class="font-bold mb-1">Cảnh báo hệ thống cần lưu ý:</h4>
+                    <ul id="list-warnings" class="list-disc pl-5 space-y-0.5">
+                        {% for w in data.warnings %}
+                            <li>{{ w }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4 Thẻ KPI Tổng Quan Nhanh -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <!-- Card 1: RAM Usage -->
+            <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs flex flex-col justify-between">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">Bộ nhớ RAM</span>
+                    <span id="kpi-ram-badge" class="px-2 py-0.5 rounded-full text-xs font-bold {% if data.memory.percent < 75 %}bg-emerald-50 text-emerald-700{% elif data.memory.percent < 88 %}bg-amber-50 text-amber-700{% else %}bg-rose-50 text-rose-700{% endif %}">
+                        <span id="kpi-ram-percent">{{ data.memory.percent }}</span>%
+                    </span>
+                </div>
+                <div class="my-2">
+                    <div class="flex items-baseline gap-2">
+                        <span id="kpi-ram-used" class="text-2xl font-black text-gray-900">{{ data.memory.used_mb }}</span>
+                        <span class="text-xs text-gray-500">/ <span id="kpi-ram-total">{{ data.memory.total_mb }}</span> MB</span>
+                    </div>
+                    <!-- Progress bar -->
+                    <div class="w-full bg-gray-100 rounded-full h-2.5 mt-2 overflow-hidden">
+                        <div id="bar-ram" class="h-2.5 rounded-full transition-all duration-500 {% if data.memory.percent < 75 %}bg-emerald-500{% elif data.memory.percent < 88 %}bg-amber-500{% else %}bg-rose-500{% endif %}" style="width: {{ data.memory.percent }}%"></div>
+                    </div>
+                </div>
+                <div class="text-xs text-gray-500 pt-2 border-t border-gray-100 flex items-center justify-between">
+                    <span>Khả dụng:</span>
+                    <strong id="kpi-ram-avail" class="text-gray-700">{{ data.memory.available_mb }} MB</strong>
+                </div>
+            </div>
+
+            <!-- Card 2: Ổ Đĩa / -->
+            <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs flex flex-col justify-between">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">Ổ Đĩa Gốc (/)</span>
+                    <span id="kpi-disk-badge" class="px-2 py-0.5 rounded-full text-xs font-bold {% if data.disk.percent < 80 %}bg-emerald-50 text-emerald-700{% elif data.disk.percent < 90 %}bg-amber-50 text-amber-700{% else %}bg-rose-50 text-rose-700{% endif %}">
+                        <span id="kpi-disk-percent">{{ data.disk.percent }}</span>%
+                    </span>
+                </div>
+                <div class="my-2">
+                    <div class="flex items-baseline gap-2">
+                        <span id="kpi-disk-used" class="text-2xl font-black text-gray-900">{{ data.disk.used_gb }}</span>
+                        <span class="text-xs text-gray-500">/ <span id="kpi-disk-total">{{ data.disk.total_gb }}</span> GB</span>
+                    </div>
+                    <!-- Progress bar -->
+                    <div class="w-full bg-gray-100 rounded-full h-2.5 mt-2 overflow-hidden">
+                        <div id="bar-disk" class="h-2.5 rounded-full transition-all duration-500 {% if data.disk.percent < 80 %}bg-emerald-500{% elif data.disk.percent < 90 %}bg-amber-500{% else %}bg-rose-500{% endif %}" style="width: {{ data.disk.percent }}%"></div>
+                    </div>
+                </div>
+                <div class="text-xs text-gray-500 pt-2 border-t border-gray-100 flex items-center justify-between">
+                    <span>Còn trống:</span>
+                    <strong id="kpi-disk-free" class="text-gray-700">{{ data.disk.free_gb }} GB</strong>
+                </div>
+            </div>
+
+            <!-- Card 3: CPU Load Average -->
+            <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs flex flex-col justify-between">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">Tải CPU (Load Avg)</span>
+                    <span class="px-2 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700">
+                        <span id="kpi-cpu-cores">{{ data.system.cpu_cores }}</span> Core(s)
+                    </span>
+                </div>
+                <div class="my-2">
+                    <div class="flex items-baseline gap-2">
+                        <span id="kpi-load-1m" class="text-2xl font-black text-gray-900">{{ data.system.load_avg['1m'] }}</span>
+                        <span class="text-xs text-gray-400">(1 phút gần nhất)</span>
+                    </div>
+                    <div class="text-xs text-gray-500 mt-2 flex items-center gap-3">
+                        <span>5m: <strong id="kpi-load-5m" class="text-gray-700">{{ data.system.load_avg['5m'] }}</strong></span>
+                        <span>15m: <strong id="kpi-load-15m" class="text-gray-700">{{ data.system.load_avg['15m'] }}</strong></span>
+                    </div>
+                </div>
+                <div class="text-xs text-gray-500 pt-2 border-t border-gray-100 flex items-center justify-between">
+                    <span>Trạng thái:</span>
+                    <strong id="kpi-load-status" class="text-emerald-600 font-semibold">Tải bình thường</strong>
+                </div>
+            </div>
+
+            <!-- Card 4: Uptime -->
+            <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs flex flex-col justify-between">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">Thời Gian Hoạt Động</span>
+                    <span class="inline-flex items-center gap-1 text-emerald-600 text-xs font-bold">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 pulse-active"></span>
+                        Online
+                    </span>
+                </div>
+                <div class="my-2">
+                    <span id="kpi-uptime" class="text-lg font-extrabold text-gray-900 leading-snug line-clamp-2">
+                        {{ data.system.uptime_string }}
+                    </span>
+                    <p class="text-xs text-gray-400 mt-1">Không ghi nhận gián đoạn</p>
+                </div>
+                <div class="text-xs text-gray-500 pt-2 border-t border-gray-100 flex items-center justify-between">
+                    <span>Hệ thống:</span>
+                    <strong id="kpi-hostname" class="text-gray-700 truncate max-w-[130px]" title="{{ data.system.hostname }}">{{ data.system.hostname }}</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chi Tiết 2 Cột Chuyên Sâu -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <!-- Cột Trái: RAM & Ổ Đĩa Chi Tiết -->
+            <div class="space-y-6">
+                <!-- Box Chi Tiết RAM & Swap -->
+                <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-xs">
+                    <h3 class="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        <span>Phân Bổ Bộ Nhớ RAM & Swap</span>
+                    </h3>
+
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100 text-sm">
+                            <span class="text-gray-600">Tổng dung lượng RAM (Total)</span>
+                            <span id="dt-ram-total" class="font-bold text-gray-900 font-mono">{{ data.memory.total_mb }} MB</span>
+                        </div>
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100 text-sm">
+                            <span class="text-gray-600">RAM đã dùng (Used)</span>
+                            <span id="dt-ram-used" class="font-bold text-indigo-600 font-mono">{{ data.memory.used_mb }} MB ({{ data.memory.percent }}%)</span>
+                        </div>
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100 text-sm">
+                            <span class="text-gray-600">RAM khả dụng (Available)</span>
+                            <span id="dt-ram-avail" class="font-bold text-emerald-600 font-mono">{{ data.memory.available_mb }} MB</span>
+                        </div>
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100 text-sm">
+                            <span class="text-gray-600">Bộ đệm & Cache (Buffers/Cache)</span>
+                            <span id="dt-ram-cache" class="font-semibold text-gray-700 font-mono">{{ data.memory.buffers_cached_mb }} MB</span>
+                        </div>
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100 text-sm">
+                            <span class="text-gray-600">Bộ nhớ ảo Swap đã dùng (Swap Used)</span>
+                            <span id="dt-swap-used" class="font-semibold text-gray-700 font-mono">{{ data.memory.swap_used_mb }} / {{ data.memory.swap_total_mb }} MB ({{ data.memory.swap_percent }}%)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Box Chi Tiết Lưu Trữ Ổ Đĩa -->
+                <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-xs">
+                    <h3 class="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path>
+                        </svg>
+                        <span>Phân Vùng Ổ Cứng Hệ Thống</span>
+                    </h3>
+
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100 text-sm">
+                            <span class="text-gray-600">Điểm gắn kết (Mount Point)</span>
+                            <span id="dt-disk-mount" class="font-bold text-gray-900 font-mono">{{ data.disk.mount }} (Phân vùng Root)</span>
+                        </div>
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100 text-sm">
+                            <span class="text-gray-600">Tổng dung lượng đĩa</span>
+                            <span id="dt-disk-total" class="font-bold text-gray-900 font-mono">{{ data.disk.total_gb }} GB</span>
+                        </div>
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100 text-sm">
+                            <span class="text-gray-600">Đã sử dụng</span>
+                            <span id="dt-disk-used" class="font-bold text-indigo-600 font-mono">{{ data.disk.used_gb }} GB ({{ data.disk.percent }}%)</span>
+                        </div>
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100 text-sm">
+                            <span class="text-gray-600">Còn trống khả dụng</span>
+                            <span id="dt-disk-free" class="font-bold text-emerald-600 font-mono">{{ data.disk.free_gb }} GB</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cột Phải: Services Đang Chạy & Mạng -->
+            <div class="space-y-6">
+                <!-- Box Services Đang Chạy -->
+                <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-xs">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-base font-bold text-gray-900 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                            </svg>
+                            <span>Dịch Vụ Cốt Lõi (Services Status)</span>
+                        </h3>
+                        <span class="text-xs text-gray-400">Systemd Manager</span>
+                    </div>
+
+                    <div id="container-services" class="space-y-3">
+                        {% for svc in data.services %}
+                        <div class="p-3.5 rounded-xl border {% if svc.is_healthy %}border-gray-100 bg-gray-50/60{% else %}border-rose-200 bg-rose-50/50{% endif %} flex items-center justify-between gap-3">
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2.5 h-2.5 rounded-full {% if svc.is_healthy %}bg-emerald-500 pulse-active{% else %}bg-rose-500{% endif %}"></span>
+                                    <strong class="text-sm font-bold text-gray-900 truncate">{{ svc.label }}</strong>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-0.5 truncate">{{ svc.description }}</p>
+                                <span class="text-[11px] font-mono text-gray-400">{{ svc.name }}</span>
+                            </div>
+                            <span class="px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex-shrink-0 {% if svc.is_healthy %}bg-emerald-50 text-emerald-700 border border-emerald-200{% else %}bg-rose-50 text-rose-700 border border-rose-200{% endif %}">
+                                {{ svc.status }}
+                            </span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Box Môi Trường & Mạng -->
+                <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-xs">
+                    <h3 class="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path>
+                        </svg>
+                        <span>Môi Trường & Cổng Mạng</span>
+                    </h3>
+
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100 text-sm">
+                            <span class="text-gray-600">Hệ điều hành</span>
+                            <span id="dt-env-os" class="font-bold text-gray-900">{{ data.system.os }}</span>
+                        </div>
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100 text-sm">
+                            <span class="text-gray-600">Linux Kernel</span>
+                            <span id="dt-env-kernel" class="font-mono text-xs text-gray-700 truncate max-w-[200px]" title="{{ data.system.kernel }}">{{ data.system.kernel }}</span>
+                        </div>
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100 text-sm">
+                            <span class="text-gray-600 flex items-center gap-1.5">
+                                <span>IPv4 Public (VPS)</span>
+                            </span>
+                            <div class="flex items-center gap-1.5">
+                                <span id="dt-env-ipv4" class="font-mono text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded">{{ data.network.public_ipv4 }}</span>
+                                <button type="button" onclick="copyToClipboard(document.getElementById('dt-env-ipv4').textContent, this)" class="text-gray-400 hover:text-indigo-600 p-1 rounded hover:bg-gray-100 transition-colors cursor-pointer" title="Sao chép IPv4">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100 text-sm">
+                            <span class="text-gray-600">IPv6 Public (VPS)</span>
+                            <span id="dt-env-ipv6" class="font-mono text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{{ data.network.public_ipv6 }}</span>
+                        </div>
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100 text-sm">
+                            <span class="text-gray-600">Tên miền công khai</span>
+                            <a target="_blank" rel="noopener noreferrer" href="https://{{ data.network.public_domain }}" class="text-indigo-600 font-bold hover:underline flex items-center gap-1">
+                                <span>{{ data.network.public_domain }}</span>
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                            </a>
+                        </div>
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100 text-sm">
+                            <span class="text-gray-600">Cổng ứng dụng nội bộ</span>
+                            <span class="font-mono text-xs bg-gray-100 text-gray-800 px-2 py-0.5 rounded font-bold">Port {{ data.network.fastapi_port }}</span>
+                        </div>
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100 text-sm">
+                            <span class="text-gray-600">Proxy Gateway Shopify</span>
+                            <span id="dt-env-proxy" class="font-semibold text-xs {% if data.network.proxy_gateway_enabled %}text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200{% else %}text-gray-600 bg-gray-100 px-2 py-0.5 rounded{% endif %}">
+                                {{ data.network.proxy_status }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Security & Performance Notice -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-gray-500 mb-8">
+            <div class="p-4 rounded-xl bg-gray-100/80 border border-gray-200 flex items-start gap-3">
+                <svg class="w-5 h-5 text-indigo-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                </svg>
+                <div>
+                    <strong class="font-semibold text-gray-800 block mb-0.5">Bảo Mật Tuyệt Đối (No Client Credentials)</strong>
+                    Toàn bộ quá trình kiểm tra thực thi khép kín tại máy chủ (Server-side). Không có bất kỳ mật khẩu, SSH key hay thông tin xác thực nhạy cảm nào được gửi về trình duyệt.
+                </div>
+            </div>
+            <div class="p-4 rounded-xl bg-gray-100/80 border border-gray-200 flex items-start gap-3">
+                <svg class="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                </svg>
+                <div>
+                    <strong class="font-semibold text-gray-800 block mb-0.5">Không Ảnh Hưởng Hiệu Suất (Zero Impact)</strong>
+                    Đọc dữ liệu qua các tệp ảo bộ nhớ kernel (/proc) và bộ đệm in-memory cache 5 giây. Đảm bảo 100% không làm chậm hoặc gián đoạn bất kỳ dịch vụ nào trên VPS.
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-200 py-4 px-6 text-center text-xs text-gray-500">
+        Shopify Admin App &copy; 2026 WRYDECO - Hệ thống giám sát sức khỏe VPS độc lập
+    </footer>
+
+    <script>
+        let autoRefreshTimer = null;
+        let isFetching = false;
+
+        async function refreshData(force = false) {
+            if (isFetching) return;
+            isFetching = true;
+
+            const icon = document.getElementById('icon-refresh');
+            if (icon) icon.classList.add('animate-spin');
+
+            try {
+                const res = await fetch('/api/vps-health?force=' + (force ? 'true' : 'false'));
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const d = await res.json();
+                updateUI(d);
+            } catch (err) {
+                console.error('Lỗi khi cập nhật sức khỏe VPS:', err);
+            } finally {
+                isFetching = false;
+                if (icon) icon.classList.remove('animate-spin');
+            }
+        }
+
+        function updateUI(d) {
+            if (!d) return;
+
+            // Timestamp
+            if (d.timestamp) {
+                const el = document.getElementById('lbl-last-update');
+                if (el) el.textContent = d.timestamp;
+            }
+
+            // Top Status Badge
+            const topBadge = document.getElementById('badge-top-status');
+            const topText = document.getElementById('badge-top-text');
+            if (topBadge && topText) {
+                topBadge.className = 'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ' +
+                    (d.status === 'healthy' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                     d.status === 'warning' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                     'bg-rose-50 text-rose-700 border border-rose-200');
+                topText.textContent = (d.status === 'healthy' ? 'Khỏe mạnh' : d.status === 'warning' ? 'Cần lưu ý' : 'Cảnh báo cao');
+            }
+
+            // Warnings Box
+            const boxWarn = document.getElementById('box-warnings');
+            const listWarn = document.getElementById('list-warnings');
+            if (boxWarn && listWarn) {
+                if (d.warnings && d.warnings.length > 0) {
+                    boxWarn.classList.remove('hidden');
+                    listWarn.innerHTML = d.warnings.map(w => `<li>${w}</li>`).join('');
+                } else {
+                    boxWarn.classList.add('hidden');
+                }
+            }
+
+            // Memory
+            if (d.memory) {
+                setTxt('kpi-ram-percent', d.memory.percent);
+                setTxt('kpi-ram-used', d.memory.used_mb);
+                setTxt('kpi-ram-total', d.memory.total_mb);
+                setTxt('kpi-ram-avail', d.memory.available_mb + ' MB');
+                setTxt('dt-ram-total', d.memory.total_mb + ' MB');
+                setTxt('dt-ram-used', d.memory.used_mb + ' MB (' + d.memory.percent + '%)');
+                setTxt('dt-ram-avail', d.memory.available_mb + ' MB');
+                setTxt('dt-ram-cache', d.memory.buffers_cached_mb + ' MB');
+                setTxt('dt-swap-used', d.memory.swap_used_mb + ' / ' + d.memory.swap_total_mb + ' MB (' + d.memory.swap_percent + '%)');
+
+                const barRam = document.getElementById('bar-ram');
+                if (barRam) {
+                    barRam.style.width = d.memory.percent + '%';
+                    barRam.className = 'h-2.5 rounded-full transition-all duration-500 ' +
+                        (d.memory.percent < 75 ? 'bg-emerald-500' : d.memory.percent < 88 ? 'bg-amber-500' : 'bg-rose-500');
+                }
+            }
+
+            // Disk
+            if (d.disk) {
+                setTxt('kpi-disk-percent', d.disk.percent);
+                setTxt('kpi-disk-used', d.disk.used_gb);
+                setTxt('kpi-disk-total', d.disk.total_gb);
+                setTxt('kpi-disk-free', d.disk.free_gb + ' GB');
+                setTxt('dt-disk-total', d.disk.total_gb + ' GB');
+                setTxt('dt-disk-used', d.disk.used_gb + ' GB (' + d.disk.percent + '%)');
+                setTxt('dt-disk-free', d.disk.free_gb + ' GB');
+
+                const barDisk = document.getElementById('bar-disk');
+                if (barDisk) {
+                    barDisk.style.width = d.disk.percent + '%';
+                    barDisk.className = 'h-2.5 rounded-full transition-all duration-500 ' +
+                        (d.disk.percent < 80 ? 'bg-emerald-500' : d.disk.percent < 90 ? 'bg-amber-500' : 'bg-rose-500');
+                }
+            }
+
+            // CPU & System
+            if (d.system) {
+                setTxt('kpi-cpu-cores', d.system.cpu_cores);
+                setTxt('kpi-uptime', d.system.uptime_string);
+                setTxt('kpi-hostname', d.system.hostname);
+                setTxt('dt-env-os', d.system.os);
+                setTxt('dt-env-kernel', d.system.kernel);
+
+                if (d.system.load_avg) {
+                    setTxt('kpi-load-1m', d.system.load_avg['1m']);
+                    setTxt('kpi-load-5m', d.system.load_avg['5m']);
+                    setTxt('kpi-load-15m', d.system.load_avg['15m']);
+
+                    const loadStatus = document.getElementById('kpi-load-status');
+                    if (loadStatus) {
+                        const ratio = d.system.load_avg['1m'] / (d.system.cpu_cores || 1);
+                        if (ratio > 1.5) {
+                            loadStatus.textContent = 'Tải nặng';
+                            loadStatus.className = 'text-rose-600 font-semibold';
+                        } else if (ratio > 1.0) {
+                            loadStatus.textContent = 'Tải vừa phải';
+                            loadStatus.className = 'text-amber-600 font-semibold';
+                        } else {
+                            loadStatus.textContent = 'Tải bình thường';
+                            loadStatus.className = 'text-emerald-600 font-semibold';
+                        }
+                    }
+                }
+            }
+
+            // Services
+            if (d.services && d.services.length > 0) {
+                const container = document.getElementById('container-services');
+                if (container) {
+                    container.innerHTML = d.services.map(svc => `
+                        <div class="p-3.5 rounded-xl border ${svc.is_healthy ? 'border-gray-100 bg-gray-50/60' : 'border-rose-200 bg-rose-50/50'} flex items-center justify-between gap-3">
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2.5 h-2.5 rounded-full ${svc.is_healthy ? 'bg-emerald-500 pulse-active' : 'bg-rose-500'}"></span>
+                                    <strong class="text-sm font-bold text-gray-900 truncate">${svc.label}</strong>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-0.5 truncate">${svc.description}</p>
+                                <span class="text-[11px] font-mono text-gray-400">${svc.name}</span>
+                            </div>
+                            <span class="px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex-shrink-0 ${svc.is_healthy ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}">
+                                ${svc.status}
+                            </span>
+                        </div>
+                    `).join('');
+                }
+            }
+
+            // Network
+            if (d.network) {
+                setTxt('dt-env-ipv4', d.network.public_ipv4);
+                setTxt('dt-env-ipv6', d.network.public_ipv6);
+                setTxt('dt-env-proxy', d.network.proxy_status);
+            }
+        }
+
+        function setTxt(id, val) {
+            const el = document.getElementById(id);
+            if (el && val !== undefined && val !== null) el.textContent = val;
+        }
+
+        function copyToClipboard(text, btn) {
+            if (!text || text.includes('Không khả dụng')) return;
+            navigator.clipboard.writeText(text).then(() => {
+                if (btn) {
+                    const originalHtml = btn.innerHTML;
+                    btn.innerHTML = '<span class="text-[10px] text-emerald-600 font-bold">Đã chép!</span>';
+                    setTimeout(() => {
+                        btn.innerHTML = originalHtml;
+                    }, 2000);
+                }
+            }).catch(err => {
+                console.error('Không thể sao chép:', err);
+            });
+        }
+
+        function changeAutoRefresh(seconds) {
+            if (autoRefreshTimer) {
+                clearInterval(autoRefreshTimer);
+                autoRefreshTimer = null;
+            }
+            const sec = parseInt(seconds, 10);
+            if (sec > 0) {
+                autoRefreshTimer = setInterval(() => {
+                    refreshData(false);
+                }, sec * 1000);
+            }
+        }
+
+        // Khởi động auto-refresh 10s mặc định
+        document.addEventListener('DOMContentLoaded', function() {
+            changeAutoRefresh(10);
+        });
+    </script>
+</body>
+</html>

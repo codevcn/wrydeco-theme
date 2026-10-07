@@ -20,18 +20,23 @@
         {{ block.shopify_attributes }}
       >
         <div class="curated-collections__card-bg">
-          {%- assign collection_image_alt = block.settings.image.alt | default: block.settings.title -%}
+          {%- assign collection_image_alt = '' -%}
           {%- if block.settings.image != blank -%}
             {{
               block.settings.image
               | image_url: width: 800
-              | image_tag: class: 'curated-collections__img', loading: 'lazy', alt: collection_image_alt
+              | image_tag:
+                class: 'curated-collections__img',
+                loading: 'lazy',
+                widths: '320, 480, 640, 800',
+                sizes: '(max-width: 47.999rem) 90vw, 40vw',
+                alt: collection_image_alt
             }}
           {%- else -%}
             {%- assign asset_img = 'curated-collections-img-' | append: forloop.index | append: '.png' -%}
             <img
               src="{{ asset_img | file_url }}"
-              alt="{{ collection_image_alt | escape }}"
+              alt=""
               class="curated-collections__img"
               loading="lazy"
               width="800"
@@ -64,15 +69,7 @@
 
 <div class="custom-section-divider"></div>
 
-{% stylesheet %}
-  @font-face {
-    font-family: 'Fraunces';
-    src: url('Fraunces.woff2') format('woff2');
-    font-weight: 100 900;
-    font-style: normal;
-    font-display: swap;
-  }
-
+{% style %}
   .curated-collections {
     padding-top: var(--sp-8, 64px);
     padding-bottom: var(--sp-8, 64px);
@@ -456,7 +453,7 @@
     pointer-events: none;
     user-select: none;
   }
-{% endstylesheet %}
+{% endstyle %}
 
 {% javascript %}
   document.addEventListener('DOMContentLoaded', () => {

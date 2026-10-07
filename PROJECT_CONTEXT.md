@@ -88,7 +88,6 @@ The studio features **6 official master artisans** modeled as Shopify Metaobject
 | **Product Detail** | `/products/[handle]` | [templates/product.json](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/templates/product.json) (Gallery, maker badge, specs, buy box) |
 | **Bespoke Service** | `/pages/customization` | [templates/page.customization.json](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/templates/page.customization.json) (Consultation brief form) |
 | **Brand Story** | `/pages/about-us` | [templates/page.about-us.json](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/templates/page.about-us.json) (Heritage, artisans, sustainability) |
-| **Visual Showroom** | `/pages/showroom` | [templates/page.showroom.json](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/templates/page.showroom.json) (Interactive space showcase) |
 | **Care Guide** | `/pages/care-guide` | [templates/page.care-guide.json](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/templates/page.care-guide.json) (Solid wood preservation & cleaning) |
 | **Customer FAQ** | `/pages/faq` | [templates/page.faq.json](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/templates/page.faq.json) (Shipping, crating, warranty, returns) |
 | **Contact Us** | `/pages/contact` | [templates/page.contact.json](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/templates/page.contact.json) (Inquiry form, US office address, hotline) |

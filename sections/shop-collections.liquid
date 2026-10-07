@@ -50,6 +50,13 @@
             assign card_image = col.products.first.featured_image
           endif
           assign card_alt = card_image.alt | default: col.title
+          assign card_sizes = '(min-width: 1281px) 18vw, (min-width: 769px) 31vw, 44vw'
+          assign card_position_is_odd = forloop.index | modulo: 2
+          if forloop.last
+            if card_position_is_odd == 1
+              assign card_sizes = '(min-width: 1281px) 18vw, (min-width: 769px) 31vw, 92vw'
+            endif
+          endif
 
           # Per-card destination, mapped by the source collection handle.
           # Defaults to the collection's own URL; the wall-shelf card is routed
@@ -77,9 +84,9 @@
                 | image_tag:
                   class: 'shop-collections__img',
                   loading: 'lazy',
-                  sizes: '(min-width: 1200px) 18vw, (min-width: 768px) 32vw, 86vw',
-                  widths: '900, 1200',
-                  alt: card_alt
+                  sizes: card_sizes,
+                  widths: '240, 360, 480, 640, 720, 900',
+                  alt: ''
               }}
             {%- else -%}
               {%- case forloop.index -%}
@@ -94,9 +101,19 @@
                 {%- else -%}
                   {%- assign fallback_image = 'home-colle-avt-5.png' -%}
               {%- endcase -%}
+              {%- assign fallback_image_url = fallback_image | file_url -%}
               <img
-                src="{{ fallback_image | file_url: width: 900 }}"
-                alt="{{ col.title | escape }}"
+                src="{{ fallback_image_url | append: '&width=720' }}"
+                srcset="
+                  {{ fallback_image_url | append: '&width=240' }} 240w,
+                  {{ fallback_image_url | append: '&width=360' }} 360w,
+                  {{ fallback_image_url | append: '&width=480' }} 480w,
+                  {{ fallback_image_url | append: '&width=640' }} 640w,
+                  {{ fallback_image_url | append: '&width=720' }} 720w,
+                  {{ fallback_image_url | append: '&width=900' }} 900w
+                "
+                sizes="{{ card_sizes }}"
+                alt=""
                 class="shop-collections__img"
                 loading="lazy"
                 width="900"

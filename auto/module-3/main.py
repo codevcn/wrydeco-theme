@@ -9120,6 +9120,558 @@ async def api_customers_toggle_proxy(request: Request):
     })
 
 
+# =====================================================================
+# VPS HEALTH MONITORING MODULE
+# =====================================================================
+_vps_health_cache = {
+    "timestamp": 0,
+    "data": None
+}
+VPS_HEALTH_CACHE_TTL = 5  # Giây - In-memory cache chống spam và triệt tiêu tải hệ thống
+
+_vps_ip_cache = {
+    "ipv4": None,
+    "ipv6": None,
+    "timestamp": 0
+}
+VPS_IP_CACHE_TTL = 1800  # 30 phút - Cache dài hạn vì IP Public rất hiếm khi thay đổi và tránh gọi HTTP không cần thiết
+
+def get_vps_public_ips():
+    global _vps_ip_cache
+    now_ts = time.time()
+    if _vps_ip_cache["ipv4"] and (now_ts - _vps_ip_cache["timestamp"] < VPS_IP_CACHE_TTL):
+        return _vps_ip_cache["ipv4"], _vps_ip_cache["ipv6"]
+
+    ipv4 = None
+    ipv6 = None
+
+    if sys.platform.startswith("linux"):
+        # 1. Thử lấy IPv4 qua api.ipify.org
+        try:
+            r4 = requests.get("https://api.ipify.org?format=text", timeout=2)
+            if r4.status_code == 200:
+                t = r4.text.strip()
+                if re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", t):
+                    ipv4 = t
+        except Exception:
+            pass
+
+        # Fallback IPv4 qua ifconfig.me
+        if not ipv4:
+            try:
+                r4 = requests.get("https://ifconfig.me/ip", timeout=2)
+                if r4.status_code == 200:
+                    t = r4.text.strip()
+                    if re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", t):
+                        ipv4 = t
+            except Exception:
+                pass
+
+        # Fallback DNS lookup
+        if not ipv4:
+            try:
+                import socket
+                ipv4 = socket.gethostbyname("wrydeco.shopify.vnote.site")
+            except Exception:
+                ipv4 = "20.222.21.81"
+
+        # 2. Thử lấy IPv6
+        try:
+            r6 = requests.get("https://api6.ipify.org?format=text", timeout=1.5)
+            if r6.status_code == 200 and ":" in r6.text:
+                ipv6 = r6.text.strip()
+        except Exception:
+            pass
+
+    else:
+        # Chạy ở Local Development
+        ipv4 = "20.222.21.81"
+        ipv6 = None
+
+    if not ipv4:
+        ipv4 = "20.222.21.81"
+
+    if not ipv6:
+        ipv6 = "Không khả dụng (Chưa cấu hình)"
+
+    _vps_ip_cache["ipv4"] = ipv4
+    _vps_ip_cache["ipv6"] = ipv6
+    _vps_ip_cache["timestamp"] = now_ts
+    return ipv4, ipv6
+
+def parse_vps_uptime_seconds(seconds_float):
+    try:
+        sec = int(float(seconds_float))
+        days = sec // 86400
+        hours = (sec % 86400) // 3600
+        minutes = (sec % 3600) // 60
+        parts = []
+        if days > 0:
+            parts.append(f"{days} ngày")
+        if hours > 0:
+            parts.append(f"{hours} giờ")
+        parts.append(f"{minutes} phút")
+        return ", ".join(parts) if parts else "Dưới 1 phút"
+    except Exception:
+        return "--"
+
+def parse_vps_raw_metrics(raw_text):
+    data = {
+        "timestamp": datetime.now().strftime("%H:%M:%S %d/%m/%Y"),
+        "source": "vps_remote",
+        "status": "healthy",
+        "warnings": [],
+        "system": {
+            "hostname": "Azure Linux VPS (wrydeco)",
+            "os": "Ubuntu Linux",
+            "kernel": "Linux",
+            "cpu_cores": 1,
+            "uptime_seconds": 0,
+            "uptime_string": "--",
+            "load_avg": {"1m": 0.0, "5m": 0.0, "15m": 0.0}
+        },
+        "memory": {
+            "total_mb": 0.0,
+            "used_mb": 0.0,
+            "free_mb": 0.0,
+            "available_mb": 0.0,
+            "buffers_cached_mb": 0.0,
+            "percent": 0.0,
+            "swap_total_mb": 0.0,
+            "swap_used_mb": 0.0,
+            "swap_percent": 0.0
+        },
+        "disk": {
+            "mount": "/",
+            "total_gb": 0.0,
+            "used_gb": 0.0,
+            "free_gb": 0.0,
+            "percent": 0.0
+        },
+        "services": [
+            {"name": "shopify-admin-app.service", "label": "Shopify Admin FastAPI", "description": "Quản trị Shopify Admin App (Port 8085)", "status": "unknown", "is_healthy": False},
+            {"name": "nginx", "label": "Nginx Reverse Proxy", "description": "Web Server & SSL Gateway (Port 80/443)", "status": "unknown", "is_healthy": False},
+            {"name": "ssh", "label": "OpenSSH Server", "description": "Cổng truy cập quản trị từ xa (Port 22)", "status": "unknown", "is_healthy": False}
+        ]
+    }
+
+    # 1. Parse Meminfo
+    mem_dict = {}
+    for line in raw_text.splitlines():
+        if ":" in line:
+            k, v = line.split(":", 1)
+            k = k.strip()
+            num_match = re.search(r"(\d+)", v)
+            if num_match:
+                mem_dict[k] = int(num_match.group(1))
+
+    total_kb = mem_dict.get("MemTotal", 0)
+    free_kb = mem_dict.get("MemFree", 0)
+    avail_kb = mem_dict.get("MemAvailable", free_kb)
+    buffers_kb = mem_dict.get("Buffers", 0)
+    cached_kb = mem_dict.get("Cached", 0)
+    swap_total_kb = mem_dict.get("SwapTotal", 0)
+    swap_free_kb = mem_dict.get("SwapFree", 0)
+
+    if total_kb > 0:
+        used_kb = total_kb - avail_kb
+        data["memory"]["total_mb"] = round(total_kb / 1024, 1)
+        data["memory"]["used_mb"] = round(used_kb / 1024, 1)
+        data["memory"]["free_mb"] = round(free_kb / 1024, 1)
+        data["memory"]["available_mb"] = round(avail_kb / 1024, 1)
+        data["memory"]["buffers_cached_mb"] = round((buffers_kb + cached_kb) / 1024, 1)
+        data["memory"]["percent"] = round((used_kb / total_kb) * 100, 1)
+
+    if swap_total_kb > 0:
+        swap_used_kb = swap_total_kb - swap_free_kb
+        data["memory"]["swap_total_mb"] = round(swap_total_kb / 1024, 1)
+        data["memory"]["swap_used_mb"] = round(swap_used_kb / 1024, 1)
+        data["memory"]["swap_percent"] = round((swap_used_kb / swap_total_kb) * 100, 1)
+
+    # 2. Parse Disk
+    disk_match = re.search(r"===DISK===[\r\n]+(.*?)(?====|\Z)", raw_text, re.DOTALL)
+    if disk_match:
+        for line in disk_match.group(1).splitlines():
+            line_str = line.strip()
+            if line_str and not line_str.startswith("Filesystem"):
+                parts = line_str.split()
+                if len(parts) >= 5:
+                    try:
+                        total_m = float(parts[1])
+                        used_m = float(parts[2])
+                        avail_m = float(parts[3])
+                        data["disk"]["total_gb"] = round(total_m / 1024, 2)
+                        data["disk"]["used_gb"] = round(used_m / 1024, 2)
+                        data["disk"]["free_gb"] = round(avail_m / 1024, 2)
+                        if total_m > 0:
+                            data["disk"]["percent"] = round((used_m / total_m) * 100, 1)
+                    except Exception:
+                        pass
+                break
+
+    # 3. Parse Uptime
+    uptime_match = re.search(r"===UPTIME===[\r\n]+([0-9.]+)", raw_text)
+    if uptime_match:
+        try:
+            up_sec = float(uptime_match.group(1))
+            data["system"]["uptime_seconds"] = int(up_sec)
+            data["system"]["uptime_string"] = parse_vps_uptime_seconds(up_sec)
+        except Exception:
+            pass
+
+    # 4. Parse Loadavg
+    load_match = re.search(r"===LOADAVG===[\r\n]+([0-9.]+)\s+([0-9.]+)\s+([0-9.]+)", raw_text)
+    if load_match:
+        try:
+            data["system"]["load_avg"]["1m"] = float(load_match.group(1))
+            data["system"]["load_avg"]["5m"] = float(load_match.group(2))
+            data["system"]["load_avg"]["15m"] = float(load_match.group(3))
+        except Exception:
+            pass
+
+    # 5. Parse NPROC
+    nproc_match = re.search(r"===NPROC===[\r\n]+(\d+)", raw_text)
+    if nproc_match:
+        try:
+            data["system"]["cpu_cores"] = int(nproc_match.group(1))
+        except Exception:
+            pass
+
+    # 6. Parse Services
+    svc_match = re.search(r"===SERVICES===[\r\n]+(.*?)(?====|\Z)", raw_text, re.DOTALL)
+    if svc_match:
+        statuses = [s.strip() for s in svc_match.group(1).splitlines() if s.strip()]
+        for idx, svc in enumerate(data["services"]):
+            if idx < len(statuses):
+                st = statuses[idx]
+                svc["status"] = st
+                svc["is_healthy"] = (st == "active")
+
+    # 7. Parse OS
+    os_match = re.search(r"===OS===[\r\n]+(.*?)(?====|\Z)", raw_text, re.DOTALL)
+    if os_match:
+        os_lines = [l.strip() for l in os_match.group(1).splitlines() if l.strip()]
+        if len(os_lines) >= 1:
+            data["system"]["kernel"] = os_lines[0]
+        for l in os_lines:
+            if l.startswith("PRETTY_NAME="):
+                data["system"]["os"] = l.split("=", 1)[1].strip('"\' \r\n')
+
+    return data
+
+def get_vps_health_data(force_refresh: bool = False) -> dict:
+    global _vps_health_cache
+    now_ts = time.time()
+
+    # 1. Trả về Cache nếu chưa hết hạn TTL
+    if not force_refresh and _vps_health_cache["data"] is not None:
+        if now_ts - _vps_health_cache["timestamp"] < VPS_HEALTH_CACHE_TTL:
+            cached_res = dict(_vps_health_cache["data"])
+            cached_res["is_cached"] = True
+            cached_res["cache_age_seconds"] = round(now_ts - _vps_health_cache["timestamp"], 1)
+            return cached_res
+
+    import platform
+    import shutil
+    import subprocess
+    import sys
+
+    data = {
+        "timestamp": datetime.now().strftime("%H:%M:%S %d/%m/%Y"),
+        "is_cached": False,
+        "cache_age_seconds": 0,
+        "source": "vps_local" if sys.platform.startswith("linux") else "vps_remote",
+        "status": "healthy",
+        "warnings": [],
+        "system": {
+            "hostname": "Azure Linux VPS (wrydeco)",
+            "os": "Ubuntu Linux",
+            "kernel": "Linux",
+            "cpu_cores": 1,
+            "uptime_seconds": 0,
+            "uptime_string": "--",
+            "load_avg": {"1m": 0.0, "5m": 0.0, "15m": 0.0}
+        },
+        "memory": {
+            "total_mb": 0.0,
+            "used_mb": 0.0,
+            "free_mb": 0.0,
+            "available_mb": 0.0,
+            "buffers_cached_mb": 0.0,
+            "percent": 0.0,
+            "swap_total_mb": 0.0,
+            "swap_used_mb": 0.0,
+            "swap_percent": 0.0
+        },
+        "disk": {
+            "mount": "/",
+            "total_gb": 0.0,
+            "used_gb": 0.0,
+            "free_gb": 0.0,
+            "percent": 0.0
+        },
+        "services": [
+            {
+                "name": "shopify-admin-app.service",
+                "label": "Shopify Admin FastAPI",
+                "description": "Quản trị Shopify Admin App (Port 8085)",
+                "status": "unknown",
+                "is_healthy": False
+            },
+            {
+                "name": "nginx",
+                "label": "Nginx Reverse Proxy",
+                "description": "Web Server & SSL Gateway (Port 80/443)",
+                "status": "unknown",
+                "is_healthy": False
+            },
+            {
+                "name": "ssh",
+                "label": "OpenSSH Server",
+                "description": "Cổng truy cập quản trị từ xa (Port 22)",
+                "status": "unknown",
+                "is_healthy": False
+            }
+        ],
+        "network": {
+            "public_domain": "wrydeco.shopify.vnote.site",
+            "public_ipv4": "20.222.21.81",
+            "public_ipv6": "Không khả dụng (Chưa cấu hình)",
+            "fastapi_port": 8085,
+            "proxy_gateway_enabled": False,
+            "proxy_status": "Đang tắt"
+        }
+    }
+
+    # Bổ sung IP Public thực tế của VPS
+    try:
+        v4, v6 = get_vps_public_ips()
+        data["network"]["public_ipv4"] = v4
+        data["network"]["public_ipv6"] = v6
+    except Exception:
+        pass
+
+    # Bổ sung trạng thái Proxy Gateway hiện tại
+    try:
+        p_cfg = load_proxy_config()
+        p_enabled = bool(p_cfg.get("enabled", False))
+        data["network"]["proxy_gateway_enabled"] = p_enabled
+        if p_enabled:
+            data["network"]["proxy_status"] = f"Đang bật ({p_cfg.get('last_status', 'stable')}, {p_cfg.get('last_latency_ms', 0)}ms)"
+        else:
+            data["network"]["proxy_status"] = "Đang tắt (Direct Connection)"
+    except Exception:
+        pass
+
+    # A. CHẠY TRỰC TIẾP TRÊN LINUX (PRODUCTION VPS)
+    if sys.platform.startswith("linux"):
+        try:
+            # 1. RAM từ /proc/meminfo
+            mem_dict = {}
+            if os.path.exists("/proc/meminfo"):
+                with open("/proc/meminfo", "r", encoding="utf-8") as f:
+                    for line in f:
+                        if ":" in line:
+                            k, v = line.split(":", 1)
+                            m = re.search(r"(\d+)", v)
+                            if m:
+                                mem_dict[k.strip()] = int(m.group(1))
+
+                total_kb = mem_dict.get("MemTotal", 0)
+                free_kb = mem_dict.get("MemFree", 0)
+                avail_kb = mem_dict.get("MemAvailable", free_kb)
+                buffers_kb = mem_dict.get("Buffers", 0)
+                cached_kb = mem_dict.get("Cached", 0)
+                swap_total_kb = mem_dict.get("SwapTotal", 0)
+                swap_free_kb = mem_dict.get("SwapFree", 0)
+
+                if total_kb > 0:
+                    used_kb = total_kb - avail_kb
+                    data["memory"]["total_mb"] = round(total_kb / 1024, 1)
+                    data["memory"]["used_mb"] = round(used_kb / 1024, 1)
+                    data["memory"]["free_mb"] = round(free_kb / 1024, 1)
+                    data["memory"]["available_mb"] = round(avail_kb / 1024, 1)
+                    data["memory"]["buffers_cached_mb"] = round((buffers_kb + cached_kb) / 1024, 1)
+                    data["memory"]["percent"] = round((used_kb / total_kb) * 100, 1)
+
+                if swap_total_kb > 0:
+                    swap_used_kb = swap_total_kb - swap_free_kb
+                    data["memory"]["swap_total_mb"] = round(swap_total_kb / 1024, 1)
+                    data["memory"]["swap_used_mb"] = round(swap_used_kb / 1024, 1)
+                    data["memory"]["swap_percent"] = round((swap_used_kb / swap_total_kb) * 100, 1)
+        except Exception as e:
+            data["warnings"].append(f"Lỗi đọc RAM: {e}")
+
+        # 2. Ổ cứng qua shutil.disk_usage("/")
+        try:
+            du = shutil.disk_usage("/")
+            total_gb = du.total / (1024 ** 3)
+            used_gb = du.used / (1024 ** 3)
+            free_gb = du.free / (1024 ** 3)
+            data["disk"]["total_gb"] = round(total_gb, 2)
+            data["disk"]["used_gb"] = round(used_gb, 2)
+            data["disk"]["free_gb"] = round(free_gb, 2)
+            if du.total > 0:
+                data["disk"]["percent"] = round((du.used / du.total) * 100, 1)
+        except Exception as e:
+            data["warnings"].append(f"Lỗi đọc ổ đĩa: {e}")
+
+        # 3. Uptime
+        try:
+            if os.path.exists("/proc/uptime"):
+                with open("/proc/uptime", "r", encoding="utf-8") as f:
+                    up_sec = float(f.read().split()[0])
+                    data["system"]["uptime_seconds"] = int(up_sec)
+                    data["system"]["uptime_string"] = parse_vps_uptime_seconds(up_sec)
+        except Exception:
+            pass
+
+        # 4. Load average & CPU Cores
+        try:
+            l1, l5, l15 = os.getloadavg()
+            data["system"]["load_avg"]["1m"] = round(l1, 2)
+            data["system"]["load_avg"]["5m"] = round(l5, 2)
+            data["system"]["load_avg"]["15m"] = round(l15, 2)
+        except Exception:
+            pass
+
+        try:
+            data["system"]["cpu_cores"] = os.cpu_count() or 1
+        except Exception:
+            pass
+
+        # 5. OS & Kernel info
+        try:
+            data["system"]["kernel"] = f"{platform.system()} {platform.release()} {platform.machine()}"
+            data["system"]["hostname"] = platform.node() or "Azure Linux VPS"
+            if os.path.exists("/etc/os-release"):
+                with open("/etc/os-release", "r", encoding="utf-8") as f:
+                    for line in f:
+                        if line.startswith("PRETTY_NAME="):
+                            data["system"]["os"] = line.split("=", 1)[1].strip('"\' \r\n')
+                            break
+        except Exception:
+            pass
+
+        # 6. Core Services status
+        for svc in data["services"]:
+            try:
+                res = subprocess.run(["systemctl", "is-active", svc["name"]], capture_output=True, text=True, timeout=1.5)
+                st = res.stdout.strip() or ("active" if res.returncode == 0 else "inactive")
+                svc["status"] = st
+                svc["is_healthy"] = (st == "active")
+            except Exception:
+                svc["status"] = "unknown"
+                svc["is_healthy"] = False
+
+    # B. CHẠY LOCAL DEVELOPMENT (WINDOWS) -> QUERY VPS TỪ XA QUA SSH READ-ONLY
+    else:
+        try:
+            import paramiko
+            cfg_file = os.path.expanduser("~/.ssh/config")
+            host, user, key = "20.222.21.81", "azureuser", None
+            if os.path.exists(cfg_file):
+                c = paramiko.SSHConfig()
+                with open(cfg_file, encoding="utf-8") as f:
+                    c.parse(f)
+                hc = c.lookup("wrydeco-vps")
+                if hc:
+                    host = hc.get("hostname", host)
+                    user = hc.get("user", user)
+                    key = hc.get("identityfile", [None])[0] if isinstance(hc.get("identityfile"), list) else hc.get("identityfile")
+
+            ssh = paramiko.SSHClient()
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            ssh.connect(hostname=host, username=user, key_filename=key, timeout=5, look_for_keys=True, allow_agent=True)
+
+            cmd = """
+            cat /proc/meminfo | grep -E '^(MemTotal|MemFree|MemAvailable|Buffers|Cached|SwapTotal|SwapFree):'
+            echo '===DISK==='
+            df -m /
+            echo '===UPTIME==='
+            cat /proc/uptime
+            echo '===LOADAVG==='
+            cat /proc/loadavg
+            echo '===NPROC==='
+            nproc
+            echo '===SERVICES==='
+            systemctl is-active shopify-admin-app.service || echo 'inactive'
+            systemctl is-active nginx || echo 'inactive'
+            systemctl is-active ssh || echo 'inactive'
+            echo '===OS==='
+            uname -srm
+            cat /etc/os-release | grep -E '^PRETTY_NAME='
+            """
+            _, stdout, stderr = ssh.exec_command(cmd, timeout=5)
+            raw_text = stdout.read().decode("utf-8", errors="replace")
+            ssh.close()
+
+            parsed = parse_vps_raw_metrics(raw_text)
+            parsed["network"] = data["network"]
+            parsed["source"] = "vps_remote"
+            data = parsed
+
+        except Exception as ssh_err:
+            data["status"] = "warning"
+            data["warnings"].append(f"Không thể kết nối SSH từ máy Local đến VPS: {str(ssh_err)[:80]}")
+            data["system"]["hostname"] = "Azure Linux VPS (Chưa kết nối)"
+
+    # Đánh giá sức khỏe tổng thể
+    warnings = list(data.get("warnings", []))
+    if data["disk"]["percent"] >= 90:
+        warnings.append(f"Dung lượng ổ đĩa phân vùng / đang ở mức rất cao ({data['disk']['percent']}%)!")
+    elif data["disk"]["percent"] >= 80:
+        warnings.append(f"Dung lượng ổ đĩa phân vùng / đạt {data['disk']['percent']}%, nên theo dõi dọn dẹp log/backups.")
+
+    if data["memory"]["percent"] >= 92:
+        warnings.append(f"Mức sử dụng RAM đang ở mức rất cao ({data['memory']['percent']}%)!")
+
+    unhealthy_services = [s["label"] for s in data.get("services", []) if not s.get("is_healthy", False)]
+    if unhealthy_services:
+        warnings.append(f"Có dịch vụ đang dừng hoạt động: {', '.join(unhealthy_services)}")
+
+    if unhealthy_services or data["disk"]["percent"] >= 92 or data["memory"]["percent"] >= 95:
+        data["status"] = "critical"
+    elif warnings:
+        data["status"] = "warning"
+    else:
+        data["status"] = "healthy"
+
+    data["warnings"] = list(dict.fromkeys(warnings))
+
+    # Cập nhật cache
+    _vps_health_cache["timestamp"] = now_ts
+    _vps_health_cache["data"] = data
+
+    return data
+
+
+@app.get("/vps-health", response_class=HTMLResponse)
+async def page_vps_health(request: Request):
+    """
+    Trang giao diện kiểm tra sức khỏe toàn diện của VPS (tab mới).
+    """
+    health_data = get_vps_health_data()
+    return templates.TemplateResponse(
+        request=request,
+        name="vps_health.html",
+        context={
+            "data": health_data
+        }
+    )
+
+
+@app.get("/api/vps-health")
+async def api_vps_health(force: bool = False):
+    """
+    API JSON trả về các thông số sức khỏe VPS, hỗ trợ auto-refresh và cập nhật realtime.
+    Tuyệt đối không chứa credentials kết nối.
+    """
+    health_data = get_vps_health_data(force_refresh=force)
+    return JSONResponse(health_data)
+
+
+
 
 
 

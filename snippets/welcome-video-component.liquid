@@ -4,6 +4,7 @@
   @param {string} video_url - The MP4 video URL to render.
   @param {string} [mobile_video_url] - The MP4 video URL to render on phone viewports.
   @param {string} [poster_url] - The poster image URL shown before the video loads.
+  @param {string} [captions_url] - The English WebVTT captions URL.
   @param {string} [intro] - Supporting copy shown above the video frame.
   @param {string} [eyebrow] - Eyebrow text shown above the video frame.
   @param {string} [heading] - Accessible heading text for the section.
@@ -18,6 +19,15 @@
 {%- liquid
   assign mobile_video_url = mobile_video_url | default: blank
   assign poster_url = poster_url | default: blank
+  assign captions_url = captions_url | default: blank
+  assign optimized_poster_url = poster_url
+  if optimized_poster_url != blank
+    if optimized_poster_url contains '?'
+      assign optimized_poster_url = optimized_poster_url | append: '&width=720'
+    else
+      assign optimized_poster_url = optimized_poster_url | append: '?width=720'
+    endif
+  endif
   assign intro = intro | default: 'Discover how nature, craftsmanship, and thoughtful design come together to shape every Wrydeco piece.'
   assign eyebrow = eyebrow | default: 'The WRYDECO Story'
   assign heading = heading | default: 'From Nature to Artful Living'
@@ -48,8 +58,8 @@
           preload="none"
           playsinline
           webkit-playsinline
-          {% if poster_url != blank %}
-            poster="{{ poster_url | escape }}"
+          {% if optimized_poster_url != blank %}
+            poster="{{ optimized_poster_url | escape }}"
           {% endif %}
           aria-label="{{ video_label | escape }}"
           data-welcome-video-media
@@ -61,6 +71,9 @@
             <source src="{{ video_url | append: '#t=0.001' | escape }}" type="video/mp4">
           {%- elsif mobile_video_url != blank -%}
             <source src="{{ mobile_video_url | append: '#t=0.001' | escape }}" type="video/mp4">
+          {%- endif -%}
+          {%- if captions_url != blank -%}
+            <track kind="captions" src="{{ captions_url | escape }}" srclang="en" label="English">
           {%- endif -%}
         </video>
 

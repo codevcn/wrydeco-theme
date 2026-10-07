@@ -52,7 +52,6 @@
         id="SignaturePiecesCarousel-{{ section.id }}"
         class="signature-pieces__grid"
         data-signature-carousel
-        role="list"
       >
       {%- for product in sorted_products limit: 12 -%}
         {%- assign display_title = product.metafields.custom.artwork_name.value | default: product.title -%}
@@ -90,7 +89,6 @@
 
         <article
           class="signature-pieces__card"
-          role="listitem"
           data-product-id="{{ product.id }}"
           data-product-handle="{{ product.handle | escape }}"
           data-variant-id="{{ product.variants.first.id }}"
@@ -112,15 +110,17 @@
                   | image_tag:
                     class: 'signature-pieces__image is-active',
                     loading: 'lazy',
-                    widths: '360, 540, 720, 900',
-                    sizes: '(min-width: 80rem) 23vw, (min-width: 48rem) 46vw, 88vw',
+                    widths: '240, 360, 480, 540, 720, 900',
+                    sizes: '(min-width: 75rem) 23vw, (min-width: 48rem) 40vw, 48vw',
                     draggable: false,
                     alt: featured_media_alt
                 }}
                 {%- comment -%}
                   Extra frames cycled while the pointer is over the card (PLP parity).
-                  Capped at 4 so a media-heavy product doesn't bloat the homepage.
+                  Capped at 4 and kept in a template until the gallery nears the
+                  viewport so they do not inflate the initial DOM or image requests.
                 {%- endcomment -%}
+                <template data-sp-hover-template>
                 {%- assign hover_count = 0 -%}
                 {%- for media in product.media -%}
                   {%- if media.media_type != 'image' -%}
@@ -130,22 +130,30 @@
                     {%- continue -%}
                   {%- endif -%}
                   {%- assign hover_media_alt = media.alt | default: display_title -%}
-                  {{
-                    media.preview_image
-                    | image_url: width: 900
-                    | image_tag:
-                      class: 'signature-pieces__image',
-                      loading: 'lazy',
-                      widths: '360, 540, 720, 900',
-                      sizes: '(min-width: 80rem) 23vw, (min-width: 48rem) 46vw, 88vw',
-                      draggable: false,
-                      alt: hover_media_alt
-                  }}
+                  <img
+                    class="signature-pieces__image"
+                    data-src="{{ media.preview_image | image_url: width: 720 }}"
+                    data-srcset="
+                      {{ media.preview_image | image_url: width: 240 }} 240w,
+                      {{ media.preview_image | image_url: width: 360 }} 360w,
+                      {{ media.preview_image | image_url: width: 480 }} 480w,
+                      {{ media.preview_image | image_url: width: 540 }} 540w,
+                      {{ media.preview_image | image_url: width: 720 }} 720w,
+                      {{ media.preview_image | image_url: width: 900 }} 900w
+                    "
+                    sizes="(min-width: 75rem) 23vw, (min-width: 48rem) 40vw, 48vw"
+                    alt="{{ hover_media_alt | escape }}"
+                    width="{{ media.preview_image.width }}"
+                    height="{{ media.preview_image.height }}"
+                    loading="lazy"
+                    draggable="false"
+                  >
                   {%- assign hover_count = hover_count | plus: 1 -%}
                   {%- if hover_count >= 4 -%}
                     {%- break -%}
                   {%- endif -%}
                 {%- endfor -%}
+                </template>
               {%- else -%}
                 {%- assign fallback_asset = 'sli-' | append: forloop.index | append: '.webp' -%}
                 <img
@@ -251,7 +259,6 @@
           -%}
           <article
             class="signature-pieces__card"
-            role="listitem"
             style="--signature-piece-order: {{ i }}; --signature-piece-desktop-order: {{ desktop_order }};"
           >
             <div class="signature-pieces__media">
@@ -882,6 +889,34 @@
 
     // Hover gallery: cycle through the card's images while the pointer is over
     // it, cross-fading each frame. Mirrors the collection (PLP) product card.
+    function loadDeferredGalleryImages(gallery) {
+      gallery.querySelectorAll('img[data-src]').forEach(function (image) {
+        image.src = image.dataset.src;
+        if (image.dataset.srcset) image.srcset = image.dataset.srcset;
+        image.removeAttribute('data-src');
+        image.removeAttribute('data-srcset');
+      });
+    }
+
+    function hydrateHoverGallery(gallery) {
+      var template = gallery.querySelector('[data-sp-hover-template]');
+      if (template) {
+        gallery.appendChild(template.content.cloneNode(true));
+        template.remove();
+      }
+      loadDeferredGalleryImages(gallery);
+    }
+
+    var hoverGalleryObserver = 'IntersectionObserver' in window
+      ? new IntersectionObserver(function (entries, observer) {
+          entries.forEach(function (entry) {
+            if (!entry.isIntersecting) return;
+            hydrateHoverGallery(entry.target);
+            observer.unobserve(entry.target);
+          });
+        }, { rootMargin: '300px 0px' })
+      : null;
+
     function initHoverGallery(root) {
       var scope = root && root.querySelectorAll ? root : document;
       scope.querySelectorAll('[data-sp-hover-gallery]').forEach(function (gallery) {
@@ -889,10 +924,18 @@
         gallery.dataset.initHover = 'true';
 
         var images = gallery.querySelectorAll('.signature-pieces__image');
-        if (images.length <= 1) return;
+        var template = gallery.querySelector('[data-sp-hover-template]');
+        if (images.length <= 1 && !template) return;
 
         var intervalId = null;
         var currentIndex = 0;
+
+        if (hoverGalleryObserver) {
+          hoverGalleryObserver.observe(gallery);
+        } else {
+          hydrateHoverGallery(gallery);
+          images = gallery.querySelectorAll('.signature-pieces__image');
+        }
 
         function showImage(index) {
           images.forEach(function (img) {
@@ -906,6 +949,9 @@
         }
 
         gallery.addEventListener('mouseenter', function () {
+          hydrateHoverGallery(gallery);
+          images = gallery.querySelectorAll('.signature-pieces__image');
+          if (images.length <= 1) return;
           currentIndex = 1;
           showImage(currentIndex);
 
@@ -953,6 +999,10 @@
 
         carousel.dataset.carouselInit = 'true';
         var updateFrame = null;
+        var carouselMetrics = {
+          maxScrollLeft: 0,
+          scrollDistance: 0,
+        };
 
         carousel.querySelectorAll('img').forEach(function (image) {
           image.draggable = false;
@@ -962,12 +1012,32 @@
           return window.matchMedia('(max-width: 74.999rem)').matches;
         }
 
+        function measureCarousel() {
+          var carouselWidth = carousel.clientWidth;
+          var card = carousel.querySelector('.signature-pieces__card');
+          var scrollDistance = carouselWidth;
+
+          if (card) {
+            var styles = window.getComputedStyle(carousel);
+            var gap = parseFloat(styles.columnGap) || 0;
+            scrollDistance = card.offsetWidth + gap;
+          }
+
+          carouselMetrics.maxScrollLeft = Math.max(0, carousel.scrollWidth - carouselWidth);
+          carouselMetrics.scrollDistance = scrollDistance;
+        }
+
         function updateControls() {
-          var maxScrollLeft = Math.max(0, carousel.scrollWidth - carousel.clientWidth);
+          var maxScrollLeft = carouselMetrics.maxScrollLeft;
+          var currentScrollLeft = carousel.scrollLeft;
           var hasOverflow = isSliderViewport() && maxScrollLeft > 1;
-          controls.hidden = !hasOverflow;
-          previousButton.disabled = !hasOverflow || carousel.scrollLeft <= 1;
-          nextButton.disabled = !hasOverflow || carousel.scrollLeft >= maxScrollLeft - 1;
+          var controlsShouldBeHidden = !hasOverflow;
+          var previousShouldBeDisabled = !hasOverflow || currentScrollLeft <= 1;
+          var nextShouldBeDisabled = !hasOverflow || currentScrollLeft >= maxScrollLeft - 1;
+
+          if (controls.hidden !== controlsShouldBeHidden) controls.hidden = controlsShouldBeHidden;
+          if (previousButton.disabled !== previousShouldBeDisabled) previousButton.disabled = previousShouldBeDisabled;
+          if (nextButton.disabled !== nextShouldBeDisabled) nextButton.disabled = nextShouldBeDisabled;
         }
 
         function scheduleControlsUpdate() {
@@ -978,19 +1048,19 @@
           });
         }
 
-        function getScrollDistance() {
-          var card = carousel.querySelector('.signature-pieces__card');
-          if (!card) return carousel.clientWidth;
-
-          var styles = window.getComputedStyle(carousel);
-          var gap = parseFloat(styles.columnGap) || 0;
-          return card.getBoundingClientRect().width + gap;
+        function scheduleCarouselMeasurement() {
+          if (updateFrame !== null) return;
+          updateFrame = window.requestAnimationFrame(function () {
+            updateFrame = null;
+            measureCarousel();
+            updateControls();
+          });
         }
 
         function scrollCarousel(direction) {
           var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
           carousel.scrollBy({
-            left: getScrollDistance() * direction,
+            left: carouselMetrics.scrollDistance * direction,
             behavior: reduceMotion ? 'auto' : 'smooth',
           });
         }
@@ -1062,11 +1132,12 @@
         );
 
         if ('ResizeObserver' in window) {
-          var resizeObserver = new ResizeObserver(scheduleControlsUpdate);
+          var resizeObserver = new ResizeObserver(scheduleCarouselMeasurement);
           resizeObserver.observe(carousel);
         }
-        window.addEventListener('resize', scheduleControlsUpdate);
+        window.addEventListener('resize', scheduleCarouselMeasurement);
 
+        measureCarousel();
         updateControls();
       });
     }

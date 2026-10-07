@@ -55,10 +55,19 @@
                 alt: logo_alt
             }}
           {%- elsif section.settings.logo_asset != blank -%}
+            {%- assign logo_asset_url = section.settings.logo_asset | file_url -%}
             <img
-              src="{{ section.settings.logo_asset | file_url }}"
+              src="{{ logo_asset_url | append: '&width=204' }}"
+              srcset="
+                {{ logo_asset_url | append: '&width=102' }} 102w,
+                {{ logo_asset_url | append: '&width=204' }} 204w,
+                {{ logo_asset_url | append: '&width=306' }} 306w
+              "
+              sizes="102px"
               class="header__heading-logo"
               alt="{{ shop.name | escape }}"
+              width="102"
+              height="67"
             >
           {%- else -%}
             <span class="h2">{{ shop.name }}</span>
@@ -645,7 +654,6 @@
 
   body:has(.hero-new) .header__search-widget,
   body:has(.about-new) .header__search-widget,
-  body:has(.showroom-intro) .header__search-widget,
   body:has(.blog-editorial) .header__search-widget,
   body:has(.col-banner) .header__search-widget,
   body:has(.srp-hero) .header__search-widget,
@@ -657,7 +665,6 @@
 
   body:has(.hero-new) .header__search-widget:hover,
   body:has(.about-new) .header__search-widget:hover,
-  body:has(.showroom-intro) .header__search-widget:hover,
   body:has(.blog-editorial) .header__search-widget:hover,
   body:has(.col-banner) .header__search-widget:hover,
   body:has(.srp-hero) .header__search-widget:hover,
@@ -1441,7 +1448,7 @@
   .header__heading-logo {
     width: 102px;
     min-width: 102px;
-    height: 62px;
+    height: auto;
   }
 
   .header__icon {

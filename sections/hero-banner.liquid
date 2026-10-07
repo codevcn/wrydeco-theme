@@ -2,15 +2,33 @@
   assign hero_image_alt = section.settings.hero_image_alt | default: 'Handcrafted solid wood furniture in a refined interior'
   assign primary_link = routes.all_products_collection_url
   assign secondary_link = pages.customization.url | default: '/pages/customization'
+  assign desktop_hero_url = 'hero-section-ver-new.png' | file_url
+  assign mobile_hero_url = 'hero-section-ver-new-mobile.png' | file_url
 -%}
 
 <div class="hero-new" id="homepage-hero-new">
   <div class="hero-new__background" aria-hidden="true">
     <picture class="hero-new__picture">
-      <source media="(max-width: 640px)" srcset="{{ 'hero-section-ver-new-mobile.png' | file_url }}">
+      <source
+        media="(max-width: 640px)"
+        srcset="
+          {{ mobile_hero_url | append: '&width=480' }} 480w,
+          {{ mobile_hero_url | append: '&width=720' }} 720w,
+          {{ mobile_hero_url | append: '&width=960' }} 960w
+        "
+        sizes="100vw"
+      >
       <img
         class="hero-new__image"
-        src="{{ 'hero-section-ver-new.png' | file_url }}"
+        src="{{ desktop_hero_url | append: '&width=1920' }}"
+        srcset="
+          {{ desktop_hero_url | append: '&width=960' }} 960w,
+          {{ desktop_hero_url | append: '&width=1440' }} 1440w,
+          {{ desktop_hero_url | append: '&width=1920' }} 1920w,
+          {{ desktop_hero_url | append: '&width=2560' }} 2560w,
+          {{ desktop_hero_url | append: '&width=2880' }} 2880w
+        "
+        sizes="100vw"
         alt="{{ hero_image_alt | escape }}"
         width="2880"
         height="1620"

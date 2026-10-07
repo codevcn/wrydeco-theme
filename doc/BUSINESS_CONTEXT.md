@@ -109,7 +109,6 @@ The WRYDECO storefront operates on Shopify's native JSON template architecture w
 | `/products/[handle]` | `templates/product.json` | Comprehensive product gallery, artist attribution, customizer, buy box |
 | `/pages/customization` | `templates/page.customization.json` | Bespoke consultation flow, 5-step process, custom inquiry form |
 | `/pages/about-us` | `templates/page.about-us.json` | Brand heritage, artisan team, sustainable sourcing, Vietnamese craft |
-| `/pages/showroom` | `templates/page.showroom.json` | Visual space gallery showcasing pieces in real interior settings |
 | `/pages/care-guide` | `templates/page.care-guide.json` | Comprehensive maintenance guide for natural wood furniture |
 | `/pages/faq` | `templates/page.faq.json` | In-depth customer care, shipping, transit protection, warranty, returns |
 | `/pages/contact` | `templates/page.contact.json` | Contact form, hotline, email, support hours, and US business address |
