@@ -73,6 +73,20 @@ try:
             sftp.stat(f"{app_dir}/logo_updater_config.json")
         except (FileNotFoundError, IOError):
             upload_file("logo_updater_config.json", f"{app_dir}/logo_updater_config.json")
+
+    # Upload notes.json if not present on remote
+    if os.path.exists("notes.json"):
+        try:
+            sftp.stat(f"{app_dir}/notes.json")
+        except (FileNotFoundError, IOError):
+            upload_file("notes.json", f"{app_dir}/notes.json")
+
+    # Upload config.json if not present on remote
+    if os.path.exists("config.json"):
+        try:
+            sftp.stat(f"{app_dir}/config.json")
+        except (FileNotFoundError, IOError):
+            upload_file("config.json", f"{app_dir}/config.json")
     
     # Upload templates
     for f in os.listdir("templates"):

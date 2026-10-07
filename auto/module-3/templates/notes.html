@@ -9,18 +9,35 @@
     <link rel="shortcut icon" href="/static/favicon.ico" />
     <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png" />
     <link rel="manifest" href="/static/site.webmanifest" />
-    <title>Admin - Ghi chú</title>
+    <title>Admin - Ghi chú nội bộ</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <style>
         body { font-family: 'Inter', sans-serif; }
+        
+        /* Custom horizontal and vertical scrollbars */
+        .custom-scrollbar::-webkit-scrollbar {
+            height: 8px;
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-900 min-h-screen">
+<body class="bg-gray-50 text-gray-900 min-h-screen flex flex-col">
     <!-- Header -->
     <header class="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
-        <div class="max-w-7xl mx-auto px-4 sm:px-8">
+        <div class="mx-auto px-4 sm:px-8">
             <div class="flex items-center justify-between h-16">
                 <!-- Logo -->
                 <div class="flex-shrink-0 flex items-center gap-3">
@@ -42,7 +59,7 @@
                     <a target="_blank" rel="noopener noreferrer" href="/edit-variants" class="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">Sửa hàng loạt</a>
                     <a target="_blank" rel="noopener noreferrer" href="/blogs" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path></svg>Blog</a>
                     <a target="_blank" rel="noopener noreferrer" href="/policies" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>Policy</a>
-                    <button id="drawer-toggle-btn" type="button" onclick="toggleDrawer()" class="p-1.5 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors flex items-center justify-center focus:outline-none ring-1 ring-indigo-200" title="Menu tiện ích (đang mở trang trong menu)">
+                    <button id="drawer-toggle-btn" type="button" onclick="toggleDrawer()" class="p-1.5 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors flex items-center justify-center focus:outline-none ring-1 ring-indigo-200" title="Menu tiện ích">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                         </svg>
@@ -53,100 +70,475 @@
     </header>
     {% include 'drawer.html' %}
 
-    <main class="max-w-4xl mx-auto p-4 sm:p-8">
-        <div class="mb-8">
-            <h1 class="text-3xl font-bold text-gray-800 tracking-tight flex items-center gap-2">
-                <iconify-icon icon="mdi:note-edit-outline" class="text-indigo-600"></iconify-icon>
-                Ghi chú nội bộ
-            </h1>
-            <p class="text-gray-500 mt-2">Lưu lại các ghi chú, nội dung text mẫu để sử dụng sau này. Tự động load nội dung đã lưu mỗi khi vào trang.</p>
-        </div>
-
-        <form id="notes-form" method="POST" action="/notes" class="space-y-6">
-            <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07)] border border-gray-100">
-                <textarea 
-                    name="note_content" 
-                    id="note_content" 
-                    rows="15" 
-                    tabindex="1"
-                    autofocus
-                    class="w-full p-4 bg-gray-50/70 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm outline-none transition-all resize-y"
-                    placeholder="Nhập nội dung ghi chú ở đây..."
-                >{{ note_content }}</textarea>
-                
-                <div class="mt-4 flex items-center justify-between">
-                    <div id="status-message" class="text-sm font-medium opacity-0 transition-opacity"></div>
-                    <button type="submit" id="submit-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-8 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer focus:ring-4 focus:ring-indigo-200">
-                        <iconify-icon icon="mdi:content-save-outline" class="text-xl"></iconify-icon>
-                        <span>Lưu Ghi Chú</span>
-                    </button>
+    <main class="flex-1 w-full max-w-[1700px] mx-auto p-4 sm:p-8 flex flex-col">
+        <!-- Title & Action Bar -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div>
+                <div class="flex items-center gap-3">
+                    <div class="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl">
+                        <iconify-icon icon="mdi:notebook-multiple" class="text-2xl"></iconify-icon>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-3">
+                            <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 tracking-tight">Ghi chú nội bộ</h1>
+                            <span id="notebookCountBadge" class="bg-indigo-100 text-indigo-700 text-xs font-bold px-2.5 py-1 rounded-full shadow-2xs">
+                                <span id="notebookCountNumber">{{ notebooks|length }}</span> sổ ghi chú
+                            </span>
+                        </div>
+                        <p class="text-xs sm:text-sm text-gray-500 mt-1">Danh sách các sổ ghi chú tự động xuống dòng linh hoạt. Sổ mới tạo sẽ xuất hiện ở vị trí tiếp theo.</p>
+                    </div>
                 </div>
             </div>
-        </form>
+
+            <!-- Nút Thêm sổ ghi chú mới -->
+            <div class="flex items-center gap-2">
+                <button type="button" 
+                        id="btnAddNotebookHeader" 
+                        onclick="createNewNotebook()" 
+                        class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-5 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer focus:ring-4 focus:ring-indigo-200">
+                    <iconify-icon icon="mdi:plus-circle-outline" class="text-xl"></iconify-icon>
+                    <span>Thêm sổ ghi chú mới</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Trạng thái trống (Không có sổ ghi chú nào) -->
+        <div id="emptyNotebooksState" class="{% if notebooks|length > 0 %}hidden{% endif %} my-auto py-16 flex flex-col items-center justify-center text-center bg-white rounded-3xl border border-dashed border-gray-300 p-8 shadow-2xs">
+            <div class="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-4">
+                <iconify-icon icon="mdi:notebook-outline" class="text-3xl"></iconify-icon>
+            </div>
+            <h3 class="text-lg font-bold text-gray-800 mb-1">Chưa có sổ ghi chú nào</h3>
+            <p class="text-sm text-gray-500 max-w-md mb-6">Hiện chưa có sổ ghi chú nào trên hệ thống. Hãy nhấn nút bên dưới để tạo sổ ghi chú đầu tiên của bạn.</p>
+            <button type="button" 
+                    onclick="createNewNotebook()" 
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-6 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer">
+                <iconify-icon icon="mdi:plus-circle-outline" class="text-xl"></iconify-icon>
+                <span>Thêm sổ ghi chú mới</span>
+            </button>
+        </div>
+
+        <!-- Danh sách sổ ghi chú có thể xuống dòng (Grid responsive thay vì cuộn ngang) -->
+        <div id="notebooksContainerWrapper" class="{% if notebooks|length == 0 %}hidden{% endif %} flex-1 flex flex-col">
+            <div id="notebooksContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pb-12 pt-2 px-1">
+                {% for nb in notebooks %}
+                <!-- Notebook Card -->
+                <div id="notebook-card-{{ nb.id }}" data-id="{{ nb.id }}" class="notebook-card w-full bg-white rounded-2xl border border-gray-200/90 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.06)] hover:shadow-md transition-all flex flex-col overflow-hidden">
+                    <!-- Card Header: Title input & actions -->
+                    <div class="p-4 border-b border-gray-100 bg-gray-50/70 flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-2 flex-1 min-w-0">
+                            <span class="text-indigo-600 flex-shrink-0">
+                                <iconify-icon icon="mdi:notebook-outline" class="text-xl"></iconify-icon>
+                            </span>
+                            <input type="text" 
+                                   name="title" 
+                                   value="{{ nb.title }}" 
+                                   placeholder="Tên sổ ghi chú..." 
+                                   class="notebook-title-input w-full bg-transparent font-bold text-gray-800 text-base focus:bg-white focus:ring-2 focus:ring-indigo-500 rounded-lg px-2 py-1 outline-none transition-all border border-transparent focus:border-indigo-300">
+                        </div>
+                        
+                        <!-- Nút xóa sổ -->
+                        <button type="button" 
+                                onclick="deleteNotebook('{{ nb.id }}')" 
+                                class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer flex-shrink-0" 
+                                title="Xóa sổ ghi chú này">
+                            <iconify-icon icon="mdi:trash-can-outline" class="text-lg"></iconify-icon>
+                        </button>
+                    </div>
+
+                    <!-- Card Body: Textarea (mặc định 5 dòng) -->
+                    <div class="p-4 flex-1 flex flex-col">
+                        <textarea 
+                            name="content" 
+                            rows="5" 
+                            placeholder="Nhập nội dung ghi chú ở đây..." 
+                            class="notebook-content-textarea w-full p-3.5 bg-gray-50/60 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm font-sans text-gray-800 leading-relaxed outline-none transition-all resize-y custom-scrollbar"
+                        >{{ nb.content }}</textarea>
+
+                        <!-- Card Footer: Status msg & Nút Lưu -->
+                        <div class="mt-3.5 pt-3 border-t border-gray-100 flex items-center justify-between gap-2">
+                            <div class="notebook-status text-xs font-medium text-gray-400 truncate">
+                                {% if nb.updated_at %}Đã lưu: {{ nb.updated_at }}{% else %}Chưa lưu{% endif %}
+                            </div>
+                            <button type="button" 
+                                    onclick="saveNotebook('{{ nb.id }}', this)" 
+                                    class="btn-save-notebook bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-2 px-4 rounded-xl shadow-xs hover:shadow transition-all flex items-center gap-1.5 cursor-pointer flex-shrink-0">
+                                <iconify-icon icon="mdi:content-save-outline" class="text-base"></iconify-icon>
+                                <span>Lưu</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+
+                <!-- Nút dạng card dashed để thêm sổ mới nhanh -->
+                <div id="addNotebookDashedCard" 
+                     onclick="createNewNotebook()" 
+                     class="w-full min-h-[240px] rounded-2xl border-2 border-dashed border-gray-300 hover:border-indigo-500 hover:bg-indigo-50/30 transition-all flex flex-col items-center justify-center gap-2 cursor-pointer text-gray-500 hover:text-indigo-600 group shadow-2xs">
+                    <div class="w-12 h-12 rounded-full bg-gray-100 group-hover:bg-indigo-100 flex items-center justify-center text-gray-500 group-hover:text-indigo-600 transition-colors">
+                        <iconify-icon icon="mdi:plus" class="text-2xl"></iconify-icon>
+                    </div>
+                    <span class="text-sm font-bold">Thêm sổ ghi chú mới</span>
+                    <span class="text-[11px] text-gray-400">Tạo thêm sổ mới</span>
+                </div>
+            </div>
+        </div>
     </main>
 
+    <!-- Modal xác nhận xóa sổ ghi chú -->
+    <div id="deleteConfirmModal" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 p-4 hidden" onclick="closeDeleteModal()">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md relative transition-all" onclick="event.stopPropagation()">
+            <!-- Nút đóng góc phải -->
+            <button type="button" onclick="closeDeleteModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-700 transition-colors focus:outline-none cursor-pointer" title="Đóng">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+
+            <div class="flex items-start gap-4">
+                <div class="w-12 h-12 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center flex-shrink-0">
+                    <iconify-icon icon="mdi:trash-can-outline" class="text-2xl"></iconify-icon>
+                </div>
+                <div class="flex-1 pr-4">
+                    <h3 class="text-lg font-bold text-gray-900 mb-1">Xác nhận xóa sổ ghi chú</h3>
+                    <p class="text-sm text-gray-600 leading-relaxed">
+                        Bạn có chắc chắn muốn xóa sổ ghi chú <strong id="deleteModalNotebookTitle" class="text-gray-900 font-bold break-words"></strong> không?
+                    </p>
+                    <p class="text-xs text-red-600 bg-red-50 p-2.5 rounded-xl border border-red-100 mt-3 font-medium">
+                        Toàn bộ nội dung của sổ ghi chú này sẽ bị xóa hoàn toàn khỏi server và không thể hoàn tác.
+                    </p>
+                </div>
+            </div>
+
+            <div class="mt-6 flex items-center justify-end gap-3 pt-3 border-t border-gray-100">
+                <button type="button" 
+                        onclick="closeDeleteModal()" 
+                        class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-xs rounded-xl transition-colors cursor-pointer">
+                    Hủy bỏ
+                </button>
+                <button type="button" 
+                        id="btnConfirmDelete" 
+                        onclick="executeConfirmDelete()" 
+                        class="px-5 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-1.5 cursor-pointer focus:ring-4 focus:ring-red-200">
+                    <iconify-icon icon="mdi:trash-can-outline" class="text-base"></iconify-icon>
+                    <span>Xác nhận xóa</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
     <script>
-        // Focus textarea when pressing Tab outside of it
+        // Hỗ trợ phím Tab thụt lề trong textarea của sổ ghi chú
         document.addEventListener('keydown', function(e) {
-            const textarea = document.getElementById('note_content');
-            if (e.key === 'Tab' && document.activeElement !== textarea) {
+            if (e.key === 'Tab' && e.target && e.target.classList.contains('notebook-content-textarea')) {
                 e.preventDefault();
-                textarea.focus();
+                const textarea = e.target;
+                const start = textarea.selectionStart;
+                const end = textarea.selectionEnd;
+                textarea.value = textarea.value.substring(0, start) + "\t" + textarea.value.substring(end);
+                textarea.selectionStart = textarea.selectionEnd = start + 1;
             }
         });
 
-        // Allow using Tab key to insert tabs in textarea
-        document.getElementById('note_content').addEventListener('keydown', function(e) {
-            if (e.key === 'Tab') {
-                e.preventDefault();
-                var start = this.selectionStart;
-                var end = this.selectionEnd;
-                this.value = this.value.substring(0, start) + "\t" + this.value.substring(end);
-                this.selectionStart = this.selectionEnd = start + 1;
-            }
-        });
-
-        document.getElementById('notes-form').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const btn = document.getElementById('submit-btn');
-            const statusMsg = document.getElementById('status-message');
-            const originalContent = btn.innerHTML;
-            
-            btn.disabled = true;
-            btn.innerHTML = `<iconify-icon icon="mdi:loading" class="text-xl animate-spin"></iconify-icon> <span>Đang lưu...</span>`;
-            
-            try {
-                const formData = new FormData(this);
-                const response = await fetch('/notes', {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                const result = await response.json();
-                
-                if (result.status === 'success') {
-                    statusMsg.textContent = result.message;
-                    statusMsg.className = 'text-sm font-medium text-green-600 opacity-100 transition-opacity';
-                } else {
-                    statusMsg.textContent = result.message || 'Có lỗi xảy ra!';
-                    statusMsg.className = 'text-sm font-medium text-red-600 opacity-100 transition-opacity';
+        // Hỗ trợ phím tắt Ctrl+S để lưu sổ ghi chú hiện tại đang thao tác
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+                const card = document.activeElement ? document.activeElement.closest('.notebook-card') : null;
+                if (card) {
+                    e.preventDefault();
+                    const noteId = card.getAttribute('data-id');
+                    const saveBtn = card.querySelector('.btn-save-notebook');
+                    if (noteId && saveBtn) {
+                        saveNotebook(noteId, saveBtn);
+                    }
                 }
+            }
+        });
+
+        // Cập nhật số lượng sổ ghi chú
+        function updateNotebookCount() {
+            const container = document.getElementById('notebooksContainer');
+            const cards = container ? container.querySelectorAll('.notebook-card') : [];
+            const count = cards.length;
+            
+            const countNumEl = document.getElementById('notebookCountNumber');
+            if (countNumEl) countNumEl.textContent = count;
+
+            const emptyState = document.getElementById('emptyNotebooksState');
+            const wrapper = document.getElementById('notebooksContainerWrapper');
+
+            if (count === 0) {
+                if (emptyState) emptyState.classList.remove('hidden');
+                if (wrapper) wrapper.classList.add('hidden');
+            } else {
+                if (emptyState) emptyState.classList.add('hidden');
+                if (wrapper) wrapper.classList.remove('hidden');
+            }
+        }
+
+        // Tạo sổ ghi chú mới (nằm ở phía bên phải trong danh sách)
+        async function createNewNotebook() {
+            const addHeaderBtn = document.getElementById('btnAddNotebookHeader');
+            const originalContent = addHeaderBtn ? addHeaderBtn.innerHTML : '';
+            if (addHeaderBtn) {
+                addHeaderBtn.disabled = true;
+                addHeaderBtn.innerHTML = `<iconify-icon icon="mdi:loading" class="text-xl animate-spin"></iconify-icon> <span>Đang tạo...</span>`;
+            }
+
+            try {
+                const response = await fetch('/api/notes/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                const res = await response.json();
+
+                if (!res.success || !res.notebook) {
+                    alert('Lỗi tạo sổ ghi chú: ' + (res.error || 'Không xác định'));
+                    return;
+                }
+
+                const nb = res.notebook;
                 
-                // Hide message after 3 seconds
+                // Tạo element HTML cho sổ ghi chú mới
+                const cardEl = document.createElement('div');
+                cardEl.id = `notebook-card-${nb.id}`;
+                cardEl.setAttribute('data-id', nb.id);
+                cardEl.className = 'notebook-card w-full bg-white rounded-2xl border border-gray-200/90 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.06)] hover:shadow-md transition-all flex flex-col overflow-hidden';
+                
+                cardEl.innerHTML = `
+                    <div class="p-4 border-b border-gray-100 bg-gray-50/70 flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-2 flex-1 min-w-0">
+                            <span class="text-indigo-600 flex-shrink-0">
+                                <iconify-icon icon="mdi:notebook-outline" class="text-xl"></iconify-icon>
+                            </span>
+                            <input type="text" 
+                                   name="title" 
+                                   value="${escapeHtml(nb.title)}" 
+                                   placeholder="Tên sổ ghi chú..." 
+                                   class="notebook-title-input w-full bg-transparent font-bold text-gray-800 text-base focus:bg-white focus:ring-2 focus:ring-indigo-500 rounded-lg px-2 py-1 outline-none transition-all border border-transparent focus:border-indigo-300">
+                        </div>
+                        <button type="button" 
+                                onclick="deleteNotebook('${nb.id}')" 
+                                class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer flex-shrink-0" 
+                                title="Xóa sổ ghi chú này">
+                            <iconify-icon icon="mdi:trash-can-outline" class="text-lg"></iconify-icon>
+                        </button>
+                    </div>
+
+                    <div class="p-4 flex-1 flex flex-col">
+                        <textarea 
+                            name="content" 
+                            rows="5" 
+                            placeholder="Nhập nội dung ghi chú ở đây..." 
+                            class="notebook-content-textarea w-full p-3.5 bg-gray-50/60 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm font-sans text-gray-800 leading-relaxed outline-none transition-all resize-y custom-scrollbar"
+                        >${escapeHtml(nb.content)}</textarea>
+
+                        <div class="mt-3.5 pt-3 border-t border-gray-100 flex items-center justify-between gap-2">
+                            <div class="notebook-status text-xs font-medium text-gray-400 truncate">
+                                Vừa tạo: ${nb.created_at || 'Mới'}
+                            </div>
+                            <button type="button" 
+                                    onclick="saveNotebook('${nb.id}', this)" 
+                                    class="btn-save-notebook bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-2 px-4 rounded-xl shadow-xs hover:shadow transition-all flex items-center gap-1.5 cursor-pointer flex-shrink-0">
+                                <iconify-icon icon="mdi:content-save-outline" class="text-base"></iconify-icon>
+                                <span>Lưu</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                // Chèn card vào danh sách, nằm ngay trước nút dashed ở cuối cùng
+                const dashedCard = document.getElementById('addNotebookDashedCard');
+                const container = document.getElementById('notebooksContainer');
+                if (dashedCard && container) {
+                    container.insertBefore(cardEl, dashedCard);
+                } else if (container) {
+                    container.appendChild(cardEl);
+                }
+
+                updateNotebookCount();
+
+                // Cuộn màn hình tới sổ ghi chú mới vừa tạo
+                cardEl.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'nearest'
+                });
+
+                // Focus vào ô nhập tên của sổ mới
                 setTimeout(() => {
-                    statusMsg.classList.remove('opacity-100');
-                    statusMsg.classList.add('opacity-0');
-                }, 3000);
-                
-            } catch (error) {
-                statusMsg.textContent = 'Lỗi kết nối!';
-                statusMsg.className = 'text-sm font-medium text-red-600 opacity-100 transition-opacity';
+                    const titleInput = cardEl.querySelector('.notebook-title-input');
+                    if (titleInput) {
+                        titleInput.focus();
+                        titleInput.select();
+                    }
+                }, 150);
+
+            } catch (err) {
+                alert('Lỗi kết nối khi tạo sổ ghi chú: ' + err);
+            } finally {
+                if (addHeaderBtn) {
+                    addHeaderBtn.disabled = false;
+                    addHeaderBtn.innerHTML = originalContent;
+                }
+            }
+        }
+
+        // Lưu sổ ghi chú (Lưu tên & nội dung)
+        async function saveNotebook(noteId, btnElement) {
+            const card = document.getElementById(`notebook-card-${noteId}`);
+            if (!card) return;
+
+            const titleInput = card.querySelector('.notebook-title-input');
+            const textarea = card.querySelector('.notebook-content-textarea');
+            const statusEl = card.querySelector('.notebook-status');
+
+            const title = titleInput ? titleInput.value.trim() : '';
+            const content = textarea ? textarea.value : '';
+
+            const originalBtnHTML = btnElement.innerHTML;
+            btnElement.disabled = true;
+            btnElement.innerHTML = `<iconify-icon icon="mdi:loading" class="text-base animate-spin"></iconify-icon> <span>Đang lưu...</span>`;
+
+            try {
+                const response = await fetch(`/api/notes/${encodeURIComponent(noteId)}/save`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, content })
+                });
+                const res = await response.json();
+
+                if (res.success) {
+                    // Cập nhật trạng thái thành công
+                    btnElement.classList.replace('bg-indigo-600', 'bg-emerald-600');
+                    btnElement.classList.replace('hover:bg-indigo-700', 'hover:bg-emerald-700');
+                    btnElement.innerHTML = `<iconify-icon icon="mdi:check" class="text-base"></iconify-icon> <span>Đã lưu!</span>`;
+
+                    if (statusEl) {
+                        statusEl.textContent = `Đã lưu: ${res.updated_at || 'vừa xong'}`;
+                        statusEl.classList.remove('text-red-500', 'text-gray-400');
+                        statusEl.classList.add('text-emerald-600');
+                    }
+
+                    setTimeout(() => {
+                        btnElement.disabled = false;
+                        btnElement.innerHTML = originalBtnHTML;
+                        btnElement.classList.replace('bg-emerald-600', 'bg-indigo-600');
+                        btnElement.classList.replace('hover:bg-emerald-700', 'hover:bg-indigo-700');
+                        if (statusEl) {
+                            statusEl.classList.remove('text-emerald-600');
+                            statusEl.classList.add('text-gray-400');
+                        }
+                    }, 2000);
+                } else {
+                    alert('Lỗi lưu sổ ghi chú: ' + (res.error || 'Không xác định'));
+                    btnElement.disabled = false;
+                    btnElement.innerHTML = originalBtnHTML;
+                    if (statusEl) {
+                        statusEl.textContent = 'Lưu thất bại!';
+                        statusEl.classList.add('text-red-500');
+                    }
+                }
+            } catch (err) {
+                alert('Lỗi kết nối khi lưu: ' + err);
+                btnElement.disabled = false;
+                btnElement.innerHTML = originalBtnHTML;
+                if (statusEl) {
+                    statusEl.textContent = 'Lỗi kết nối!';
+                    statusEl.classList.add('text-red-500');
+                }
+            }
+        }
+
+        // =================================================================
+        // XÓA SỔ GHI CHÚ (POPUP XÁC NHẬN)
+        // =================================================================
+        let notebookToDeleteId = null;
+
+        function deleteNotebook(noteId) {
+            const card = document.getElementById(`notebook-card-${noteId}`);
+            if (!card) return;
+
+            const titleInput = card.querySelector('.notebook-title-input');
+            const title = titleInput ? titleInput.value.trim() : '';
+
+            notebookToDeleteId = noteId;
+            const titleDisplay = title ? `"${title}"` : 'sổ ghi chú này';
+            document.getElementById('deleteModalNotebookTitle').textContent = titleDisplay;
+
+            const modal = document.getElementById('deleteConfirmModal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+            }
+        }
+
+        function closeDeleteModal() {
+            const modal = document.getElementById('deleteConfirmModal');
+            if (modal) {
+                modal.classList.add('hidden');
+                document.body.style.overflow = '';
+            }
+            notebookToDeleteId = null;
+        }
+
+        async function executeConfirmDelete() {
+            if (!notebookToDeleteId) return;
+
+            const noteId = notebookToDeleteId;
+            const btn = document.getElementById('btnConfirmDelete');
+            const originalHTML = btn.innerHTML;
+
+            btn.disabled = true;
+            btn.innerHTML = `<iconify-icon icon="mdi:loading" class="text-base animate-spin"></iconify-icon> <span>Đang xóa...</span>`;
+
+            try {
+                const response = await fetch(`/api/notes/${encodeURIComponent(noteId)}/delete`, {
+                    method: 'POST'
+                });
+                const res = await response.json();
+
+                if (res.success) {
+                    closeDeleteModal();
+
+                    const card = document.getElementById(`notebook-card-${noteId}`);
+                    if (card) {
+                        card.style.transition = 'all 0.3s ease';
+                        card.style.opacity = '0';
+                        card.style.transform = 'scale(0.85)';
+                        setTimeout(() => {
+                            card.remove();
+                            updateNotebookCount();
+                        }, 300);
+                    }
+                } else {
+                    alert('Lỗi khi xóa sổ ghi chú: ' + (res.error || 'Không xác định'));
+                }
+            } catch (err) {
+                alert('Lỗi kết nối khi xóa: ' + err);
             } finally {
                 btn.disabled = false;
-                btn.innerHTML = originalContent;
+                btn.innerHTML = originalHTML;
+            }
+        }
+
+        // Đóng modal xác nhận khi bấm phím Escape
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('deleteConfirmModal');
+                if (modal && !modal.classList.contains('hidden')) {
+                    closeDeleteModal();
+                }
             }
         });
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
     </script>
 </body>
 </html>

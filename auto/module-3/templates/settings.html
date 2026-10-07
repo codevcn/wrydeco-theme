@@ -42,6 +42,10 @@
                     <a target="_blank" rel="noopener noreferrer" href="/edit-variants" class="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">Sửa hàng loạt</a>
                     <a target="_blank" rel="noopener noreferrer" href="/blogs" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path></svg>Blog</a>
                     <a target="_blank" rel="noopener noreferrer" href="/policies" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>Policy</a>
+                    <a href="/settings/logout" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold rounded-lg border border-rose-200 shadow-2xs transition-colors" title="Đăng xuất khỏi phiên Quản trị Settings">
+                        <iconify-icon icon="mdi:logout" class="text-sm"></iconify-icon>
+                        <span>Đăng xuất</span>
+                    </a>
                     <button id="drawer-toggle-btn" type="button" onclick="toggleDrawer()" class="p-1.5 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors flex items-center justify-center focus:outline-none ring-1 ring-indigo-200" title="Menu tiện ích (đang mở trang trong menu)">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
@@ -63,41 +67,65 @@
         </div>
 
         <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07)] border border-gray-100">
-            <h2 class="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Bảo mật</h2>
+            <div class="flex items-center justify-between pb-3 border-b border-gray-100 gap-2 mb-4">
+                <h2 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                    <iconify-icon icon="mdi:shield-lock-outline" class="text-indigo-600 text-xl"></iconify-icon>
+                    <span>Bảo mật (Admin Password)</span>
+                </h2>
+                <span class="text-xs text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-full font-medium flex items-center gap-1.5">
+                    <iconify-icon icon="mdi:key-outline"></iconify-icon>
+                    Phiên bảo vệ JWT 24h
+                </span>
+            </div>
+
+            <p class="text-xs text-gray-500 mb-4 leading-relaxed">
+                Mật khẩu quản trị (Admin Password) dùng để đăng nhập vào trang Cài đặt (Settings) và xác thực các tác vụ bảo mật quan trọng của hệ thống (như xóa sản phẩm, bài viết blog).
+            </p>
+
             <form id="settings-form" class="space-y-4">
                 <div>
-                    <label for="current_password" class="block text-sm font-medium text-gray-700">Mật khẩu hiện tại</label>
-                    <input type="password" id="current_password" name="current_password" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border" required placeholder="Nhập mật khẩu đang sử dụng">
+                    <label for="current_password" class="block text-sm font-medium text-gray-700">Admin Password hiện tại</label>
+                    <div class="relative mt-1">
+                        <input type="password" id="current_password" name="current_password" class="block w-full rounded-lg border-gray-300 shadow-xs focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border pr-10 font-mono" required placeholder="Nhập Admin Password đang sử dụng">
+                        <button type="button" onclick="togglePasswordVisibility('current_password')" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer" title="Ẩn/Hiện mật khẩu">
+                            <iconify-icon icon="mdi:eye-outline"></iconify-icon>
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="mt-4">
-                    <label for="new_password" class="block text-sm font-medium text-gray-700">Mật khẩu mới</label>
-                    <p class="text-xs text-gray-500 mt-1 mb-2">Mật khẩu mới yêu cầu khi thực hiện chức năng xóa sản phẩm.</p>
-                    <input type="password" id="new_password" name="new_password" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border" required placeholder="Nhập mật khẩu mới">
+                    <label for="new_password" class="block text-sm font-medium text-gray-700">Admin Password mới</label>
+                    <div class="relative mt-1">
+                        <input type="password" id="new_password" name="new_password" class="block w-full rounded-lg border-gray-300 shadow-xs focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border pr-10 font-mono" required placeholder="Nhập Admin Password mới">
+                        <button type="button" onclick="togglePasswordVisibility('new_password')" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer" title="Ẩn/Hiện mật khẩu">
+                            <iconify-icon icon="mdi:eye-outline"></iconify-icon>
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="mt-6 flex items-center gap-4">
-                    <button type="submit" id="submit-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg shadow-sm transition-all focus:ring-4 focus:ring-indigo-200">
-                        Cập nhật mật khẩu
+                    <button type="submit" id="submit-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 px-6 rounded-xl shadow-xs transition-all focus:ring-4 focus:ring-indigo-200 cursor-pointer flex items-center gap-1.5">
+                        <iconify-icon icon="mdi:lock-check-outline" class="text-base"></iconify-icon>
+                        <span>Cập nhật Admin Password</span>
                     </button>
                     <div id="status-message" class="text-sm font-medium transition-opacity"></div>
                 </div>
             </form>
         </div>
 
-        <!-- Section Cấu hình Shopify App Riêng cho Trang Cập nhật Logo -->
+        <!-- Section Cấu hình Proxy Gateway -->
         <div class="mt-8 bg-white p-4 sm:p-6 rounded-2xl shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07)] border border-gray-100">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-gray-100 gap-2 mb-4">
                 <div>
                     <h2 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                        <iconify-icon icon="mdi:shield-key-outline" class="text-indigo-600 text-xl"></iconify-icon>
-                        <span>Cấu hình Shopify App Riêng cho Trang Cập nhật Logo (Kích hoạt khi Bật Proxy)</span>
+                        <iconify-icon icon="mdi:server-network" class="text-indigo-600 text-xl"></iconify-icon>
+                        <span>Cấu hình Proxy Gateway (proxy_config.json)</span>
                     </h2>
                 </div>
                 <!-- Status Badge -->
-                <div id="logo-config-mode-badge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 border border-gray-200">
+                <div id="proxy-settings-badge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 border border-gray-200">
                     <span class="w-2 h-2 rounded-full bg-gray-400"></span>
-                    <span>Đang dùng mặc định server (Loại 1)</span>
+                    <span>Đang tải trạng thái...</span>
                 </div>
             </div>
 
@@ -105,43 +133,139 @@
             <div class="p-3.5 bg-indigo-50 border border-indigo-100 rounded-xl mb-6 text-xs text-indigo-900 leading-relaxed flex items-start gap-2.5">
                 <iconify-icon icon="mdi:information-outline" class="text-indigo-600 text-lg flex-shrink-0 mt-0.5"></iconify-icon>
                 <div>
-                    <strong>Cơ chế hoạt động:</strong> Bộ credentials này (Client ID, Client Secret, Access Token) <em>chỉ được áp dụng khi trang Cập nhật logo BẬT kết nối Proxy Gateway</em>. Khi TẮT Proxy, trang sẽ <strong>bắt buộc fallback 100%</strong> về sử dụng credentials mặc định của server từ file <code>.env</code> (kết nối trực tiếp từ VPS).
+                    <strong>Cơ chế hoạt động:</strong> Thông tin kết nối Proxy sẽ được lưu trữ trực tiếp vào tệp <code class="bg-indigo-100 text-indigo-800 px-1 py-0.5 rounded font-mono">proxy_config.json</code>. Mặc định server vẫn duy trì sử dụng proxy đang cấu hình tại đây. Bạn có thể dán trực tiếp chuỗi kết nối (hỗ trợ dạng <code class="bg-indigo-100 text-indigo-800 px-1 py-0.5 rounded font-mono">http://user:pass@host:port</code> hoặc <code class="bg-indigo-100 text-indigo-800 px-1 py-0.5 rounded font-mono">host:port:user:pass</code>) hoặc nhập chi tiết từng trường bên dưới.
                 </div>
             </div>
 
-            <form id="logo-updater-form" class="space-y-4" onsubmit="return false;">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label for="logo_shop_domain" class="block text-sm font-medium text-gray-700">Shop Domain (Tùy chọn)</label>
-                        <p class="text-xs text-gray-500 mt-0.5 mb-1.5">Để trống sẽ sử dụng store mặc định của server (<span id="default_shop_label" class="font-mono">wrydeco.myshopify.com</span>).</p>
-                        <input type="text" id="logo_shop_domain" name="shop_domain" class="w-full rounded-lg border-gray-300 shadow-xs focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border" placeholder="Ví dụ: wrydeco hoặc wrydeco.myshopify.com">
+            <form id="proxy-settings-form" class="space-y-4" onsubmit="return false;">
+                <!-- Quick Input Chuỗi kết nối Proxy -->
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label for="proxy_quick_string" class="block text-sm font-medium text-gray-700">
+                            Chuỗi kết nối Proxy (Nhập nhanh hoặc dán vào đây)
+                        </label>
+                        <span class="text-[11px] text-gray-400">Tự động phân tách Host, Port, User, Pass</span>
                     </div>
-
-                    <div>
-                        <label for="logo_client_id" class="block text-sm font-medium text-gray-700">Client ID (Tùy chọn)</label>
-                        <p class="text-xs text-gray-500 mt-0.5 mb-1.5">Client ID của App được cấp quyền trong Shopify Partner/Admin.</p>
-                        <input type="text" id="logo_client_id" name="client_id" class="w-full rounded-lg border-gray-300 shadow-xs focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border" placeholder="Nhập Client ID...">
+                    <div class="relative">
+                        <input type="text" id="proxy_quick_string" oninput="handleProxyQuickInput(this.value)" class="w-full rounded-lg border-gray-300 shadow-xs focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border pr-10 font-mono" placeholder="Ví dụ: 185.124.63.174:55031:username:password hoặc http://user:pass@185.124.63.174:55031">
+                        <button type="button" onclick="togglePasswordVisibility('proxy_quick_string')" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer" title="Ẩn/Hiện mật khẩu">
+                            <iconify-icon icon="mdi:eye-outline"></iconify-icon>
+                        </button>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- 4 Ô chi tiết -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 pt-1">
                     <div>
-                        <label for="logo_client_secret" class="block text-sm font-medium text-gray-700">Client Secret (Tùy chọn)</label>
-                        <p class="text-xs text-gray-500 mt-0.5 mb-1.5">Client Secret của App (để trống nếu không muốn thay đổi).</p>
+                        <label for="proxy_host" class="block text-xs font-semibold text-gray-700 mb-1">Host / IP <span class="text-red-500">*</span></label>
+                        <input type="text" id="proxy_host" oninput="syncProxyQuickString()" class="w-full rounded-lg border-gray-300 shadow-xs focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border font-mono" placeholder="185.124.63.174" required>
+                    </div>
+
+                    <div>
+                        <label for="proxy_port" class="block text-xs font-semibold text-gray-700 mb-1">Port <span class="text-red-500">*</span></label>
+                        <input type="number" id="proxy_port" oninput="syncProxyQuickString()" class="w-full rounded-lg border-gray-300 shadow-xs focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border font-mono" placeholder="55031" required>
+                    </div>
+
+                    <div>
+                        <label for="proxy_username" class="block text-xs font-semibold text-gray-700 mb-1">Username (Tùy chọn)</label>
+                        <input type="text" id="proxy_username" oninput="syncProxyQuickString()" class="w-full rounded-lg border-gray-300 shadow-xs focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border font-mono" placeholder="Tên đăng nhập...">
+                    </div>
+
+                    <div>
+                        <label for="proxy_password" class="block text-xs font-semibold text-gray-700 mb-1">Password (Tùy chọn)</label>
                         <div class="relative">
-                            <input type="password" id="logo_client_secret" name="client_secret" class="w-full rounded-lg border-gray-300 shadow-xs focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border pr-10" placeholder="shpss_...">
-                            <button type="button" onclick="togglePasswordVisibility('logo_client_secret')" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer">
+                            <input type="password" id="proxy_password" oninput="syncProxyQuickString()" class="w-full rounded-lg border-gray-300 shadow-xs focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border pr-10 font-mono" placeholder="Mật khẩu...">
+                            <button type="button" onclick="togglePasswordVisibility('proxy_password')" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer">
                                 <iconify-icon icon="mdi:eye-outline"></iconify-icon>
                             </button>
                         </div>
                     </div>
+                </div>
+
+                <!-- Live Egress Geo Info Box -->
+                <div id="proxy-geo-card" class="hidden p-3.5 bg-gray-50 border border-gray-200 rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="font-semibold text-gray-600">Định danh IP Thoát (Live Egress):</span>
+                        <span id="proxy-geo-flag" class="text-base">🇺🇸</span>
+                        <span id="proxy-geo-location" class="font-bold text-gray-800">United States</span>
+                        <span id="proxy-geo-isp" class="bg-gray-200 text-gray-700 px-2 py-0.5 rounded font-mono text-[11px]">ISP: Verizon Business</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span id="proxy-geo-ping" class="text-emerald-700 font-mono font-semibold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">Ping: 0ms</span>
+                        <span id="proxy-geo-time" class="text-gray-400 text-[11px]">--</span>
+                    </div>
+                </div>
+
+                <!-- Last updated / checked time -->
+                <div id="proxy-last-checked" class="text-xs text-gray-400 hidden pt-0.5"></div>
+
+                <!-- Action Buttons -->
+                <div class="pt-4 flex flex-wrap items-center gap-3">
+                    <button type="button" id="btnSaveProxy" onclick="saveProxySettings()" class="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-semibold py-2.5 px-6 rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer">
+                        <iconify-icon icon="mdi:content-save-outline" class="text-base" id="saveProxyBtnIcon"></iconify-icon>
+                        <span id="saveProxyBtnText">Lưu Cấu Hình Proxy</span>
+                    </button>
+
+                    <button type="button" id="btnTestProxy" onclick="testProxySettings()" class="bg-gray-100 hover:bg-gray-200 active:scale-95 text-gray-800 border border-gray-300 font-semibold py-2.5 px-5 rounded-xl shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer">
+                        <iconify-icon icon="mdi:network-check" class="text-base text-indigo-600" id="testProxyBtnIcon"></iconify-icon>
+                        <span id="testProxyBtnText">Kiểm tra kết nối (Test Ping)</span>
+                    </button>
+
+                    <button type="button" id="btnResetProxy" onclick="resetProxySettings()" class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 font-semibold py-2.5 px-5 rounded-xl shadow-2xs transition-all flex items-center gap-1.5 sm:ml-auto cursor-pointer">
+                        <iconify-icon icon="mdi:restore" class="text-base" id="resetProxyBtnIcon"></iconify-icon>
+                        <span id="resetProxyBtnText">Khôi phục Mặc định</span>
+                    </button>
+                </div>
+
+                <!-- Status Feedback Message -->
+                <div id="proxy-config-feedback" class="text-sm font-medium pt-2 transition-all"></div>
+            </form>
+        </div>
+
+        <!-- Section Cấu hình Shopify App cho Store Riêng -->
+        <div class="mt-8 bg-white p-4 sm:p-6 rounded-2xl shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07)] border border-gray-100">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-gray-100 gap-2 mb-4">
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                        <iconify-icon icon="mdi:store-cog-outline" class="text-indigo-600 text-xl"></iconify-icon>
+                        <span>Cấu hình Shopify App cho Store Riêng</span>
+                    </h2>
+                </div>
+                <!-- Status Badge -->
+                <div id="logo-config-mode-badge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 border border-gray-200">
+                    <span class="w-2 h-2 rounded-full bg-gray-400"></span>
+                    <span>Đang dùng Store Mặc định của server</span>
+                </div>
+            </div>
+
+            <!-- Warning / Instruction Banner -->
+            <div class="p-3.5 bg-indigo-50 border border-indigo-100 rounded-xl mb-6 text-xs text-indigo-900 leading-relaxed flex items-start gap-2.5">
+                <iconify-icon icon="mdi:information-outline" class="text-indigo-600 text-lg flex-shrink-0 mt-0.5"></iconify-icon>
+                <div>
+                    <strong>Cơ chế hoạt động:</strong> Cấu hình thông tin kết nối Shopify App cho <strong>Store Riêng</strong> (khác với store mặc định mà trang chủ đang dùng). Nhập <strong>Shop Domain</strong>, <strong>Client ID</strong> và <strong>Client Secret</strong> (cả 3 trường đều là bắt buộc). Bạn không cần nhập Access Token. Khi các trang tiện ích (như <em>Cập nhật logo</em>, <em>Danh sách khách hàng</em>) bật Proxy, hệ thống sẽ <strong>tự động dùng Client ID & Client Secret này để yêu cầu cấp mới Access Token qua Proxy US</strong> cho Store Riêng.
+                </div>
+            </div>
+
+            <form id="logo-updater-form" class="space-y-4" onsubmit="return false;">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label for="logo_shop_domain" class="block text-sm font-medium text-gray-700">Shop Domain Store Riêng <span class="text-red-500">*</span></label>
+                        <p class="text-xs text-gray-500 mt-0.5 mb-1.5">Tên miền store (ví dụ: wrydeco hoặc wrydeco.myshopify.com).</p>
+                        <input type="text" id="logo_shop_domain" name="shop_domain" class="w-full rounded-lg border-gray-300 shadow-xs focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border font-mono" placeholder="wrydeco" required>
+                    </div>
 
                     <div>
-                        <label for="logo_access_token" class="block text-sm font-medium text-gray-700">Admin Access Token <span class="text-red-500">*</span></label>
-                        <p class="text-xs text-gray-500 mt-0.5 mb-1.5">Bắt buộc để gọi Admin REST & GraphQL API (để trống nếu không đổi).</p>
+                        <label for="logo_client_id" class="block text-sm font-medium text-gray-700">Client ID <span class="text-red-500">*</span></label>
+                        <p class="text-xs text-gray-500 mt-0.5 mb-1.5">Client ID của App được cấp quyền trong Shopify Partner/Admin.</p>
+                        <input type="text" id="logo_client_id" name="client_id" class="w-full rounded-lg border-gray-300 shadow-xs focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border font-mono" placeholder="Nhập Client ID..." required>
+                    </div>
+
+                    <div>
+                        <label for="logo_client_secret" class="block text-sm font-medium text-gray-700">Client Secret <span class="text-red-500">*</span></label>
+                        <p class="text-xs text-gray-500 mt-0.5 mb-1.5">Client Secret của App (để trống nếu không muốn thay đổi).</p>
                         <div class="relative">
-                            <input type="password" id="logo_access_token" name="access_token" class="w-full rounded-lg border-gray-300 shadow-xs focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border pr-10 font-mono" placeholder="shpat_...">
-                            <button type="button" onclick="togglePasswordVisibility('logo_access_token')" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer">
+                            <input type="password" id="logo_client_secret" name="client_secret" class="w-full rounded-lg border-gray-300 shadow-xs focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border pr-10 font-mono" placeholder="shpss_..." required>
+                            <button type="button" onclick="togglePasswordVisibility('logo_client_secret')" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer">
                                 <iconify-icon icon="mdi:eye-outline"></iconify-icon>
                             </button>
                         </div>
@@ -154,13 +278,12 @@
                 <div class="pt-4 flex flex-wrap items-center gap-3">
                     <button type="button" id="btnSaveLogoConfig" onclick="saveLogoUpdaterConfig()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 px-6 rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer">
                         <iconify-icon icon="mdi:content-save-outline" class="text-base" id="saveBtnIcon"></iconify-icon>
-                        <span id="saveBtnText">Lưu Cấu Hình (Loại 2)</span>
+                        <span id="saveBtnText">Lưu Cấu Hình Store Riêng</span>
                     </button>
-                    
 
                     <button type="button" id="btnResetLogoConfig" onclick="resetLogoUpdaterConfig()" class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 font-semibold py-2.5 px-5 rounded-xl shadow-2xs transition-all flex items-center gap-1.5 sm:ml-auto cursor-pointer">
                         <iconify-icon icon="mdi:restore" class="text-base" id="resetBtnIcon"></iconify-icon>
-                        <span id="resetBtnText">Khôi phục Mặc định (Xóa cấu hình riêng)</span>
+                        <span id="resetBtnText">Khôi phục Mặc định (Xóa cấu hình Store Riêng)</span>
                     </button>
                 </div>
 
@@ -178,7 +301,7 @@
             const statusMsg = document.getElementById('status-message');
             
             submitBtn.disabled = true;
-            submitBtn.innerText = 'Đang xử lý...';
+            submitBtn.innerHTML = '<iconify-icon icon="mdi:loading" class="animate-spin text-base"></iconify-icon><span>Đang xử lý...</span>';
             statusMsg.innerHTML = '';
             
             const formData = new FormData();
@@ -195,29 +318,37 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    statusMsg.innerHTML = '<span class="text-green-600">Cập nhật mật khẩu thành công!</span>';
+                    statusMsg.innerHTML = '<span class="text-emerald-600 font-semibold">✓ Cập nhật Admin Password thành công!</span>';
                     document.getElementById('current_password').value = '';
                     document.getElementById('new_password').value = '';
                 } else {
-                    statusMsg.innerHTML = `<span class="text-red-600">Lỗi: ${data.message}</span>`;
+                    statusMsg.innerHTML = `<span class="text-rose-600 font-semibold">✕ Lỗi: ${data.message}</span>`;
                 }
             } catch (err) {
-                statusMsg.innerHTML = `<span class="text-red-600">Lỗi mạng: ${err.message}</span>`;
+                statusMsg.innerHTML = `<span class="text-rose-600">Lỗi mạng: ${err.message}</span>`;
             }
             
             submitBtn.disabled = false;
-            submitBtn.innerText = 'Cập nhật mật khẩu';
+            submitBtn.innerHTML = '<iconify-icon icon="mdi:lock-check-outline" class="text-base"></iconify-icon><span>Cập nhật Admin Password</span>';
         });
 
-        // Toggle password visibility
+        // Toggle password visibility with icon swap
         function togglePasswordVisibility(id) {
             const input = document.getElementById(id);
             if (!input) return;
-            input.type = input.type === 'password' ? 'text' : 'password';
+            const isPassword = input.type === 'password';
+            input.type = isPassword ? 'text' : 'password';
+
+            const btn = input.parentElement ? input.parentElement.querySelector('button') : null;
+            if (btn) {
+                const icon = btn.querySelector('iconify-icon');
+                if (icon) {
+                    icon.setAttribute('icon', isPassword ? 'mdi:eye-off-outline' : 'mdi:eye-outline');
+                }
+            }
         }
 
         // Logo Updater Config logic
-        let hasStoredToken = false;
         let hasStoredSecret = false;
 
         async function loadLogoUpdaterConfig() {
@@ -240,7 +371,6 @@
                 document.getElementById('logo_client_id').value = cfg.client_id || '';
 
                 hasStoredSecret = !!cfg.has_secret;
-                hasStoredToken = !!cfg.has_token;
 
                 const secretInput = document.getElementById('logo_client_secret');
                 if (hasStoredSecret) {
@@ -249,25 +379,18 @@
                     secretInput.placeholder = 'shpss_...';
                 }
 
-                const tokenInput = document.getElementById('logo_access_token');
-                if (hasStoredToken) {
-                    tokenInput.placeholder = `Đã lưu (${cfg.access_token_masked || '********'}) - để trống nếu không đổi`;
-                } else {
-                    tokenInput.placeholder = 'shpat_...';
-                }
-
                 if (badge) {
                     if (cfg.is_custom) {
                         badge.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200';
                         badge.innerHTML = `
                             <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
-                            <span>Đã cấu hình App Riêng (Loại 2)</span>
+                            <span>Đã cấu hình Store Riêng (Kích hoạt khi Bật Proxy)</span>
                         `;
                     } else {
                         badge.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 border border-gray-200';
                         badge.innerHTML = `
                             <span class="w-2 h-2 rounded-full bg-gray-400"></span>
-                            <span>Đang dùng mặc định server (Loại 1)</span>
+                            <span>Đang dùng Store Mặc định của server</span>
                         `;
                     }
                 }
@@ -284,7 +407,7 @@
                     lastUpdated.classList.add('hidden');
                 }
             } catch (err) {
-                console.warn('Lỗi tải cấu hình logo-updater:', err);
+                console.warn('Lỗi tải cấu hình Store Riêng:', err);
             }
         }
 
@@ -296,16 +419,26 @@
             const shopDomain = document.getElementById('logo_shop_domain').value.trim();
             const clientId = document.getElementById('logo_client_id').value.trim();
             const clientSecret = document.getElementById('logo_client_secret').value.trim();
-            const accessToken = document.getElementById('logo_access_token').value.trim();
 
-            if (!accessToken && !hasStoredToken) {
-                feedback.innerHTML = '<span class="text-rose-600">Vui lòng nhập Admin Access Token (bắt buộc khi lưu cấu hình riêng).</span>';
+            if (!shopDomain) {
+                feedback.innerHTML = '<span class="text-rose-600">Vui lòng nhập Shop Domain Store Riêng (bắt buộc).</span>';
+                document.getElementById('logo_shop_domain').focus();
+                return;
+            }
+            if (!clientId) {
+                feedback.innerHTML = '<span class="text-rose-600">Vui lòng nhập Client ID (bắt buộc).</span>';
+                document.getElementById('logo_client_id').focus();
+                return;
+            }
+            if (!clientSecret && !hasStoredSecret) {
+                feedback.innerHTML = '<span class="text-rose-600">Vui lòng nhập Client Secret (bắt buộc).</span>';
+                document.getElementById('logo_client_secret').focus();
                 return;
             }
 
             saveBtn.disabled = true;
-            saveBtnText.textContent = 'Đang xác thực & lưu...';
-            feedback.innerHTML = '<span class="text-indigo-600">Đang gọi Shopify API xác thực token...</span>';
+            saveBtnText.textContent = 'Đang lưu cấu hình...';
+            feedback.innerHTML = '<span class="text-indigo-600">Đang lưu thông tin cấu hình Store Riêng...</span>';
 
             try {
                 const res = await fetch('/api/settings/logo-updater', {
@@ -314,8 +447,7 @@
                     body: JSON.stringify({
                         shop_domain: shopDomain,
                         client_id: clientId,
-                        client_secret: clientSecret,
-                        access_token: accessToken
+                        client_secret: clientSecret
                     })
                 });
 
@@ -323,7 +455,6 @@
                 if (data.success) {
                     feedback.innerHTML = `<span class="text-emerald-600 font-semibold">✓ ${data.message}</span>`;
                     document.getElementById('logo_client_secret').value = '';
-                    document.getElementById('logo_access_token').value = '';
                     await loadLogoUpdaterConfig();
                 } else {
                     feedback.innerHTML = `<span class="text-rose-600 font-semibold">✕ ${data.message}</span>`;
@@ -332,13 +463,12 @@
                 feedback.innerHTML = `<span class="text-rose-600">Lỗi kết nối: ${err.message}</span>`;
             } finally {
                 saveBtn.disabled = false;
-                saveBtnText.textContent = 'Lưu Cấu Hình (Loại 2)';
+                saveBtnText.textContent = 'Lưu Cấu Hình Store Riêng';
             }
         }
 
-
         async function resetLogoUpdaterConfig() {
-            if (!confirm('Bạn có chắc chắn muốn xóa cấu hình riêng và khôi phục về Credentials Mặc định của Server?')) {
+            if (!confirm('Bạn có chắc chắn muốn xóa cấu hình Store Riêng và khôi phục về Store Mặc định của Server?')) {
                 return;
             }
 
@@ -360,7 +490,6 @@
                     document.getElementById('logo_shop_domain').value = '';
                     document.getElementById('logo_client_id').value = '';
                     document.getElementById('logo_client_secret').value = '';
-                    document.getElementById('logo_access_token').value = '';
                     await loadLogoUpdaterConfig();
                 } else {
                     feedback.innerHTML = `<span class="text-rose-600">✕ Lỗi: ${data.message || 'Không thể khôi phục'}</span>`;
@@ -373,8 +502,343 @@
             }
         }
 
+        // =================================================================
+        // PROXY SETTINGS CONTROLLER
+        // =================================================================
+        let hasStoredProxyPassword = false;
+
+        function renderCountryFlag(countryCode, fallbackEmoji = '🇺🇸') {
+            if (!countryCode) return fallbackEmoji || '🌐';
+            const code = String(countryCode).toLowerCase();
+            return `<iconify-icon icon="circle-flags:${code}" class="text-sm inline-block align-middle"></iconify-icon>`;
+        }
+
+        async function loadProxySettings() {
+            try {
+                const res = await fetch('/api/settings/proxy');
+                if (!res.ok) return;
+                const data = await res.json();
+                if (!data.success) return;
+
+                const cfg = data.config || {};
+                const badge = document.getElementById('proxy-settings-badge');
+                const lastChecked = document.getElementById('proxy-last-checked');
+                const geoCard = document.getElementById('proxy-geo-card');
+                const geoFlag = document.getElementById('proxy-geo-flag');
+                const geoLoc = document.getElementById('proxy-geo-location');
+                const geoIsp = document.getElementById('proxy-geo-isp');
+                const geoPing = document.getElementById('proxy-geo-ping');
+                const geoTime = document.getElementById('proxy-geo-time');
+
+                // Điền thông tin vào các input
+                document.getElementById('proxy_quick_string').value = cfg.proxy_url || '';
+                document.getElementById('proxy_host').value = cfg.host || cfg.proxy_ip || '';
+                document.getElementById('proxy_port').value = cfg.port || '';
+                document.getElementById('proxy_username').value = cfg.username || '';
+
+                hasStoredProxyPassword = !!cfg.has_password;
+                const pwdInput = document.getElementById('proxy_password');
+                if (hasStoredProxyPassword) {
+                    pwdInput.placeholder = `Đã lưu (${cfg.password_masked || '********'}) - để trống nếu không đổi`;
+                } else {
+                    pwdInput.placeholder = 'Mật khẩu...';
+                }
+
+                // Cập nhật Badge
+                if (badge) {
+                    if (!cfg.enabled) {
+                        badge.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600 border border-gray-200 transition-all';
+                        badge.innerHTML = `
+                            <span class="w-2 h-2 rounded-full bg-gray-400"></span>
+                            <span>Proxy đang Tắt (Kết nối trực tiếp từ VPS)</span>
+                        `;
+                    } else if (cfg.is_stable) {
+                        badge.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-300 transition-all';
+                        const flagHtml = cfg.geo ? renderCountryFlag(cfg.geo.country_code, cfg.geo.flag) : '🇺🇸';
+                        badge.innerHTML = `
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span>Proxy Ổn định (Ping: ${cfg.last_latency_ms}ms • ${flagHtml} ${cfg.proxy_ip})</span>
+                        `;
+                    } else {
+                        badge.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-300 transition-all';
+                        badge.innerHTML = `
+                            <span class="w-2 h-2 rounded-full bg-red-500"></span>
+                            <span>Proxy Không ổn định / Lỗi kết nối</span>
+                        `;
+                    }
+                }
+
+                // Cập nhật Geo Info Card
+                if (cfg.geo && (cfg.geo.ip || cfg.geo.country)) {
+                    if (geoFlag) geoFlag.innerHTML = renderCountryFlag(cfg.geo.country_code, cfg.geo.flag);
+                    if (geoLoc) {
+                        const locParts = [cfg.geo.city, cfg.geo.region, cfg.geo.country_code || cfg.geo.country].filter(Boolean);
+                        geoLoc.textContent = locParts.length > 0 ? locParts.join(', ') : (cfg.geo.country || 'Hoa Kỳ');
+                    }
+                    if (geoIsp) geoIsp.textContent = `ISP: ${cfg.geo.isp || 'N/A'}`;
+                    if (geoPing) geoPing.textContent = `Ping: ${cfg.last_latency_ms || 0}ms`;
+                    if (geoTime && cfg.last_checked_at) {
+                        try {
+                            const d = new Date(cfg.last_checked_at);
+                            geoTime.textContent = `Kiểm tra: ${d.toLocaleTimeString('vi-VN')}`;
+                        } catch (e) {
+                            geoTime.textContent = '';
+                        }
+                    }
+                    if (geoCard) geoCard.classList.remove('hidden');
+                } else if (geoCard) {
+                    geoCard.classList.add('hidden');
+                }
+
+                // Thời gian kiểm tra cuối
+                if (lastChecked && cfg.last_checked_at) {
+                    try {
+                        const d = new Date(cfg.last_checked_at);
+                        lastChecked.textContent = `Kiểm tra kết nối gần nhất: ${d.toLocaleString('vi-VN')} ${cfg.last_error ? `(Lỗi: ${cfg.last_error})` : ''}`;
+                        lastChecked.classList.remove('hidden');
+                    } catch (e) {
+                        lastChecked.classList.add('hidden');
+                    }
+                } else if (lastChecked) {
+                    lastChecked.classList.add('hidden');
+                }
+            } catch (err) {
+                console.warn('Lỗi tải cấu hình proxy:', err);
+            }
+        }
+
+        // Tự động phân tích khi người dùng dán hoặc nhập chuỗi nhanh
+        function handleProxyQuickInput(raw) {
+            if (!raw) return;
+            const str = raw.trim();
+
+            // Định dạng 1: URL có scheme
+            if (/^[a-zA-Z0-9+.-]+:\/\//.test(str)) {
+                try {
+                    const u = new URL(str);
+                    document.getElementById('proxy_host').value = u.hostname || '';
+                    document.getElementById('proxy_port').value = u.port || '';
+                    document.getElementById('proxy_username').value = decodeURIComponent(u.username || '');
+                    if (u.password) {
+                        document.getElementById('proxy_password').value = decodeURIComponent(u.password);
+                    }
+                    return;
+                } catch (e) {}
+            }
+
+            // Định dạng 2: host:port:user:pass
+            const parts = str.split(':');
+            if (parts.length === 4) {
+                document.getElementById('proxy_host').value = parts[0];
+                document.getElementById('proxy_port').value = parts[1];
+                document.getElementById('proxy_username').value = parts[2];
+                document.getElementById('proxy_password').value = parts[3];
+                return;
+            }
+
+            // Định dạng 3: user:pass@host:port
+            if (str.includes('@')) {
+                try {
+                    const u = new URL('http://' + str);
+                    document.getElementById('proxy_host').value = u.hostname || '';
+                    document.getElementById('proxy_port').value = u.port || '';
+                    document.getElementById('proxy_username').value = decodeURIComponent(u.username || '');
+                    if (u.password) {
+                        document.getElementById('proxy_password').value = decodeURIComponent(u.password);
+                    }
+                    return;
+                } catch (e) {}
+            }
+
+            // Định dạng 4: host:port
+            if (parts.length === 2 && !isNaN(parts[1])) {
+                document.getElementById('proxy_host').value = parts[0];
+                document.getElementById('proxy_port').value = parts[1];
+            }
+        }
+
+        // Đồng bộ ngược lại ô quick string khi sửa 4 ô chi tiết
+        function syncProxyQuickString() {
+            const host = document.getElementById('proxy_host').value.trim();
+            const port = document.getElementById('proxy_port').value.trim();
+            const user = document.getElementById('proxy_username').value.trim();
+            const pass = document.getElementById('proxy_password').value.trim();
+
+            if (!host) return;
+            let url = '';
+            if (user || pass) {
+                url = `http://${encodeURIComponent(user)}:${encodeURIComponent(pass)}@${host}${port ? `:${port}` : ''}`;
+            } else {
+                url = `http://${host}${port ? `:${port}` : ''}`;
+            }
+            document.getElementById('proxy_quick_string').value = url;
+        }
+
+        async function testProxySettings() {
+            const testBtn = document.getElementById('btnTestProxy');
+            const testBtnIcon = document.getElementById('testProxyBtnIcon');
+            const testBtnText = document.getElementById('testProxyBtnText');
+            const feedback = document.getElementById('proxy-config-feedback');
+
+            const quickStr = document.getElementById('proxy_quick_string').value.trim();
+            const host = document.getElementById('proxy_host').value.trim();
+            const port = document.getElementById('proxy_port').value.trim();
+            const username = document.getElementById('proxy_username').value.trim();
+            const password = document.getElementById('proxy_password').value.trim();
+
+            if (!quickStr && (!host || !port)) {
+                feedback.innerHTML = '<span class="text-rose-600 font-semibold">✕ Vui lòng nhập thông tin kết nối Proxy trước khi kiểm tra!</span>';
+                return;
+            }
+
+            testBtn.disabled = true;
+            if (testBtnIcon) {
+                testBtnIcon.setAttribute('icon', 'mdi:loading');
+                testBtnIcon.classList.add('animate-spin');
+            }
+            testBtnText.textContent = 'Đang kiểm tra kết nối...';
+            feedback.innerHTML = '<span class="text-indigo-600">Đang gửi request kiểm tra xuyên qua Proxy US...</span>';
+
+            try {
+                const res = await fetch('/api/settings/proxy/test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        proxy_input: quickStr,
+                        host: host,
+                        port: port,
+                        username: username,
+                        password: password
+                    })
+                });
+
+                const data = await res.json();
+                if (data.is_stable) {
+                    let geoStr = '';
+                    if (data.geo) {
+                        const g = data.geo;
+                        geoStr = ` • ${g.flag || ''} ${[g.city, g.region || g.country].filter(Boolean).join(', ')} (ISP: ${g.isp || 'N/A'})`;
+                    }
+                    feedback.innerHTML = `<span class="text-emerald-600 font-semibold">✓ Kết nối hoàn hảo! (Ping: ${data.latency_ms}ms${geoStr})</span>`;
+                    
+                    // Cập nhật Geo Card
+                    const geoCard = document.getElementById('proxy-geo-card');
+                    if (data.geo) {
+                        document.getElementById('proxy-geo-flag').innerHTML = renderCountryFlag(data.geo.country_code, data.geo.flag);
+                        document.getElementById('proxy-geo-location').textContent = [data.geo.city, data.geo.region, data.geo.country].filter(Boolean).join(', ');
+                        document.getElementById('proxy-geo-isp').textContent = `ISP: ${data.geo.isp || 'N/A'}`;
+                        document.getElementById('proxy-geo-ping').textContent = `Ping: ${data.latency_ms}ms`;
+                        document.getElementById('proxy-geo-time').textContent = 'Vừa kiểm tra xong';
+                        if (geoCard) geoCard.classList.remove('hidden');
+                    }
+                } else {
+                    feedback.innerHTML = `<span class="text-rose-600 font-semibold">✕ Lỗi kết nối Proxy: ${data.error || data.message || 'Không thể phản hồi'}</span>`;
+                }
+            } catch (err) {
+                feedback.innerHTML = `<span class="text-rose-600">Lỗi kiểm tra mạng: ${err.message}</span>`;
+            } finally {
+                testBtn.disabled = false;
+                if (testBtnIcon) {
+                    testBtnIcon.setAttribute('icon', 'mdi:network-check');
+                    testBtnIcon.classList.remove('animate-spin');
+                }
+                testBtnText.textContent = 'Kiểm tra kết nối (Test Ping)';
+            }
+        }
+
+        async function saveProxySettings() {
+            const saveBtn = document.getElementById('btnSaveProxy');
+            const saveBtnIcon = document.getElementById('saveProxyBtnIcon');
+            const saveBtnText = document.getElementById('saveProxyBtnText');
+            const feedback = document.getElementById('proxy-config-feedback');
+
+            const quickStr = document.getElementById('proxy_quick_string').value.trim();
+            const host = document.getElementById('proxy_host').value.trim();
+            const port = document.getElementById('proxy_port').value.trim();
+            const username = document.getElementById('proxy_username').value.trim();
+            const password = document.getElementById('proxy_password').value.trim();
+
+            if (!quickStr && (!host || !port)) {
+                feedback.innerHTML = '<span class="text-rose-600 font-semibold">✕ Vui lòng nhập Host/IP và Port cho Proxy!</span>';
+                return;
+            }
+
+            saveBtn.disabled = true;
+            if (saveProxyBtnIcon) {
+                saveProxyBtnIcon.setAttribute('icon', 'mdi:loading');
+                saveProxyBtnIcon.classList.add('animate-spin');
+            }
+            saveBtnText.textContent = 'Đang lưu & kiểm tra...';
+            feedback.innerHTML = '<span class="text-indigo-600">Đang lưu vào proxy_config.json và kiểm tra kết nối...</span>';
+
+            try {
+                const res = await fetch('/api/settings/proxy', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        proxy_input: quickStr,
+                        host: host,
+                        port: port,
+                        username: username,
+                        password: password
+                    })
+                });
+
+                const data = await res.json();
+                if (data.success) {
+                    feedback.innerHTML = `<span class="text-emerald-600 font-semibold">✓ ${data.message}</span>`;
+                    document.getElementById('proxy_password').value = '';
+                    await loadProxySettings();
+                } else {
+                    feedback.innerHTML = `<span class="text-rose-600 font-semibold">✕ ${data.message}</span>`;
+                }
+            } catch (err) {
+                feedback.innerHTML = `<span class="text-rose-600">Lỗi kết nối: ${err.message}</span>`;
+            } finally {
+                saveBtn.disabled = false;
+                if (saveProxyBtnIcon) {
+                    saveProxyBtnIcon.setAttribute('icon', 'mdi:content-save-outline');
+                    saveProxyBtnIcon.classList.remove('animate-spin');
+                }
+                saveBtnText.textContent = 'Lưu Cấu Hình Proxy';
+            }
+        }
+
+        async function resetProxySettings() {
+            if (!confirm('Bạn có chắc chắn muốn khôi phục cấu hình Proxy về giá trị mặc định của server?')) {
+                return;
+            }
+
+            const resetBtn = document.getElementById('btnResetProxy');
+            const resetBtnText = document.getElementById('resetProxyBtnText');
+            const feedback = document.getElementById('proxy-config-feedback');
+
+            resetBtn.disabled = true;
+            resetBtnText.textContent = 'Đang khôi phục...';
+
+            try {
+                const res = await fetch('/api/settings/proxy/reset', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await res.json();
+                if (data.success) {
+                    feedback.innerHTML = `<span class="text-emerald-600 font-semibold">✓ ${data.message}</span>`;
+                    await loadProxySettings();
+                } else {
+                    feedback.innerHTML = `<span class="text-rose-600">✕ Lỗi: ${data.message || 'Không thể khôi phục'}</span>`;
+                }
+            } catch (err) {
+                feedback.innerHTML = `<span class="text-rose-600">Lỗi kết nối: ${err.message}</span>`;
+            } finally {
+                resetBtn.disabled = false;
+                resetBtnText.textContent = 'Khôi phục Mặc định';
+            }
+        }
+
         // Tự động load config khi vào trang
         document.addEventListener('DOMContentLoaded', () => {
+            loadProxySettings();
             loadLogoUpdaterConfig();
         });
     </script>

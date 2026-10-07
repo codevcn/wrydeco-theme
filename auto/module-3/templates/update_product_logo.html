@@ -272,12 +272,19 @@
 
         <!-- SECTION 2: Danh sách Sản phẩm & Media (Grid 1 cột, vô hạn hàng) -->
         <section id="sectionProducts" class="space-y-4">
-            <div class="flex items-center justify-between">
+            <div class="flex flex-wrap items-center justify-between gap-3">
                 <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2">
                     <iconify-icon icon="mdi:view-grid-outline" class="text-indigo-600"></iconify-icon>
                     <span>Section 2: Danh sách Sản phẩm</span>
                 </h3>
-                <span id="productTotalBadge" class="text-xs font-semibold bg-gray-200 text-gray-700 px-3 py-1 rounded-full">0 sản phẩm</span>
+                <div class="flex items-center gap-3 flex-wrap">
+                    <!-- NÚT THAY THẾ MEDIA TỪ STORE RIÊNG SANG STORE MẶC ĐỊNH (CHỈ HIỆN KHI PROXY BẬT & ĐÃ NẠP SẢN PHẨM) -->
+                    <button id="btnSyncFromCustomStore" type="button" onclick="openSyncFromCustomStoreModal()" class="hidden inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 active:scale-95 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md transition-all cursor-pointer" title="Thay thế toàn bộ ảnh sản phẩm trên Store mặc định bằng ảnh từ Store riêng (qua Proxy)">
+                        <iconify-icon icon="mdi:cloud-sync" class="text-lg"></iconify-icon>
+                        <span>Thay thế Media từ Store riêng sang Store mặc định</span>
+                    </button>
+                    <span id="productTotalBadge" class="text-xs font-semibold bg-gray-200 text-gray-700 px-3 py-1 rounded-full">0 sản phẩm</span>
+                </div>
             </div>
 
             <!-- Container Grid 1 cột các sản phẩm -->
@@ -651,7 +658,7 @@
                     <iconify-icon icon="mdi:magnify" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-base"></iconify-icon>
                     <input type="text" id="backupSearchInput" oninput="filterBackupList()" placeholder="Tìm theo Product ID, Media ID, tên file..." class="w-full pl-9 pr-3 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500 focus:bg-white transition-colors">
                 </div>
-                <div class="flex items-center gap-2 text-xs">
+                <div class="flex items-center gap-2 text-xs flex-wrap">
                     <span class="text-gray-500 font-medium">Trạng thái:</span>
                     <select id="backupFilterStatus" onchange="filterBackupList()" class="px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs font-medium focus:outline-none focus:border-indigo-500 cursor-pointer">
                         <option value="all">Tất cả file</option>
@@ -660,6 +667,10 @@
                     </select>
                     <div class="h-4 w-px bg-gray-200 mx-1"></div>
                     <span id="backupTotalSizeBadge" class="text-gray-600 font-medium bg-gray-100 px-2 py-1 rounded-md text-xs">Tổng: --</span>
+                    <button type="button" onclick="triggerCleanupSafeBackups()" id="btnCleanupSafeBackups" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-semibold shadow-2xs transition-colors cursor-pointer" title="Dọn dẹp toàn bộ các bản sao lưu đã Rollback mộc an toàn để giải phóng ổ cứng VPS">
+                        <iconify-icon icon="mdi:broom" class="text-sm text-emerald-600"></iconify-icon>
+                        <span>Dọn dẹp an toàn</span>
+                    </button>
                 </div>
             </div>
 
@@ -731,12 +742,125 @@
                 </div>
             </div>
         </div>
+    <!-- Modal Xác nhận & Tiến trình Thay thế Media từ Store Riêng sang Store Mặc định -->
+    <div id="syncCustomStoreModal" onclick="if(event.target === this) closeSyncFromCustomStoreModal()" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+        <div onclick="event.stopPropagation()" class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-gray-200">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-amber-50 to-orange-50">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center text-xl flex-shrink-0 shadow-xs">
+                        <iconify-icon icon="mdi:cloud-sync"></iconify-icon>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-gray-800 text-base">Thay thế Media từ Store riêng sang Store mặc định</h3>
+                        <p class="text-xs text-gray-500 mt-0.5">Định tuyến 100% qua Proxy US • Tự động dọn dẹp ảnh cũ</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeSyncFromCustomStoreModal()" class="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-white/60 cursor-pointer" title="Đóng">
+                    <iconify-icon icon="mdi:close" class="text-xl"></iconify-icon>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="p-6 overflow-y-auto space-y-4 flex-1 text-xs">
+                <!-- Thông tin Store Nguồn & Đích -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="p-3 bg-indigo-50 border border-indigo-200 rounded-xl space-y-1">
+                        <div class="font-semibold text-indigo-900 flex items-center gap-1.5">
+                            <iconify-icon icon="mdi:storefront" class="text-indigo-600 text-base"></iconify-icon>
+                            <span>Store Riêng (Nguồn ảnh chuẩn):</span>
+                        </div>
+                        <div id="syncModalSourceShop" class="font-mono font-bold text-indigo-700 break-all">236qm8-w7.myshopify.com</div>
+                        <div class="text-[11px] text-emerald-600 font-medium">✓ Chỉ đọc dữ liệu - Tuyệt đối không xóa/sửa</div>
+                    </div>
+
+                    <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-1">
+                        <div class="font-semibold text-amber-900 flex items-center gap-1.5">
+                            <iconify-icon icon="mdi:storefront-outline" class="text-amber-600 text-base"></iconify-icon>
+                            <span>Store Mặc định (Đích đến):</span>
+                        </div>
+                        <div id="syncModalTargetShop" class="font-mono font-bold text-amber-700 break-all">wrydeco.myshopify.com</div>
+                        <div class="text-[11px] text-amber-700 font-medium">⚠️ Nhận ảnh mới & xóa toàn bộ ảnh cũ</div>
+                    </div>
+                </div>
+
+                <!-- Cảnh báo An toàn Quan trọng -->
+                <div class="p-4 bg-red-50 border border-red-200 rounded-xl text-red-800 space-y-1.5">
+                    <div class="font-bold flex items-center gap-1.5 text-red-900 text-sm">
+                        <iconify-icon icon="mdi:alert-octagon" class="text-red-600 text-lg"></iconify-icon>
+                        <span>CẢNH BÁO QUAN TRỌNG VỀ THAY THẾ MEDIA</span>
+                    </div>
+                    <p class="leading-relaxed">
+                        Toàn bộ ảnh hiện tại trên <strong>Store mặc định</strong> của danh sách <span id="syncModalProdCount" class="font-bold font-mono">0</span> sản phẩm bên dưới sẽ được thay thế bằng ảnh tương ứng từ <strong>Store riêng</strong> (Ảnh 1 thay Ảnh 1, Ảnh 2 thay Ảnh 2...).
+                    </p>
+                    <p class="leading-relaxed text-red-700">
+                        Sau khi ảnh mới được upload lên Store mặc định, <strong>toàn bộ ảnh cũ bị thay thế trên Store mặc định sẽ bị xóa bỏ vĩnh viễn</strong> để không làm tăng dung lượng Shopify Content Files.
+                    </p>
+                    <div class="text-[11px] text-emerald-700 font-medium flex items-center gap-1 pt-1">
+                        <iconify-icon icon="mdi:shield-check"></iconify-icon>
+                        <span>Toàn bộ tiến trình (truy vấn, tải ảnh CDN, upload, xóa) bắt buộc đi qua Proxy US.</span>
+                    </div>
+                </div>
+
+                <!-- Danh sách sản phẩm sẽ đồng bộ -->
+                <div class="space-y-1.5">
+                    <div class="font-semibold text-gray-700 flex items-center justify-between">
+                        <span>Danh sách sản phẩm sẽ thay thế:</span>
+                        <span id="syncModalProductCountBadge" class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded font-mono text-[11px]">0 sản phẩm</span>
+                    </div>
+                    <div id="syncModalProductList" class="p-3 bg-gray-50 border border-gray-200 rounded-xl max-h-36 overflow-y-auto font-mono text-[11px] space-y-1">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Khu vực Tiến trình (ẩn ban đầu, hiện khi bắt đầu chạy) -->
+                <div id="syncProgressArea" class="hidden space-y-3 pt-2 border-t border-gray-200">
+                    <div class="flex items-center justify-between text-xs font-semibold text-gray-700">
+                        <span id="syncProgressStatusText">Đang chuẩn bị...</span>
+                        <span id="syncProgressPercent" class="text-amber-700 font-mono">0%</span>
+                    </div>
+                    <div class="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+                        <div id="syncProgressBar" class="h-full bg-gradient-to-r from-amber-500 to-orange-600 transition-all duration-300 w-0"></div>
+                    </div>
+                    <!-- Activity logs -->
+                    <div id="syncLogsBox" class="p-3 bg-gray-900 text-gray-100 rounded-xl font-mono text-[11px] h-32 overflow-y-auto space-y-1 leading-relaxed">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-4 border-t border-gray-200 flex items-center justify-between bg-gray-50">
+                <button id="btnCancelSyncModal" type="button" onclick="closeSyncFromCustomStoreModal()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 active:bg-gray-400 text-gray-700 font-semibold rounded-xl transition-colors cursor-pointer text-xs">
+                    Hủy bỏ
+                </button>
+                <button id="btnStartSyncModal" type="button" onclick="startSyncFromCustomStore()" class="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 active:scale-95 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md transition-all cursor-pointer">
+                    <iconify-icon icon="mdi:play-circle" class="text-base"></iconify-icon>
+                    <span id="btnStartSyncModalText">Bắt đầu Thay thế ngay</span>
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- Toast Notification Container -->
     <div id="toastContainer" class="fixed bottom-20 right-6 z-50 space-y-3 pointer-events-none"></div>
 
     <script>
+        // =================================================================
+        // GLOBAL FETCH INTERCEPTOR FOR SHOPIFY ACCESS TOKEN EVENTS
+        // =================================================================
+        const _origFetch = window.fetch;
+        window.fetch = async function(...args) {
+            const resp = await _origFetch.apply(this, args);
+            try {
+                const clone = resp.clone();
+                const data = await clone.json();
+                if (data && data.token_notification && data.token_notification.message) {
+                    showToast(data.token_notification.message, data.token_notification.type || 'info');
+                }
+            } catch (_) {}
+            return resp;
+        };
+
         // =================================================================
         // PROXY GATEWAY CLIENT STATE & CONTROLLER
         // =================================================================
@@ -861,6 +985,9 @@
                     }
                 }
             });
+
+            // Cập nhật trạng thái hiển thị nút Đồng bộ / Thay thế Media từ Store riêng
+            updateSyncButtonVisibility();
         }
 
         function updateStoreInfoUI(info) {
@@ -871,7 +998,8 @@
             const sectionDomain = document.getElementById('sectionStoreDomain');
             const sectionTag = document.getElementById('sectionStoreBadgeTag');
 
-            const domain = info.shop_domain || 'wrydeco.myshopify.com';
+            const domain = info.shop_domain || '236qm8-w7.myshopify.com';
+            window.currentStoreDomain = domain;
             const shortShop = domain.replace('.myshopify.com', '');
             if (headerStoreLink) {
                 headerStoreLink.href = `https://admin.shopify.com/store/${shortShop}`;
@@ -1312,6 +1440,9 @@
                     activeCard.after(setupSection);
                 }
             }
+
+            // Cập nhật trạng thái hiển thị nút Thay thế Media từ Store riêng
+            updateSyncButtonVisibility();
         }
 
         // Select Media Thumbnail to Open Setup Logo Section
@@ -1757,6 +1888,10 @@
                 if (safetyWrapper && !safetyWrapper.classList.contains('hidden')) {
                     toggleSafetyPopover(false);
                 }
+                const syncModal = document.getElementById('syncCustomStoreModal');
+                if (syncModal && !syncModal.classList.contains('hidden')) {
+                    closeSyncFromCustomStoreModal();
+                }
             }
         });
 
@@ -1872,6 +2007,7 @@
                     groupsMap.set(prodId, {
                         productId: prodId,
                         productTitle: resolveProductTitle(prodId, item.product_title),
+                        storeName: item.store_name || window.currentStoreDomain || '236qm8-w7.myshopify.com',
                         items: [],
                         totalBytes: 0,
                         allApplied: true,
@@ -1923,6 +2059,7 @@
                     (item.product_id && item.product_id.toLowerCase().includes(searchVal)) ||
                     (item.media_id && item.media_id.toLowerCase().includes(searchVal)) ||
                     (item.filename && item.filename.toLowerCase().includes(searchVal)) ||
+                    (item.store_name && item.store_name.toLowerCase().includes(searchVal)) ||
                     prodTitle.includes(searchVal);
 
                 let matchStatus = true;
@@ -2046,7 +2183,7 @@
                                 <span>${item.file_size_formatted}</span> • <span>${item.dimensions || '--'} px</span>
                             </div>
 
-                            <div class="pt-0.5 flex items-center gap-1.5 text-[11px]">
+                            <div class="pt-0.5 flex items-center gap-1.5 text-[11px] flex-wrap">
                                 <a href="${item.file_url}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:text-indigo-800 font-semibold hover:underline inline-flex items-center gap-0.5" title="Mở ảnh gốc toàn màn hình">
                                     <span>Xem ảnh</span>
                                     <iconify-icon icon="mdi:open-in-new" class="text-xs"></iconify-icon>
@@ -2055,10 +2192,25 @@
                                 <button type="button" onclick="navigator.clipboard.writeText(window.location.origin + '${item.file_url}'); showToast('Đã copy URL file backup', 'success');" class="text-gray-500 hover:text-gray-800 cursor-pointer" title="Sao chép đường dẫn">
                                     Copy link
                                 </button>
+                                <span class="text-gray-300">•</span>
+                                ${item.is_applied ? `
+                                    <button type="button" onclick="deleteBackupMedia('${item.product_id}', '${item.media_id}', true)" class="text-rose-600 hover:text-rose-800 font-medium inline-flex items-center gap-0.5 cursor-pointer" title="Ảnh đang dán logo trên Shopify! Xóa sẽ mất gốc vĩnh viễn không thể Rollback">
+                                        <iconify-icon icon="mdi:alert-circle-outline" class="text-xs"></iconify-icon>
+                                        <span>Xóa (Mất gốc)</span>
+                                    </button>
+                                ` : `
+                                    <button type="button" onclick="deleteBackupMedia('${item.product_id}', '${item.media_id}', false)" class="text-gray-500 hover:text-rose-600 font-medium inline-flex items-center gap-0.5 cursor-pointer" title="Xóa bản sao lưu mộc này khỏi VPS để tiết kiệm dung lượng (An toàn)">
+                                        <iconify-icon icon="mdi:trash-can-outline" class="text-xs"></iconify-icon>
+                                        <span>Xóa lưu</span>
+                                    </button>
+                                `}
                             </div>
                         </div>
                     </div>
                 `).join('');
+
+                const storeDomain = group.storeName || window.currentStoreDomain || '236qm8-w7.myshopify.com';
+                const shortStore = storeDomain.replace('.myshopify.com', '');
 
                 return `
                     <div class="bg-gray-50/70 border border-gray-200 hover:border-gray-300 rounded-2xl p-4 sm:p-5 space-y-3.5 shadow-2xs transition-colors">
@@ -2076,6 +2228,9 @@
                                         <span class="bg-indigo-100 text-indigo-800 text-[11px] px-2.5 py-0.5 rounded-full font-bold">
                                             ${group.items.length} media
                                         </span>
+                                        <span class="bg-purple-100 text-purple-800 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-purple-200 flex items-center gap-1 font-mono" title="Gian hàng Shopify sao lưu: ${storeDomain}">
+                                            <iconify-icon icon="mdi:storefront-outline"></iconify-icon> ${storeDomain}
+                                        </span>
                                         ${statusBadge}
                                     </div>
                                     <div class="text-gray-500 font-mono text-[11px] flex items-center gap-2 flex-wrap">
@@ -2091,9 +2246,9 @@
 
                             <!-- Actions Sản phẩm -->
                             <div class="flex items-center gap-2 self-end sm:self-center flex-shrink-0">
-                                <a href="https://admin.shopify.com/store/wrydeco/products/${group.productId}" target="_blank" rel="noopener noreferrer" 
+                                <a href="https://admin.shopify.com/store/${shortStore}/products/${group.productId}" target="_blank" rel="noopener noreferrer" 
                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-black hover:bg-neutral-800 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer" 
-                                   title="Mở sản phẩm trên Shopify Admin">
+                                   title="Mở sản phẩm trên Shopify Admin (${storeDomain})">
                                     <span>Shopify Store</span>
                                     <iconify-icon icon="mdi:open-in-new" class="text-xs text-gray-300"></iconify-icon>
                                 </a>
@@ -2164,6 +2319,81 @@
 
                         controlsElem.innerHTML = btns;
                     }
+                }
+            }
+        }
+
+        // Xóa một file media backup trên VPS (có bảo vệ an toàn)
+        async function deleteBackupMedia(productId, mediaId, isApplied) {
+            if (!productId || !mediaId) return;
+
+            let force = false;
+            if (isApplied) {
+                const promptMsg = "⚠️ CẢNH BÁO NGUY HIỂM:\n\nẢnh này ĐANG ĐƯỢC GẮN LOGO TRÊN SHOPIFY (chưa Rollback)!\nNếu xóa bản sao lưu này, bạn sẽ VĨNH VIỄN KHÔNG THỂ KHÔI PHỤC (ROLLBACK) VỀ ẢNH GỐC NỮA!\n\nNếu bạn chắc chắn muốn xóa cưỡng bức, vui lòng gõ chữ DELETE vào ô bên dưới để xác nhận:";
+                const confirmWord = prompt(promptMsg);
+                if (confirmWord !== 'DELETE') {
+                    showToast('Đã hủy thao tác xóa cưỡng bức', 'info');
+                    return;
+                }
+                force = true;
+            } else {
+                if (!confirm(`Xác nhận xóa bản sao lưu media #${mediaId} khỏi VPS để giải phóng dung lượng?\n\n(Thao tác này là an toàn vì ảnh trên Shopify đã là ảnh gốc).`)) {
+                    return;
+                }
+            }
+
+            try {
+                const res = await fetch('/api/products/backups/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        product_id: productId,
+                        media_id: mediaId,
+                        force: force
+                    })
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    showToast(data.message || 'Đã xóa bản sao lưu thành công!', 'success');
+                    loadVpsBackupList(true);
+                } else {
+                    showToast(data.error || 'Lỗi khi xóa bản sao lưu', 'error');
+                }
+            } catch (err) {
+                showToast(`Lỗi kết nối: ${err.message}`, 'error');
+            }
+        }
+
+        // Dọn dẹp hàng loạt các bản sao lưu an toàn (đã Rollback mộc)
+        async function triggerCleanupSafeBackups() {
+            if (!confirm("Hệ thống sẽ quét và DỌN DẸP TOÀN BỘ các bản sao lưu an toàn (những ảnh đã Rollback về gốc trên Shopify, không còn mang logo).\n\nTuyệt đối KHÔNG đụng tới các ảnh đang gắn logo trên gian hàng.\n\nBạn có muốn tiếp tục?")) {
+                return;
+            }
+
+            const btn = document.getElementById('btnCleanupSafeBackups');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = `<iconify-icon icon="mdi:loading" class="text-sm animate-spin"></iconify-icon> <span>Đang dọn dẹp...</span>`;
+            }
+
+            try {
+                const res = await fetch('/api/products/backups/cleanup-safe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    showToast(data.message || 'Đã dọn dẹp các bản sao lưu an toàn thành công!', 'success');
+                    loadVpsBackupList(true);
+                } else {
+                    showToast(data.error || 'Lỗi khi dọn dẹp bản sao lưu an toàn', 'error');
+                }
+            } catch (err) {
+                showToast(`Lỗi kết nối: ${err.message}`, 'error');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = `<iconify-icon icon="mdi:broom" class="text-sm text-emerald-600"></iconify-icon> <span>Dọn dẹp an toàn</span>`;
                 }
             }
         }
@@ -2492,7 +2722,8 @@
                             media_id: item.mediaRawId,
                             orig_media_id: item.mediaOrigId,
                             image_url: item.mediaUrl,
-                            position: item.position
+                            position: item.position,
+                            store_name: window.currentStoreDomain || '236qm8-w7.myshopify.com'
                         })
                     });
 
@@ -2916,6 +3147,219 @@
                 toast.classList.add('opacity-0', 'translate-y-2');
                 setTimeout(() => toast.remove(), 200);
             }, 4000);
+        }
+
+        // =================================================================
+        // ĐỒNG BỘ / THAY THẾ MEDIA TỪ STORE RIÊNG SANG STORE MẶC ĐỊNH
+        // =================================================================
+        function updateSyncButtonVisibility() {
+            const btnSync = document.getElementById('btnSyncFromCustomStore');
+            if (!btnSync) return;
+            // RÀNG BUỘC: Proxy phải BẬT và ỔN ĐỊNH, và danh sách sản phẩm đã được nạp thành công
+            const canShow = Boolean(proxyState.enabled && proxyState.isStable && loadedProducts && loadedProducts.length > 0);
+            if (canShow) {
+                btnSync.classList.remove('hidden');
+            } else {
+                btnSync.classList.add('hidden');
+            }
+        }
+
+        function openSyncFromCustomStoreModal() {
+            if (!assertProxySafety()) return;
+            if (!loadedProducts || loadedProducts.length === 0) {
+                showToast('Chưa có sản phẩm nào được nạp! Vui lòng nạp sản phẩm trước.', 'warning');
+                return;
+            }
+
+            const modal = document.getElementById('syncCustomStoreModal');
+            if (!modal) return;
+
+            // Điền thông tin store
+            const sourceShopElem = document.getElementById('syncModalSourceShop');
+            const targetShopElem = document.getElementById('syncModalTargetShop');
+            if (sourceShopElem) sourceShopElem.textContent = window.currentStoreDomain || '236qm8-w7.myshopify.com';
+            if (targetShopElem) targetShopElem.textContent = 'wrydeco.myshopify.com';
+
+            const countElem = document.getElementById('syncModalProdCount');
+            const badgeElem = document.getElementById('syncModalProductCountBadge');
+            const listElem = document.getElementById('syncModalProductList');
+
+            if (countElem) countElem.textContent = loadedProducts.length;
+            if (badgeElem) badgeElem.textContent = `${loadedProducts.length} sản phẩm`;
+
+            if (listElem) {
+                listElem.innerHTML = loadedProducts.map((p, idx) => `
+                    <div class="flex items-center justify-between text-gray-700 py-0.5 border-b border-gray-100 last:border-0">
+                        <span class="truncate max-w-[340px] font-semibold text-gray-800">${idx + 1}. ${p.title}</span>
+                        <span class="text-indigo-600 font-mono text-[10px] ml-2">(${p.handle})</span>
+                    </div>
+                `).join('');
+            }
+
+            // Reset progress area
+            const progressArea = document.getElementById('syncProgressArea');
+            const progressBar = document.getElementById('syncProgressBar');
+            const progressPercent = document.getElementById('syncProgressPercent');
+            const progressStatus = document.getElementById('syncProgressStatusText');
+            const logsBox = document.getElementById('syncLogsBox');
+            const startBtn = document.getElementById('btnStartSyncModal');
+            const cancelBtn = document.getElementById('btnCancelSyncModal');
+            const startBtnText = document.getElementById('btnStartSyncModalText');
+
+            if (progressArea) progressArea.classList.add('hidden');
+            if (progressBar) progressBar.style.width = '0%';
+            if (progressPercent) progressPercent.textContent = '0%';
+            if (progressStatus) progressStatus.textContent = 'Sẵn sàng thay thế...';
+            if (logsBox) logsBox.innerHTML = '';
+
+            if (startBtn) {
+                startBtn.disabled = false;
+                startBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+            if (cancelBtn) {
+                cancelBtn.disabled = false;
+                cancelBtn.textContent = 'Hủy bỏ';
+            }
+            if (startBtnText) startBtnText.textContent = 'Bắt đầu Thay thế ngay';
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeSyncFromCustomStoreModal() {
+            if (isSyncingMedia) {
+                if (!confirm('Tiến trình thay thế media đang chạy. Bạn có chắc chắn muốn đóng cửa sổ? (Tiến trình ngầm vẫn có thể tiếp tục xử lý sản phẩm hiện tại)')) {
+                    return;
+                }
+            }
+            const modal = document.getElementById('syncCustomStoreModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        let isSyncingMedia = false;
+
+        async function startSyncFromCustomStore() {
+            if (isSyncingMedia) return;
+            if (!assertProxySafety()) return;
+
+            const progressArea = document.getElementById('syncProgressArea');
+            const progressBar = document.getElementById('syncProgressBar');
+            const progressPercent = document.getElementById('syncProgressPercent');
+            const progressStatus = document.getElementById('syncProgressStatusText');
+            const logsBox = document.getElementById('syncLogsBox');
+            const startBtn = document.getElementById('btnStartSyncModal');
+            const cancelBtn = document.getElementById('btnCancelSyncModal');
+            const startBtnText = document.getElementById('btnStartSyncModalText');
+
+            if (!loadedProducts || loadedProducts.length === 0) {
+                showToast('Không có sản phẩm nào để đồng bộ!', 'warning');
+                return;
+            }
+
+            isSyncingMedia = true;
+            if (startBtn) {
+                startBtn.disabled = true;
+                startBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+            if (cancelBtn) cancelBtn.disabled = true;
+            if (startBtnText) startBtnText.textContent = 'Đang xử lý qua Proxy...';
+
+            if (progressArea) progressArea.classList.remove('hidden');
+            if (logsBox) logsBox.innerHTML = '<div class="text-amber-300">🚀 Bắt đầu tiến trình thay thế media qua Proxy US...</div>';
+
+            const total = loadedProducts.length;
+            let successCount = 0;
+            let failCount = 0;
+
+            for (let i = 0; i < total; i++) {
+                const prod = loadedProducts[i];
+                const percent = Math.round(((i) / total) * 100);
+                if (progressBar) progressBar.style.width = `${percent}%`;
+                if (progressPercent) progressPercent.textContent = `${percent}%`;
+                if (progressStatus) progressStatus.textContent = `Đang xử lý [${i + 1}/${total}]: ${prod.title}...`;
+
+                if (logsBox) {
+                    const startLine = document.createElement('div');
+                    startLine.className = 'text-gray-300';
+                    startLine.textContent = `[${i + 1}/${total}] Đang kết nối Store riêng lấy media cho '${prod.handle}'...`;
+                    logsBox.appendChild(startLine);
+                    logsBox.scrollTop = logsBox.scrollHeight;
+                }
+
+                try {
+                    const res = await fetch('/api/products/sync-media-from-custom-store', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ handle: prod.handle })
+                    });
+
+                    const data = await res.json();
+
+                    if (res.ok && data.success) {
+                        const itemRes = (data.results && data.results[0]) || {};
+                        successCount++;
+                        if (logsBox) {
+                            const okLine = document.createElement('div');
+                            okLine.className = 'text-emerald-400 font-semibold';
+                            okLine.textContent = `✓ [${i + 1}/${total}] ${prod.handle}: Đã upload ${itemRes.new_images_count || 0} ảnh mới từ Store riêng, xóa ${itemRes.deleted_old_count || 0} ảnh cũ trên Store mặc định.`;
+                            logsBox.appendChild(okLine);
+                            logsBox.scrollTop = logsBox.scrollHeight;
+                        }
+                    } else {
+                        failCount++;
+                        const errMsg = data.error || (data.results && data.results[0] && data.results[0].error) || `HTTP ${res.status}`;
+                        if (logsBox) {
+                            const errLine = document.createElement('div');
+                            errLine.className = 'text-red-400 font-semibold';
+                            errLine.textContent = `❌ [${i + 1}/${total}] ${prod.handle}: ${errMsg}`;
+                            logsBox.appendChild(errLine);
+                            logsBox.scrollTop = logsBox.scrollHeight;
+                        }
+                        if (res.status === 503 || (errMsg && errMsg.includes('CHỐT CHẶN AN TOÀN'))) {
+                            highlightProxySection();
+                            initProxyGateway();
+                            break;
+                        }
+                    }
+                } catch (err) {
+                    failCount++;
+                    if (logsBox) {
+                        const netErrLine = document.createElement('div');
+                        netErrLine.className = 'text-red-400 font-semibold';
+                        netErrLine.textContent = `❌ [${i + 1}/${total}] ${prod.handle} Lỗi mạng: ${err.message}`;
+                        logsBox.appendChild(netErrLine);
+                        logsBox.scrollTop = logsBox.scrollHeight;
+                    }
+                }
+            }
+
+            if (progressBar) progressBar.style.width = '100%';
+            if (progressPercent) progressPercent.textContent = '100%';
+            if (progressStatus) progressStatus.textContent = `Hoàn tất! Thành công: ${successCount} sp, Thất bại: ${failCount} sp.`;
+
+            if (logsBox) {
+                const endLine = document.createElement('div');
+                endLine.className = 'text-amber-300 font-bold pt-2 border-t border-gray-700';
+                endLine.textContent = `🏁 Hoàn tất: ${successCount}/${total} sản phẩm đã được thay thế media thành công! Đang tự động nạp lại dữ liệu...`;
+                logsBox.appendChild(endLine);
+                logsBox.scrollTop = logsBox.scrollHeight;
+            }
+
+            isSyncingMedia = false;
+            if (cancelBtn) {
+                cancelBtn.disabled = false;
+                cancelBtn.textContent = 'Đóng';
+            }
+            if (startBtn) {
+                startBtn.disabled = true;
+                startBtn.textContent = 'Đã hoàn tất';
+            }
+
+            showToast(`Đã thay thế media cho ${successCount}/${total} sản phẩm thành công!`, 'success');
+
+            // Tự động load lại danh sách sản phẩm sau 1.5s để cập nhật thumbnail mới
+            setTimeout(async () => {
+                await loadProducts();
+            }, 1500);
         }
 
         // Tự động load danh sách định danh đã lưu trong localStorage và khởi tạo Proxy Gateway khi vào lại trang

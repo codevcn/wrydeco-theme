@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/static/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+    <link rel="shortcut icon" href="/static/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png" />
+    <link rel="manifest" href="/static/site.webmanifest" />
+    <title>Định danh của sản phẩm - Shopify Admin Manager</title>
+    <!-- Font Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS v4 CDN -->
+    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom scrollbar cho description preview */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 min-h-screen relative">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
+        <div class="mx-auto px-4 sm:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo -->
+                <div class="flex-shrink-0 flex items-center gap-3">
+                    <a target="_blank" rel="noopener noreferrer" href="/" class="flex items-center gap-2 text-indigo-600 font-bold text-xl hover:text-indigo-700 transition-colors">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                        <span>Shopify Admin Manager</span>
+                    </a>
+                    <a target="_blank" rel="noopener noreferrer" href="https://admin.shopify.com/store/{{ shopify_shop|default('wrydeco') }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-black hover:bg-neutral-800 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors" title="Mở Shopify Admin Store">
+                        <span>Shopify Store</span>
+                        <svg class="w-3.5 h-3.5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                    </a>
+                </div>
+                <!-- Nav Links -->
+                <nav class="flex items-center gap-6">
+                    <a target="_blank" rel="noopener noreferrer" href="/" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Sản phẩm</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/collections" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Collections</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/metaobjects" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Meta Objects</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/create" class="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">Tạo sản phẩm</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/edit-variants" class="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">Sửa hàng loạt</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/blogs" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path></svg>Blog</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/policies" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>Policy</a>
+                    <button id="drawer-toggle-btn" type="button" onclick="toggleDrawer()" class="p-1.5 text-gray-600 hover:text-indigo-600 hover:bg-gray-100 rounded-lg transition-colors flex items-center justify-center focus:outline-none" title="Menu tiện ích">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    {% include 'drawer.html' %}
+
+    <main class="p-4 sm:p-8">
+        <div class="max-w-[96rem] mx-auto">
+            <!-- Header title & actions -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <div class="flex items-center gap-3">
+                    <div class="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl">
+                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-3">
+                            <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 tracking-tight">Định danh của sản phẩm</h1>
+                            <span id="displayCountBadge" class="bg-indigo-100 text-indigo-700 text-xs sm:text-sm font-bold px-3 py-1 rounded-full shadow-sm" title="Tổng số lượng sản phẩm trong store">
+                                {{ total_count }} sản phẩm
+                            </span>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">Danh sách đầy đủ ID và Handle của toàn bộ sản phẩm trong gian hàng. Nhấn vào một hàng để xem chi tiết.</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 self-start sm:self-auto">
+                    <button type="button" onclick="openCopyModal(event, 'id')" class="flex items-center gap-1.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 font-medium px-3.5 py-2 rounded-lg text-sm transition-colors shadow-sm focus:outline-none cursor-pointer" title="Mở tính năng Copy (Alt+Q)">
+                        <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                        <span>Tính năng Copy (Alt+Q)</span>
+                    </button>
+                    <button onclick="window.location.reload()" class="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-4 py-2 rounded-lg text-sm transition-colors shadow-sm focus:outline-none cursor-pointer" title="Tải lại trang">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        <span>Tải lại</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Toolbar / Search box -->
+            <div class="bg-white p-4 rounded-xl shadow-[0_2px_10px_-4px_rgba(0,0,0,0.06)] border border-gray-100 mb-4 flex flex-col sm:flex-row gap-4 items-center justify-between">
+                <div class="relative w-full sm:max-w-md">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </div>
+                    <input type="text" id="liveSearchInput" oninput="filterTable()" placeholder="Lọc nhanh theo ID hoặc Handle..." class="bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-9 pr-8 p-2.5 outline-none transition-colors hover:border-gray-300">
+                    <button type="button" id="clearSearchBtn" onclick="clearSearch()" class="hidden absolute inset-y-0 right-0 pr-2.5 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none cursor-pointer" title="Xóa tìm kiếm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+                <div class="flex items-center gap-2 text-xs text-gray-500 w-full sm:w-auto justify-end">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-50 text-amber-800 border border-amber-200">
+                        <svg class="w-3.5 h-3.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <span>Nhấn vào hàng để xem chi tiết sản phẩm (Title, Description, SEO)</span>
+                    </span>
+                </div>
+            </div>
+
+            <!-- Mục hiển thị số lượng sản phẩm NẰM PHÍA TRÊN TABLE -->
+            <div class="flex items-center justify-between mb-3 px-1 text-sm text-gray-600">
+                <div class="flex items-center gap-2">
+                    <span class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-indigo-50 text-indigo-600">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+                    </span>
+                    <span class="font-medium text-gray-700">
+                        Hiển thị <span id="visibleRowCount" class="font-bold text-indigo-600">{{ products|length }}</span> / <span id="totalRowCount" class="font-bold text-gray-900">{{ total_count }}</span> sản phẩm
+                    </span>
+                </div>
+                <div class="text-xs text-gray-400 hidden sm:block">
+                    Click vào hàng để highlight & xem chi tiết • Nút Copy riêng cạnh từng handle
+                </div>
+            </div>
+
+            {% if error %}
+            <div class="p-4 mb-6 text-sm text-red-700 bg-red-50 rounded-xl border border-red-200 flex items-center gap-3">
+                <svg class="w-5 h-5 flex-shrink-0 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <span><strong>Lỗi kết nối Shopify:</strong> {{ error }}</span>
+            </div>
+            {% endif %}
+
+            <!-- Table Card -->
+            <div class="bg-white rounded-xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-gray-100 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-100" id="identifiersTable">
+                        <thead class="border-b border-gray-200">
+                            <tr>
+                                <!-- Cột 1: STT -->
+                                <th scope="col" class="px-6 py-4 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-24">
+                                    STT
+                                </th>
+                                
+                                <!-- Cột 2: Product ID -->
+                                <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                    <div class="flex items-center gap-2">
+                                        <span>Product ID</span>
+                                        <button type="button" onclick="openCopyModal(event, 'id')" class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded transition-colors shadow-xs cursor-pointer" title="Copy danh sách ID (Alt+Q)">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                            <span class="text-[10px] font-bold">COPY</span>
+                                        </button>
+                                    </div>
+                                </th>
+
+                                <!-- Cột 3: Product Handle + Nút Sort ASC/DESC + Nút Copy Modal -->
+                                <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                    <div class="flex items-center flex-wrap gap-2">
+                                        <div class="flex items-center gap-2">
+                                            <span>Product Handle</span>
+                                            <!-- Nút Sort mũi tên ASC / DESC (Mặc định ASC) -->
+                                            <button type="button" id="sortHandleBtn" onclick="toggleSortHandle()" class="inline-flex items-center gap-1 px-2 py-1 bg-indigo-100 text-indigo-700 border border-indigo-300 rounded transition-colors shadow-xs cursor-pointer" title="Đang sắp xếp A-Z (Nhấn để đảo thành Z-A)">
+                                                <span id="sortHandleIcon" class="flex items-center">
+                                                    <svg class="w-3.5 h-3.5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 15l7-7 7 7"></path>
+                                                    </svg>
+                                                </span>
+                                                <span id="sortHandleText" class="text-[10px] font-bold">ASC (A-Z)</span>
+                                            </button>
+                                        </div>
+
+                                        <!-- Nút Copy hàng loạt Handle -->
+                                        <button type="button" onclick="openCopyModal(event, 'handle')" class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded transition-colors shadow-xs cursor-pointer" title="Copy danh sách Handle">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                            <span class="text-[10px] font-bold">COPY</span>
+                                        </button>
+                                    </div>
+                                </th>
+
+                                <!-- Cột 4: Created At + Nút Sort ASC/DESC -->
+                                <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                    <div class="flex items-center gap-2">
+                                        <span>Created At</span>
+                                        <!-- Nút Sort mũi tên ASC / DESC -->
+                                        <button type="button" id="sortCreatedAtBtn" onclick="toggleSortCreatedAt()" class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 hover:bg-indigo-50 hover:text-indigo-700 text-gray-700 border border-transparent hover:border-indigo-200 rounded transition-colors shadow-xs cursor-pointer" title="Sắp xếp Ngày tạo theo thứ tự (Mới nhất / Cũ nhất)">
+                                            <span id="sortCreatedAtIcon" class="flex items-center">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                                                </svg>
+                                            </span>
+                                            <span id="sortCreatedAtText" class="text-[10px] font-bold">SORT</span>
+                                        </button>
+                                    </div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            {% for product in products %}
+                            <tr data-product-id="{{ product.id }}" data-product-handle="{{ product.handle }}" data-created-at="{{ product.created_at }}" class="cursor-pointer hover:bg-gray-50/80 transition-colors border-b border-gray-200 last:border-b-0 select-none" onclick="handleRowClick(this)">
+                                <!-- STT -->
+                                <td class="row-stt px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-bold text-center">
+                                    {{ loop.index }}
+                                </td>
+                                <!-- Product ID -->
+                                <td class="row-id px-6 py-4 whitespace-nowrap text-sm font-mono font-semibold text-gray-700">
+                                    {{ product.id }}
+                                </td>
+                                <!-- Product Handle -->
+                                <td class="row-handle px-6 py-3.5 whitespace-nowrap text-sm font-mono text-indigo-600 font-medium">
+                                    <div class="flex items-center justify-between pr-2 gap-3">
+                                        <!-- Handle text + nút copy riêng từng row -->
+                                        <div class="flex items-center gap-2 min-w-0">
+                                            <span class="handle-text font-bold text-indigo-600 select-all">{{ product.handle }}</span>
+                                            
+                                            <!-- Nút Copy riêng cho Handle từng hàng (2s check indicator) -->
+                                            <button type="button" 
+                                                    onclick="copySingleHandle(event, '{{ product.handle }}', this)" 
+                                                    class="btn-copy-single inline-flex items-center gap-1 px-2 py-0.5 text-xs text-gray-500 hover:text-indigo-600 bg-gray-100 hover:bg-indigo-50 border border-gray-200 rounded transition-all focus:outline-none flex-shrink-0 cursor-pointer shadow-2xs" 
+                                                    title="Copy Handle này">
+                                                <svg class="copy-svg w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                                </svg>
+                                                <span class="copy-txt text-[10px] font-sans font-semibold">Copy</span>
+                                            </button>
+                                        </div>
+
+                                        <span class="text-xs text-gray-400 group-hover:text-indigo-600 flex items-center gap-1 font-sans flex-shrink-0 opacity-80 hover:opacity-100">
+                                            <span>Chi tiết</span>
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                                        </span>
+                                    </div>
+                                </td>
+                                <!-- Created At -->
+                                <td class="row-created-at px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-600">
+                                    <div class="flex items-center gap-1.5">
+                                        <svg class="w-3.5 h-3.5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                        <span>{{ product.created_at_display if product.created_at_display else '--' }}</span>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr id="emptyRow">
+                                <td colspan="4" class="px-6 py-12 text-center text-gray-500">
+                                    <div class="flex flex-col items-center justify-center gap-2">
+                                        <svg class="w-10 h-10 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
+                                        <p class="font-medium text-base text-gray-600">Không có dữ liệu sản phẩm</p>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Footer info -->
+            <div class="mt-4 text-xs text-gray-400 flex items-center justify-between">
+                <span>Shopify Store: <strong class="text-gray-600">{{ shopify_shop|default('wrydeco') }}</strong></span>
+                <span>Wrydeco Admin Manager</span>
+            </div>
+        </div>
+    </main>
+
+    <!-- ================================================================= -->
+    <!-- FLOATING SCROLL CONTROLS (Scroll to Top & Scroll to Bottom)       -->
+    <!-- ================================================================= -->
+    <div class="fixed bottom-12 right-6 z-40 flex flex-col gap-2.5 select-none">
+        <!-- Nút Cuộn lên đầu trang -->
+        <button type="button" 
+                onclick="scrollToTop()" 
+                class="w-11 h-11 rounded-full bg-white hover:bg-indigo-600 text-gray-700 hover:text-white shadow-lg border border-gray-200 hover:border-indigo-600 flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95 focus:outline-none group cursor-pointer" 
+                title="Cuộn lên đầu trang (Scroll to Top)">
+            <svg class="w-5 h-5 text-gray-600 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 15l7-7 7 7"></path>
+            </svg>
+        </button>
+
+        <!-- Nút Cuộn xuống cuối trang -->
+        <button type="button" 
+                onclick="scrollToBottom()" 
+                class="w-11 h-11 rounded-full bg-white hover:bg-indigo-600 text-gray-700 hover:text-white shadow-lg border border-gray-200 hover:border-indigo-600 flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95 focus:outline-none group cursor-pointer" 
+                title="Cuộn xuống cuối trang (Scroll to Bottom)">
+            <svg class="w-5 h-5 text-gray-600 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
+            </svg>
+        </button>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- POPUP TÍNH NĂNG COPY (Đồng bộ 100% với trang chủ)                 -->
+    <!-- ================================================================= -->
+    <div id="copyModal" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 p-4 hidden">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg relative" onclick="event.stopPropagation()">
+            <button id="copyCloseBtn" type="button" class="absolute top-4 right-4 text-gray-400 hover:text-gray-700 transition-colors focus:outline-none cursor-pointer" title="Đóng">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            <h3 class="text-lg font-bold text-gray-800 mb-4 pr-6">Tính năng Copy</h3>
+            
+            <div class="flex p-1 space-x-1 bg-gray-100 rounded-xl mb-4">
+                <button id="tabCopyId" type="button" class="w-full py-1.5 text-sm font-medium leading-5 text-indigo-700 bg-white rounded-lg shadow ring-1 ring-black/5 focus:outline-none transition-all cursor-pointer" onclick="switchCopyTab('id')">
+                    Copy ID
+                </button>
+                <button id="tabCopyHandle" type="button" class="w-full py-1.5 text-sm font-medium leading-5 text-gray-500 hover:text-gray-700 hover:bg-white/[0.12] rounded-lg focus:outline-none transition-all cursor-pointer" onclick="switchCopyTab('handle')">
+                    Copy Handle
+                </button>
+            </div>
+
+            <div class="flex flex-col gap-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">STT bắt đầu:</label>
+                        <input type="number" id="copyStartInput" class="bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5 outline-none transition-colors" placeholder="Mặc định: 1" value="1" min="1">
+                    </div>
+                    <div>
+                        <label id="copyModalLabel" class="block text-sm font-medium text-gray-700 mb-1">Số lượng ID muốn copy:</label>
+                        <input type="number" id="copyCountInput" class="bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5 outline-none transition-colors" placeholder="Nhập SL" min="1">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Định dạng copy:</label>
+                    <div class="flex flex-col gap-2">
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="radio" name="copy_format" value="comma" class="form-radio h-4 w-4 text-indigo-600 focus:ring-indigo-500" checked>
+                            <span class="ml-2 text-sm text-gray-700">Copy cách nhau bởi dấu phẩy</span>
+                        </label>
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="radio" name="copy_format" value="newline" class="form-radio h-4 w-4 text-indigo-600 focus:ring-indigo-500">
+                            <span class="ml-2 text-sm text-gray-700">Copy cách nhau bởi xuống dòng</span>
+                        </label>
+                    </div>
+                </div>
+                <button id="copySubmitBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-sm px-5 py-2.5 transition-colors shadow-sm focus:ring-4 focus:ring-indigo-300 flex justify-center items-center gap-2 cursor-pointer">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                    <span>Tiến hành Copy</span>
+                </button>
+            </div>
+            <p class="text-xs text-gray-500 mt-4">Nhấn <kbd class="bg-gray-100 border border-gray-300 rounded px-1 font-mono text-gray-700">Esc</kbd> để đóng. Mũi tên trái/phải để chuyển tab.</p>
+        </div>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- POPUP CHI TIẾT SẢN PHẨM (Fetch SAU KHI mở popup kèm spinner)     -->
+    <!-- ================================================================= -->
+    <div id="productDetailModal" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-xs p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col relative overflow-hidden" onclick="event.stopPropagation()">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between flex-shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="p-2 bg-indigo-100 text-indigo-700 rounded-lg">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </div>
+                    <div>
+                        <h3 class="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2">
+                            <span>Chi tiết sản phẩm</span>
+                        </h3>
+                        <p id="modalProductHeaderSubtitle" class="text-xs font-mono text-gray-500 mt-0.5 truncate max-w-md">Đang tải...</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeProductDetailModal()" class="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-200 rounded-lg transition-colors focus:outline-none cursor-pointer" title="Đóng (Esc)">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <!-- Modal Body (Scrollable) -->
+            <div class="p-6 overflow-y-auto flex-1 custom-scrollbar">
+                <!-- 1. SPINNER LOADING INDICATOR (Hiển thị ngay khi popup mở ra) -->
+                <div id="detailSpinner" class="flex flex-col items-center justify-center py-16 gap-4">
+                    <div class="relative w-12 h-12">
+                        <svg class="animate-spin w-12 h-12 text-indigo-600" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-base font-semibold text-gray-800">Đang tải thông tin chi tiết sản phẩm...</p>
+                        <p class="text-xs text-gray-500 mt-1">Đang truy vấn Shopify Admin GraphQL API</p>
+                    </div>
+                </div>
+
+                <!-- 2. ERROR STATE -->
+                <div id="detailError" class="hidden py-8">
+                    <div class="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm flex items-start gap-3">
+                        <svg class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <div class="flex-1">
+                            <p class="font-bold">Lỗi khi tải thông tin sản phẩm</p>
+                            <p id="detailErrorMessage" class="mt-1 text-xs text-red-600"></p>
+                            <button type="button" id="detailRetryBtn" class="mt-3 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-semibold shadow-xs cursor-pointer">
+                                Thử lại
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. ACTUAL DETAILS CONTENT (Hiển thị sau khi fetch xong) -->
+                <div id="detailContent" class="hidden space-y-6">
+                    <!-- IDs, Handles & Created At cards -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="p-3.5 bg-gray-50 rounded-xl border border-gray-200">
+                            <span class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Product ID</span>
+                            <div class="flex items-center justify-between">
+                                <span id="detailId" class="font-mono text-sm sm:text-base font-bold text-gray-800 select-all truncate"></span>
+                                <button type="button" onclick="copyText(document.getElementById('detailId').textContent, this)" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium px-2 py-1 rounded hover:bg-indigo-50 transition-colors cursor-pointer flex-shrink-0" title="Copy ID">
+                                    Copy
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="p-3.5 bg-gray-50 rounded-xl border border-gray-200">
+                            <span class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Product Handle</span>
+                            <div class="flex items-center justify-between">
+                                <span id="detailHandle" class="font-mono text-sm sm:text-base font-bold text-indigo-700 truncate select-all"></span>
+                                <button type="button" onclick="copyText(document.getElementById('detailHandle').textContent, this)" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium px-2 py-1 rounded hover:bg-indigo-50 transition-colors cursor-pointer flex-shrink-0" title="Copy Handle">
+                                    Copy
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="p-3.5 bg-gray-50 rounded-xl border border-gray-200">
+                            <span class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Created At</span>
+                            <div class="flex items-center justify-between">
+                                <span id="detailCreatedAt" class="font-mono text-sm sm:text-base font-bold text-gray-700 truncate select-all"></span>
+                                <button type="button" onclick="copyText(document.getElementById('detailCreatedAt').textContent, this)" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium px-2 py-1 rounded hover:bg-indigo-50 transition-colors cursor-pointer flex-shrink-0" title="Copy Created At">
+                                    Copy
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Title -->
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Tiêu đề (Title)</label>
+                        <div class="p-3.5 bg-white rounded-xl border border-gray-200 shadow-2xs">
+                            <h4 id="detailTitle" class="text-base sm:text-lg font-bold text-gray-900 leading-snug"></h4>
+                        </div>
+                    </div>
+
+                    <!-- Description -->
+                    <div>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Mô tả (Description HTML)</label>
+                            <span class="text-[11px] text-gray-400">Đã render HTML</span>
+                        </div>
+                        <div id="detailDescription" class="p-4 bg-white rounded-xl border border-gray-200 max-h-64 overflow-y-auto text-sm text-gray-700 leading-relaxed custom-scrollbar prose max-w-none shadow-2xs">
+                        </div>
+                    </div>
+
+                    <!-- SEO Fields -->
+                    <div class="border-t border-gray-200 pt-5">
+                        <div class="flex items-center gap-2 mb-3">
+                            <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                            <h4 class="text-sm font-bold text-gray-800">Tối ưu công cụ tìm kiếm (SEO Fields)</h4>
+                        </div>
+                        
+                        <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-3">
+                            <div>
+                                <span class="block text-xs font-semibold text-gray-500 mb-1">SEO Title</span>
+                                <p id="detailSeoTitle" class="text-sm font-medium text-indigo-700 break-words"></p>
+                            </div>
+                            <div class="border-t border-gray-200 pt-3">
+                                <span class="block text-xs font-semibold text-gray-500 mb-1">SEO Description</span>
+                                <p id="detailSeoDescription" class="text-xs sm:text-sm text-gray-600 leading-relaxed break-words"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-3.5 border-t border-gray-200 bg-gray-50 flex items-center justify-between flex-shrink-0">
+                <div class="flex items-center gap-2">
+                    <a id="detailOpenEditBtn" target="_blank" rel="noopener noreferrer" href="#" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 rounded-lg text-xs font-medium transition-colors shadow-xs">
+                        <span>Sửa sản phẩm</span>
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                    </a>
+                </div>
+                <button type="button" onclick="closeProductDetailModal()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-xs font-semibold transition-colors focus:outline-none cursor-pointer">
+                    Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // =================================================================
+        // 1. ROW CLICK INDICATOR & PRODUCT DETAIL MODAL
+        // =================================================================
+        let currentActiveRow = null;
+
+        function handleRowClick(row) {
+            // 1. Đổi indicator màu xanh tím bg-indigo-100
+            const tbody = row.closest('tbody');
+            if (tbody) {
+                tbody.querySelectorAll('tr').forEach(r => {
+                    r.classList.remove('bg-indigo-100');
+                });
+            }
+            row.classList.add('bg-indigo-100');
+            currentActiveRow = row;
+
+            // 2. Lấy định danh từ data-attributes
+            const prodId = row.getAttribute('data-product-id');
+            const prodHandle = row.getAttribute('data-product-handle');
+
+            // 3. Mở popup chi tiết sản phẩm và bắt đầu fetch thông tin SAU KHI mở popup
+            openProductDetailModal(prodId, prodHandle);
+        }
+
+        function openProductDetailModal(prodId, prodHandle) {
+            const modal = document.getElementById('productDetailModal');
+            const spinner = document.getElementById('detailSpinner');
+            const content = document.getElementById('detailContent');
+            const errorBox = document.getElementById('detailError');
+            const headerSubtitle = document.getElementById('modalProductHeaderSubtitle');
+
+            // Hiển thị modal và trạng thái loading ngay lập tức
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+
+            spinner.classList.remove('hidden');
+            content.classList.add('hidden');
+            errorBox.classList.add('hidden');
+
+            headerSubtitle.textContent = `ID: ${prodId} • Handle: ${prodHandle}`;
+
+            const detailCreatedAt = document.getElementById('detailCreatedAt');
+            if (detailCreatedAt) detailCreatedAt.textContent = '';
+
+            // Cập nhật nút sửa sản phẩm
+            const editBtn = document.getElementById('detailOpenEditBtn');
+            if (editBtn) {
+                editBtn.href = `/products/${encodeURIComponent(prodHandle)}`;
+            }
+
+            // Gán hành động thử lại nếu lỗi
+            const retryBtn = document.getElementById('detailRetryBtn');
+            if (retryBtn) {
+                retryBtn.onclick = () => openProductDetailModal(prodId, prodHandle);
+            }
+
+            // CHỈ KHI MỞ POPUP XONG MỚI BẮT ĐẦU FETCH DỮ LIỆU
+            fetchProductDetail(prodId);
+        }
+
+        function closeProductDetailModal() {
+            const modal = document.getElementById('productDetailModal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+            document.body.style.overflow = '';
+            // Lưu ý: indicator 'bg-indigo-100' trên row vẫn được giữ nguyên như yêu cầu!
+        }
+
+        function fetchProductDetail(prodId) {
+            const spinner = document.getElementById('detailSpinner');
+            const content = document.getElementById('detailContent');
+            const errorBox = document.getElementById('detailError');
+
+            fetch(`/api/products/${encodeURIComponent(prodId)}/details`)
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(errData => {
+                            throw new Error(errData.error || `HTTP lỗi ${response.status}`);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (!data.success || !data.product) {
+                        throw new Error(data.error || "Không tìm thấy dữ liệu sản phẩm");
+                    }
+
+                    const prod = data.product;
+
+                    // Điền thông tin vào giao diện
+                    document.getElementById('detailId').textContent = prod.id || '';
+                    document.getElementById('detailHandle').textContent = prod.handle || '';
+                    const detailCreatedAt = document.getElementById('detailCreatedAt');
+                    if (detailCreatedAt) {
+                        detailCreatedAt.textContent = prod.created_at_display || prod.created_at || 'Chưa thiết lập';
+                    }
+                    document.getElementById('detailTitle').textContent = prod.title || 'Chưa đặt tiêu đề';
+
+                    const descEl = document.getElementById('detailDescription');
+                    if (prod.descriptionHtml && prod.descriptionHtml.trim()) {
+                        descEl.innerHTML = prod.descriptionHtml;
+                    } else {
+                        descEl.innerHTML = '<span class="text-gray-400 italic">Sản phẩm chưa có mô tả.</span>';
+                    }
+
+                    const seoTitle = (prod.seo && prod.seo.title) ? prod.seo.title : 'Chưa thiết lập';
+                    const seoDesc = (prod.seo && prod.seo.description) ? prod.seo.description : 'Chưa thiết lập';
+                    document.getElementById('detailSeoTitle').textContent = seoTitle;
+                    document.getElementById('detailSeoDescription').textContent = seoDesc;
+
+                    // Ẩn spinner, hiển thị nội dung
+                    spinner.classList.add('hidden');
+                    content.classList.remove('hidden');
+                })
+                .catch(err => {
+                    spinner.classList.add('hidden');
+                    errorBox.classList.remove('hidden');
+                    document.getElementById('detailErrorMessage').textContent = err.message || String(err);
+                });
+        }
+
+        function copyText(text, btnElement) {
+            if (!text) return;
+            navigator.clipboard.writeText(text).then(() => {
+                if (btnElement) {
+                    const originalText = btnElement.textContent;
+                    btnElement.textContent = 'Đã copy!';
+                    btnElement.classList.add('text-green-600', 'font-bold');
+                    setTimeout(() => {
+                        btnElement.textContent = originalText;
+                        btnElement.classList.remove('text-green-600', 'font-bold');
+                    }, 1200);
+                }
+            });
+        }
+
+        // =================================================================
+        // 2. COPY RIÊNG HANDLE CỦA TỪNG ROW (2 GIÂY CHECK INDICATOR)
+        // =================================================================
+        function copySingleHandle(event, handle, btn) {
+            // Ngăn chặn nổi bọt sự kiện để KHÔNG kích hoạt handleRowClick (mở detail modal)
+            if (event) {
+                event.stopPropagation();
+            }
+            if (!handle) return;
+
+            navigator.clipboard.writeText(handle).then(() => {
+                const originalHTML = btn.innerHTML;
+                
+                // Đổi sang check indicator màu xanh lá
+                btn.innerHTML = `
+                    <svg class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <span class="text-[10px] font-sans font-bold text-emerald-700">Đã copy!</span>
+                `;
+                btn.classList.add('bg-emerald-50', 'border-emerald-300', 'ring-1', 'ring-emerald-200');
+                btn.classList.remove('bg-gray-100', 'hover:bg-indigo-50', 'hover:text-indigo-600');
+
+                // 2 giây check indicator (2000ms)
+                setTimeout(() => {
+                    btn.innerHTML = originalHTML;
+                    btn.classList.remove('bg-emerald-50', 'border-emerald-300', 'ring-1', 'ring-emerald-200');
+                    btn.classList.add('bg-gray-100', 'hover:bg-indigo-50', 'hover:text-indigo-600');
+                }, 2000);
+            }).catch(err => {
+                alert("Lỗi khi copy handle: " + err);
+            });
+        }
+
+        // =================================================================
+        // 3. SẮP XẾP ROWS THEO PRODUCT HANDLE VÀ CREATED AT (ASC / DESC)
+        // =================================================================
+        let currentHandleSort = 'asc'; // Mặc định bảng đã sort ASC theo handle (A-Z)
+        let currentCreatedAtSort = 'none'; // 'none' -> 'desc' -> 'asc' -> 'desc'
+
+        function resetSortHandleUI() {
+            const sortBtn = document.getElementById('sortHandleBtn');
+            const sortIcon = document.getElementById('sortHandleIcon');
+            const sortText = document.getElementById('sortHandleText');
+            if (sortBtn && sortIcon && sortText) {
+                sortBtn.classList.remove('bg-indigo-100', 'text-indigo-700', 'border-indigo-300');
+                sortBtn.classList.add('bg-gray-100', 'text-gray-700');
+                sortIcon.innerHTML = `
+                    <svg class="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                    </svg>
+                `;
+                sortText.textContent = 'SORT';
+                sortBtn.title = 'Sắp xếp Handle theo thứ tự (A-Z / Z-A)';
+            }
+        }
+
+        function resetSortCreatedAtUI() {
+            const sortBtn = document.getElementById('sortCreatedAtBtn');
+            const sortIcon = document.getElementById('sortCreatedAtIcon');
+            const sortText = document.getElementById('sortCreatedAtText');
+            if (sortBtn && sortIcon && sortText) {
+                sortBtn.classList.remove('bg-indigo-100', 'text-indigo-700', 'border-indigo-300');
+                sortBtn.classList.add('bg-gray-100', 'text-gray-700');
+                sortIcon.innerHTML = `
+                    <svg class="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                    </svg>
+                `;
+                sortText.textContent = 'SORT';
+                sortBtn.title = 'Sắp xếp Ngày tạo theo thứ tự (Mới nhất / Cũ nhất)';
+            }
+        }
+
+        function toggleSortHandle() {
+            const tbody = document.querySelector('#identifiersTable tbody');
+            if (!tbody) return;
+
+            const rows = Array.from(tbody.querySelectorAll('tr:not(#emptyRow)'));
+            if (rows.length === 0) return;
+
+            // Reset trạng thái sắp xếp của cột Created At
+            currentCreatedAtSort = 'none';
+            resetSortCreatedAtUI();
+
+            // Đổi trạng thái sắp xếp
+            if (currentHandleSort === 'asc') {
+                currentHandleSort = 'desc';
+            } else {
+                currentHandleSort = 'asc';
+            }
+
+            // Sắp xếp các rows
+            rows.sort((a, b) => {
+                const handleA = (a.getAttribute('data-product-handle') || '').toLowerCase();
+                const handleB = (b.getAttribute('data-product-handle') || '').toLowerCase();
+                if (currentHandleSort === 'asc') {
+                    return handleA.localeCompare(handleB);
+                } else {
+                    return handleB.localeCompare(handleA);
+                }
+            });
+
+            // Gắn lại các rows theo thứ tự mới vào tbody và đánh lại STT
+            rows.forEach((row, index) => {
+                tbody.appendChild(row);
+                const sttCell = row.querySelector('.row-stt');
+                if (sttCell) {
+                    sttCell.textContent = index + 1;
+                }
+            });
+
+            // Cập nhật giao diện nút Sort Handle
+            const sortBtn = document.getElementById('sortHandleBtn');
+            const sortIcon = document.getElementById('sortHandleIcon');
+            const sortText = document.getElementById('sortHandleText');
+
+            if (currentHandleSort === 'asc') {
+                sortBtn.classList.add('bg-indigo-100', 'text-indigo-700', 'border-indigo-300');
+                sortBtn.classList.remove('bg-gray-100', 'text-gray-700');
+                sortIcon.innerHTML = `
+                    <svg class="w-3.5 h-3.5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 15l7-7 7 7"></path>
+                    </svg>
+                `;
+                sortText.textContent = 'ASC (A-Z)';
+                sortBtn.title = 'Đang sắp xếp A-Z (Nhấn để đảo thành Z-A)';
+            } else {
+                sortBtn.classList.add('bg-indigo-100', 'text-indigo-700', 'border-indigo-300');
+                sortBtn.classList.remove('bg-gray-100', 'text-gray-700');
+                sortIcon.innerHTML = `
+                    <svg class="w-3.5 h-3.5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                `;
+                sortText.textContent = 'DESC (Z-A)';
+                sortBtn.title = 'Đang sắp xếp Z-A (Nhấn để đảo thành A-Z)';
+            }
+        }
+
+        function toggleSortCreatedAt() {
+            const tbody = document.querySelector('#identifiersTable tbody');
+            if (!tbody) return;
+
+            const rows = Array.from(tbody.querySelectorAll('tr:not(#emptyRow)'));
+            if (rows.length === 0) return;
+
+            // Reset trạng thái sắp xếp của cột Handle
+            currentHandleSort = 'none';
+            resetSortHandleUI();
+
+            // Đổi trạng thái sắp xếp: desc (mới nhất trước) -> asc (cũ nhất trước) -> desc
+            if (currentCreatedAtSort === 'desc') {
+                currentCreatedAtSort = 'asc';
+            } else {
+                currentCreatedAtSort = 'desc';
+            }
+
+            // Sắp xếp các rows theo timestamp
+            rows.sort((a, b) => {
+                const dateStrA = a.getAttribute('data-created-at') || '';
+                const dateStrB = b.getAttribute('data-created-at') || '';
+                const timeA = dateStrA ? new Date(dateStrA).getTime() : 0;
+                const timeB = dateStrB ? new Date(dateStrB).getTime() : 0;
+                if (currentCreatedAtSort === 'asc') {
+                    return timeA - timeB;
+                } else {
+                    return timeB - timeA;
+                }
+            });
+
+            // Gắn lại các rows theo thứ tự mới vào tbody và đánh lại STT
+            rows.forEach((row, index) => {
+                tbody.appendChild(row);
+                const sttCell = row.querySelector('.row-stt');
+                if (sttCell) {
+                    sttCell.textContent = index + 1;
+                }
+            });
+
+            // Cập nhật giao diện nút Sort Created At
+            const sortBtn = document.getElementById('sortCreatedAtBtn');
+            const sortIcon = document.getElementById('sortCreatedAtIcon');
+            const sortText = document.getElementById('sortCreatedAtText');
+
+            if (currentCreatedAtSort === 'asc') {
+                sortBtn.classList.add('bg-indigo-100', 'text-indigo-700', 'border-indigo-300');
+                sortBtn.classList.remove('bg-gray-100', 'text-gray-700');
+                sortIcon.innerHTML = `
+                    <svg class="w-3.5 h-3.5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 15l7-7 7 7"></path>
+                    </svg>
+                `;
+                sortText.textContent = 'ASC (Cũ → Mới)';
+                sortBtn.title = 'Đang sắp xếp Cũ nhất đến Mới nhất (Nhấn để đảo thành Mới nhất)';
+            } else {
+                sortBtn.classList.add('bg-indigo-100', 'text-indigo-700', 'border-indigo-300');
+                sortBtn.classList.remove('bg-gray-100', 'text-gray-700');
+                sortIcon.innerHTML = `
+                    <svg class="w-3.5 h-3.5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                `;
+                sortText.textContent = 'DESC (Mới → Cũ)';
+                sortBtn.title = 'Đang sắp xếp Mới nhất đến Cũ nhất (Nhấn để đảo thành Cũ nhất)';
+            }
+        }
+
+        // =================================================================
+        // 4. FLOATING SCROLL TO TOP & SCROLL TO BOTTOM
+        // =================================================================
+        function scrollToTop() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'instant'
+            });
+        }
+
+        function scrollToBottom() {
+            window.scrollTo({
+                top: document.documentElement.scrollHeight || document.body.scrollHeight,
+                behavior: 'instant'
+            });
+        }
+
+        // =================================================================
+        // 5. LIVE SEARCH / FILTER TABLE
+        // =================================================================
+        function filterTable() {
+            const query = (document.getElementById('liveSearchInput').value || '').trim().toLowerCase();
+            const clearBtn = document.getElementById('clearSearchBtn');
+            const rows = document.querySelectorAll('#identifiersTable tbody tr:not(#emptyRow)');
+            let visibleCount = 0;
+
+            if (query) {
+                clearBtn.classList.remove('hidden');
+            } else {
+                clearBtn.classList.add('hidden');
+            }
+
+            rows.forEach((row) => {
+                const idText = (row.querySelector('.row-id')?.textContent || '').toLowerCase();
+                const handleText = (row.getAttribute('data-product-handle') || '').toLowerCase();
+                const createdText = (row.querySelector('.row-created-at')?.textContent || '').toLowerCase();
+
+                if (!query || idText.includes(query) || handleText.includes(query) || createdText.includes(query)) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            const countBadge = document.getElementById('displayCountBadge');
+            const visibleRowCount = document.getElementById('visibleRowCount');
+            if (visibleRowCount) visibleRowCount.textContent = visibleCount;
+            if (countBadge && query) {
+                countBadge.textContent = `${visibleCount} kết quả`;
+            } else if (countBadge) {
+                countBadge.textContent = `{{ total_count }} sản phẩm`;
+            }
+        }
+
+        function clearSearch() {
+            const input = document.getElementById('liveSearchInput');
+            input.value = '';
+            filterTable();
+            input.focus();
+        }
+
+        // =================================================================
+        // 6. LOGIC CHO POPUP "TÍNH NĂNG COPY" (Giống 100% trang chủ)
+        // =================================================================
+        const copyModal = document.getElementById('copyModal');
+        const copyStartInput = document.getElementById('copyStartInput');
+        const copyCountInput = document.getElementById('copyCountInput');
+        const copySubmitBtn = document.getElementById('copySubmitBtn');
+        const copyCloseBtn = document.getElementById('copyCloseBtn');
+
+        let currentCopyType = 'id';
+
+        function switchCopyTab(type) {
+            currentCopyType = type;
+            const tabId = document.getElementById('tabCopyId');
+            const tabHandle = document.getElementById('tabCopyHandle');
+            const labelEl = document.getElementById('copyModalLabel');
+            
+            if (type === 'handle') {
+                if (tabHandle) {
+                    tabHandle.classList.add('bg-white', 'shadow', 'ring-1', 'ring-black/5', 'text-indigo-700');
+                    tabHandle.classList.remove('text-gray-500', 'hover:text-gray-700', 'hover:bg-white/[0.12]');
+                }
+                if (tabId) {
+                    tabId.classList.remove('bg-white', 'shadow', 'ring-1', 'ring-black/5', 'text-indigo-700');
+                    tabId.classList.add('text-gray-500', 'hover:text-gray-700', 'hover:bg-white/[0.12]');
+                }
+                
+                if (labelEl) labelEl.textContent = 'Số lượng Handle muốn copy:';
+            } else {
+                if (tabId) {
+                    tabId.classList.add('bg-white', 'shadow', 'ring-1', 'ring-black/5', 'text-indigo-700');
+                    tabId.classList.remove('text-gray-500', 'hover:text-gray-700', 'hover:bg-white/[0.12]');
+                }
+                if (tabHandle) {
+                    tabHandle.classList.remove('bg-white', 'shadow', 'ring-1', 'ring-black/5', 'text-indigo-700');
+                    tabHandle.classList.add('text-gray-500', 'hover:text-gray-700', 'hover:bg-white/[0.12]');
+                }
+                
+                if (labelEl) labelEl.textContent = 'Số lượng ID muốn copy:';
+            }
+        }
+
+        function openCopyModal(e, type = 'id') {
+            if (e) e.stopPropagation();
+            switchCopyTab(type);
+            copyModal.classList.remove('hidden');
+            copyCountInput.value = '';
+            setTimeout(() => copyCountInput.focus(), 50);
+        }
+
+        function closeCopyModal() {
+            copyModal.classList.add('hidden');
+            copyCountInput.blur();
+        }
+
+        function performCopy() {
+            const startIdx = parseInt(copyStartInput.value) || 1;
+            const count = parseInt(copyCountInput.value);
+            if (isNaN(count) || count <= 0 || startIdx <= 0) {
+                alert("Vui lòng nhập số lượng và STT hợp lệ.");
+                return;
+            }
+
+            const format = document.querySelector('input[name="copy_format"]:checked').value;
+            
+            // Lấy tất cả hàng trong bảng (chỉ lấy các hàng đang hiển thị)
+            const tbody = document.querySelector('#identifiersTable tbody');
+            const allRows = Array.from(tbody.querySelectorAll('tr:not(#emptyRow)'));
+            const visibleRows = allRows.filter(r => r.style.display !== 'none');
+            const targetRows = visibleRows.length > 0 ? visibleRows : allRows;
+
+            const itemsToCopy = [];
+            const start0 = startIdx - 1;
+            const end0 = Math.min(start0 + count, targetRows.length);
+
+            if (start0 >= targetRows.length) {
+                alert("STT bắt đầu vượt quá tổng số dòng hiện có.");
+                return;
+            }
+
+            for (let i = start0; i < end0; i++) {
+                if (currentCopyType === 'handle') {
+                    // Cột 3 là Product Handle
+                    const handleVal = targetRows[i].getAttribute('data-product-handle') || targetRows[i].querySelector('.handle-text')?.textContent.trim();
+                    if (handleVal) {
+                        itemsToCopy.push(handleVal);
+                    }
+                } else {
+                    // Cột 2 là Product ID
+                    const idVal = targetRows[i].getAttribute('data-product-id') || targetRows[i].querySelector('.row-id')?.textContent.trim();
+                    if (idVal) {
+                        itemsToCopy.push(idVal);
+                    }
+                }
+            }
+
+            if (itemsToCopy.length === 0) {
+                alert(`Không tìm thấy ${currentCopyType === 'handle' ? 'Handle' : 'ID'} nào để copy.`);
+                return;
+            }
+
+            const textToCopy = format === 'comma' ? itemsToCopy.join(',') : itemsToCopy.join('\n');
+            
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                const originalText = copySubmitBtn.innerHTML;
+                copySubmitBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Đã Copy!';
+                copySubmitBtn.classList.replace('bg-indigo-600', 'bg-green-600');
+                copySubmitBtn.classList.replace('hover:bg-indigo-700', 'hover:bg-green-700');
+                
+                setTimeout(() => {
+                    copySubmitBtn.innerHTML = originalText;
+                    copySubmitBtn.classList.replace('bg-green-600', 'bg-indigo-600');
+                    copySubmitBtn.classList.replace('hover:bg-green-700', 'hover:bg-indigo-700');
+                }, 1500);
+            }).catch(err => {
+                alert("Lỗi khi copy: " + err);
+            });
+        }
+
+        // Gán sự kiện cho Copy Modal
+        if (copyCloseBtn) {
+            copyCloseBtn.addEventListener('click', closeCopyModal);
+        }
+        
+        if (copyModal) {
+            copyModal.addEventListener('click', closeCopyModal);
+            copyModal.querySelector('div').addEventListener('click', (e) => e.stopPropagation());
+        }
+
+        if (copyCountInput) {
+            copyCountInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    performCopy();
+                }
+            });
+        }
+
+        if (copySubmitBtn) {
+            copySubmitBtn.addEventListener('click', performCopy);
+        }
+
+        // =================================================================
+        // 7. PHÍM TẮT TOÀN CỤC (Alt+Q, Esc, Arrows)
+        // =================================================================
+        document.addEventListener('keydown', (e) => {
+            // Khi Modal Chi Tiết Sản Phẩm đang mở
+            const detailModal = document.getElementById('productDetailModal');
+            if (detailModal && !detailModal.classList.contains('hidden')) {
+                if (e.key === "Escape") {
+                    closeProductDetailModal();
+                }
+                return;
+            }
+
+            // Khi Modal Copy đang mở
+            if (copyModal && !copyModal.classList.contains('hidden')) {
+                if (['ArrowLeft', 'ArrowUp'].includes(e.key)) {
+                    e.preventDefault();
+                    switchCopyTab('id');
+                } else if (['ArrowRight', 'ArrowDown'].includes(e.key)) {
+                    e.preventDefault();
+                    switchCopyTab('handle');
+                } else if (e.key === "Escape") {
+                    closeCopyModal();
+                }
+            } else {
+                // Nhấn Alt + Q để mở Copy Modal
+                if (e.altKey && e.key.toLowerCase() === 'q') {
+                    e.preventDefault();
+                    openCopyModal(null, 'id');
+                }
+            }
+        });
+
+        // Click ngoài Product Detail Modal để đóng
+        const prodDetailModal = document.getElementById('productDetailModal');
+        if (prodDetailModal) {
+            prodDetailModal.addEventListener('click', closeProductDetailModal);
+            const detailCard = prodDetailModal.querySelector('div');
+            if (detailCard) {
+                detailCard.addEventListener('click', (e) => e.stopPropagation());
+            }
+        }
+    </script>
+</body>
+</html>

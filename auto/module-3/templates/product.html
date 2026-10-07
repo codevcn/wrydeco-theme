@@ -149,19 +149,52 @@
 
                 <!-- Media Gallery -->
                 <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sm:p-8">
-                    <div class="flex justify-between items-center mb-4 border-b border-gray-100 pb-3">
-                        <h2 class="text-xl font-bold text-gray-800">Hình ảnh & Media</h2>
-                        <button id="save-media-btn" onclick="saveMediaOrder()" class="hidden flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors shadow-sm">
-                            <iconify-icon icon="mdi:check-circle-outline" class="text-lg"></iconify-icon> Save
-                        </button>
+                    <div class="flex flex-wrap justify-between items-center mb-4 border-b border-gray-100 pb-3 gap-3">
+                        <div class="flex items-center gap-3">
+                            <h2 class="text-xl font-bold text-gray-800">Hình ảnh & Media</h2>
+                            <span class="text-xs font-semibold text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full" id="media-count">{{ product.media | length }} ảnh</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <!-- Input chọn file ảnh ẩn -->
+                            <input type="file" id="media-file-input" multiple accept="image/*" class="hidden" onchange="handleMediaFilesSelected(this)">
+                            
+                            <!-- Nút Lưu thứ tự sắp xếp -->
+                            <button id="save-media-btn" onclick="saveMediaOrder()" class="hidden flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors shadow-sm">
+                                <iconify-icon icon="mdi:check-circle-outline" class="text-lg"></iconify-icon> Save
+                            </button>
+                        </div>
                     </div>
+
+                    <!-- Tiến trình Uploading thông báo -->
+                    <div id="media-upload-progress" class="hidden mb-4 p-3.5 bg-indigo-50 border border-indigo-200 rounded-xl flex items-center gap-3 text-indigo-700 text-sm font-medium shadow-sm">
+                        <iconify-icon icon="mdi:loading" class="text-xl animate-spin text-indigo-600 flex-shrink-0"></iconify-icon>
+                        <span id="media-upload-status-text">Đang tải ảnh lên Shopify...</span>
+                    </div>
+
                     <div id="media-sortable-list" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-4">
                         {% for media in product.media %}
-                        <div data-id="{{ media.id }}" class="relative group cursor-move aspect-square rounded-lg overflow-hidden border border-gray-200 bg-gray-50">
+                        <div data-id="{{ media.id }}" class="relative group cursor-move aspect-square rounded-lg overflow-hidden border border-gray-200 bg-gray-50 media-card">
                             <img src="{{ media.url }}" class="w-full h-full object-cover transition-transform duration-300 pointer-events-none" alt="Product Media">
                             <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" onclick="openLightbox('{{ media.url }}')"></div>
+                            
+                            <!-- Nút xóa ảnh -->
+                            <button type="button" onclick="event.stopPropagation(); deleteProductMedia('{{ media.id }}', this)" class="delete-media-btn absolute top-2 right-2 bg-red-600/90 hover:bg-red-700 text-white p-1.5 rounded-lg shadow-md opacity-0 group-hover:opacity-100 transition-all z-10 cursor-pointer flex items-center justify-center hover:scale-110" title="Xóa ảnh này">
+                                <iconify-icon icon="mdi:trash-can-outline" class="text-base pointer-events-none"></iconify-icon>
+                            </button>
+                            
+                            <!-- Badge số thứ tự ảnh -->
+                            <span class="absolute bottom-1.5 left-1.5 bg-black/60 text-white text-[10px] font-mono px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">#{{ loop.index }}</span>
                         </div>
                         {% endfor %}
+
+                        <!-- Nút Upload ảnh nằm cạnh ảnh cuối cùng -->
+                        <div id="upload-media-card" onclick="openUploadMediaModal()" class="upload-media-card aspect-square rounded-lg border-2 border-dashed border-gray-300 hover:border-indigo-500 bg-gray-50/60 hover:bg-indigo-50/40 flex flex-col items-center justify-center p-3 text-center cursor-pointer transition-all duration-200 group hover:shadow-sm" title="Upload thêm ảnh mới vào sản phẩm">
+                            <div class="w-10 h-10 rounded-full bg-indigo-50 group-hover:bg-indigo-100 flex items-center justify-center text-indigo-600 transition-colors mb-1.5">
+                                <iconify-icon icon="mdi:cloud-upload-outline" class="text-2xl group-hover:scale-110 transition-transform"></iconify-icon>
+                            </div>
+                            <span class="text-xs font-bold text-gray-700 group-hover:text-indigo-600 transition-colors">Upload ảnh</span>
+                            <span class="text-[10px] text-gray-400 group-hover:text-gray-500 mt-0.5">Thiết bị / Link</span>
+                        </div>
                     </div>
                 </div>
 
@@ -569,6 +602,104 @@
             <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
         <img id="lightbox-img" src="" alt="Popup Image" class="max-w-full max-h-[90vh] rounded-xl shadow-2xl object-contain" onclick="event.stopPropagation()">
+    </div>
+
+    <!-- Upload Media Modal -->
+    <div id="upload-media-modal" class="fixed inset-0 z-[100] flex items-center justify-center hidden">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeUploadMediaModal()"></div>
+        <div class="bg-white rounded-2xl shadow-2xl w-[90%] max-w-lg z-10 relative overflow-hidden flex flex-col max-h-[90vh]">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                    <iconify-icon icon="mdi:cloud-upload" class="text-indigo-600 text-xl"></iconify-icon>
+                    <span>Upload ảnh sản phẩm</span>
+                </h3>
+                <button type="button" onclick="closeUploadMediaModal()" class="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100">
+                    <iconify-icon icon="mdi:close" class="text-2xl"></iconify-icon>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="p-6 space-y-5 overflow-y-auto">
+                <!-- 2 Option Tabs -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Chọn phương thức upload:</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button type="button" onclick="selectUploadOption('device')" id="opt-device-btn" class="flex flex-col items-center justify-center p-4 border-2 border-indigo-600 bg-indigo-50/50 rounded-xl cursor-pointer transition-all text-center">
+                            <iconify-icon icon="mdi:laptop" class="text-3xl text-indigo-600 mb-1.5"></iconify-icon>
+                            <span class="text-sm font-bold text-indigo-900">Từ thiết bị</span>
+                            <span class="text-xs text-gray-500 mt-0.5">Chọn file từ máy tính</span>
+                        </button>
+                        <button type="button" onclick="selectUploadOption('link')" id="opt-link-btn" class="flex flex-col items-center justify-center p-4 border-2 border-gray-200 hover:border-gray-300 bg-white rounded-xl cursor-pointer transition-all text-center">
+                            <iconify-icon icon="mdi:link-variant" class="text-3xl text-gray-400 mb-1.5"></iconify-icon>
+                            <span class="text-sm font-bold text-gray-700">Từ link ảnh</span>
+                            <span class="text-xs text-gray-500 mt-0.5">Tải từ URL mạng</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- View 1: Upload từ thiết bị -->
+                <div id="upload-from-device-view" class="space-y-4">
+                    <div class="p-5 bg-gray-50/80 border border-dashed border-gray-300 rounded-xl text-center space-y-3">
+                        <p class="text-sm text-gray-600">Chọn một hoặc nhiều tệp ảnh (JPEG, PNG, WEBP) từ thiết bị của bạn để tải lên Shopify store.</p>
+                        <button type="button" onclick="triggerDeviceFileInput()" class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-5 py-2.5 rounded-xl shadow-sm transition-all cursor-pointer hover:shadow-md">
+                            <iconify-icon icon="mdi:folder-open-outline" class="text-xl"></iconify-icon>
+                            <span>Mở thư viện chọn file</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- View 2: Upload từ 1 link -->
+                <div id="upload-from-link-view" class="hidden space-y-4">
+                    <div>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label class="block text-sm font-semibold text-gray-700">Danh sách link (URL) ảnh:</label>
+                            <span id="url-count-badge" class="text-xs font-medium text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">0 link</span>
+                        </div>
+                        <div class="relative">
+                            <textarea id="upload-link-input" rows="4" oninput="updateUrlCountBadge()" placeholder="Nhập mỗi dòng một link ảnh...&#10;https://example.com/image1.jpg&#10;https://example.com/image2.jpg" class="w-full pl-3.5 pr-10 py-2.5 bg-white border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-800 transition-all shadow-2xs font-mono"></textarea>
+                            <button type="button" onclick="pasteFromClipboard('upload-link-input'); setTimeout(updateUrlCountBadge, 100);" class="absolute right-2.5 top-2.5 text-gray-400 hover:text-indigo-600 p-1.5 rounded-md hover:bg-gray-100 transition-colors" title="Dán từ Clipboard">
+                                <iconify-icon icon="mdi:content-paste" class="text-lg"></iconify-icon>
+                            </button>
+                        </div>
+                        <p class="text-[11px] text-gray-400 mt-1">Hỗ trợ nhập nhiều link cùng lúc (mỗi dòng một link hoặc cách nhau bằng dấu phẩy). Hỗ trợ JPG, PNG, WEBP...</p>
+                    </div>
+
+                    <!-- Chọn folder lưu trên thiết bị -->
+                    <div class="p-3.5 bg-gray-50 border border-gray-200 rounded-xl space-y-2">
+                        <div class="flex items-center justify-between">
+                            <label class="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
+                                <iconify-icon icon="mdi:folder-download-outline" class="text-base text-indigo-600"></iconify-icon>
+                                <span>Thư mục lưu trên thiết bị:</span>
+                            </label>
+                            <button type="button" onclick="chooseDeviceSaveFolder()" class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 bg-white border border-gray-300 hover:border-indigo-300 px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 cursor-pointer shadow-2xs">
+                                <iconify-icon icon="mdi:folder-search-outline"></iconify-icon>
+                                <span id="btn-choose-folder-text">Chọn thư mục</span>
+                            </button>
+                        </div>
+                        <div id="selected-folder-display" class="text-xs text-gray-500 flex items-center gap-1.5 bg-white p-2.5 rounded-lg border border-gray-200">
+                            <iconify-icon icon="mdi:information-outline" class="text-gray-400 text-sm flex-shrink-0"></iconify-icon>
+                            <span id="folder-status-text" class="truncate">Chưa chọn thư mục (khi bấm OK sẽ cho phép chọn hoặc lưu về máy)</span>
+                        </div>
+                        <p class="text-[11px] text-gray-400">Ảnh từ link sẽ được fetch về máy và lưu vào thư mục này trước khi upload lên store.</p>
+                    </div>
+
+                    <!-- Status thông báo tiến trình fetch & upload -->
+                    <div id="upload-link-status" class="hidden p-3 rounded-xl text-xs font-medium border flex items-center gap-2"></div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-4 border-t border-gray-100 bg-gray-50/80 flex items-center justify-end gap-3 rounded-b-2xl">
+                <button type="button" onclick="closeUploadMediaModal()" class="px-4 py-2 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors">
+                    Hủy bỏ
+                </button>
+                <button type="button" id="upload-link-submit-btn" onclick="submitUploadFromLink()" class="hidden px-6 py-2.5 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer">
+                    <iconify-icon icon="mdi:check-bold" class="text-base"></iconify-icon>
+                    <span>OK</span>
+                </button>
+            </div>
+        </div>
     </div>
 
     </main>
@@ -1022,7 +1153,7 @@
             
             if (!password) {
                 alertBox.className = 'mt-3 rounded-lg p-3 bg-red-50 text-red-700 border border-red-200 block text-left';
-                alertBox.innerHTML = 'Vui lòng nhập mật khẩu xác nhận.';
+                alertBox.innerHTML = 'Vui lòng nhập Admin Password xác nhận.';
                 return;
             }
             
@@ -1205,8 +1336,8 @@
                                 <p><strong>Title:</strong> <span class="text-indigo-600">{{ product.title }}</span></p>
                             </div>
                             <div class="mt-4 text-left">
-                                <label for="delete_password" class="block text-sm font-medium text-gray-700">Mật khẩu xác nhận</label>
-                                <input type="password" id="delete_password" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm p-2 border" placeholder="Nhập mật khẩu xác nhận xóa sản phẩm" onkeypress="if(event.key === 'Enter') submitDeleteProduct()">
+                                <label for="delete_password" class="block text-sm font-medium text-gray-700">Admin Password xác nhận</label>
+                                <input type="password" id="delete_password" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm p-2 border font-mono" placeholder="Nhập Admin Password xác nhận xóa sản phẩm" onkeypress="if(event.key === 'Enter') submitDeleteProduct()">
                             </div>
                             <div id="deleteAlertBox" class="hidden mt-3 text-sm"></div>
                         </div>
@@ -1231,6 +1362,8 @@
                 new Sortable(mediaList, {
                     animation: 150,
                     ghostClass: 'opacity-50',
+                    draggable: '.media-card',
+                    filter: '.upload-media-card',
                     onEnd: function (evt) {
                         if (evt.oldIndex !== evt.newIndex) {
                             document.getElementById('save-media-btn').classList.remove('hidden');
@@ -1249,7 +1382,7 @@
             btn.innerHTML = '<iconify-icon icon="mdi:loading" class="text-lg animate-spin"></iconify-icon> Saving...';
             btn.disabled = true;
 
-            const mediaItems = Array.from(mediaList.children);
+            const mediaItems = Array.from(mediaList.querySelectorAll('.media-card'));
             const moves = [];
             mediaItems.forEach((item, index) => {
                 moves.push({
@@ -1290,6 +1423,435 @@
                 alert('Lỗi hệ thống: ' + e);
                 btn.innerHTML = originalText;
                 btn.disabled = false;
+            }
+        }
+
+        // ==================== UPLOAD MEDIA MODAL LOGIC ====================
+        let currentUploadOption = 'device';
+        let deviceSaveFolderHandle = null;
+
+        function openUploadMediaModal() {
+            const modal = document.getElementById('upload-media-modal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                selectUploadOption('device');
+            }
+        }
+
+        function closeUploadMediaModal() {
+            const modal = document.getElementById('upload-media-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+            const statusDiv = document.getElementById('upload-link-status');
+            if (statusDiv) {
+                statusDiv.classList.add('hidden');
+                statusDiv.innerHTML = '';
+            }
+        }
+
+        function selectUploadOption(opt) {
+            currentUploadOption = opt;
+            const deviceBtn = document.getElementById('opt-device-btn');
+            const linkBtn = document.getElementById('opt-link-btn');
+            const deviceView = document.getElementById('upload-from-device-view');
+            const linkView = document.getElementById('upload-from-link-view');
+            const okBtn = document.getElementById('upload-link-submit-btn');
+
+            if (opt === 'device') {
+                deviceBtn.className = 'flex flex-col items-center justify-center p-4 border-2 border-indigo-600 bg-indigo-50/50 rounded-xl cursor-pointer transition-all text-center';
+                const dIcon = deviceBtn.querySelector('iconify-icon');
+                if (dIcon) dIcon.className = 'text-3xl text-indigo-600 mb-1.5';
+                const dTitle = deviceBtn.querySelector('span:first-of-type');
+                if (dTitle) dTitle.className = 'text-sm font-bold text-indigo-900';
+
+                linkBtn.className = 'flex flex-col items-center justify-center p-4 border-2 border-gray-200 hover:border-gray-300 bg-white rounded-xl cursor-pointer transition-all text-center';
+                const lIcon = linkBtn.querySelector('iconify-icon');
+                if (lIcon) lIcon.className = 'text-3xl text-gray-400 mb-1.5';
+                const lTitle = linkBtn.querySelector('span:first-of-type');
+                if (lTitle) lTitle.className = 'text-sm font-bold text-gray-700';
+
+                deviceView.classList.remove('hidden');
+                linkView.classList.add('hidden');
+                okBtn.classList.add('hidden');
+            } else {
+                linkBtn.className = 'flex flex-col items-center justify-center p-4 border-2 border-indigo-600 bg-indigo-50/50 rounded-xl cursor-pointer transition-all text-center';
+                const lIcon = linkBtn.querySelector('iconify-icon');
+                if (lIcon) lIcon.className = 'text-3xl text-indigo-600 mb-1.5';
+                const lTitle = linkBtn.querySelector('span:first-of-type');
+                if (lTitle) lTitle.className = 'text-sm font-bold text-indigo-900';
+
+                deviceBtn.className = 'flex flex-col items-center justify-center p-4 border-2 border-gray-200 hover:border-gray-300 bg-white rounded-xl cursor-pointer transition-all text-center';
+                const dIcon = deviceBtn.querySelector('iconify-icon');
+                if (dIcon) dIcon.className = 'text-3xl text-gray-400 mb-1.5';
+                const dTitle = deviceBtn.querySelector('span:first-of-type');
+                if (dTitle) dTitle.className = 'text-sm font-bold text-gray-700';
+
+                linkView.classList.remove('hidden');
+                deviceView.classList.add('hidden');
+                okBtn.classList.remove('hidden');
+
+                const linkInput = document.getElementById('upload-link-input');
+                if (linkInput) setTimeout(() => linkInput.focus(), 100);
+            }
+        }
+
+        function triggerDeviceFileInput() {
+            closeUploadMediaModal();
+            const fileInput = document.getElementById('media-file-input');
+            if (fileInput) {
+                fileInput.click();
+            }
+        }
+
+        async function pasteFromClipboard(targetInputId) {
+            try {
+                const text = await navigator.clipboard.readText();
+                if (text) {
+                    const input = document.getElementById(targetInputId);
+                    if (input) {
+                        input.value = text.trim();
+                        input.focus();
+                    }
+                }
+            } catch (err) {
+                console.warn('Không thể đọc clipboard tự động:', err);
+            }
+        }
+
+        async function chooseDeviceSaveFolder() {
+            if ('showDirectoryPicker' in window) {
+                try {
+                    deviceSaveFolderHandle = await window.showDirectoryPicker();
+                    const statusText = document.getElementById('folder-status-text');
+                    const btnText = document.getElementById('btn-choose-folder-text');
+                    const displayBox = document.getElementById('selected-folder-display');
+                    if (statusText && deviceSaveFolderHandle) {
+                        statusText.innerHTML = `Thư mục: <strong class="text-green-700 font-bold">${deviceSaveFolderHandle.name}</strong>`;
+                        displayBox.className = 'text-xs text-green-700 flex items-center gap-1.5 bg-green-50 p-2.5 rounded-lg border border-green-200';
+                        if (btnText) btnText.innerText = 'Đổi thư mục';
+                    }
+                } catch (err) {
+                    if (err.name !== 'AbortError') {
+                        console.warn('Lỗi khi chọn thư mục:', err);
+                    }
+                }
+            } else {
+                alert('Trình duyệt hiện tại không hỗ trợ trực tiếp File System Access API. Ảnh sẽ được tự động tải về thư mục Downloads của bạn khi hoàn tất!');
+            }
+        }
+
+        function downloadBlobToDevice(blob, filename) {
+            const blobUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            setTimeout(() => {
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(blobUrl);
+            }, 1000);
+        }
+
+        function updateUrlCountBadge() {
+            const textarea = document.getElementById('upload-link-input');
+            const badge = document.getElementById('url-count-badge');
+            if (!textarea || !badge) return;
+            const urls = parseUrlsFromInput(textarea.value);
+            badge.innerText = `${urls.length} link`;
+            if (urls.length > 0) {
+                badge.className = 'text-xs font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100';
+            } else {
+                badge.className = 'text-xs font-medium text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full';
+            }
+        }
+
+        function parseUrlsFromInput(text) {
+            if (!text) return [];
+            const lines = text.split(/[\r\n,]+/);
+            const urls = [];
+            lines.forEach(item => {
+                let u = item.trim();
+                if (u) {
+                    u = u.replace(/^["'\[\]]+|["'\[\]]+$/g, '').trim();
+                    if (u.startsWith('http://') || u.startsWith('https://') || u.startsWith('//')) {
+                        urls.push(u);
+                    }
+                }
+            });
+            return urls;
+        }
+
+        async function submitUploadFromLink() {
+            const linkInput = document.getElementById('upload-link-input');
+            const rawText = linkInput ? linkInput.value : '';
+            const urls = parseUrlsFromInput(rawText);
+            const statusDiv = document.getElementById('upload-link-status');
+            const submitBtn = document.getElementById('upload-link-submit-btn');
+
+            if (urls.length === 0) {
+                alert('Vui lòng nhập ít nhất một đường dẫn (URL) ảnh hợp lệ!');
+                if (linkInput) linkInput.focus();
+                return;
+            }
+
+            // Nếu chưa chọn thư mục và browser hỗ trợ, mở picker cho user chọn thư mục lưu
+            if (!deviceSaveFolderHandle && 'showDirectoryPicker' in window) {
+                try {
+                    deviceSaveFolderHandle = await window.showDirectoryPicker();
+                    const statusText = document.getElementById('folder-status-text');
+                    const btnText = document.getElementById('btn-choose-folder-text');
+                    const displayBox = document.getElementById('selected-folder-display');
+                    if (statusText && deviceSaveFolderHandle) {
+                        statusText.innerHTML = `Thư mục: <strong class="text-green-700 font-bold">${deviceSaveFolderHandle.name}</strong>`;
+                        displayBox.className = 'text-xs text-green-700 flex items-center gap-1.5 bg-green-50 p-2.5 rounded-lg border border-green-200';
+                        if (btnText) btnText.innerText = 'Đổi thư mục';
+                    }
+                } catch (e) {
+                    // Người dùng không chọn, tiếp tục dùng fallback download về máy
+                    console.log('User bỏ qua chọn folder, dùng fallback download');
+                }
+            }
+
+            const originalBtnHtml = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<iconify-icon icon="mdi:loading" class="text-base animate-spin"></iconify-icon> <span>Đang xử lý (0/${urls.length})...</span>`;
+
+            function setModalStatus(msg, type = 'info') {
+                if (!statusDiv) return;
+                statusDiv.classList.remove('hidden', 'bg-blue-50', 'text-blue-700', 'border-blue-200', 'bg-red-50', 'text-red-700', 'border-red-200', 'bg-green-50', 'text-green-700', 'border-green-200');
+                if (type === 'info') {
+                    statusDiv.classList.add('bg-blue-50', 'text-blue-700', 'border-blue-200');
+                    statusDiv.innerHTML = `<iconify-icon icon="mdi:loading" class="animate-spin text-base flex-shrink-0"></iconify-icon> <span>${msg}</span>`;
+                } else if (type === 'error') {
+                    statusDiv.classList.add('bg-red-50', 'text-red-700', 'border-red-200');
+                    statusDiv.innerHTML = `<iconify-icon icon="mdi:alert-circle" class="text-base flex-shrink-0"></iconify-icon> <span>${msg}</span>`;
+                } else {
+                    statusDiv.classList.add('bg-green-50', 'text-green-700', 'border-green-200');
+                    statusDiv.innerHTML = `<iconify-icon icon="mdi:check-circle" class="text-base flex-shrink-0"></iconify-icon> <span>${msg}</span>`;
+                }
+            }
+
+            const downloadedFiles = [];
+            const errors = [];
+            let savedFolderCount = 0;
+
+            try {
+                // Duyệt qua từng URL và fetch ảnh
+                for (let i = 0; i < urls.length; i++) {
+                    const currentUrl = urls[i];
+                    const progressStr = `[${i + 1}/${urls.length}]`;
+                    submitBtn.innerHTML = `<iconify-icon icon="mdi:loading" class="text-base animate-spin"></iconify-icon> <span>Đang xử lý (${i + 1}/${urls.length})...</span>`;
+                    setModalStatus(`${progressStr} Đang fetch ảnh từ link: ${currentUrl.substring(0, 50)}...`, 'info');
+
+                    try {
+                        const fetchRes = await fetch('/api/fetch-external-image', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ url: currentUrl })
+                        });
+
+                        if (!fetchRes.ok) {
+                            const errJson = await fetchRes.json().catch(() => ({}));
+                            throw new Error(errJson.message || `Lỗi HTTP ${fetchRes.status}`);
+                        }
+
+                        const blob = await fetchRes.blob();
+                        let filename = fetchRes.headers.get('X-File-Name');
+                        if (!filename) {
+                            const ext = blob.type.includes('png') ? '.png' : blob.type.includes('webp') ? '.webp' : '.jpg';
+                            filename = `image_${Date.now()}_${i + 1}${ext}`;
+                        } else {
+                            const dotIdx = filename.lastIndexOf('.');
+                            if (dotIdx !== -1) {
+                                filename = `${filename.substring(0, dotIdx)}_${Date.now()}_${i + 1}${filename.substring(dotIdx)}`;
+                            }
+                        }
+
+                        // Lưu xuống thiết bị
+                        setModalStatus(`${progressStr} Đang lưu file "${filename}" vào thiết bị...`, 'info');
+                        if (deviceSaveFolderHandle) {
+                            try {
+                                const fileHandle = await deviceSaveFolderHandle.getFileHandle(filename, { create: true });
+                                const writable = await fileHandle.createWritable();
+                                await writable.write(blob);
+                                await writable.close();
+                                savedFolderCount++;
+                            } catch (fsErr) {
+                                console.warn('Lỗi ghi file qua FileSystem, fallback download:', fsErr);
+                                downloadBlobToDevice(blob, filename);
+                                await new Promise(r => setTimeout(r, 200));
+                            }
+                        } else {
+                            downloadBlobToDevice(blob, filename);
+                            await new Promise(r => setTimeout(r, 200));
+                        }
+
+                        const fileObj = new File([blob], filename, { type: blob.type || 'image/jpeg' });
+                        downloadedFiles.push(fileObj);
+
+                    } catch (itemErr) {
+                        console.error(`Lỗi xử lý URL [${i + 1}]:`, itemErr);
+                        errors.push(`Link ${i + 1}: ${itemErr.message}`);
+                    }
+                }
+
+                if (downloadedFiles.length === 0) {
+                    throw new Error(`Không thể tải được ảnh nào. ${errors.join('; ')}`);
+                }
+
+                // Upload tất cả ảnh đã fetch lên Shopify store
+                setModalStatus(`Đã lưu ${downloadedFiles.length} ảnh vào thiết bị! Đang tải lên Shopify store...`, 'info');
+                const formData = new FormData();
+                for (const f of downloadedFiles) {
+                    formData.append('files', f);
+                }
+
+                const upRes = await fetch('/api/products/{{ product.id }}/upload-media', {
+                    method: 'POST',
+                    body: formData
+                });
+                const upResult = await upRes.json();
+
+                if (upResult.success) {
+                    let successMsg = `Thành công! Đã lưu và upload ${downloadedFiles.length} ảnh lên Shopify.`;
+                    if (errors.length > 0) {
+                        successMsg += ` (Lỗi ${errors.length} link: ${errors.join('; ')})`;
+                    }
+                    setModalStatus(successMsg, 'success');
+                    showToast('Thành công', successMsg, 'success');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    throw new Error(upResult.message || 'Lỗi khi upload ảnh lên store.');
+                }
+
+            } catch (err) {
+                setModalStatus(`Lỗi: ${err.message}`, 'error');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnHtml;
+            }
+        }
+
+        async function handleMediaFilesSelected(input) {
+            const files = input.files;
+            if (!files || files.length === 0) return;
+
+            const uploadCard = document.getElementById('upload-media-card');
+            const progressBanner = document.getElementById('media-upload-progress');
+            const statusText = document.getElementById('media-upload-status-text');
+            const originalCardHtml = uploadCard ? uploadCard.innerHTML : '';
+
+            if (uploadCard) {
+                uploadCard.classList.add('opacity-75', 'pointer-events-none');
+                uploadCard.innerHTML = `
+                    <iconify-icon icon="mdi:loading" class="text-3xl text-indigo-600 animate-spin mb-1.5"></iconify-icon>
+                    <span class="text-xs font-semibold text-indigo-600">Đang upload...</span>
+                `;
+            }
+
+            if (progressBanner) {
+                progressBanner.classList.remove('hidden');
+                progressBanner.classList.add('flex');
+            }
+            if (statusText) {
+                statusText.innerText = `Đang tải lên ${files.length} ảnh lên Shopify... Vui lòng đợi trong giây lát.`;
+            }
+
+            const formData = new FormData();
+            for (let i = 0; i < files.length; i++) {
+                formData.append('files', files[i]);
+            }
+
+            try {
+                const response = await fetch('/api/products/{{ product.id }}/upload-media', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    if (statusText) statusText.innerText = result.message || 'Tải ảnh thành công!';
+                    showToast('Thành công', result.message || 'Đã tải lên ảnh thành công!', 'success');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1200);
+                } else {
+                    alert('Lỗi tải ảnh: ' + (result.message || 'Không xác định'));
+                    if (progressBanner) {
+                        progressBanner.classList.add('hidden');
+                        progressBanner.classList.remove('flex');
+                    }
+                    if (uploadCard) {
+                        uploadCard.classList.remove('opacity-75', 'pointer-events-none');
+                        uploadCard.innerHTML = originalCardHtml;
+                    }
+                }
+            } catch (err) {
+                alert('Lỗi kết nối khi tải ảnh: ' + err.message);
+                if (progressBanner) {
+                    progressBanner.classList.add('hidden');
+                    progressBanner.classList.remove('flex');
+                }
+                if (uploadCard) {
+                    uploadCard.classList.remove('opacity-75', 'pointer-events-none');
+                    uploadCard.innerHTML = originalCardHtml;
+                }
+            } finally {
+                input.value = '';
+            }
+        }
+
+        async function deleteProductMedia(mediaId, btn) {
+            if (!confirm('Bạn có chắc chắn muốn xóa ảnh này khỏi sản phẩm trên Shopify?')) {
+                return;
+            }
+
+            const originalBtnHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = `<iconify-icon icon="mdi:loading" class="text-base animate-spin"></iconify-icon>`;
+            btn.classList.add('opacity-100');
+
+            try {
+                const response = await fetch('/api/products/{{ product.id }}/delete-media', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        media_id: mediaId
+                    })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    showToast('Thành công', result.message || 'Đã xóa ảnh thành công!', 'success');
+                    const card = btn.closest('.media-card');
+                    if (card) {
+                        card.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+                        card.style.opacity = '0';
+                        card.style.transform = 'scale(0.8)';
+                        setTimeout(() => {
+                            card.remove();
+                            // Update count badge
+                            const remaining = document.querySelectorAll('.media-card').length;
+                            const countBadge = document.getElementById('media-count');
+                            if (countBadge) {
+                                countBadge.innerText = `${remaining} ảnh`;
+                            }
+                        }, 300);
+                    }
+                } else {
+                    alert('Lỗi xóa ảnh: ' + (result.message || 'Không xác định'));
+                    btn.disabled = false;
+                    btn.innerHTML = originalBtnHtml;
+                }
+            } catch (err) {
+                alert('Lỗi kết nối khi xóa ảnh: ' + err.message);
+                btn.disabled = false;
+                btn.innerHTML = originalBtnHtml;
             }
         }
 

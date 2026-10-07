@@ -105,6 +105,11 @@ from handle_images import (
     parse_positive_int,
     safe_filename,
 )
+from metadata_sanitizer import (
+    sanitize_html_img_attributes,
+    sanitize_image_bytes,
+    sanitize_text,
+)
 
 
 # ============================================================
@@ -1594,6 +1599,16 @@ def main() -> int:
                     source_url,
                 )
 
+                content, was_sanitized = sanitize_image_bytes(
+                    content,
+                    filename=f"rich-{display_index:03d}",
+                )
+                if was_sanitized:
+                    LOGGER.info(
+                        "Image %d: sanitized binary metadata (EXIF/XMP/info).",
+                        display_index,
+                    )
+
                 (
                     extension,
                     mime_type,
@@ -1608,8 +1623,9 @@ def main() -> int:
                     .hexdigest()[:12]
                 )
 
+                clean_identifier = sanitize_text(identifier)
                 filename = (
-                    f"{identifier}"
+                    f"{clean_identifier}"
                     f"-rich-"
                     f"{display_index:03d}"
                     f"-{digest}"
@@ -1623,10 +1639,12 @@ def main() -> int:
                         f"({len(content) / (1024 * 1024):.2f} MB)"
                     )
 
-                product_title = first_nonempty(
-                    product.get("product_title")
+                product_title = sanitize_text(
+                    first_nonempty(
+                        product.get("product_title")
+                    )
                 )
-                alt_text = (
+                alt_text = sanitize_text(
                     f"{product_title} rich description image {display_index}"
                     if product_title
                     else filename
@@ -1799,6 +1817,8 @@ def main() -> int:
                 "src",
                 placeholder_url,
             )
+
+            tag = sanitize_html_img_attributes(tag)
 
             return tag
 

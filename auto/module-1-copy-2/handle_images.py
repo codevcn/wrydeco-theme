@@ -74,7 +74,9 @@ from typing import Any, Mapping, MutableMapping, Sequence
 from urllib.parse import urlparse
 
 import requests
-from PIL import Image, ImageOps, UnidentifiedImageError
+from PIL import Image, ImageOps, PngImagePlugin, UnidentifiedImageError
+
+from metadata_sanitizer import sanitize_exif, sanitize_image_info, sanitize_text
 
 
 LOGGER = logging.getLogger("product-image-logo-uploader")
@@ -767,6 +769,8 @@ def add_logo_to_image(
             product = ImageOps.exif_transpose(opened).convert("RGBA")
             source_info = copy.deepcopy(opened.info)
             source_exif = opened.getexif()
+            cleaned_exif, _ = sanitize_exif(source_exif) if source_exif else (None, False)
+            cleaned_info, _ = sanitize_image_info(source_info)
     except (UnidentifiedImageError, OSError) as exc:
         raise AppError(f"Pillow cannot decode product image: {source_url}") from exc
 
@@ -808,29 +812,48 @@ def add_logo_to_image(
 
     output = BytesIO()
     save_kwargs: dict[str, Any] = {}
-    icc_profile = source_info.get("icc_profile")
+    icc_profile = cleaned_info.get("icc_profile")
     if icc_profile:
         save_kwargs["icc_profile"] = icc_profile
 
     if extension == ".jpg":
         output_image = product.convert("RGB")
         save_kwargs.update(quality=100, subsampling=0, optimize=True)
-        if source_exif:
+        if cleaned_exif:
             try:
-                source_exif[274] = 1  # EXIF orientation is already applied.
-                save_kwargs["exif"] = source_exif.tobytes()
+                cleaned_exif[274] = 1  # EXIF orientation is already applied.
+                save_kwargs["exif"] = cleaned_exif.tobytes()
             except Exception:  # noqa: BLE001 - EXIF must never break the upload.
                 LOGGER.debug("Could not preserve EXIF metadata.", exc_info=True)
+        if "xmp" in cleaned_info:
+            save_kwargs["xmp"] = cleaned_info["xmp"]
         output_image.save(output, format="JPEG", **save_kwargs)
     elif extension == ".webp":
+        if cleaned_exif:
+            try:
+                save_kwargs["exif"] = cleaned_exif.tobytes()
+            except Exception:
+                pass
+        if "xmp" in cleaned_info:
+            save_kwargs["xmp"] = cleaned_info["xmp"]
         product.save(output, format="WEBP", lossless=True, method=6, **save_kwargs)
     else:
         extension = ".png"
+        png_info = PngImagePlugin.PngInfo()
+        for k, v in cleaned_info.items():
+            if isinstance(v, str) and k not in ["icc_profile"]:
+                png_info.add_text(k, v)
+        save_kwargs["pnginfo"] = png_info
+        if cleaned_exif:
+            try:
+                save_kwargs["exif"] = cleaned_exif.tobytes()
+            except Exception:
+                pass
         product.save(output, format="PNG", compress_level=6, **save_kwargs)
 
     digest = hashlib.sha256(output.getvalue()).hexdigest()[:12]
     filename = (
-        f"{safe_filename(filename_prefix)}-gallery-{image_index:03d}-"
+        f"{safe_filename(sanitize_text(filename_prefix))}-gallery-{image_index:03d}-"
         f"logo-{digest}{extension}"
     )
     return EncodedImage(
@@ -939,7 +962,7 @@ def process_config_file(
                 local_path.write_bytes(encoded.content)
                 LOGGER.info("Watermarked local copy: %s", local_path)
 
-            alt_text = f"{product_title} - image {display_index}"
+            alt_text = sanitize_text(f"{product_title} - image {display_index}")
             shopify_url = shopify.upload_image(encoded, alt_text)
 
             # product_images is the original mutable list inside payload, so this

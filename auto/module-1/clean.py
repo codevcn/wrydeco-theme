@@ -42,7 +42,9 @@ KEEP_CONTENT = [
     "module-1.zip",
     "saved.txt",
     "extension",
-    "sync-extension-to-folder.cmd"
+    "sync-extension-to-folder.cmd",
+    "metadata_sanitizer.py",
+    "test_metadata_sanitizer.py"
 ]
 
 

@@ -1,0 +1,1356 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="/static/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+    <link rel="shortcut icon" href="/static/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png" />
+    <link rel="manifest" href="/static/site.webmanifest" />
+    <title>Danh Sách Khách Hàng - Shopify Admin Manager</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .hidden { display: none !important; }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 shadow-xs sticky top-0 z-40">
+        <div class="mx-auto px-4 sm:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo & Store Link -->
+                <div class="flex-shrink-0 flex items-center gap-3">
+                    <a target="_blank" rel="noopener noreferrer" href="/" class="flex items-center gap-2 text-indigo-600 font-bold text-xl hover:text-indigo-700 transition-colors">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                        <span>Shopify Admin Manager</span>
+                    </a>
+                    <a target="_blank" rel="noopener noreferrer" href="https://admin.shopify.com/store/wrydeco" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-black hover:bg-neutral-800 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors" title="Mở Shopify Admin Store" id="headerShopifyStoreLink">
+                        <span>Shopify Store</span>
+                        <svg class="w-3.5 h-3.5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                    </a>
+                </div>
+
+                <!-- Nav Links -->
+                <nav class="flex items-center gap-6">
+                    <a target="_blank" rel="noopener noreferrer" href="/" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Sản phẩm</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/collections" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Collections</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/metaobjects" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Meta Objects</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/create" class="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">Tạo sản phẩm</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/edit-variants" class="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">Sửa hàng loạt</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/blogs" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path></svg>Blog</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/policies" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>Policy</a>
+                    <button id="drawer-toggle-btn" type="button" onclick="toggleDrawer()" class="p-1.5 text-gray-600 hover:text-indigo-600 hover:bg-gray-100 rounded-lg transition-colors flex items-center justify-center focus:outline-none" title="Menu tiện ích">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    {% include 'drawer.html' %}
+
+    <main class="max-w-[90rem] mx-auto px-4 sm:px-8 py-8 space-y-8">
+        <!-- Page Title & Store Overview -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight flex items-center gap-2.5">
+                    <iconify-icon icon="mdi:account-group-outline" class="text-indigo-600 text-3xl"></iconify-icon>
+                    <span>Danh Sách Khách Hàng</span>
+                </h1>
+                <p class="text-xs sm:text-sm text-gray-500 mt-1">
+                    Tra cứu và quản lý thông tin khách hàng, số lượng đơn hàng, tổng chi tiêu. Mặc định sắp xếp khách hàng mới đăng ký nhất lên đầu.
+                </p>
+            </div>
+
+            <!-- Active Store Tag -->
+            <div class="flex items-center gap-2">
+                <span class="text-xs text-gray-500 font-medium">Store đang kết nối:</span>
+                <span id="activeStoreBadge" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white border border-gray-200 shadow-2xs text-gray-800">
+                    <iconify-icon icon="mdi:storefront-outline" class="text-indigo-600 text-base"></iconify-icon>
+                    <span id="activeStoreTypeBadge" class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase {% if proxy_enabled %}bg-indigo-100 text-indigo-700{% else %}bg-gray-100 text-gray-700{% endif %}">
+                        {% if proxy_enabled %}Store Riêng{% else %}Store Mặc định{% endif %}
+                    </span>
+                    <span id="activeStoreLabel" class="font-mono font-bold text-indigo-700 text-xs sm:text-sm">{{ active_full_domain }}</span>
+                </span>
+            </div>
+        </div>
+
+        <!-- SECTION: PROXY GATEWAY & CHỌN STORE (Yêu cầu cốt lõi) -->
+        <section id="proxySection" class="bg-white rounded-2xl border border-gray-200 p-5 sm:p-6 shadow-xs transition-all">
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+                <!-- Info & Explanation -->
+                <div class="flex items-start gap-4">
+                    <div class="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 text-2xl flex-shrink-0">
+                        <iconify-icon icon="mdi:shield-lock-outline"></iconify-icon>
+                    </div>
+                    <div>
+                        <div class="flex flex-wrap items-center gap-2.5">
+                            <h3 class="text-base sm:text-lg font-bold text-gray-900 flex items-center gap-2">
+                                Bảo Vệ Kết Nối Proxy & Cấu Hình Store
+                            </h3>
+                            <!-- Trạng thái Store Badge -->
+                            <div id="proxyStoreModeBadge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 border border-gray-200">
+                                <span class="w-2 h-2 rounded-full {% if proxy_enabled %}bg-indigo-500 animate-pulse{% else %}bg-emerald-500{% endif %}"></span>
+                                <span>
+                                    {% if proxy_enabled %}
+                                        Đang kết nối: Store Riêng (<span class="font-mono font-bold">{{ custom_full_domain }}</span>) qua Proxy US
+                                    {% else %}
+                                        Đang kết nối: Store Mặc định (<span class="font-mono font-bold">{{ default_full_domain }}</span>) - Trực tiếp
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Quy tắc hoạt động -->
+                        <div class="mt-2 text-xs leading-relaxed max-w-3xl space-y-1">
+                            <p class="text-gray-600">
+                                <strong>Nguyên tắc kết nối & Định tuyến:</strong>
+                            </p>
+                            <ul class="list-disc pl-4 space-y-0.5 text-gray-600">
+                                <li>
+                                    <strong>Khi Proxy TẮT:</strong> Server kết nối <strong>trực tiếp từ VPS</strong> (không qua Proxy) đến <strong>Store Mặc định</strong> (<span id="proxyRuleDefaultShop" class="font-mono font-bold text-gray-800">{{ default_full_domain }}</span>).
+                                </li>
+                                <li>
+                                    <strong>Khi Proxy BẬT:</strong> Server kết nối đến <strong>Store Riêng</strong> (<span id="proxyRuleCustomShop" class="font-mono font-bold text-indigo-700">{{ custom_full_domain }}</span>) và <strong>bắt buộc đi qua Proxy Gateway US</strong> (<span class="font-mono font-semibold text-gray-700">{{ proxy_cfg.proxy_ip or '185.124.63.174' }}</span>) để bảo vệ gian hàng.
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- Trạng thái mạng / Egress Live Geo Info -->
+                        <div id="proxyGeoBox" class="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                            <span id="proxyStatusPill" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg {% if proxy_enabled %}bg-indigo-50 text-indigo-700 border border-indigo-200{% else %}bg-emerald-50 text-emerald-700 border border-emerald-200{% endif %} font-medium">
+                                <span id="proxyGeoFlag">{% if proxy_enabled %}🇺🇸{% else %}⚡{% endif %}</span>
+                                <span id="proxyGeoCountry">{% if proxy_enabled %}Proxy US Gateway{% else %}Kết nối Trực tiếp (Direct VPS){% endif %}</span>
+                            </span>
+                            <span id="proxyIspPill" class="{% if not proxy_enabled %}hidden{% endif %} inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-gray-100 text-gray-700 border border-gray-200">
+                                <iconify-icon icon="mdi:server-network" class="text-gray-500"></iconify-icon>
+                                <span id="proxyGeoIsp">ISP: Verizon Business</span>
+                            </span>
+                            <span id="proxyGeoPing" class="{% if not proxy_enabled %}hidden{% endif %} font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg text-[11px] font-semibold">
+                                Ping: 460ms
+                            </span>
+                            <span id="proxyRoutingPill" class="text-[11px] {% if proxy_enabled %}text-indigo-600{% else %}text-emerald-600{% endif %} font-medium flex items-center gap-1">
+                                <iconify-icon icon="mdi:check-decagram" class="{% if proxy_enabled %}text-indigo-500{% else %}text-emerald-500{% endif %}"></iconify-icon>
+                                <span id="proxyRoutingText">{% if proxy_enabled %}Store Riêng (Bắt buộc qua Proxy US){% else %}Store Mặc định (Direct, không qua Proxy){% endif %}</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Controls: Toggle Switch & Actions -->
+                <div class="flex flex-wrap items-center gap-3 sm:gap-4 self-end lg:self-center flex-shrink-0 pt-2 lg:pt-0">
+                    <!-- Toggle Switch -->
+                    <div class="flex items-center bg-gray-50 p-2 rounded-xl border border-gray-200 gap-3">
+                        <span class="text-xs font-semibold text-gray-600">Proxy:</span>
+                        <label class="relative inline-flex items-center cursor-pointer select-none">
+                            <input type="checkbox" id="customerProxyToggle" class="sr-only peer" onchange="handleProxyToggle(this.checked)">
+                            <div class="w-12 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                            <span id="proxyToggleText" class="ml-2.5 text-xs font-bold text-gray-700">Tắt (Mặc định)</span>
+                        </label>
+                    </div>
+
+                    <!-- Test Proxy Button -->
+                    <button type="button" id="btnTestProxy" onclick="testProxyPing()" class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-gray-100 hover:bg-gray-200 active:scale-95 text-gray-700 font-semibold text-xs rounded-xl border border-gray-300 transition-all cursor-pointer shadow-2xs">
+                        <iconify-icon icon="mdi:refresh" id="testProxyIcon" class="text-sm"></iconify-icon>
+                        <span id="testProxyText">Test Ping</span>
+                    </button>
+
+                    <!-- Link to Settings Store Riêng -->
+                    <a target="_blank" rel="noopener noreferrer" href="/settings" class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold text-xs rounded-xl border border-indigo-200 transition-all shadow-2xs" title="Mở trang Cài đặt Store Riêng">
+                        <iconify-icon icon="mdi:cog-outline" class="text-sm"></iconify-icon>
+                        <span>Cài đặt Store Riêng</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Warning Banner khi bật Proxy nhưng chưa cấu hình Store Riêng -->
+            <div id="unconfiguredCustomStoreAlert" class="hidden mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs flex items-start gap-3">
+                <iconify-icon icon="mdi:alert-outline" class="text-xl text-amber-600 flex-shrink-0 mt-0.5"></iconify-icon>
+                <div class="flex-1 space-y-1">
+                    <div class="font-bold text-amber-900 text-sm">CHƯA CẤU HÌNH STORE RIÊNG TRONG SETTINGS</div>
+                    <p class="leading-relaxed">
+                        Bạn đang BẬT Proxy nhưng chưa cấu hình Shop Domain, Client ID và Client Secret cho <strong>Store Riêng</strong> trong trang Cài đặt. Vui lòng bấm nút bên dưới để cấu hình Store Riêng hoặc TẮT Proxy để xem khách hàng của Store Mặc định.
+                    </p>
+                    <div class="pt-1.5 flex items-center gap-3">
+                        <a target="_blank" rel="noopener noreferrer" href="/settings" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-semibold text-xs shadow-2xs transition-colors">
+                            <span>Mở Cài đặt ngay</span>
+                            <iconify-icon icon="mdi:arrow-right"></iconify-icon>
+                        </a>
+                        <button type="button" onclick="setProxyToggle(false)" class="text-amber-800 hover:underline font-semibold cursor-pointer">
+                            Chuyển về Store Mặc định
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fallback Alert khi Proxy gặp sự cố và tự động chuyển về Store Mặc định -->
+            <div id="proxyFallbackAlert" class="hidden mt-4 p-4 bg-amber-50/90 border border-amber-300 rounded-2xl text-amber-900 text-xs flex items-start gap-3.5 shadow-2xs">
+                <div class="w-9 h-9 rounded-xl bg-amber-200 text-amber-900 flex items-center justify-center text-xl flex-shrink-0 mt-0.5">
+                    <iconify-icon icon="mdi:swap-horizontal-bold"></iconify-icon>
+                </div>
+                <div class="flex-1 space-y-1">
+                    <div class="font-bold text-amber-950 text-sm flex items-center gap-2 flex-wrap">
+                        <span>ĐÃ TỰ ĐỘNG CHUYỂN HƯỚNG DỰ PHÒNG (FALLBACK)</span>
+                        <span class="px-2 py-0.5 rounded text-[10px] bg-amber-200 font-extrabold text-amber-900 uppercase">Store Mặc định</span>
+                    </div>
+                    <p id="proxyFallbackMessage" class="leading-relaxed text-amber-900 font-medium">
+                        Proxy Gateway gặp sự cố kết nối. Hệ thống đã tự động chuyển sang hiển thị dữ liệu từ Store Mặc định để đảm bảo công việc không bị gián đoạn.
+                    </p>
+                    <div class="text-[11px] text-amber-800 flex flex-wrap items-center gap-3 pt-1">
+                        <span>Store đang hiển thị: <strong class="font-mono text-amber-950 font-bold" id="fallbackStoreDomainLabel">{{ default_full_domain }}</strong></span>
+                        <span>•</span>
+                        <button type="button" onclick="loadCustomersData()" class="underline hover:text-amber-950 font-bold cursor-pointer">
+                            Thử kết nối lại Store Riêng
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error Banner chung nếu có lỗi kết nối -->
+            <div id="proxyErrorAlert" class="hidden mt-4 p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs flex items-start gap-3">
+                <iconify-icon icon="mdi:alert-octagon-outline" class="text-xl text-rose-600 flex-shrink-0 mt-0.5"></iconify-icon>
+                <div class="flex-1">
+                    <div class="font-bold text-rose-800 text-sm" id="proxyErrorTitle">Lỗi kết nối Shopify qua Proxy</div>
+                    <div class="mt-1 leading-relaxed" id="proxyErrorMessage">--</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TOOLBAR: TÌM KIẾM, SẮP XẾP, TẢI LẠI -->
+        <div class="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+            <!-- Search Input -->
+            <div class="relative flex-1 max-w-md">
+                <input
+                    type="text"
+                    id="searchInput"
+                    onkeypress="if(event.key === 'Enter') handleSearchSubmit()"
+                    placeholder="Tìm kiếm theo tên, email, điện thoại, tag..."
+                    class="w-full rounded-xl border-gray-300 py-2.5 pl-10 pr-10 text-xs sm:text-sm border shadow-2xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all font-sans"
+                >
+                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                    <iconify-icon icon="mdi:magnify" class="text-lg"></iconify-icon>
+                </div>
+                <button
+                    type="button"
+                    id="clearSearchBtn"
+                    onclick="clearSearch()"
+                    class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer"
+                    title="Xóa tìm kiếm"
+                >
+                    <iconify-icon icon="mdi:close-circle" class="text-base"></iconify-icon>
+                </button>
+            </div>
+
+            <!-- Filter Controls -->
+            <div class="flex flex-wrap items-center gap-3">
+                <!-- Page size select -->
+                <div class="flex items-center gap-1.5 text-xs text-gray-500 font-medium">
+                    <span>Hiển thị:</span>
+                    <select id="pageSizeSelect" onchange="changePageSize(this.value)" class="rounded-lg border-gray-300 py-1.5 px-2.5 text-xs border bg-white focus:border-indigo-500 focus:ring-indigo-500">
+                        <option value="25">25</option>
+                        <option value="50" selected>50</option>
+                        <option value="100">100</option>
+                    </select>
+                </div>
+
+                <!-- Sort indicator -->
+                <div class="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-700 font-medium">
+                    <iconify-icon icon="mdi:sort-calendar-descending" class="text-indigo-600 text-sm"></iconify-icon>
+                    <span>Mới đăng ký nhất</span>
+                </div>
+
+                <!-- Total Count Badge -->
+                <div id="customerCountBadge" class="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg text-xs text-indigo-700 font-bold">
+                    <iconify-icon icon="mdi:account" class="text-indigo-600 text-sm"></iconify-icon>
+                    <span id="customerCountText">0 khách hàng</span>
+                </div>
+
+                <!-- Store Source Badge in Toolbar -->
+                <div class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-700 font-medium">
+                    <iconify-icon icon="mdi:storefront-outline" class="text-indigo-600 text-sm"></iconify-icon>
+                    <span>Store:</span>
+                    <span id="toolbarStoreDomain" class="font-mono font-bold text-indigo-700">{{ active_full_domain }}</span>
+                </div>
+
+                <!-- Refresh Button -->
+                <button type="button" id="btnRefresh" onclick="loadCustomersData()" class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-semibold text-xs rounded-xl shadow-xs transition-all cursor-pointer">
+                    <iconify-icon icon="mdi:refresh" id="refreshIcon" class="text-sm"></iconify-icon>
+                    <span>Tải lại</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- TABLE SECTION: DANH SÁCH KHÁCH HÀNG (Có cột STT, Click mở Popup) -->
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
+            <div class="overflow-x-auto min-h-[350px] relative">
+                <!-- Loading Overlay -->
+                <div id="tableLoading" class="hidden absolute inset-0 bg-white/80 backdrop-blur-xs flex flex-col items-center justify-center z-10 gap-3">
+                    <iconify-icon icon="mdi:loading" class="text-4xl text-indigo-600 animate-spin"></iconify-icon>
+                    <span id="tableLoadingText" class="text-xs font-semibold text-gray-600">
+                        {% if proxy_enabled %}
+                            Đang truy vấn Store Riêng ({{ active_full_domain }}) qua Proxy US...
+                        {% else %}
+                            Đang kết nối trực tiếp Store Mặc định ({{ active_full_domain }})...
+                        {% endif %}
+                    </span>
+                </div>
+
+                <table class="w-full text-left text-xs sm:text-sm border-collapse">
+                    <thead>
+                        <tr class="bg-gray-50/80 border-b border-gray-200 text-gray-600 uppercase text-[11px] font-bold tracking-wider select-none">
+                            <th scope="col" class="py-3.5 px-4 w-14 text-center">STT</th>
+                            <th scope="col" class="py-3.5 px-4">Khách hàng</th>
+                            <th scope="col" class="py-3.5 px-4">Liên hệ (Email & SĐT)</th>
+                            <th scope="col" class="py-3.5 px-4">Địa chỉ chính</th>
+                            <th scope="col" class="py-3.5 px-4 text-center">Đơn hàng</th>
+                            <th scope="col" class="py-3.5 px-4 text-right">Tổng chi tiêu</th>
+                            <th scope="col" class="py-3.5 px-4">Ngày đăng ký</th>
+                            <th scope="col" class="py-3.5 px-4 text-center w-20">Chi tiết</th>
+                        </tr>
+                    </thead>
+                    <tbody id="customersTableBody" class="divide-y divide-gray-100">
+                        <!-- Sẽ render bằng JavaScript -->
+                    </tbody>
+                </table>
+
+                <!-- Empty State -->
+                <div id="emptyState" class="hidden py-16 px-4 text-center">
+                    <div class="w-16 h-16 rounded-3xl bg-gray-100 text-gray-400 mx-auto flex items-center justify-center text-3xl mb-3">
+                        <iconify-icon icon="mdi:account-off-outline"></iconify-icon>
+                    </div>
+                    <h4 class="text-base font-bold text-gray-800">Không tìm thấy khách hàng nào</h4>
+                    <p class="text-xs text-gray-500 mt-1 max-w-sm mx-auto" id="emptyStateMessage">
+                        Chưa có khách hàng nào trong store này hoặc không khớp với từ khóa tìm kiếm.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Pagination Bar -->
+            <div id="paginationBar" class="p-4 border-t border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-600">
+                <div id="paginationInfo">
+                    Hiển thị danh sách khách hàng
+                </div>
+                <div class="flex items-center gap-2">
+                    <button
+                        type="button"
+                        id="btnPrevPage"
+                        onclick="goToPrevPage()"
+                        disabled
+                        class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 bg-white font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    >
+                        <iconify-icon icon="mdi:chevron-left" class="text-base"></iconify-icon>
+                        <span>Trang trước</span>
+                    </button>
+                    <button
+                        type="button"
+                        id="btnNextPage"
+                        onclick="goToNextPage()"
+                        disabled
+                        class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 bg-white font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    >
+                        <span>Trang sau</span>
+                        <iconify-icon icon="mdi:chevron-right" class="text-base"></iconify-icon>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- POPUP MODAL: CHI TIẾT KHÁCH HÀNG (Hiển thị khi click vào row) -->
+    <div id="customerDetailModal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity" onclick="closeCustomerModal()"></div>
+
+        <div class="flex min-h-screen items-center justify-center p-4 text-center sm:p-0">
+            <!-- Modal Content -->
+            <div class="relative transform overflow-hidden rounded-3xl bg-white text-left shadow-2xl transition-all sm:my-8 w-full max-w-3xl border border-gray-100 animate-in fade-in duration-200">
+                <!-- Modal Top Accent Line -->
+                <div class="h-2 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
+
+                <!-- Modal Header -->
+                <div class="px-6 pt-5 pb-4 border-b border-gray-100 flex items-start justify-between gap-4">
+                    <div class="flex items-center gap-3.5">
+                        <div id="modalAvatar" class="w-14 h-14 rounded-2xl bg-indigo-100 text-indigo-700 font-extrabold text-xl flex items-center justify-center shadow-xs flex-shrink-0">
+                            KH
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h3 class="text-lg sm:text-xl font-bold text-gray-900" id="modalCustomerName">
+                                    Nguyễn Văn A
+                                </h3>
+                                <span id="modalCustomerStateBadge" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    Hoạt động
+                                </span>
+                                <span id="modalVerifiedBadge" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                                    <iconify-icon icon="mdi:check-decagram"></iconify-icon>
+                                    Đã xác thực email
+                                </span>
+                            </div>
+                            <p class="text-xs text-gray-400 mt-1 flex items-center gap-2 flex-wrap">
+                                <span id="modalCustomerId">ID: --</span>
+                                <span>•</span>
+                                <span id="modalCustomerDate">Ngày đăng ký: --</span>
+                                <span>•</span>
+                                <span class="inline-flex items-center gap-1 font-mono text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-md text-[11px] font-semibold">
+                                    <iconify-icon icon="mdi:storefront-outline"></iconify-icon>
+                                    <span id="modalCustomerStoreDomain">{{ active_full_domain }}</span>
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Close Button -->
+                    <button type="button" onclick="closeCustomerModal()" class="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer" title="Đóng popup (Esc)">
+                        <iconify-icon icon="mdi:close" class="text-2xl"></iconify-icon>
+                    </button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="px-6 py-5 space-y-6 max-h-[75vh] overflow-y-auto">
+                    <!-- 3 Thẻ tóm tắt số liệu (Stats) -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div class="bg-indigo-50/60 border border-indigo-100 p-3.5 rounded-2xl flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-xl flex-shrink-0">
+                                <iconify-icon icon="mdi:shopping-outline"></iconify-icon>
+                            </div>
+                            <div>
+                                <div class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Tổng Đơn Hàng</div>
+                                <div class="text-lg font-bold text-gray-900" id="modalStatOrders">0 đơn</div>
+                            </div>
+                        </div>
+
+                        <div class="bg-emerald-50/60 border border-emerald-100 p-3.5 rounded-2xl flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-xl flex-shrink-0">
+                                <iconify-icon icon="mdi:cash-multiple"></iconify-icon>
+                            </div>
+                            <div>
+                                <div class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Tổng Chi Tiêu</div>
+                                <div class="text-lg font-bold text-emerald-700" id="modalStatSpent">$0.00</div>
+                            </div>
+                        </div>
+
+                        <div class="bg-purple-50/60 border border-purple-100 p-3.5 rounded-2xl flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center text-xl flex-shrink-0">
+                                <iconify-icon icon="mdi:email-check-outline"></iconify-icon>
+                            </div>
+                            <div>
+                                <div class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Email Marketing</div>
+                                <div class="text-xs font-bold text-purple-800" id="modalStatMarketing">Chưa đăng ký</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Grid 2 Cột: Thông tin liên hệ & Địa chỉ -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Cột Trái: Thông tin liên hệ -->
+                        <div class="bg-gray-50/70 border border-gray-200 rounded-2xl p-4 space-y-3">
+                            <h4 class="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5 border-b border-gray-200 pb-2">
+                                <iconify-icon icon="mdi:card-account-mail-outline" class="text-indigo-600 text-base"></iconify-icon>
+                                <span>Thông tin Liên Hệ</span>
+                            </h4>
+
+                            <div class="space-y-2 text-xs">
+                                <div>
+                                    <span class="text-gray-400">Email:</span>
+                                    <div class="font-medium text-gray-800 flex items-center gap-1.5 mt-0.5" id="modalEmailWrapper">
+                                        <iconify-icon icon="mdi:email-outline" class="text-gray-400"></iconify-icon>
+                                        <a href="#" id="modalEmail" class="text-indigo-600 hover:underline">--</a>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <span class="text-gray-400">Số điện thoại:</span>
+                                    <div class="font-medium text-gray-800 flex items-center gap-1.5 mt-0.5" id="modalPhoneWrapper">
+                                        <iconify-icon icon="mdi:phone-outline" class="text-gray-400"></iconify-icon>
+                                        <a href="#" id="modalPhone" class="text-indigo-600 hover:underline">--</a>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <span class="text-gray-400">SMS Marketing:</span>
+                                    <div class="font-medium text-gray-700 mt-0.5" id="modalSmsConsent">--</div>
+                                </div>
+
+                                <div>
+                                    <span class="text-gray-400">Cập nhật lần cuối:</span>
+                                    <div class="font-medium text-gray-700 mt-0.5" id="modalUpdatedAt">--</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Cột Phải: Địa chỉ mặc định -->
+                        <div class="bg-gray-50/70 border border-gray-200 rounded-2xl p-4 space-y-3">
+                            <h4 class="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5 border-b border-gray-200 pb-2">
+                                <iconify-icon icon="mdi:map-marker-outline" class="text-indigo-600 text-base"></iconify-icon>
+                                <span>Địa Chỉ Mặc Định</span>
+                            </h4>
+
+                            <div class="text-xs text-gray-700 space-y-1.5" id="modalAddressBox">
+                                <div class="font-bold text-gray-900" id="modalAddressName">--</div>
+                                <div id="modalAddressStreet" class="text-gray-600">--</div>
+                                <div id="modalAddressCity">--</div>
+                                <div id="modalAddressCountry" class="font-medium text-gray-800">--</div>
+                                <div id="modalAddressPhone" class="text-gray-500">--</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ghi chú & Thẻ Tags -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Tags -->
+                        <div class="bg-gray-50/70 border border-gray-200 rounded-2xl p-4">
+                            <h4 class="text-xs font-bold text-gray-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                                <iconify-icon icon="mdi:tag-multiple-outline" class="text-indigo-600 text-base"></iconify-icon>
+                                <span>Thẻ Phân Loại (Tags)</span>
+                            </h4>
+                            <div id="modalTagsContainer" class="flex flex-wrap gap-1.5 min-h-[30px] items-center">
+                                <span class="text-xs text-gray-400 italic">Không có thẻ nào</span>
+                            </div>
+                        </div>
+
+                        <!-- Note -->
+                        <div class="bg-gray-50/70 border border-gray-200 rounded-2xl p-4">
+                            <h4 class="text-xs font-bold text-gray-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                                <iconify-icon icon="mdi:note-text-outline" class="text-indigo-600 text-base"></iconify-icon>
+                                <span>Ghi Chú Nội Bộ</span>
+                            </h4>
+                            <div id="modalNoteText" class="text-xs text-gray-600 whitespace-pre-wrap min-h-[30px]">
+                                Không có ghi chú.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Danh sách đơn hàng gần đây -->
+                    <div class="border border-gray-200 rounded-2xl overflow-hidden">
+                        <div class="bg-gray-50 px-4 py-2.5 border-b border-gray-200 flex items-center justify-between">
+                            <span class="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+                                <iconify-icon icon="mdi:clipboard-list-outline" class="text-indigo-600 text-base"></iconify-icon>
+                                <span>Đơn Hàng Gần Nhất</span>
+                            </span>
+                            <span class="text-[11px] text-gray-400" id="modalOrdersCount">0 đơn</span>
+                        </div>
+                        <div id="modalOrdersTableWrapper" class="overflow-x-auto max-h-44">
+                            <table class="w-full text-left text-xs">
+                                <thead class="bg-gray-100/60 text-gray-500 text-[10px] uppercase font-semibold">
+                                    <tr>
+                                        <th class="py-2 px-3">Mã Đơn</th>
+                                        <th class="py-2 px-3">Ngày đặt</th>
+                                        <th class="py-2 px-3">Thanh toán</th>
+                                        <th class="py-2 px-3">Giao hàng</th>
+                                        <th class="py-2 px-3 text-right">Giá trị</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="modalOrdersTbody" class="divide-y divide-gray-100">
+                                    <tr>
+                                        <td colspan="5" class="py-4 text-center text-gray-400 text-xs">Khách hàng chưa có đơn hàng nào</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex flex-wrap items-center justify-between gap-3">
+                    <span class="text-[11px] text-gray-400">
+                        Bấm phím <kbd class="px-1.5 py-0.5 bg-gray-200 rounded text-[10px] font-mono">Esc</kbd> hoặc bấm ra ngoài để đóng.
+                    </span>
+                    <button type="button" onclick="closeCustomerModal()" class="px-5 py-2 bg-gray-200 hover:bg-gray-300 active:scale-95 text-gray-800 font-semibold text-xs rounded-xl transition-all cursor-pointer">
+                        Đóng
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // Global State
+        let state = {
+            customers: [],
+            pageInfo: {},
+            pageSize: 50,
+            searchQuery: '',
+            proxyEnabled: {{ 'true' if proxy_enabled else 'false' }},
+            defaultFullDomain: '{{ default_full_domain }}',
+            customFullDomain: '{{ custom_full_domain }}',
+            activeFullDomain: '{{ active_full_domain }}',
+            activeShop: '{{ default_shop }}',
+            startCursor: null,
+            endCursor: null,
+            isLoading: false,
+            // History cursor stack for previous pagination
+            cursorHistory: []
+        };
+
+        // DOM Ready
+        document.addEventListener('DOMContentLoaded', () => {
+            // Khởi tạo toggle state
+            const toggle = document.getElementById('customerProxyToggle');
+            if (toggle) {
+                toggle.checked = state.proxyEnabled;
+                updateProxyToggleUI(state.proxyEnabled, state.activeFullDomain);
+            }
+
+            // Tải dữ liệu ban đầu
+            loadCustomersData();
+        });
+
+        // Toggle Proxy Handler
+        async function handleProxyToggle(checked) {
+            state.proxyEnabled = checked;
+            const targetDomain = checked ? state.customFullDomain : state.defaultFullDomain;
+            state.activeFullDomain = targetDomain;
+            updateProxyToggleUI(checked, targetDomain);
+
+            try {
+                const res = await fetch('/api/customers/toggle-proxy', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled: checked })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    state.activeShop = data.target_shop;
+                    if (data.full_domain) {
+                        state.activeFullDomain = data.full_domain;
+                        if (checked) state.customFullDomain = data.full_domain;
+                        else state.defaultFullDomain = data.full_domain;
+                    }
+                    updateProxyToggleUI(checked, state.activeFullDomain);
+                }
+            } catch (err) {
+                console.warn('Lỗi lưu proxy toggle:', err);
+            }
+
+            // Reset pagination and reload data
+            state.startCursor = null;
+            state.endCursor = null;
+            state.cursorHistory = [];
+            loadCustomersData();
+        }
+
+        function setProxyToggle(val) {
+            const toggle = document.getElementById('customerProxyToggle');
+            if (toggle) {
+                toggle.checked = val;
+                handleProxyToggle(val);
+            }
+        }
+
+        function updateProxyToggleUI(enabled, storeDomain = null, isFallback = false, fallbackReason = null) {
+            const toggleText = document.getElementById('proxyToggleText');
+            const modeBadge = document.getElementById('proxyStoreModeBadge');
+            const alertBox = document.getElementById('unconfiguredCustomStoreAlert');
+            const fallbackAlert = document.getElementById('proxyFallbackAlert');
+            const fallbackMsg = document.getElementById('proxyFallbackMessage');
+            const fallbackLabel = document.getElementById('fallbackStoreDomainLabel');
+            const activeStoreTypeBadge = document.getElementById('activeStoreTypeBadge');
+            const activeStoreLabel = document.getElementById('activeStoreLabel');
+            const toolbarStoreDomain = document.getElementById('toolbarStoreDomain');
+            const headerShopifyLink = document.getElementById('headerShopifyStoreLink');
+            const proxyGeoFlag = document.getElementById('proxyGeoFlag');
+            const proxyGeoCountry = document.getElementById('proxyGeoCountry');
+            const proxyStatusPill = document.getElementById('proxyStatusPill');
+            const proxyIspPill = document.getElementById('proxyIspPill');
+            const proxyGeoPing = document.getElementById('proxyGeoPing');
+            const proxyRoutingPill = document.getElementById('proxyRoutingPill');
+            const proxyRoutingText = document.getElementById('proxyRoutingText');
+
+            const domain = storeDomain || (enabled ? state.customFullDomain : state.defaultFullDomain);
+            state.activeFullDomain = domain;
+
+            if (activeStoreLabel) activeStoreLabel.textContent = domain;
+            if (toolbarStoreDomain) toolbarStoreDomain.textContent = isFallback ? `${domain} [Dự phòng]` : domain;
+
+            // Cập nhật link Shopify Admin Store
+            if (headerShopifyLink) {
+                const targetShopName = domain.replace('.myshopify.com', '');
+                headerShopifyLink.href = `https://admin.shopify.com/store/${targetShopName}`;
+            }
+
+            // Xử lý trạng thái FALLBACK
+            if (isFallback) {
+                if (fallbackAlert) {
+                    fallbackAlert.classList.remove('hidden');
+                    if (fallbackMsg) fallbackMsg.textContent = fallbackReason || 'Proxy Gateway gặp sự cố kết nối. Hệ thống đã tự động chuyển hướng dự phòng (fallback) về Store Mặc định.';
+                    if (fallbackLabel) fallbackLabel.textContent = domain;
+                }
+
+                if (activeStoreTypeBadge) {
+                    activeStoreTypeBadge.textContent = 'Store Mặc định (Dự phòng)';
+                    activeStoreTypeBadge.className = 'px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-100 text-amber-900 border border-amber-300';
+                }
+
+                if (modeBadge) {
+                    modeBadge.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-900 border border-amber-300';
+                    modeBadge.innerHTML = `
+                        <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                        <span>Proxy lỗi kết nối ➔ Đang Fallback: Store Mặc định (<span class="font-mono font-bold">${domain}</span>)</span>
+                    `;
+                }
+
+                if (proxyStatusPill) {
+                    proxyStatusPill.className = 'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-amber-100 text-amber-900 border border-amber-300 font-medium';
+                }
+                if (proxyGeoFlag) proxyGeoFlag.textContent = '⚠️';
+                if (proxyGeoCountry) proxyGeoCountry.textContent = 'Proxy US Gián đoạn - Đang Fallback';
+                if (proxyIspPill) proxyIspPill.classList.add('hidden');
+                if (proxyGeoPing) proxyGeoPing.classList.add('hidden');
+                if (proxyRoutingPill) proxyRoutingPill.className = 'text-[11px] text-amber-700 font-semibold flex items-center gap-1';
+                if (proxyRoutingText) proxyRoutingText.textContent = 'Đang chuyển hướng dự phòng về Store Mặc định';
+                return;
+            } else {
+                if (fallbackAlert) fallbackAlert.classList.add('hidden');
+            }
+
+            if (enabled) {
+                if (toggleText) {
+                    toggleText.textContent = 'Bật (Store Riêng)';
+                    toggleText.className = 'ml-2.5 text-xs font-bold text-indigo-700';
+                }
+
+                if (activeStoreTypeBadge) {
+                    activeStoreTypeBadge.textContent = 'Store Riêng';
+                    activeStoreTypeBadge.className = 'px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-indigo-100 text-indigo-700';
+                }
+
+                if (modeBadge) {
+                    modeBadge.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200';
+                    modeBadge.innerHTML = `
+                        <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
+                        <span>Đang kết nối: Store Riêng (<span class="font-mono font-bold">${domain}</span>) qua Proxy US</span>
+                    `;
+                }
+
+                if (proxyStatusPill) {
+                    proxyStatusPill.className = 'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 font-medium';
+                }
+                if (proxyGeoFlag) proxyGeoFlag.textContent = '🇺🇸';
+                if (proxyGeoCountry) proxyGeoCountry.textContent = 'Proxy US Gateway';
+                if (proxyIspPill) proxyIspPill.classList.remove('hidden');
+                if (proxyGeoPing) proxyGeoPing.classList.remove('hidden');
+                if (proxyRoutingPill) proxyRoutingPill.className = 'text-[11px] text-indigo-600 font-medium flex items-center gap-1';
+                if (proxyRoutingText) proxyRoutingText.textContent = 'Store Riêng (Bắt buộc qua Proxy US)';
+
+            } else {
+                if (toggleText) {
+                    toggleText.textContent = 'Tắt (Store Mặc định)';
+                    toggleText.className = 'ml-2.5 text-xs font-bold text-gray-700';
+                }
+
+                if (activeStoreTypeBadge) {
+                    activeStoreTypeBadge.textContent = 'Store Mặc định';
+                    activeStoreTypeBadge.className = 'px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-gray-100 text-gray-700';
+                }
+
+                if (modeBadge) {
+                    modeBadge.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 border border-gray-200';
+                    modeBadge.innerHTML = `
+                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        <span>Đang kết nối: Store Mặc định (<span class="font-mono font-bold">${domain}</span>) - Trực tiếp</span>
+                    `;
+                }
+
+                if (proxyStatusPill) {
+                    proxyStatusPill.className = 'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 font-medium';
+                }
+                if (proxyGeoFlag) proxyGeoFlag.textContent = '⚡';
+                if (proxyGeoCountry) proxyGeoCountry.textContent = 'Kết nối Trực tiếp (Direct VPS)';
+                if (proxyIspPill) proxyIspPill.classList.add('hidden');
+                if (proxyGeoPing) proxyGeoPing.classList.add('hidden');
+                if (proxyRoutingPill) proxyRoutingPill.className = 'text-[11px] text-emerald-600 font-medium flex items-center gap-1';
+                if (proxyRoutingText) proxyRoutingText.textContent = 'Store Mặc định (Direct, không qua Proxy)';
+
+                if (alertBox) alertBox.classList.add('hidden');
+            }
+        }
+
+        // Test Proxy Ping
+        async function testProxyPing() {
+            const btn = document.getElementById('btnTestProxy');
+            const icon = document.getElementById('testProxyIcon');
+            const text = document.getElementById('testProxyText');
+            const pingLabel = document.getElementById('proxyGeoPing');
+            const proxyGeoFlag = document.getElementById('proxyGeoFlag');
+            const proxyGeoCountry = document.getElementById('proxyGeoCountry');
+            const proxyGeoIsp = document.getElementById('proxyGeoIsp');
+
+            btn.disabled = true;
+            text.textContent = 'Đang ping...';
+            icon.classList.add('animate-spin');
+
+            try {
+                const res = await fetch('/api/settings/proxy/test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                const data = await res.json();
+                const isSuccess = data.success && (data.is_stable === true || data.status === 'ok');
+
+                if (isSuccess) {
+                    const lat = data.latency_ms || 0;
+                    pingLabel.textContent = `Ping: ${lat}ms`;
+                    pingLabel.className = 'font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg text-[11px] font-semibold';
+                    text.textContent = `${lat}ms (Tốt)`;
+
+                    // Cập nhật Geo Egress nếu có
+                    if (data.geo) {
+                        if (proxyGeoFlag && data.geo.flag) proxyGeoFlag.textContent = data.geo.flag;
+                        if (proxyGeoCountry && data.geo.country) proxyGeoCountry.textContent = `Proxy US Gateway (${data.geo.country})`;
+                        if (proxyGeoIsp && data.geo.isp) proxyGeoIsp.textContent = `ISP: ${data.geo.isp}`;
+                    }
+                } else {
+                    pingLabel.textContent = 'Mất kết nối';
+                    pingLabel.className = 'font-mono text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-lg text-[11px] font-semibold';
+                    text.textContent = 'Lỗi ping';
+                }
+            } catch (err) {
+                pingLabel.textContent = 'Lỗi kết nối';
+                pingLabel.className = 'font-mono text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-lg text-[11px] font-semibold';
+                text.textContent = 'Lỗi';
+            } finally {
+                btn.disabled = false;
+                icon.classList.remove('animate-spin');
+                setTimeout(() => { text.textContent = 'Test Ping'; }, 3000);
+            }
+        }
+
+        // Load Customers Data
+        async function loadCustomersData(direction = null) {
+            if (state.isLoading) return;
+            state.isLoading = true;
+
+            const loadingOverlay = document.getElementById('tableLoading');
+            const loadingText = document.getElementById('tableLoadingText');
+            const refreshIcon = document.getElementById('refreshIcon');
+            const alertBox = document.getElementById('unconfiguredCustomStoreAlert');
+            const fallbackAlert = document.getElementById('proxyFallbackAlert');
+            const errorAlert = document.getElementById('proxyErrorAlert');
+
+            if (loadingText) {
+                if (state.proxyEnabled) {
+                    loadingText.textContent = `Đang truy vấn Store Riêng (${state.activeFullDomain}) qua Proxy US...`;
+                } else {
+                    loadingText.textContent = `Đang kết nối trực tiếp Store Mặc định (${state.activeFullDomain})...`;
+                }
+            }
+
+            loadingOverlay.classList.remove('hidden');
+            if (refreshIcon) refreshIcon.classList.add('animate-spin');
+            errorAlert.classList.add('hidden');
+
+            let url = `/api/customers?first=${state.pageSize}&sort_key=CREATED_AT&reverse=true`;
+            url += `&use_custom_store=${state.proxyEnabled}`;
+
+            if (state.searchQuery) {
+                url += `&query=${encodeURIComponent(state.searchQuery)}`;
+            }
+
+            if (direction === 'next' && state.endCursor) {
+                url += `&after=${encodeURIComponent(state.endCursor)}`;
+            } else if (direction === 'prev' && state.startCursor) {
+                url += `&before=${encodeURIComponent(state.startCursor)}`;
+            }
+
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+
+                if (data.need_config && state.proxyEnabled) {
+                    if (alertBox) alertBox.classList.remove('hidden');
+                    if (data.full_domain) {
+                        state.customFullDomain = data.full_domain;
+                        updateProxyToggleUI(true, data.full_domain);
+                    }
+                    renderTable([]);
+                    document.getElementById('customerCountText').textContent = 'Chưa cấu hình Store Riêng';
+                    return;
+                } else {
+                    if (alertBox) alertBox.classList.add('hidden');
+                }
+
+                if (!data.success) {
+                    document.getElementById('proxyErrorTitle').textContent = state.proxyEnabled ? 'Lỗi truy vấn Shopify qua Proxy US' : 'Lỗi truy vấn Shopify Store Mặc định';
+                    document.getElementById('proxyErrorMessage').textContent = data.error || 'Không thể lấy dữ liệu khách hàng.';
+                    errorAlert.classList.remove('hidden');
+                    renderTable([]);
+                    document.getElementById('customerCountText').textContent = '0 khách hàng';
+                    return;
+                }
+
+                state.customers = data.customers || [];
+                state.pageInfo = data.page_info || {};
+                state.startCursor = state.pageInfo.startCursor || null;
+                state.endCursor = state.pageInfo.endCursor || null;
+
+                if (data.store_info) {
+                    const fullDom = data.store_info.full_domain || state.activeFullDomain;
+                    state.activeFullDomain = fullDom;
+                    if (!data.fallback_triggered) {
+                        if (state.proxyEnabled) state.customFullDomain = fullDom;
+                        else state.defaultFullDomain = fullDom;
+                    }
+                    updateProxyToggleUI(state.proxyEnabled, fullDom, Boolean(data.fallback_triggered), data.fallback_reason);
+                }
+
+                const countSuffix = data.fallback_triggered ? ' (Dự phòng)' : '';
+                document.getElementById('customerCountText').textContent = `${state.customers.length} khách hàng${countSuffix}`;
+                renderTable(state.customers);
+                updatePaginationControls();
+
+            } catch (err) {
+                document.getElementById('proxyErrorTitle').textContent = 'Lỗi mạng khi gọi máy chủ';
+                document.getElementById('proxyErrorMessage').textContent = err.message;
+                errorAlert.classList.remove('hidden');
+                renderTable([]);
+            } finally {
+                state.isLoading = false;
+                loadingOverlay.classList.add('hidden');
+                if (refreshIcon) refreshIcon.classList.remove('animate-spin');
+            }
+        }
+
+        // Render Customers Table
+        function renderTable(customers) {
+            const tbody = document.getElementById('customersTableBody');
+            const emptyState = document.getElementById('emptyState');
+            tbody.innerHTML = '';
+
+            if (!customers || customers.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            emptyState.classList.add('hidden');
+
+            customers.forEach((cust, index) => {
+                const stt = index + 1;
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-indigo-50/40 cursor-pointer transition-colors border-b border-gray-100 group';
+                tr.onclick = () => openCustomerModal(cust);
+
+                // Tên hiển thị & initials
+                const fullName = [cust.firstName, cust.lastName].filter(Boolean).join(' ') || cust.displayName || 'Khách Vãng Lai';
+                const initials = getInitials(fullName);
+                const bgAvatarColor = getAvatarGradient(index);
+
+                // Format amount
+                const amt = cust.amountSpent ? `${cust.amountSpent.currencyCode || '$'} ${parseFloat(cust.amountSpent.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '$0.00';
+                
+                // Format date
+                const createdDate = formatDateTime(cust.createdAt);
+
+                // Default Address
+                const addr = cust.defaultAddress;
+                let addrStr = 'Chưa có địa chỉ';
+                if (addr) {
+                    const parts = [addr.city, addr.province, addr.country].filter(Boolean);
+                    addrStr = parts.join(', ') || addr.address1 || 'Chưa rõ';
+                }
+
+                // Status Badge
+                let stateBadge = '';
+                if (cust.state === 'ENABLED') {
+                    stateBadge = '<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Hoạt động</span>';
+                } else if (cust.state === 'INVITED') {
+                    stateBadge = '<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">Đã mời</span>';
+                } else {
+                    stateBadge = '<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-gray-100 text-gray-600 border border-gray-200">Chưa kích hoạt</span>';
+                }
+
+                tr.innerHTML = `
+                    <td class="py-3.5 px-4 text-center font-mono font-semibold text-gray-500 text-xs">
+                        ${stt}
+                    </td>
+                    <td class="py-3.5 px-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-xl ${bgAvatarColor} text-white font-bold text-xs flex items-center justify-center shadow-2xs flex-shrink-0">
+                                ${initials}
+                            </div>
+                            <div class="min-w-0">
+                                <div class="font-bold text-gray-900 group-hover:text-indigo-600 transition-colors truncate max-w-[200px]">
+                                    ${escapeHtml(fullName)}
+                                </div>
+                                <div class="flex items-center gap-1.5 mt-0.5">
+                                    ${stateBadge}
+                                    ${cust.verifiedEmail ? '<iconify-icon icon="mdi:check-decagram" class="text-blue-500 text-xs" title="Email đã xác thực"></iconify-icon>' : ''}
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="py-3.5 px-4">
+                        <div class="space-y-0.5">
+                            ${cust.email ? `
+                            <div class="font-medium text-gray-800 flex items-center gap-1.5 max-w-[240px]">
+                                <iconify-icon icon="mdi:email-outline" class="text-gray-400 text-sm flex-shrink-0"></iconify-icon>
+                                <span class="truncate" title="${escapeHtml(cust.email)}">${escapeHtml(cust.email)}</span>
+                                <button
+                                    type="button"
+                                    data-email="${escapeHtml(cust.email)}"
+                                    onclick="copyCustomerEmail(event, this)"
+                                    class="p-1 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-all cursor-pointer flex-shrink-0 inline-flex items-center justify-center ml-0.5"
+                                    title="Sao chép email"
+                                >
+                                    <iconify-icon icon="mdi:content-copy" class="text-lg"></iconify-icon>
+                                </button>
+                            </div>` : `
+                            <div class="font-medium text-gray-400 flex items-center gap-1.5 truncate max-w-[220px]">
+                                <iconify-icon icon="mdi:email-outline" class="text-gray-300 text-sm flex-shrink-0"></iconify-icon>
+                                <span class="italic text-xs">Chưa cung cấp</span>
+                            </div>`}
+                            ${cust.phone ? `
+                            <div class="text-gray-500 text-xs flex items-center gap-1.5 font-mono">
+                                <iconify-icon icon="mdi:phone-outline" class="text-gray-400 text-sm flex-shrink-0"></iconify-icon>
+                                <span>${escapeHtml(cust.phone)}</span>
+                            </div>` : ''}
+                        </div>
+                    </td>
+                    <td class="py-3.5 px-4 text-gray-600 truncate max-w-[180px]" title="${escapeHtml(addrStr)}">
+                        <div class="flex items-center gap-1.5">
+                            <iconify-icon icon="mdi:map-marker-outline" class="text-gray-400 flex-shrink-0"></iconify-icon>
+                            <span class="truncate">${escapeHtml(addrStr)}</span>
+                        </div>
+                    </td>
+                    <td class="py-3.5 px-4 text-center">
+                        <span class="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs font-bold ${cust.numberOfOrders > 0 ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'bg-gray-100 text-gray-500'}">
+                            ${cust.numberOfOrders || 0}
+                        </span>
+                    </td>
+                    <td class="py-3.5 px-4 text-right font-mono font-bold text-gray-900">
+                        ${amt}
+                    </td>
+                    <td class="py-3.5 px-4 text-gray-500 text-xs">
+                        <div class="flex items-center gap-1.5">
+                            <iconify-icon icon="mdi:calendar-outline" class="text-gray-400"></iconify-icon>
+                            <span>${createdDate}</span>
+                        </div>
+                    </td>
+                    <td class="py-3.5 px-4 text-center">
+                        <button type="button" class="p-1.5 text-gray-400 group-hover:text-indigo-600 group-hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer" title="Xem chi tiết khách hàng">
+                            <iconify-icon icon="mdi:eye-outline" class="text-lg"></iconify-icon>
+                        </button>
+                    </td>
+                `;
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Open Detail Modal
+        function openCustomerModal(cust) {
+            if (!cust) return;
+
+            const fullName = [cust.firstName, cust.lastName].filter(Boolean).join(' ') || cust.displayName || 'Khách Hàng';
+            document.getElementById('modalCustomerName').textContent = fullName;
+            document.getElementById('modalAvatar').textContent = getInitials(fullName);
+
+            // Clean id
+            const rawId = cust.id || '';
+            const cleanId = rawId.split('/').pop() || cust.legacyResourceId || '--';
+            document.getElementById('modalCustomerId').textContent = `Shopify ID: ${cleanId}`;
+            document.getElementById('modalCustomerDate').textContent = `Đăng ký: ${formatDateTime(cust.createdAt)}`;
+            const modalStoreElem = document.getElementById('modalCustomerStoreDomain');
+            if (modalStoreElem) {
+                modalStoreElem.textContent = state.activeFullDomain || '{{ active_full_domain }}';
+            }
+
+            // State badge
+            const stateBadge = document.getElementById('modalCustomerStateBadge');
+            if (cust.state === 'ENABLED') {
+                stateBadge.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200';
+                stateBadge.textContent = 'Hoạt động';
+            } else {
+                stateBadge.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-gray-100 text-gray-600 border border-gray-200';
+                stateBadge.textContent = cust.state || 'Chưa kích hoạt';
+            }
+
+            // Verified Email
+            const verifiedBadge = document.getElementById('modalVerifiedBadge');
+            if (cust.verifiedEmail) {
+                verifiedBadge.classList.remove('hidden');
+            } else {
+                verifiedBadge.classList.add('hidden');
+            }
+
+            // Stats
+            document.getElementById('modalStatOrders').textContent = `${cust.numberOfOrders || 0} đơn hàng`;
+            const amt = cust.amountSpent ? `${cust.amountSpent.currencyCode || '$'} ${parseFloat(cust.amountSpent.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '$0.00';
+            document.getElementById('modalStatSpent').textContent = amt;
+
+            // Marketing consent
+            const mState = cust.emailMarketingConsent?.marketingState;
+            document.getElementById('modalStatMarketing').textContent = mState === 'SUBSCRIBED' ? 'Đã Đăng Ký' : (mState || 'Chưa đăng ký');
+            document.getElementById('modalSmsConsent').textContent = cust.smsMarketingConsent?.marketingState || 'Chưa đăng ký';
+
+            // Contact
+            const emailElem = document.getElementById('modalEmail');
+            if (cust.email) {
+                emailElem.textContent = cust.email;
+                emailElem.href = `mailto:${cust.email}`;
+            } else {
+                emailElem.textContent = 'Chưa cung cấp';
+                emailElem.removeAttribute('href');
+            }
+
+            const phoneElem = document.getElementById('modalPhone');
+            if (cust.phone) {
+                phoneElem.textContent = cust.phone;
+                phoneElem.href = `tel:${cust.phone}`;
+            } else {
+                phoneElem.textContent = 'Chưa cung cấp';
+                phoneElem.removeAttribute('href');
+            }
+
+            document.getElementById('modalUpdatedAt').textContent = formatDateTime(cust.updatedAt);
+
+            // Address
+            const addr = cust.defaultAddress;
+            if (addr) {
+                document.getElementById('modalAddressName').textContent = addr.name || fullName;
+                document.getElementById('modalAddressStreet').textContent = [addr.address1, addr.address2].filter(Boolean).join(', ') || 'Chưa có số nhà/đường';
+                document.getElementById('modalAddressCity').textContent = [addr.city, addr.province, addr.zip].filter(Boolean).join(' - ');
+                document.getElementById('modalAddressCountry').textContent = addr.country || 'Quốc gia: Chưa rõ';
+                document.getElementById('modalAddressPhone').textContent = addr.phone ? `SĐT nhận: ${addr.phone}` : '';
+            } else {
+                document.getElementById('modalAddressName').textContent = 'Chưa có địa chỉ mặc định';
+                document.getElementById('modalAddressStreet').textContent = '--';
+                document.getElementById('modalAddressCity').textContent = '--';
+                document.getElementById('modalAddressCountry').textContent = '--';
+                document.getElementById('modalAddressPhone').textContent = '';
+            }
+
+            // Tags
+            const tagsCont = document.getElementById('modalTagsContainer');
+            tagsCont.innerHTML = '';
+            const tags = Array.isArray(cust.tags) ? cust.tags : (cust.tags ? cust.tags.split(',') : []);
+            if (tags.length > 0) {
+                tags.forEach(t => {
+                    const tagSpan = document.createElement('span');
+                    tagSpan.className = 'inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-gray-100 text-gray-700 border border-gray-200';
+                    tagSpan.textContent = t.trim();
+                    tagsCont.appendChild(tagSpan);
+                });
+            } else {
+                tagsCont.innerHTML = '<span class="text-xs text-gray-400 italic">Không có thẻ nào</span>';
+            }
+
+            // Note
+            document.getElementById('modalNoteText').textContent = cust.note || 'Không có ghi chú nội bộ.';
+
+            // Recent Orders
+            const ordersTbody = document.getElementById('modalOrdersTbody');
+            ordersTbody.innerHTML = '';
+            const orderEdges = cust.orders?.edges || [];
+            document.getElementById('modalOrdersCount').textContent = `${orderEdges.length} đơn gần nhất`;
+
+            if (orderEdges.length > 0) {
+                orderEdges.forEach(({ node: o }) => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-gray-50';
+                    const oPrice = o.totalPriceSet?.shopMoney ? `${o.totalPriceSet.shopMoney.currencyCode || '$'} ${parseFloat(o.totalPriceSet.shopMoney.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '--';
+                    tr.innerHTML = `
+                        <td class="py-2.5 px-3 font-bold font-mono text-indigo-600">${escapeHtml(o.name || o.id)}</td>
+                        <td class="py-2.5 px-3 text-gray-500">${formatDateTime(o.processedAt)}</td>
+                        <td class="py-2.5 px-3">
+                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${o.displayFinancialStatus === 'PAID' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}">
+                                ${o.displayFinancialStatus || '--'}
+                            </span>
+                        </td>
+                        <td class="py-2.5 px-3">
+                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-600">
+                                ${o.displayFulfillmentStatus || 'UNFULFILLED'}
+                            </span>
+                        </td>
+                        <td class="py-2.5 px-3 text-right font-mono font-bold text-gray-800">${oPrice}</td>
+                    `;
+                    ordersTbody.appendChild(tr);
+                });
+            } else {
+                ordersTbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="py-4 text-center text-gray-400 text-xs">Khách hàng chưa có đơn hàng nào</td>
+                    </tr>
+                `;
+            }
+
+            // Show Modal
+            document.getElementById('customerDetailModal').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        // Close Modal
+        function closeCustomerModal() {
+            document.getElementById('customerDetailModal').classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        // Escape key to close modal
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeCustomerModal();
+            }
+        });
+
+        // Pagination Controls
+        function updatePaginationControls() {
+            const btnPrev = document.getElementById('btnPrevPage');
+            const btnNext = document.getElementById('btnNextPage');
+            const info = document.getElementById('paginationInfo');
+
+            btnPrev.disabled = !state.pageInfo.hasPreviousPage;
+            btnNext.disabled = !state.pageInfo.hasNextPage;
+
+            info.textContent = `Đang hiển thị ${state.customers.length} khách hàng (sắp xếp mới nhất đến cũ nhất)`;
+        }
+
+        function goToNextPage() {
+            if (!state.pageInfo.hasNextPage || !state.endCursor) return;
+            loadCustomersData('next');
+        }
+
+        function goToPrevPage() {
+            if (!state.pageInfo.hasPreviousPage || !state.startCursor) return;
+            loadCustomersData('prev');
+        }
+
+        function changePageSize(val) {
+            state.pageSize = parseInt(val, 10) || 50;
+            state.startCursor = null;
+            state.endCursor = null;
+            loadCustomersData();
+        }
+
+        // Search Handlers
+        function handleSearchSubmit() {
+            const input = document.getElementById('searchInput');
+            const clearBtn = document.getElementById('clearSearchBtn');
+            state.searchQuery = input.value.trim();
+            if (state.searchQuery) {
+                clearBtn.classList.remove('hidden');
+            } else {
+                clearBtn.classList.add('hidden');
+            }
+            state.startCursor = null;
+            state.endCursor = null;
+            loadCustomersData();
+        }
+
+        function clearSearch() {
+            const input = document.getElementById('searchInput');
+            input.value = '';
+            document.getElementById('clearSearchBtn').classList.add('hidden');
+            state.searchQuery = '';
+            state.startCursor = null;
+            state.endCursor = null;
+            loadCustomersData();
+        }
+
+        // Helper Utilities
+        function getInitials(name) {
+            if (!name) return 'KH';
+            const parts = name.trim().split(/\s+/);
+            if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+            return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+        }
+
+        function getAvatarGradient(index) {
+            const gradients = [
+                'bg-gradient-to-tr from-indigo-500 to-indigo-600',
+                'bg-gradient-to-tr from-blue-500 to-blue-600',
+                'bg-gradient-to-tr from-emerald-500 to-emerald-600',
+                'bg-gradient-to-tr from-purple-500 to-purple-600',
+                'bg-gradient-to-tr from-rose-500 to-rose-600',
+                'bg-gradient-to-tr from-amber-500 to-amber-600'
+            ];
+            return gradients[index % gradients.length];
+        }
+
+        function formatDateTime(isoStr) {
+            if (!isoStr) return '--';
+            try {
+                const d = new Date(isoStr);
+                return d.toLocaleString('vi-VN', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } catch (e) {
+                return isoStr;
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.toString().replace(/[&<>"']/g, m => map[m]);
+        }
+
+        function copyCustomerEmail(event, btn) {
+            if (event) event.stopPropagation();
+            if (!btn) return;
+            const email = btn.getAttribute('data-email');
+            if (!email) return;
+
+            const originalHtml = btn.innerHTML;
+            const originalTitle = btn.title || 'Sao chép email';
+
+            const showSuccess = () => {
+                btn.innerHTML = '<iconify-icon icon="mdi:check-bold" class="text-xs text-emerald-600"></iconify-icon>';
+                btn.title = 'Đã sao chép!';
+                btn.classList.add('bg-emerald-50', 'text-emerald-600');
+                btn.classList.remove('text-gray-400', 'hover:text-indigo-600', 'hover:bg-indigo-50');
+
+                setTimeout(() => {
+                    btn.innerHTML = originalHtml;
+                    btn.title = originalTitle;
+                    btn.classList.remove('bg-emerald-50', 'text-emerald-600');
+                    btn.classList.add('text-gray-400', 'hover:text-indigo-600', 'hover:bg-indigo-50');
+                }, 2000);
+            };
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(email).then(showSuccess).catch(() => fallbackCopyText(email, showSuccess));
+            } else {
+                fallbackCopyText(email, showSuccess);
+            }
+        }
+
+        function fallbackCopyText(text, callback) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            textArea.style.opacity = "0";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                if (callback) callback();
+            } catch (err) {
+                console.error('Không thể sao chép văn bản:', err);
+            }
+            document.body.removeChild(textArea);
+        }
+    </script>
+</body>
+</html>

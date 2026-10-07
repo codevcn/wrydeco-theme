@@ -7,8 +7,9 @@ import io
 import json
 import base64
 from datetime import datetime
-from fastapi import FastAPI, Request, Form
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
+from fastapi import FastAPI, Request, Form, File, UploadFile
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse, Response
+from urllib.parse import urlparse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
@@ -130,24 +131,42 @@ def test_proxy_connectivity(proxy_url: str = None, timeout: int = 8):
         "https": proxy_url
     }
     
-    test_url = f"https://{SHOPIFY_SHOP}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/shop.json"
-    test_headers = {
-        "X-Shopify-Access-Token": SHOPIFY_ADMIN_TOKEN
-    }
+    # Xác định shop domain và token để test (ưu tiên cấu hình riêng nếu có)
+    logo_cfg = load_logo_updater_config()
+    target_shop = clean_shopify_domain(logo_cfg.get("shop_domain")) if logo_cfg.get("is_custom") else clean_shopify_domain(SHOPIFY_SHOP)
+    if not target_shop:
+        target_shop = clean_shopify_domain(SHOPIFY_SHOP) or "wrydeco"
+        
+    test_url = f"https://{target_shop}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/shop.json"
+    token = logo_cfg.get("access_token") if logo_cfg.get("is_custom") else SHOPIFY_ADMIN_TOKEN
+    test_headers = {"X-Shopify-Access-Token": token} if token else {}
     
     t0 = time.time()
     try:
         resp = requests.get(test_url, headers=test_headers, proxies=proxies, timeout=timeout)
         latency_ms = int((time.time() - t0) * 1000)
-        if resp.status_code == 200:
+        # Bất kỳ mã phản hồi HTTP nào trả về từ máy chủ Shopify (200, 301, 302, 401, 403, 404...):
+        # ĐỀU CHỨNG MINH PROXY GATEWAY HOẠT ĐỘNG HOÀN TOÀN TỐT VÀ ĐÃ KẾT NỐI XUYÊN SUỐT TỚI SHOPIFY!
+        # (Lỗi 401 là do token hết hạn/chờ cấp mới, KHÔNG PHẢI lỗi proxy rớt mạng!)
+        if resp.status_code in (200, 301, 302, 401, 403, 404):
             return True, latency_ms, None
         else:
-            return False, latency_ms, f"Shopify API HTTP {resp.status_code}"
+            return False, latency_ms, f"Shopify phản hồi HTTP {resp.status_code}"
+    except (requests.exceptions.ProxyError, requests.exceptions.ConnectTimeout) as pe:
+        latency_ms = int((time.time() - t0) * 1000)
+        return False, latency_ms, f"Lỗi Proxy Gateway: {str(pe)}"
     except requests.exceptions.Timeout:
         latency_ms = int((time.time() - t0) * 1000)
-        return False, latency_ms, f"Hết thời gian chờ kết nối (Timeout > {timeout}s)"
+        return False, latency_ms, f"Hết thời gian chờ kết nối Proxy (Timeout > {timeout}s)"
     except Exception as e:
         latency_ms = int((time.time() - t0) * 1000)
+        # Fallback thử kiểm tra liveness chung qua ipwho.is
+        try:
+            r2 = requests.get("https://ipwho.is/", proxies=proxies, timeout=timeout)
+            if r2.status_code == 200:
+                return True, latency_ms, None
+        except Exception:
+            pass
         return False, latency_ms, str(e)
 
 def fetch_proxy_egress_geo(proxy_url: str = None, timeout: int = 6):
@@ -261,7 +280,9 @@ DEFAULT_LOGO_UPDATER_CONFIG = {
     "client_secret": "",
     "access_token": "",
     "is_custom": False,
-    "updated_at": None
+    "updated_at": None,
+    "token_obtained_at": None,
+    "token_expires_at": None
 }
 
 def clean_shopify_domain(raw: str) -> str:
@@ -285,6 +306,114 @@ def mask_secret(s: str) -> str:
     if len(s) <= 8:
         return "********"
     return f"{s[:4]}...{s[-4:]}"
+
+def parse_proxy_input(raw: str) -> dict:
+    if not raw:
+        return {}
+    s = str(raw).strip()
+    
+    # 1. Định dạng URL có scheme (http://, https://, socks5://, etc.)
+    if re.match(r"^[a-zA-Z0-9+.-]+://", s):
+        p = urlparse(s)
+        host = p.hostname or ""
+        port = p.port or 80
+        user = p.username or ""
+        pwd = p.password or ""
+        scheme = p.scheme or "http"
+        auth_part = f"{user}:{pwd}@" if user or pwd else ""
+        proxy_url = f"{scheme}://{auth_part}{host}:{port}"
+        return {
+            "proxy_url": proxy_url,
+            "proxy_ip": host,
+            "host": host,
+            "port": port,
+            "username": user,
+            "password": pwd,
+            "scheme": scheme
+        }
+    
+    # 2. Định dạng host:port:user:pass (Ví dụ: 185.124.63.174:55031:nPMZfSl5QX0shvm:hKTQVcQVNAvYHXq)
+    parts = s.split(":")
+    if len(parts) == 4:
+        host, port_str, user, pwd = parts
+        try:
+            port = int(port_str)
+        except ValueError:
+            port = 80
+        proxy_url = f"http://{user}:{pwd}@{host}:{port}"
+        return {
+            "proxy_url": proxy_url,
+            "proxy_ip": host,
+            "host": host,
+            "port": port,
+            "username": user,
+            "password": pwd,
+            "scheme": "http"
+        }
+        
+    # 3. Định dạng user:pass@host:port
+    if "@" in s:
+        p = urlparse(f"http://{s}")
+        host = p.hostname or ""
+        port = p.port or 80
+        user = p.username or ""
+        pwd = p.password or ""
+        auth_part = f"{user}:{pwd}@" if user or pwd else ""
+        proxy_url = f"http://{auth_part}{host}:{port}"
+        return {
+            "proxy_url": proxy_url,
+            "proxy_ip": host,
+            "host": host,
+            "port": port,
+            "username": user,
+            "password": pwd,
+            "scheme": "http"
+        }
+
+    # 4. Định dạng host:port
+    if len(parts) == 2:
+        host, port_str = parts
+        try:
+            port = int(port_str)
+        except ValueError:
+            port = 80
+        proxy_url = f"http://{host}:{port}"
+        return {
+            "proxy_url": proxy_url,
+            "proxy_ip": host,
+            "host": host,
+            "port": port,
+            "username": "",
+            "password": "",
+            "scheme": "http"
+        }
+
+    # Fallback
+    clean_host = s.replace("http://", "").replace("https://", "").split(":")[0]
+    return {
+        "proxy_url": s if s.startswith("http") else f"http://{s}",
+        "proxy_ip": clean_host,
+        "host": clean_host,
+        "port": 80,
+        "username": "",
+        "password": "",
+        "scheme": "http"
+    }
+
+def mask_proxy_url(url: str) -> str:
+    if not url:
+        return ""
+    try:
+        p = urlparse(url)
+        if p.password:
+            masked_pwd = mask_secret(p.password)
+            masked_netloc = f"{p.username}:{masked_pwd}@{p.hostname}"
+            if p.port:
+                masked_netloc += f":{p.port}"
+            return f"{p.scheme}://{masked_netloc}"
+        return url
+    except Exception:
+        return url
 
 def load_logo_updater_config() -> dict:
     with _logo_updater_lock:
@@ -327,7 +456,200 @@ def save_logo_updater_config(cfg: dict):
                     pass
             print(f"Error saving logo updater config: {e}")
 
-def get_logo_updater_credentials() -> dict:
+# =====================================================================
+# TOKEN EVENT NOTIFICATION & PROXY OAUTH EXCHANGE HELPERS
+# =====================================================================
+_token_event_lock = threading.Lock()
+_pending_token_notification = None
+
+def set_token_notification(msg_type: str, message: str):
+    global _pending_token_notification
+    with _token_event_lock:
+        _pending_token_notification = {
+            "type": msg_type,
+            "message": message,
+            "timestamp": datetime.now().isoformat()
+        }
+
+def pop_token_notification() -> dict | None:
+    global _pending_token_notification
+    with _token_event_lock:
+        notif = _pending_token_notification
+        _pending_token_notification = None
+        return notif
+
+def make_api_response(content: dict, status_code: int = 200) -> JSONResponse:
+    notif = pop_token_notification()
+    if notif:
+        content["token_notification"] = notif
+    return JSONResponse(content, status_code=status_code)
+
+def request_custom_app_access_token(shop_domain: str, client_id: str, client_secret: str, timeout: int = 25, force_proxy: bool = False) -> tuple[bool, str, str | None]:
+    """
+    Yêu cầu cấp Access Token mới từ Shopify bằng OAuth client_credentials cho Store Riêng.
+    BẮT BUỘC ĐI QUA PROXY GATEWAY US.
+    Trả về (success: bool, message: str, access_token: str | None)
+    """
+    shop = clean_shopify_domain(shop_domain) or clean_shopify_domain(SHOPIFY_SHOP)
+    if not shop or not client_id or not client_secret:
+        err = "Thiếu Shop Domain, Client ID hoặc Client Secret để cấp Access Token cho Store Riêng."
+        set_token_notification("error", f"Yêu cầu cấp Access Token mới thất bại qua Proxy: {err}")
+        return False, err, None
+
+    proxy_cfg = load_proxy_config()
+    if not proxy_cfg.get("enabled") and not force_proxy:
+        err = "Proxy Gateway đang TẮT! Yêu cầu lấy Access Token cho App riêng bắt buộc phải đi qua Proxy để bảo vệ gian hàng."
+        set_token_notification("error", f"Yêu cầu cấp Access Token mới thất bại qua Proxy: {err}")
+        return False, err, None
+
+    proxy_url = proxy_cfg.get("proxy_url")
+    if not proxy_url:
+        err = "Chưa cấu hình URL Proxy Gateway!"
+        set_token_notification("error", f"Yêu cầu cấp Access Token mới thất bại qua Proxy: {err}")
+        return False, err, None
+
+    proxies = {
+        "http": proxy_url,
+        "https": proxy_url
+    }
+
+    token_url = f"https://{shop}.myshopify.com/admin/oauth/access_token"
+    payload = {
+        "grant_type": "client_credentials",
+        "client_id": client_id.strip(),
+        "client_secret": client_secret.strip()
+    }
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Accept": "application/json"
+    }
+
+    try:
+        res = requests.post(token_url, data=payload, headers=headers, proxies=proxies, timeout=timeout)
+        if res.status_code == 200:
+            data = res.json()
+            new_token = data.get("access_token")
+            if new_token:
+                cfg = load_logo_updater_config()
+                cfg["shop_domain"] = f"{shop}.myshopify.com"
+                cfg["client_id"] = client_id.strip()
+                cfg["client_secret"] = client_secret.strip()
+                cfg["access_token"] = new_token
+                cfg["is_custom"] = True
+                cfg["updated_at"] = datetime.now().isoformat()
+                cfg["token_obtained_at"] = datetime.now().isoformat()
+                expires_in = data.get("expires_in")
+                if expires_in:
+                    cfg["token_expires_at"] = datetime.now().timestamp() + int(expires_in)
+                else:
+                    cfg["token_expires_at"] = None
+                save_logo_updater_config(cfg)
+                
+                # Cập nhật trạng thái Proxy là STABLE vì vừa kết nối và nhận phản hồi thành công từ Shopify
+                try:
+                    p_cfg = load_proxy_config()
+                    p_cfg["is_stable"] = True
+                    p_cfg["last_status"] = "stable"
+                    p_cfg["last_error"] = None
+                    p_cfg["last_checked_at"] = datetime.now().isoformat()
+                    save_proxy_config(p_cfg)
+                except Exception:
+                    pass
+
+                success_msg = f"Đã tự động lấy Access Token mới thành công qua Proxy US cho store '{shop}'!"
+                set_token_notification("success", success_msg)
+                return True, success_msg, new_token
+            else:
+                err = "Shopify không trả về access_token trong phản hồi OAuth"
+                set_token_notification("error", f"Yêu cầu cấp Access Token mới thất bại qua Proxy: {err}")
+                return False, err, None
+        else:
+            err_text = res.text
+            try:
+                ej = res.json()
+                if "error_description" in ej:
+                    err_text = ej["error_description"]
+                elif "error" in ej:
+                    err_text = ej["error"]
+            except Exception:
+                pass
+            err_msg = f"Shopify từ chối cấp token (HTTP {res.status_code}): {err_text}"
+            set_token_notification("error", f"Yêu cầu cấp Access Token mới thất bại qua Proxy: {err_msg}")
+            return False, err_msg, None
+    except (requests.exceptions.ProxyError, requests.exceptions.ConnectTimeout) as pe:
+        mark_proxy_unstable(str(pe))
+        err_msg = f"Lỗi Proxy Gateway: {str(pe)}"
+        set_token_notification("error", f"Yêu cầu cấp Access Token mới thất bại qua Proxy: {err_msg}")
+        return False, err_msg, None
+    except Exception as e:
+        err_msg = str(e)
+        set_token_notification("error", f"Yêu cầu cấp Access Token mới thất bại qua Proxy: {err_msg}")
+        return False, err_msg, None
+
+
+def request_default_store_access_token(timeout: int = 25, force_proxy: bool = False) -> tuple[bool, str, str | None]:
+    """
+    Tự động cấp mới Access Token cho Store Mặc định (.env) bằng SHOPIFY_CLIENT_ID và SHOPIFY_CLIENT_SECRET.
+    Theo nguyên tắc: Store Mặc định kết nối trực tiếp không qua Proxy (trừ khi force_proxy=True).
+    """
+    global SHOPIFY_ADMIN_TOKEN, HEADERS
+    shop = clean_shopify_domain(SHOPIFY_SHOP)
+    client_id = (os.getenv("SHOPIFY_CLIENT_ID") or "").strip()
+    client_secret = (os.getenv("SHOPIFY_CLIENT_SECRET") or "").strip()
+    if not shop or not client_id or not client_secret:
+        return False, "Thiếu SHOPIFY_CLIENT_ID hoặc SHOPIFY_CLIENT_SECRET của store mặc định trong .env", None
+
+    proxies = None
+    if force_proxy:
+        proxy_cfg = load_proxy_config()
+        proxy_url = proxy_cfg.get("proxy_url")
+        if proxy_url:
+            proxies = {"http": proxy_url, "https": proxy_url}
+
+    token_url = f"https://{shop}.myshopify.com/admin/oauth/access_token"
+    payload = {
+        "grant_type": "client_credentials",
+        "client_id": client_id,
+        "client_secret": client_secret
+    }
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Accept": "application/json"
+    }
+
+    try:
+        res = requests.post(token_url, data=payload, headers=headers, proxies=proxies, timeout=timeout)
+        if res.status_code == 200:
+            data = res.json()
+            new_tok = data.get("access_token")
+            if new_tok:
+                SHOPIFY_ADMIN_TOKEN = new_tok
+                HEADERS["X-Shopify-Access-Token"] = new_tok
+                try:
+                    env_file = ".env"
+                    if os.path.exists(env_file):
+                        with open(env_file, "r", encoding="utf-8") as f:
+                            lines = f.readlines()
+                        new_lines = []
+                        written = False
+                        for line in lines:
+                            if line.strip().startswith("SHOPIFY_ADMIN_TOKEN="):
+                                new_lines.append(f'SHOPIFY_ADMIN_TOKEN={new_tok}\n')
+                                written = True
+                            else:
+                                new_lines.append(line)
+                        if not written:
+                            new_lines.append(f'SHOPIFY_ADMIN_TOKEN={new_tok}\n')
+                        with open(env_file, "w", encoding="utf-8") as f:
+                            f.writelines(new_lines)
+                except Exception as e_env:
+                    print(f"Warning: could not update .env token: {e_env}")
+                return True, "Cấp mới Access Token thành công!", new_tok
+        return False, f"Shopify từ chối cấp token ({res.status_code}): {res.text[:200]}", None
+    except Exception as exc:
+        return False, f"Lỗi kết nối cấp token: {exc}", None
+
+def get_logo_updater_credentials(auto_refresh: bool = True) -> dict:
     proxy_cfg = load_proxy_config()
     is_proxy_enabled = bool(proxy_cfg.get("enabled", False))
     default_shop = clean_shopify_domain(SHOPIFY_SHOP)
@@ -351,28 +673,48 @@ def get_logo_updater_credentials() -> dict:
         
     # 2. NẾU PROXY BẬT: ĐỌC LOẠI 2 TỪ logo_updater_config.json
     custom_cfg = load_logo_updater_config()
-    custom_token = (custom_cfg.get("access_token") or "").strip()
-    if custom_token and custom_cfg.get("is_custom"):
+    if custom_cfg.get("is_custom"):
         raw_shop = custom_cfg.get("shop_domain")
         shop = clean_shopify_domain(raw_shop) if raw_shop else default_shop
         if not shop:
             shop = default_shop
-        return {
-            "type": 2,
-            "is_custom": True,
-            "proxy_enabled": True,
-            "shop": shop,
-            "token": custom_token,
-            "client_id": custom_cfg.get("client_id") or "",
-            "client_secret": custom_cfg.get("client_secret") or "",
-            "headers": {
-                "X-Shopify-Access-Token": custom_token,
-                "Content-Type": "application/json"
-            },
-            "graphql_url": f"https://{shop}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/graphql.json"
-        }
+            
+        client_id = (custom_cfg.get("client_id") or "").strip()
+        client_secret = (custom_cfg.get("client_secret") or "").strip()
+        custom_token = (custom_cfg.get("access_token") or "").strip()
+        expires_at = custom_cfg.get("token_expires_at")
         
-    # 3. FALLBACK NẾU PROXY BẬT NHƯNG CHƯA CẤU HÌNH LOẠI 2
+        # Kiểm tra nếu token trống HOẶC đã hết hạn
+        is_expired = False
+        if expires_at:
+            try:
+                if datetime.now().timestamp() >= (float(expires_at) - 60):
+                    is_expired = True
+            except Exception:
+                pass
+
+        if (not custom_token or is_expired) and auto_refresh and client_id and client_secret:
+            ok, msg, new_tok = request_custom_app_access_token(shop, client_id, client_secret)
+            if ok and new_tok:
+                custom_token = new_tok
+
+        if custom_token:
+            return {
+                "type": 2,
+                "is_custom": True,
+                "proxy_enabled": True,
+                "shop": shop,
+                "token": custom_token,
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "headers": {
+                    "X-Shopify-Access-Token": custom_token,
+                    "Content-Type": "application/json"
+                },
+                "graphql_url": f"https://{shop}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/graphql.json"
+            }
+        
+    # 3. FALLBACK NẾU PROXY BẬT NHƯNG CHƯA CẤU HÌNH LOẠI 2 (HOẶC CHƯA CÓ TOKEN)
     return {
         "type": 1,
         "is_custom": False,
@@ -1673,26 +2015,100 @@ async def update_token(request: Request, access_token: str = Form(...)):
 async def get_reviews(request: Request):
     return templates.TemplateResponse(request=request, name="reviews.html", context={"request": request})
 
+NOTES_FILE = "notes.json"
+
+def load_notebooks() -> list:
+    if not os.path.exists(NOTES_FILE):
+        return []
+    try:
+        with open(NOTES_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            if isinstance(data, list):
+                return data
+            return []
+    except Exception as e:
+        print(f"Error loading {NOTES_FILE}: {e}")
+        return []
+
+def save_notebooks(notebooks: list):
+    with open(NOTES_FILE, "w", encoding="utf-8") as f:
+        json.dump(notebooks, f, indent=2, ensure_ascii=False)
+
 @app.get("/notes", response_class=HTMLResponse)
 async def get_notes(request: Request):
-    note_content = ""
-    try:
-        if os.path.exists("notes.txt"):
-            with open("notes.txt", "r", encoding="utf-8") as f:
-                note_content = f.read()
-    except Exception as e:
-        print(f"Error reading notes: {e}")
-        
-    return templates.TemplateResponse(request=request, name="notes.html", context={"request": request, "note_content": note_content})
+    notebooks = load_notebooks()
+    return templates.TemplateResponse(request=request, name="notes.html", context={
+        "request": request,
+        "notebooks": notebooks
+    })
 
-@app.post("/notes")
-async def save_notes(request: Request, note_content: str = Form(default="")):
+@app.post("/api/notes/create")
+async def api_create_notebook(request: Request):
     try:
-        with open("notes.txt", "w", encoding="utf-8") as f:
-            f.write(note_content)
-        return {"status": "success", "message": "Đã lưu ghi chú thành công!"}
+        try:
+            payload = await request.json()
+        except Exception:
+            payload = {}
+        notebooks = load_notebooks()
+        new_id = str(int(time.time() * 1000))
+        count = len(notebooks) + 1
+        title = (payload.get("title") or "").strip() or f"Sổ ghi chú #{count}"
+        content = payload.get("content") or ""
+        now_str = datetime.now().strftime("%d/%m/%Y %H:%M")
+        
+        new_notebook = {
+            "id": new_id,
+            "title": title,
+            "content": content,
+            "created_at": now_str,
+            "updated_at": now_str
+        }
+        # Sổ mới nằm bên phải (cuối danh sách)
+        notebooks.append(new_notebook)
+        save_notebooks(notebooks)
+        return {"success": True, "message": "Đã tạo sổ ghi chú mới!", "notebook": new_notebook}
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        return {"success": False, "error": str(e)}
+
+@app.post("/api/notes/{note_id}/save")
+async def api_save_notebook(note_id: str, request: Request):
+    try:
+        try:
+            payload = await request.json()
+        except Exception:
+            payload = {}
+        notebooks = load_notebooks()
+        found = False
+        now_str = datetime.now().strftime("%d/%m/%Y %H:%M")
+        
+        for nb in notebooks:
+            if str(nb.get("id")) == str(note_id):
+                nb["title"] = (payload.get("title") or "").strip() or nb.get("title", "Sổ ghi chú")
+                nb["content"] = payload.get("content", "")
+                nb["updated_at"] = now_str
+                found = True
+                break
+                
+        if not found:
+            return {"success": False, "error": f"Không tìm thấy sổ ghi chú {note_id}"}
+            
+        save_notebooks(notebooks)
+        return {"success": True, "message": "Đã lưu sổ ghi chú thành công!", "updated_at": now_str}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.post("/api/notes/{note_id}/delete")
+async def api_delete_notebook(note_id: str):
+    try:
+        notebooks = load_notebooks()
+        initial_len = len(notebooks)
+        notebooks = [nb for nb in notebooks if str(nb.get("id")) != str(note_id)]
+        if len(notebooks) == initial_len:
+            return {"success": False, "error": f"Không tìm thấy sổ ghi chú {note_id}"}
+        save_notebooks(notebooks)
+        return {"success": True, "message": "Đã xóa sổ ghi chú thành công!"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -2023,6 +2439,166 @@ async def read_product(request: Request, product_handle: str):
             "product": None,
             "error": str(e)
         })
+
+def get_all_product_identifiers():
+    query = """
+    query getAllProductIdentifiers($first: Int, $after: String) {
+      products(first: $first, after: $after) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        edges {
+          node {
+            id
+            handle
+            createdAt
+          }
+        }
+      }
+    }
+    """
+    all_products = []
+    has_next_page = True
+    cursor = None
+    clean_token = (os.getenv("SHOPIFY_ADMIN_TOKEN") or SHOPIFY_ADMIN_TOKEN).strip().strip('"').strip("'")
+    headers = {
+        "X-Shopify-Access-Token": clean_token,
+        "Content-Type": "application/json"
+    }
+    proxies = get_shopify_request_proxies()
+
+    while has_next_page:
+        variables = {"first": 250}
+        if cursor:
+            variables["after"] = cursor
+            
+        res = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=headers, proxies=proxies, timeout=30)
+        res.raise_for_status()
+        data = res.json()
+        
+        if "errors" in data:
+            print("GraphQL Errors in get_all_product_identifiers:", data["errors"])
+            break
+            
+        products_data = data.get("data", {}).get("products", {})
+        for edge in products_data.get("edges", []):
+            node = edge.get("node", {})
+            raw_id = node.get("id", "")
+            clean_id = raw_id.split("/")[-1] if "/" in raw_id else raw_id
+            created_at_raw = node.get("createdAt", "")
+            created_at_display = created_at_raw
+            if created_at_raw:
+                try:
+                    dt = datetime.fromisoformat(created_at_raw.replace("Z", "+00:00"))
+                    created_at_display = dt.strftime("%d/%m/%Y %H:%M")
+                except Exception:
+                    pass
+            all_products.append({
+                "id": clean_id,
+                "gid": raw_id,
+                "handle": node.get("handle", ""),
+                "created_at": created_at_raw,
+                "created_at_display": created_at_display
+            })
+            
+        page_info = products_data.get("pageInfo", {})
+        has_next_page = page_info.get("hasNextPage", False)
+        cursor = page_info.get("endCursor")
+        
+    return all_products
+
+@app.get("/product-identifiers", response_class=HTMLResponse)
+async def read_product_identifiers(request: Request):
+    try:
+        products = get_all_product_identifiers()
+        # Mặc định sort ASC theo handle của sản phẩm (A-Z)
+        products.sort(key=lambda p: (p.get("handle") or "").lower())
+        return templates.TemplateResponse(request=request, name="product_identifiers.html", context={
+            "request": request,
+            "products": products,
+            "total_count": len(products),
+            "shopify_shop": SHOPIFY_SHOP,
+            "error": None
+        })
+    except Exception as e:
+        return templates.TemplateResponse(request=request, name="product_identifiers.html", context={
+            "request": request,
+            "products": [],
+            "total_count": 0,
+            "shopify_shop": SHOPIFY_SHOP,
+            "error": str(e)
+        })
+
+@app.get("/api/products/{product_id}/details")
+async def api_get_product_detail(product_id: str):
+    clean_id = str(product_id).strip()
+    if not clean_id.startswith("gid://shopify/Product/"):
+        gid = f"gid://shopify/Product/{clean_id}"
+    else:
+        gid = clean_id
+        clean_id = clean_id.split("/")[-1]
+        
+    query = """
+    query getProductDetailForModal($id: ID!) {
+      product(id: $id) {
+        id
+        handle
+        title
+        createdAt
+        descriptionHtml
+        seo {
+          title
+          description
+        }
+      }
+    }
+    """
+    try:
+        clean_token = (os.getenv("SHOPIFY_ADMIN_TOKEN") or SHOPIFY_ADMIN_TOKEN).strip().strip('"').strip("'")
+        headers = {
+            "X-Shopify-Access-Token": clean_token,
+            "Content-Type": "application/json"
+        }
+        proxies = get_shopify_request_proxies()
+        res = requests.post(GRAPHQL_URL, json={"query": query, "variables": {"id": gid}}, headers=headers, proxies=proxies, timeout=20)
+        res.raise_for_status()
+        data = res.json()
+        
+        if "errors" in data:
+            return JSONResponse({"success": False, "error": str(data["errors"])}, status_code=400)
+            
+        prod = data.get("data", {}).get("product")
+        if not prod:
+            return JSONResponse({"success": False, "error": f"Không tìm thấy thông tin sản phẩm có ID: {clean_id}"}, status_code=404)
+            
+        created_at_raw = prod.get("createdAt") or ""
+        created_at_display = created_at_raw
+        if created_at_raw:
+            try:
+                dt = datetime.fromisoformat(created_at_raw.replace("Z", "+00:00"))
+                created_at_display = dt.strftime("%d/%m/%Y %H:%M")
+            except Exception:
+                pass
+
+        return JSONResponse({
+            "success": True,
+            "product": {
+                "id": prod["id"].split("/")[-1],
+                "gid": prod["id"],
+                "handle": prod.get("handle") or "",
+                "title": prod.get("title") or "",
+                "created_at": created_at_raw,
+                "created_at_display": created_at_display,
+                "descriptionHtml": prod.get("descriptionHtml") or "",
+                "seo": {
+                    "title": prod.get("seo", {}).get("title") if prod.get("seo") else "",
+                    "description": prod.get("seo", {}).get("description") if prod.get("seo") else ""
+                }
+            }
+        })
+    except Exception as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 def get_all_collections():
     all_collections = []
@@ -3529,6 +4105,15 @@ def add_tags_to_product(product_id: str, tags: list, headers: dict = None, graph
     use_url = graphql_url or GRAPHQL_URL
     try:
         res = requests.post(use_url, json={"query": mutation, "variables": variables}, headers=use_headers, proxies=proxies, timeout=30)
+        if res.status_code == 401:
+            cfg = load_logo_updater_config()
+            if cfg.get("is_custom") and cfg.get("client_id") and cfg.get("client_secret"):
+                ok, msg, new_tok = request_custom_app_access_token(cfg.get("shop_domain", ""), cfg["client_id"], cfg["client_secret"])
+                if ok and new_tok:
+                    creds = get_logo_updater_credentials(auto_refresh=False)
+                    use_headers = creds["headers"]
+                    use_url = creds["graphql_url"]
+                    res = requests.post(use_url, json={"query": mutation, "variables": variables}, headers=use_headers, proxies=proxies, timeout=30)
     except (requests.exceptions.ProxyError, requests.exceptions.ConnectTimeout) as pe:
         if proxies:
             mark_proxy_unstable(str(pe))
@@ -3566,6 +4151,15 @@ def remove_tags_from_product(product_id: str, tags: list, headers: dict = None, 
     use_url = graphql_url or GRAPHQL_URL
     try:
         res = requests.post(use_url, json={"query": mutation, "variables": variables}, headers=use_headers, proxies=proxies, timeout=30)
+        if res.status_code == 401:
+            cfg = load_logo_updater_config()
+            if cfg.get("is_custom") and cfg.get("client_id") and cfg.get("client_secret"):
+                ok, msg, new_tok = request_custom_app_access_token(cfg.get("shop_domain", ""), cfg["client_id"], cfg["client_secret"])
+                if ok and new_tok:
+                    creds = get_logo_updater_credentials(auto_refresh=False)
+                    use_headers = creds["headers"]
+                    use_url = creds["graphql_url"]
+                    res = requests.post(use_url, json={"query": mutation, "variables": variables}, headers=use_headers, proxies=proxies, timeout=30)
     except (requests.exceptions.ProxyError, requests.exceptions.ConnectTimeout) as pe:
         if proxies:
             mark_proxy_unstable(str(pe))
@@ -4220,25 +4814,119 @@ async def internal_edit_product(request: Request):
         return HTMLResponse(content=json.dumps({"success": False, "message": str(e)}), media_type="application/json")
 
 CONFIG_FILE = "config.json"
+_config_lock = threading.Lock()
 
 def get_config():
-    if not os.path.exists(CONFIG_FILE):
-        default_config = {"DELETE_PASSWORD": "abc123"}
-        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-            import json
-            json.dump(default_config, f, indent=4)
-        return default_config
-    try:
-        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-            import json
-            return json.load(f)
-    except:
-        return {"DELETE_PASSWORD": "abc123"}
+    with _config_lock:
+        if not os.path.exists(CONFIG_FILE):
+            default_config = {"ADMIN_PASSWORD": "abc123", "DELETE_PASSWORD": "abc123"}
+            try:
+                with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+                    import json
+                    json.dump(default_config, f, indent=4)
+            except Exception:
+                pass
+            return default_config
+        try:
+            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                import json
+                cfg = json.load(f)
+                if "ADMIN_PASSWORD" not in cfg:
+                    cfg["ADMIN_PASSWORD"] = cfg.get("DELETE_PASSWORD", "abc123")
+                return cfg
+        except Exception:
+            return {"ADMIN_PASSWORD": "abc123", "DELETE_PASSWORD": "abc123"}
 
 def save_config(config_data):
-    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-        import json
-        json.dump(config_data, f, indent=4)
+    with _config_lock:
+        if "ADMIN_PASSWORD" in config_data:
+            config_data["DELETE_PASSWORD"] = config_data["ADMIN_PASSWORD"]
+        elif "DELETE_PASSWORD" in config_data:
+            config_data["ADMIN_PASSWORD"] = config_data["DELETE_PASSWORD"]
+        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+            import json
+            json.dump(config_data, f, indent=4)
+
+def get_admin_password() -> str:
+    cfg = get_config()
+    return str(cfg.get("ADMIN_PASSWORD") or cfg.get("DELETE_PASSWORD") or "abc123").strip()
+
+def set_admin_password(new_pwd: str):
+    cfg = get_config()
+    cfg["ADMIN_PASSWORD"] = new_pwd.strip()
+    cfg["DELETE_PASSWORD"] = new_pwd.strip()
+    save_config(cfg)
+
+def generate_password_hint(pwd: str) -> str:
+    if not pwd:
+        return "Nhập admin password..."
+    pwd_clean = pwd.strip()
+    if len(pwd_clean) <= 1:
+        return f"{pwd_clean}*"
+    if len(pwd_clean) == 2:
+        return f"{pwd_clean[0]}*{pwd_clean[1]}"
+    return f"{pwd_clean[0]}{'*' * (len(pwd_clean) - 2)}{pwd_clean[-1]}"
+
+# =====================================================================
+# JWT AUTHENTICATION FOR SETTINGS
+# =====================================================================
+JWT_SETTINGS_COOKIE = "admin_settings_token"
+JWT_SETTINGS_SECRET = os.getenv("JWT_SETTINGS_SECRET", "wrydeco_admin_settings_jwt_secret_key_2026_xyz")
+
+def create_jwt_token(payload: dict, expires_in_seconds: int = 86400) -> str:
+    import hashlib
+    import hmac
+    header = {"alg": "HS256", "typ": "JWT"}
+    header_b64 = base64.urlsafe_b64encode(json.dumps(header).encode('utf-8')).decode('utf-8').rstrip('=')
+    
+    token_payload = payload.copy()
+    token_payload["exp"] = int(time.time()) + expires_in_seconds
+    token_payload["iat"] = int(time.time())
+    payload_b64 = base64.urlsafe_b64encode(json.dumps(token_payload).encode('utf-8')).decode('utf-8').rstrip('=')
+    
+    message = f"{header_b64}.{payload_b64}".encode('utf-8')
+    signature = hmac.new(JWT_SETTINGS_SECRET.encode('utf-8'), message, hashlib.sha256).digest()
+    sig_b64 = base64.urlsafe_b64encode(signature).decode('utf-8').rstrip('=')
+    
+    return f"{header_b64}.{payload_b64}.{sig_b64}"
+
+def verify_jwt_token(token: str) -> dict | None:
+    if not token or not isinstance(token, str):
+        return None
+    parts = token.strip().split('.')
+    if len(parts) != 3:
+        return None
+    header_b64, payload_b64, sig_b64 = parts
+    try:
+        import hashlib
+        import hmac
+        message = f"{header_b64}.{payload_b64}".encode('utf-8')
+        expected_sig = hmac.new(JWT_SETTINGS_SECRET.encode('utf-8'), message, hashlib.sha256).digest()
+        expected_sig_b64 = base64.urlsafe_b64encode(expected_sig).decode('utf-8').rstrip('=')
+        if not hmac.compare_digest(sig_b64, expected_sig_b64):
+            return None
+        
+        padded_payload = payload_b64 + '=' * (-len(payload_b64) % 4)
+        payload_json = base64.urlsafe_b64decode(padded_payload.encode('utf-8')).decode('utf-8')
+        data = json.loads(payload_json)
+        
+        if data.get("exp") and time.time() > data["exp"]:
+            return None
+        return data
+    except Exception:
+        return None
+
+def is_settings_authenticated(request: Request) -> bool:
+    token = request.cookies.get(JWT_SETTINGS_COOKIE)
+    if not token:
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:].strip()
+    if not token:
+        return False
+    payload = verify_jwt_token(token)
+    return payload is not None and payload.get("sub") == "admin"
+
 
 def get_articles_count(search_query=None):
     count = 0
@@ -4466,18 +5154,75 @@ async def blogs_page(request: Request, sort: str = "created_desc", search: str =
 
 @app.get("/settings", response_class=HTMLResponse)
 async def settings_page(request: Request):
-    return templates.TemplateResponse(request=request, name="settings.html", context={"request": request})
+    if not is_settings_authenticated(request):
+        admin_pwd = get_admin_password()
+        hint = generate_password_hint(admin_pwd)
+        return templates.TemplateResponse(
+            request=request, 
+            name="settings_login.html", 
+            context={"request": request, "password_hint": hint}
+        )
+    return templates.TemplateResponse(
+        request=request, 
+        name="settings.html", 
+        context={"request": request, "is_authenticated": True}
+    )
+
+@app.post("/api/settings/login")
+async def settings_login(request: Request):
+    try:
+        data = await request.json()
+        password = str(data.get("password", "")).strip()
+    except Exception:
+        password = ""
+        
+    admin_pwd = get_admin_password()
+    if password != admin_pwd:
+        return JSONResponse({"success": False, "message": "Admin Password không chính xác! Vui lòng kiểm tra lại."}, status_code=401)
+        
+    token = create_jwt_token({"sub": "admin"}, expires_in_seconds=86400) # 24h
+    response = JSONResponse({
+        "success": True, 
+        "message": "Xác thực Admin Password thành công!",
+        "token": token
+    })
+    response.set_cookie(
+        key=JWT_SETTINGS_COOKIE,
+        value=token,
+        max_age=86400,
+        httponly=True,
+        samesite="lax",
+        path="/"
+    )
+    return response
+
+@app.get("/settings/logout")
+@app.post("/api/settings/logout")
+async def settings_logout():
+    response = RedirectResponse(url="/settings", status_code=303)
+    response.delete_cookie(key=JWT_SETTINGS_COOKIE, path="/")
+    return response
 
 @app.post("/update-settings")
 async def update_settings(request: Request, current_password: str = Form(...), new_password: str = Form(...)):
-    config_data = get_config()
-    import json
-    if current_password != config_data.get("DELETE_PASSWORD"):
-        return HTMLResponse(content=json.dumps({"success": False, "message": "Mật khẩu hiện tại không chính xác!"}), media_type="application/json")
+    admin_pwd = get_admin_password()
+    if current_password.strip() != admin_pwd:
+        return JSONResponse({"success": False, "message": "Admin Password hiện tại không chính xác!"})
         
-    config_data["DELETE_PASSWORD"] = new_password
-    save_config(config_data)
-    return HTMLResponse(content=json.dumps({"success": True, "message": "Cập nhật mật khẩu thành công"}), media_type="application/json")
+    set_admin_password(new_password)
+    
+    # Cấp lại token JWT mới cho phiên hiện tại
+    new_token = create_jwt_token({"sub": "admin"}, expires_in_seconds=86400)
+    response = JSONResponse({"success": True, "message": "Cập nhật Admin Password thành công!"})
+    response.set_cookie(
+        key=JWT_SETTINGS_COOKIE,
+        value=new_token,
+        max_age=86400,
+        httponly=True,
+        samesite="lax",
+        path="/"
+    )
+    return response
 
 @app.post("/reset-token")
 async def reset_token(request: Request):
@@ -4646,9 +5391,8 @@ async def duplicate_product_endpoint(request: Request):
 @app.post("/delete-product")
 async def delete_product(request: Request, product_id: str = Form(...), password: str = Form(...)):
     import json
-    config_data = get_config()
-    if password != config_data.get("DELETE_PASSWORD"):
-        return HTMLResponse(content=json.dumps({"success": False, "message": "Mật khẩu không chính xác!"}), media_type="application/json")
+    if password.strip() != get_admin_password():
+        return HTMLResponse(content=json.dumps({"success": False, "message": "Admin password không chính xác!"}), media_type="application/json")
         
     if not product_id.startswith("gid://"):
         product_id = f"gid://shopify/Product/{product_id}"
@@ -5030,9 +5774,8 @@ async def delete_blog_post(article_id: str, request: Request):
         password = data.get("password")
         
         # Verify password
-        config_data = get_config()
-        if password != config_data.get("DELETE_PASSWORD"):
-            return JSONResponse({"success": False, "message": "Mật khẩu không chính xác!"})
+        if str(password).strip() != get_admin_password():
+            return JSONResponse({"success": False, "message": "Admin password không chính xác!"})
             
         # Delete article via GraphQL
         article_gid = f"gid://shopify/Article/{article_id}"
@@ -5751,10 +6494,31 @@ async def toggle_proxy(request: Request):
             if geo:
                 cfg["geo"] = geo
         save_proxy_config(cfg)
+
+        # NẾU CÓ CẤU HÌNH APP RIÊNG (LOẠI 2), TỰ ĐỘNG CẤP ACCESS TOKEN MỚI NGAY KHI BẬT PROXY
+        if is_ok:
+            logo_cfg = load_logo_updater_config()
+            if logo_cfg.get("is_custom") and logo_cfg.get("client_id") and logo_cfg.get("client_secret"):
+                custom_tok = (logo_cfg.get("access_token") or "").strip()
+                expires_at = logo_cfg.get("token_expires_at")
+                is_expired = False
+                if expires_at:
+                    try:
+                        if datetime.now().timestamp() >= (float(expires_at) - 60):
+                            is_expired = True
+                    except Exception:
+                        pass
+                if not custom_tok or is_expired:
+                    request_custom_app_access_token(
+                        logo_cfg.get("shop_domain", ""),
+                        logo_cfg["client_id"],
+                        logo_cfg["client_secret"]
+                    )
     else:
         save_proxy_config(cfg)
         
-    return JSONResponse({
+    cfg = load_proxy_config()
+    return make_api_response({
         "success": True,
         "enabled": cfg.get("enabled", False),
         "proxy_url": cfg.get("proxy_url"),
@@ -5785,8 +6549,29 @@ async def check_proxy():
             cfg["geo"] = geo
             
     save_proxy_config(cfg)
-    
-    return JSONResponse({
+
+    # NẾU CÓ CẤU HÌNH APP RIÊNG VÀ TOKEN RỖNG HOẶC HẾT HẠN, LẤY TOKEN MỚI LUÔN
+    if is_ok and cfg.get("enabled"):
+        logo_cfg = load_logo_updater_config()
+        if logo_cfg.get("is_custom") and logo_cfg.get("client_id") and logo_cfg.get("client_secret"):
+            custom_tok = (logo_cfg.get("access_token") or "").strip()
+            expires_at = logo_cfg.get("token_expires_at")
+            is_expired = False
+            if expires_at:
+                try:
+                    if datetime.now().timestamp() >= (float(expires_at) - 60):
+                        is_expired = True
+                except Exception:
+                    pass
+            if not custom_tok or is_expired:
+                request_custom_app_access_token(
+                    logo_cfg.get("shop_domain", ""),
+                    logo_cfg["client_id"],
+                    logo_cfg["client_secret"]
+                )
+
+    cfg = load_proxy_config()
+    return make_api_response({
         "success": True,
         "enabled": cfg.get("enabled", False),
         "proxy_url": cfg.get("proxy_url"),
@@ -5820,7 +6605,7 @@ async def get_logo_updater_store_info():
     else:
         status_label = "Mặc định Server • Proxy US 🇺🇸"
 
-    return JSONResponse({
+    return make_api_response({
         "success": True,
         "credentials_type": cred_type,
         "is_custom": is_custom,
@@ -5841,11 +6626,11 @@ async def get_settings_logo_updater():
             "shop_name": cfg.get("shop_name", ""),
             "client_id": cfg.get("client_id", ""),
             "client_secret_masked": mask_secret(cfg.get("client_secret", "")),
-            "access_token_masked": mask_secret(cfg.get("access_token", "")),
             "has_secret": bool(cfg.get("client_secret")),
             "has_token": bool(cfg.get("access_token")),
             "is_custom": cfg.get("is_custom", False),
-            "updated_at": cfg.get("updated_at")
+            "updated_at": cfg.get("updated_at"),
+            "token_obtained_at": cfg.get("token_obtained_at")
         },
         "default_shop": f"{SHOPIFY_SHOP}.myshopify.com"
     })
@@ -5861,88 +6646,64 @@ async def save_settings_logo_updater(request: Request):
     existing_cfg = load_logo_updater_config()
     
     raw_shop = payload.get("shop_domain", "").strip()
-    shop = clean_shopify_domain(raw_shop) or clean_shopify_domain(SHOPIFY_SHOP)
-    
-    raw_token = payload.get("access_token", "").strip()
-    if raw_token and not raw_token.startswith("****") and not "..." in raw_token:
-        access_token = raw_token
-    else:
-        access_token = existing_cfg.get("access_token", "")
-        
-    if not access_token:
-        return JSONResponse({"success": False, "message": "Access Token không được để trống khi lưu cấu hình riêng."}, status_code=400)
+    shop = clean_shopify_domain(raw_shop)
+    if not shop:
+        return JSONResponse({"success": False, "message": "Shop Domain là bắt buộc. Vui lòng nhập tên miền store."}, status_code=400)
 
     raw_client_id = payload.get("client_id", "").strip()
     client_id = raw_client_id if raw_client_id else existing_cfg.get("client_id", "")
-    
+    if not client_id:
+        return JSONResponse({"success": False, "message": "Client ID là bắt buộc. Vui lòng nhập Client ID."}, status_code=400)
+
     raw_secret = payload.get("client_secret", "").strip()
     if raw_secret and not raw_secret.startswith("****") and not "..." in raw_secret:
         client_secret = raw_secret
     else:
         client_secret = existing_cfg.get("client_secret", "")
+    if not client_secret:
+        return JSONResponse({"success": False, "message": "Client Secret là bắt buộc. Vui lòng nhập Client Secret."}, status_code=400)
 
-    # Xác thực token mới với Shopify API /shop.json
-    test_url = f"https://{shop}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/shop.json"
-    test_headers = {
-        "X-Shopify-Access-Token": access_token,
-        "Content-Type": "application/json"
-    }
-    
-    try:
-        proxies = None
-        proxy_cfg = load_proxy_config()
-        if proxy_cfg.get("enabled"):
-            try:
-                proxies = get_shopify_request_proxies()
-            except ProxySafetyException as pse:
-                return JSONResponse({
-                    "success": False,
-                    "message": f"Proxy Gateway đang BẬT nhưng mất kết nối/không ổn định! Đã chặn request đến Shopify để bảo vệ gian hàng khỏi rò rỉ IP."
-                }, status_code=503)
-            except Exception as pe:
-                return JSONResponse({
-                    "success": False,
-                    "message": f"Lỗi khởi tạo Proxy Gateway: {str(pe)}. Đã chặn request để bảo vệ an toàn."
-                }, status_code=503)
+    proxy_cfg = load_proxy_config()
+    proxy_enabled = bool(proxy_cfg.get("enabled", False))
+
+    if proxy_enabled:
+        # Khi Proxy Gateway đang bật, kiểm tra và yêu cầu cấp Access Token ngay qua Proxy US
+        ok, msg, token = request_custom_app_access_token(shop, client_id, client_secret)
+        if not ok:
+            return JSONResponse({
+                "success": False,
+                "message": f"Không thể lấy Access Token qua Proxy: {msg}"
+            }, status_code=400)
         
-        resp = requests.get(test_url, headers=test_headers, proxies=proxies, timeout=12)
-        if resp.status_code == 200:
-            shop_data = resp.json().get("shop", {})
-            shop_name = shop_data.get("name", shop.capitalize())
-            myshopify_domain = shop_data.get("myshopify_domain", f"{shop}.myshopify.com")
-            
-            new_cfg = {
-                "shop_domain": myshopify_domain,
-                "shop_name": shop_name,
-                "client_id": client_id,
-                "client_secret": client_secret,
-                "access_token": access_token,
-                "is_custom": True,
-                "updated_at": datetime.now().isoformat()
-            }
-            save_logo_updater_config(new_cfg)
-            return JSONResponse({
-                "success": True,
-                "message": f"Xác thực thành công! Đã kết nối tới store '{shop_name}' ({myshopify_domain}) và lưu cấu hình Loại 2.",
-                "shop_name": shop_name,
-                "shop_domain": myshopify_domain
-            })
-        elif resp.status_code in (401, 403):
-            return JSONResponse({
-                "success": False,
-                "message": f"Shopify từ chối xác thực (HTTP {resp.status_code}): Access Token không hợp lệ hoặc không có quyền truy cập store {shop}."
-            }, status_code=400)
-        else:
-            return JSONResponse({
-                "success": False,
-                "message": f"Shopify trả về mã lỗi HTTP {resp.status_code}: {resp.text}"
-            }, status_code=400)
-    except Exception as e:
+        cfg = load_logo_updater_config()
+        cfg["shop_name"] = shop.title()
+        save_logo_updater_config(cfg)
         return JSONResponse({
-            "success": False,
-            "message": f"Không thể kết nối đến Shopify để kiểm tra credentials: {str(e)}"
-        }, status_code=500)
-
+            "success": True,
+            "message": f"Đã lưu cấu hình và tự động cấp Access Token thành công qua Proxy US cho store '{shop}'!",
+            "shop_name": shop.title(),
+            "shop_domain": f"{shop}.myshopify.com"
+        })
+    else:
+        # Khi Proxy đang tắt, lưu thông tin credentials
+        new_cfg = {
+            "shop_domain": f"{shop}.myshopify.com",
+            "shop_name": shop.title(),
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "access_token": existing_cfg.get("access_token", ""),
+            "is_custom": True,
+            "updated_at": datetime.now().isoformat(),
+            "token_obtained_at": existing_cfg.get("token_obtained_at"),
+            "token_expires_at": existing_cfg.get("token_expires_at")
+        }
+        save_logo_updater_config(new_cfg)
+        return JSONResponse({
+            "success": True,
+            "message": f"Đã lưu cấu hình App riêng thành công (Shop Domain, Client ID, Client Secret)! Khi bạn bật Proxy tại trang Cập nhật logo, hệ thống sẽ tự động yêu cầu cấp Access Token qua Proxy.",
+            "shop_name": shop.title(),
+            "shop_domain": f"{shop}.myshopify.com"
+        })
 
 
 @app.post("/api/settings/logo-updater/reset")
@@ -5954,12 +6715,188 @@ async def reset_settings_logo_updater():
         "client_secret": "",
         "access_token": "",
         "is_custom": False,
-        "updated_at": datetime.now().isoformat()
+        "updated_at": datetime.now().isoformat(),
+        "token_obtained_at": None,
+        "token_expires_at": None
     }
     save_logo_updater_config(reset_cfg)
     return JSONResponse({
         "success": True,
         "message": "Đã khôi phục về trạng thái mặc định server (Loại 1)."
+    })
+
+
+@app.get("/api/settings/proxy")
+async def get_settings_proxy():
+    cfg = load_proxy_config()
+    parsed = parse_proxy_input(cfg.get("proxy_url", ""))
+    return JSONResponse({
+        "success": True,
+        "config": {
+            "proxy_url": cfg.get("proxy_url", ""),
+            "proxy_url_masked": mask_proxy_url(cfg.get("proxy_url", "")),
+            "proxy_ip": cfg.get("proxy_ip", parsed.get("host", "")),
+            "host": parsed.get("host", ""),
+            "port": parsed.get("port", ""),
+            "username": parsed.get("username", ""),
+            "has_password": bool(parsed.get("password")),
+            "password_masked": mask_secret(parsed.get("password", "")),
+            "enabled": cfg.get("enabled", False),
+            "is_stable": cfg.get("is_stable", False),
+            "last_status": cfg.get("last_status", "unknown"),
+            "last_latency_ms": cfg.get("last_latency_ms", 0),
+            "last_checked_at": cfg.get("last_checked_at"),
+            "last_error": cfg.get("last_error"),
+            "geo": cfg.get("geo")
+        },
+        "default_proxy_url": DEFAULT_PROXY_CONFIG.get("proxy_url", "")
+    })
+
+
+@app.post("/api/settings/proxy/test")
+async def test_settings_proxy(request: Request):
+    try:
+        payload = await request.json()
+    except Exception:
+        return JSONResponse({"success": False, "message": "Dữ liệu JSON không hợp lệ"}, status_code=400)
+
+    proxy_input = payload.get("proxy_input", "").strip()
+    host = payload.get("host", "").strip()
+    port = payload.get("port", "")
+    username = payload.get("username", "").strip()
+    password = payload.get("password", "").strip()
+
+    cfg = load_proxy_config()
+    existing_parsed = parse_proxy_input(cfg.get("proxy_url", ""))
+
+    target_url = ""
+    if proxy_input:
+        parsed = parse_proxy_input(proxy_input)
+        target_url = parsed.get("proxy_url", "")
+    elif host and port:
+        if not password and existing_parsed.get("password"):
+            password = existing_parsed.get("password")
+        auth_part = f"{username}:{password}@" if username or password else ""
+        target_url = f"http://{auth_part}{host}:{port}"
+    else:
+        target_url = cfg.get("proxy_url", "")
+
+    if not target_url:
+        return JSONResponse({"success": False, "message": "Vui lòng nhập thông tin kết nối Proxy để kiểm tra!"}, status_code=400)
+
+    is_ok, latency, err = test_proxy_connectivity(target_url, timeout=8)
+    geo = fetch_proxy_egress_geo(target_url, timeout=6) if is_ok else None
+
+    return JSONResponse({
+        "success": True,
+        "status": "ok" if is_ok else "error",
+        "is_stable": is_ok,
+        "latency_ms": latency,
+        "geo": geo,
+        "error": err,
+        "message": f"Kết nối ổn định! (Ping: {latency}ms)" if is_ok else f"Không thể kết nối proxy: {err}"
+    })
+
+
+@app.post("/api/settings/proxy")
+async def save_settings_proxy(request: Request):
+    try:
+        payload = await request.json()
+    except Exception:
+        return JSONResponse({"success": False, "message": "Dữ liệu JSON không hợp lệ"}, status_code=400)
+
+    proxy_input = payload.get("proxy_input", "").strip()
+    host = payload.get("host", "").strip()
+    port = payload.get("port", "")
+    username = payload.get("username", "").strip()
+    password = payload.get("password", "").strip()
+
+    cfg = load_proxy_config()
+    existing_parsed = parse_proxy_input(cfg.get("proxy_url", ""))
+
+    new_proxy_url = ""
+    new_proxy_ip = ""
+
+    if proxy_input:
+        parsed = parse_proxy_input(proxy_input)
+        new_proxy_url = parsed.get("proxy_url", "")
+        new_proxy_ip = parsed.get("host", "")
+    elif host and port:
+        if not password and existing_parsed.get("password"):
+            password = existing_parsed.get("password")
+        auth_part = f"{username}:{password}@" if username or password else ""
+        new_proxy_url = f"http://{auth_part}{host}:{port}"
+        new_proxy_ip = host
+    else:
+        return JSONResponse({"success": False, "message": "Vui lòng nhập chuỗi Proxy hoặc đầy đủ Host/IP và Port!"}, status_code=400)
+
+    if not new_proxy_url or not new_proxy_ip:
+        return JSONResponse({"success": False, "message": "Thông tin Proxy không hợp lệ!"}, status_code=400)
+
+    # Kiểm tra kết nối thử
+    is_ok, latency, err = test_proxy_connectivity(new_proxy_url, timeout=8)
+    geo = fetch_proxy_egress_geo(new_proxy_url, timeout=6) if is_ok else None
+
+    cfg["proxy_url"] = new_proxy_url
+    cfg["proxy_ip"] = new_proxy_ip
+    cfg["is_stable"] = is_ok
+    cfg["last_status"] = "stable" if is_ok else "unstable"
+    cfg["last_latency_ms"] = latency
+    cfg["last_checked_at"] = datetime.now().isoformat()
+    cfg["last_error"] = err if not is_ok else None
+    if geo:
+        cfg["geo"] = geo
+
+    save_proxy_config(cfg)
+
+    # Nếu Proxy đang BẬT và cấu hình App riêng (Loại 2) đang active, thử cấp mới token nếu cần
+    if is_ok and cfg.get("enabled"):
+        logo_cfg = load_logo_updater_config()
+        if logo_cfg.get("is_custom") and logo_cfg.get("client_id") and logo_cfg.get("client_secret"):
+            try:
+                request_custom_app_access_token(
+                    logo_cfg.get("shop_domain", ""),
+                    logo_cfg["client_id"],
+                    logo_cfg["client_secret"]
+                )
+            except Exception:
+                pass
+
+    return JSONResponse({
+        "success": True,
+        "message": f"Đã lưu cấu hình Proxy vào proxy_config.json thành công! {'Kết nối ổn định (' + str(latency) + 'ms)' if is_ok else 'Cảnh báo: Proxy hiện chưa kết nối được (' + str(err) + ')'}",
+        "config": {
+            "proxy_url_masked": mask_proxy_url(new_proxy_url),
+            "proxy_ip": new_proxy_ip,
+            "is_stable": is_ok,
+            "last_latency_ms": latency,
+            "geo": geo,
+            "last_error": err if not is_ok else None
+        }
+    })
+
+
+@app.post("/api/settings/proxy/reset")
+async def reset_settings_proxy():
+    default_cfg = DEFAULT_PROXY_CONFIG.copy()
+    default_cfg["enabled"] = False
+    
+    # Kiểm tra kết nối mặc định
+    is_ok, latency, err = test_proxy_connectivity(default_cfg["proxy_url"], timeout=8)
+    geo = fetch_proxy_egress_geo(default_cfg["proxy_url"], timeout=6) if is_ok else None
+    
+    default_cfg["is_stable"] = is_ok
+    default_cfg["last_status"] = "stable" if is_ok else "unstable"
+    default_cfg["last_latency_ms"] = latency
+    default_cfg["last_checked_at"] = datetime.now().isoformat()
+    default_cfg["last_error"] = err if not is_ok else None
+    if geo:
+        default_cfg["geo"] = geo
+        
+    save_proxy_config(default_cfg)
+    return JSONResponse({
+        "success": True,
+        "message": "Đã khôi phục cấu hình Proxy về mặc định ban đầu của server!"
     })
 
 
@@ -6001,6 +6938,12 @@ def fetch_product_with_media_by_id(prod_id: str):
         creds = get_logo_updater_credentials()
         proxies = get_shopify_request_proxies()
         res = requests.post(creds["graphql_url"], json={"query": query, "variables": {"id": clean_id}}, headers=creds["headers"], proxies=proxies, timeout=15)
+        # Nếu token hết hạn (401), tự động làm mới qua Proxy và thử lại
+        if res.status_code == 401 and creds.get("is_custom") and creds.get("client_id") and creds.get("client_secret"):
+            ok, msg, new_tok = request_custom_app_access_token(creds["shop"], creds["client_id"], creds["client_secret"])
+            if ok and new_tok:
+                creds = get_logo_updater_credentials(auto_refresh=False)
+                res = requests.post(creds["graphql_url"], json={"query": query, "variables": {"id": clean_id}}, headers=creds["headers"], proxies=proxies, timeout=15)
         if res.ok:
             data = res.json()
             return data.get("data", {}).get("product")
@@ -6052,6 +6995,12 @@ def fetch_product_with_media_by_handle(handle: str):
         creds = get_logo_updater_credentials()
         proxies = get_shopify_request_proxies()
         res = requests.post(creds["graphql_url"], json={"query": query, "variables": {"handle": clean_handle}}, headers=creds["headers"], proxies=proxies, timeout=15)
+        # Nếu token hết hạn (401), tự động làm mới qua Proxy và thử lại
+        if res.status_code == 401 and creds.get("is_custom") and creds.get("client_id") and creds.get("client_secret"):
+            ok, msg, new_tok = request_custom_app_access_token(creds["shop"], creds["client_id"], creds["client_secret"])
+            if ok and new_tok:
+                creds = get_logo_updater_credentials(auto_refresh=False)
+                res = requests.post(creds["graphql_url"], json={"query": query, "variables": {"handle": clean_handle}}, headers=creds["headers"], proxies=proxies, timeout=15)
         if res.ok:
             data = res.json()
             return data.get("data", {}).get("productByHandle")
@@ -6074,6 +7023,11 @@ def get_image_position(clean_prod_id: str, media_or_image_id: str, image_url: st
         proxies = get_shopify_request_proxies()
         list_url = f"https://{creds['shop']}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/products/{clean_prod_id}/images.json"
         res = requests.get(list_url, headers=creds["headers"], proxies=proxies, timeout=15)
+        if res.status_code == 401 and creds.get("is_custom") and creds.get("client_id") and creds.get("client_secret"):
+            ok, msg, new_tok = request_custom_app_access_token(creds["shop"], creds["client_id"], creds["client_secret"])
+            if ok and new_tok:
+                creds = get_logo_updater_credentials(auto_refresh=False)
+                res = requests.get(list_url, headers=creds["headers"], proxies=proxies, timeout=15)
         if res.ok:
             images = res.json().get("images", [])
             for img in images:
@@ -6097,7 +7051,7 @@ def get_image_position(clean_prod_id: str, media_or_image_id: str, image_url: st
     return 1
 
 
-def delete_shopify_image_or_media(clean_prod_id: str, media_or_image_id: str) -> bool:
+def delete_shopify_image_or_media(clean_prod_id: str, media_or_image_id: str, shop: str = None, headers: dict = None, graphql_url: str = None) -> bool:
     clean_id = str(media_or_image_id).split("/")[-1].strip()
     if not clean_id:
         return False
@@ -6105,10 +7059,12 @@ def delete_shopify_image_or_media(clean_prod_id: str, media_or_image_id: str) ->
     prod_gid = f"gid://shopify/Product/{clean_prod_id}"
     del_media_gid = media_or_image_id if str(media_or_image_id).startswith("gid://shopify/MediaImage/") else f"gid://shopify/MediaImage/{clean_id}"
 
-    creds = get_logo_updater_credentials()
-    graphql_url = creds["graphql_url"]
-    headers = creds["headers"]
-    shop = creds["shop"]
+    creds = {}
+    if not shop or not headers or not graphql_url:
+        creds = get_logo_updater_credentials()
+        graphql_url = graphql_url or creds["graphql_url"]
+        headers = headers or creds["headers"]
+        shop = shop or creds["shop"]
 
     # 1. Try GraphQL productDeleteMedia
     del_mutation = """
@@ -6129,6 +7085,16 @@ def delete_shopify_image_or_media(clean_prod_id: str, media_or_image_id: str) ->
             "query": del_mutation,
             "variables": {"mediaIds": [del_media_gid], "productId": prod_gid}
         }, headers=headers, proxies=proxies, timeout=15)
+        if res.status_code == 401 and creds.get("is_custom") and creds.get("client_id") and creds.get("client_secret"):
+            ok, msg, new_tok = request_custom_app_access_token(creds["shop"], creds["client_id"], creds["client_secret"])
+            if ok and new_tok:
+                creds = get_logo_updater_credentials(auto_refresh=False)
+                headers = creds["headers"]
+                graphql_url = creds["graphql_url"]
+                res = requests.post(graphql_url, json={
+                    "query": del_mutation,
+                    "variables": {"mediaIds": [del_media_gid], "productId": prod_gid}
+                }, headers=headers, proxies=proxies, timeout=15)
         if res.ok:
             data = res.json()
             if not data.get("errors"):
@@ -6150,6 +7116,12 @@ def delete_shopify_image_or_media(clean_prod_id: str, media_or_image_id: str) ->
         proxies = get_shopify_request_proxies()
         rest_del_url = f"https://{shop}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/products/{clean_prod_id}/images/{clean_id}.json"
         res_rest = requests.delete(rest_del_url, headers=headers, proxies=proxies, timeout=15)
+        if res_rest.status_code == 401 and creds.get("is_custom") and creds.get("client_id") and creds.get("client_secret"):
+            ok, msg, new_tok = request_custom_app_access_token(creds["shop"], creds["client_id"], creds["client_secret"])
+            if ok and new_tok:
+                creds = get_logo_updater_credentials(auto_refresh=False)
+                headers = creds["headers"]
+                res_rest = requests.delete(rest_del_url, headers=headers, proxies=proxies, timeout=15)
         if res_rest.ok:
             return True
     except (requests.exceptions.ProxyError, requests.exceptions.ConnectTimeout) as pe:
@@ -6167,6 +7139,12 @@ def delete_shopify_image_or_media(clean_prod_id: str, media_or_image_id: str) ->
         proxies = get_shopify_request_proxies()
         list_url = f"https://{shop}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/products/{clean_prod_id}/images.json"
         res_list = requests.get(list_url, headers=headers, proxies=proxies, timeout=15)
+        if res_list.status_code == 401 and creds.get("is_custom") and creds.get("client_id") and creds.get("client_secret"):
+            ok, msg, new_tok = request_custom_app_access_token(creds["shop"], creds["client_id"], creds["client_secret"])
+            if ok and new_tok:
+                creds = get_logo_updater_credentials(auto_refresh=False)
+                headers = creds["headers"]
+                res_list = requests.get(list_url, headers=headers, proxies=proxies, timeout=15)
         if res_list.ok:
             imgs = res_list.json().get("images", [])
             for img in imgs:
@@ -6188,6 +7166,169 @@ def delete_shopify_image_or_media(clean_prod_id: str, media_or_image_id: str) ->
             raise ProxySafetyException(str(e))
 
     return False
+
+
+@app.post("/api/fetch-external-image")
+async def fetch_external_image(request: Request):
+    try:
+        data = await request.json()
+        img_url = (data.get("url") or "").strip()
+        if not img_url:
+            return JSONResponse({"success": False, "message": "Vui lòng cung cấp link ảnh hợp lệ."}, status_code=400)
+
+        if img_url.startswith("//"):
+            img_url = "https:" + img_url
+        elif not (img_url.startswith("http://") or img_url.startswith("https://")):
+            img_url = "https://" + img_url
+
+        req_headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8"
+        }
+
+        resp = requests.get(img_url, headers=req_headers, timeout=35, verify=False)
+        if not resp.ok:
+            return JSONResponse({"success": False, "message": f"Không thể tải ảnh từ link (HTTP {resp.status_code})."}, status_code=400)
+
+        content_type = resp.headers.get("Content-Type", "").split(";")[0].strip()
+        if not content_type or "image" not in content_type:
+            content_type = "image/jpeg"
+
+        ext = ".jpg"
+        if "png" in content_type:
+            ext = ".png"
+        elif "webp" in content_type:
+            ext = ".webp"
+        elif "gif" in content_type:
+            ext = ".gif"
+        elif "jpeg" in content_type or "jpg" in content_type:
+            ext = ".jpg"
+        else:
+            p_path = urlparse(img_url).path
+            for candidate in [".jpg", ".jpeg", ".png", ".webp", ".gif"]:
+                if p_path.lower().endswith(candidate):
+                    ext = candidate
+                    break
+
+        parsed_name = os.path.basename(urlparse(img_url).path)
+        clean_name = re.sub(r'[^a-zA-Z0-9_\-\.]', '_', parsed_name)
+        if not clean_name or not any(clean_name.lower().endswith(e) for e in [".jpg", ".jpeg", ".png", ".webp", ".gif"]):
+            filename = f"image_{int(time.time())}{ext}"
+        else:
+            filename = clean_name
+
+        return Response(
+            content=resp.content,
+            media_type=content_type,
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"',
+                "Access-Control-Expose-Headers": "X-File-Name, Content-Type",
+                "X-File-Name": filename
+            }
+        )
+    except Exception as e:
+        return JSONResponse({"success": False, "message": f"Lỗi khi tải ảnh: {str(e)}"}, status_code=500)
+
+
+@app.post("/api/products/{product_id}/upload-media")
+async def upload_product_media(product_id: str, files: list[UploadFile] = File(...)):
+    try:
+        clean_prod_id = str(product_id).split("/")[-1].strip()
+        if not clean_prod_id:
+            return JSONResponse({"success": False, "message": "ID sản phẩm không hợp lệ."}, status_code=400)
+
+        if not files:
+            return JSONResponse({"success": False, "message": "Không có tệp nào được tải lên."}, status_code=400)
+
+        shop = clean_shopify_domain(SHOPIFY_SHOP)
+        headers = {
+            "X-Shopify-Access-Token": SHOPIFY_ADMIN_TOKEN,
+            "Content-Type": "application/json"
+        }
+        proxies = get_shopify_request_proxies()
+
+        rest_url = f"https://{shop}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/products/{clean_prod_id}/images.json"
+
+        uploaded_results = []
+        errors = []
+
+        for f in files:
+            file_bytes = await f.read()
+            if not file_bytes:
+                continue
+            b64_str = base64.b64encode(file_bytes).decode("utf-8")
+            filename = f.filename or f"image_{int(time.time())}.jpg"
+
+            upload_payload = {
+                "image": {
+                    "attachment": b64_str,
+                    "filename": filename
+                }
+            }
+
+            try:
+                res = requests.post(rest_url, json=upload_payload, headers=headers, proxies=proxies, timeout=45)
+                if res.ok:
+                    img_data = res.json().get("image", {})
+                    uploaded_results.append({
+                        "id": img_data.get("admin_graphql_api_id") or str(img_data.get("id")),
+                        "url": img_data.get("src")
+                    })
+                else:
+                    errors.append(f"{filename}: {res.text}")
+            except Exception as up_err:
+                errors.append(f"{filename}: {str(up_err)}")
+
+        if uploaded_results:
+            msg = f"Đã tải lên thành công {len(uploaded_results)} ảnh!"
+            if errors:
+                msg += f" (Lỗi {len(errors)} ảnh: {'; '.join(errors)})"
+            return JSONResponse({"success": True, "message": msg, "uploaded": uploaded_results})
+        else:
+            return JSONResponse({"success": False, "message": f"Tải ảnh thất bại: {'; '.join(errors)}"}, status_code=500)
+
+    except ProxySafetyException as pse:
+        return JSONResponse({"success": False, "message": str(pse)}, status_code=503)
+    except Exception as e:
+        return JSONResponse({"success": False, "message": f"Lỗi hệ thống: {str(e)}"}, status_code=500)
+
+
+@app.post("/api/products/{product_id}/delete-media")
+async def delete_product_media_endpoint(product_id: str, request: Request):
+    try:
+        clean_prod_id = str(product_id).split("/")[-1].strip()
+        if not clean_prod_id:
+            return JSONResponse({"success": False, "message": "ID sản phẩm không hợp lệ."}, status_code=400)
+
+        media_id = None
+        content_type = request.headers.get("content-type", "")
+        if "application/json" in content_type:
+            data = await request.json()
+            media_id = data.get("media_id")
+        else:
+            form = await request.form()
+            media_id = form.get("media_id")
+
+        if not media_id:
+            return JSONResponse({"success": False, "message": "Vui lòng cung cấp media_id cần xóa."}, status_code=400)
+
+        shop = clean_shopify_domain(SHOPIFY_SHOP)
+        headers = {
+            "X-Shopify-Access-Token": SHOPIFY_ADMIN_TOKEN,
+            "Content-Type": "application/json"
+        }
+        graphql_url = f"https://{shop}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/graphql.json"
+
+        success = delete_shopify_image_or_media(clean_prod_id, media_id, shop=shop, headers=headers, graphql_url=graphql_url)
+        if success:
+            return JSONResponse({"success": True, "message": "Đã xóa ảnh khỏi sản phẩm thành công!"})
+        else:
+            return JSONResponse({"success": False, "message": "Shopify không xóa được ảnh. Vui lòng kiểm tra lại."}, status_code=500)
+
+    except ProxySafetyException as pse:
+        return JSONResponse({"success": False, "message": str(pse)}, status_code=503)
+    except Exception as e:
+        return JSONResponse({"success": False, "message": f"Lỗi xóa ảnh: {str(e)}"}, status_code=500)
 
 
 @app.post("/api/products/batch-media")
@@ -6310,9 +7451,58 @@ async def batch_media_products(request: Request):
                 "media": media_list
             })
     except ProxySafetyException as pse:
-        return JSONResponse({"success": False, "error": str(pse)}, status_code=503)
+        return make_api_response({"success": False, "error": str(pse)}, status_code=503)
 
-    return JSONResponse({"success": True, "products": results})
+    return make_api_response({"success": True, "products": results})
+
+
+def migrate_existing_backups_store_name():
+    """
+    Tự động chuẩn hóa & bổ sung field store_name cho tất cả các bản sao lưu media hiện có trên VPS.
+    Nếu manifest thiếu store_name hoặc rỗng, gán mặc định '236qm8-w7.myshopify.com'.
+    """
+    backup_base = "backups"
+    if not os.path.exists(backup_base):
+        return
+    updated_count = 0
+    try:
+        for item in os.listdir(backup_base):
+            p_dir = os.path.join(backup_base, item)
+            if not os.path.isdir(p_dir):
+                continue
+            manifest_file = os.path.join(p_dir, "manifest.json")
+            if not os.path.exists(manifest_file):
+                continue
+            try:
+                with open(manifest_file, "r", encoding="utf-8") as mf:
+                    manifest = json.load(mf)
+            except Exception:
+                continue
+
+            changed = False
+            for k, v in manifest.items():
+                if isinstance(v, dict):
+                    if not v.get("store_name"):
+                        v["store_name"] = "236qm8-w7.myshopify.com"
+                        changed = True
+
+            if changed:
+                try:
+                    with open(manifest_file, "w", encoding="utf-8") as mf:
+                        json.dump(manifest, mf, indent=2, ensure_ascii=False)
+                    updated_count += 1
+                except Exception as we:
+                    print(f"[Migration] Cannot write manifest {manifest_file}: {we}")
+        if updated_count > 0:
+            print(f"[Migration] Migrated store_name to 236qm8-w7.myshopify.com for {updated_count} manifest(s).")
+    except Exception as e:
+        print(f"[Migration] Error during backup store_name migration: {e}")
+
+# Chạy migration khi import/khởi động server
+try:
+    migrate_existing_backups_store_name()
+except Exception as _me:
+    print(f"[Migration Error] {_me}")
 
 
 @app.post("/api/products/backup-media")
@@ -6336,6 +7526,18 @@ async def backup_product_media(request: Request):
     image_url = payload.get("image_url", "")
     position = payload.get("position")
     product_title = payload.get("product_title", "")
+    store_name = payload.get("store_name", "").strip()
+
+    if not store_name:
+        try:
+            creds = get_logo_updater_credentials()
+            store_name = creds.get("shop", "").strip()
+            if store_name and not store_name.endswith(".myshopify.com"):
+                store_name = f"{store_name}.myshopify.com"
+        except Exception:
+            pass
+    if not store_name:
+        store_name = "236qm8-w7.myshopify.com"
 
     if not product_id or not media_id or not image_url:
         return JSONResponse({"success": False, "error": "Thiếu thông tin product_id, media_id hoặc image_url"}, status_code=400)
@@ -6388,21 +7590,26 @@ async def backup_product_media(request: Request):
             bio_full = Image.open(io.BytesIO(existing_bytes))
             img_w, img_h = bio_full.size
 
-            # Cập nhật position và product_title vào manifest nếu có
+            # Cập nhật position, product_title và store_name vào manifest nếu có
             if clean_orig_id in manifest:
                 if position is not None:
                     manifest[clean_orig_id]["position"] = position
                 if product_title:
                     manifest[clean_orig_id]["product_title"] = product_title
+                if store_name:
+                    manifest[clean_orig_id]["store_name"] = store_name
+                elif "store_name" not in manifest[clean_orig_id]:
+                    manifest[clean_orig_id]["store_name"] = "236qm8-w7.myshopify.com"
                 with open(manifest_file, "w", encoding="utf-8") as mf:
                     json.dump(manifest, mf, indent=2, ensure_ascii=False)
 
-            return JSONResponse({
+            return make_api_response({
                 "success": True,
                 "backup_url": f"/backups/{clean_prod_id}/{clean_orig_id}_orig.jpg",
                 "file_size": len(existing_bytes),
                 "dimensions": f"{img_w}x{img_h}",
                 "position": position or manifest.get(clean_orig_id, {}).get("position", 1),
+                "store_name": manifest.get(clean_orig_id, {}).get("store_name", store_name),
                 "message": "Bản sao lưu gốc trên VPS đã tồn tại, được bảo tồn vĩnh viễn và xác thực hoàn hảo 100%!"
             })
         except Exception as e:
@@ -6415,7 +7622,7 @@ async def backup_product_media(request: Request):
         except (requests.exceptions.ProxyError, requests.exceptions.ConnectTimeout) as pe:
             if proxies:
                 mark_proxy_unstable(str(pe))
-                return JSONResponse({"success": False, "error": "CHỐT CHẶN AN TOÀN: Proxy đang BẬT nhưng mất kết nối/không ổn định! Đã chặn toàn bộ request đi đến Shopify để bảo vệ gian hàng."}, status_code=503)
+                return make_api_response({"success": False, "error": "CHỐT CHẶN AN TOÀN: Proxy đang BẬT nhưng mất kết nối/không ổn định! Đã chặn toàn bộ request đi đến Shopify để bảo vệ gian hàng."}, status_code=503)
             raise
 
         if resp.status_code != 200:
@@ -6449,10 +7656,11 @@ async def backup_product_media(request: Request):
         if saved_size == 0:
             raise Exception("File sao lưu ghi trên đĩa VPS có kích thước 0 bytes")
 
-        # 4. Update manifest.json với trường position và product_title
+        # 4. Update manifest.json với trường position, product_title và store_name
         manifest[clean_orig_id] = {
             "product_id": clean_prod_id,
             "product_title": product_title,
+            "store_name": store_name,
             "media_id": clean_orig_id,
             "position": position,
             "original_url": image_url,
@@ -6466,16 +7674,17 @@ async def backup_product_media(request: Request):
         with open(manifest_file, "w", encoding="utf-8") as mf:
             json.dump(manifest, mf, indent=2, ensure_ascii=False)
 
-        return JSONResponse({
+        return make_api_response({
             "success": True,
             "backup_url": f"/backups/{clean_prod_id}/{clean_orig_id}_orig.jpg",
             "file_size": saved_size,
             "dimensions": f"{img_width}x{img_height}",
             "position": position,
+            "store_name": store_name,
             "message": "Đã sao lưu ảnh gốc vĩnh viễn và hoàn hảo trên VPS!"
         })
     except ProxySafetyException as pse:
-        return JSONResponse({"success": False, "error": str(pse)}, status_code=503)
+        return make_api_response({"success": False, "error": str(pse)}, status_code=503)
     except Exception as e:
         if os.path.exists(temp_file):
             try:
@@ -6484,8 +7693,8 @@ async def backup_product_media(request: Request):
                 pass
         print(f"Error in backup_product_media: {e}")
         if "CHỐT CHẶN AN TOÀN" in str(e):
-            return JSONResponse({"success": False, "error": str(e)}, status_code=503)
-        return JSONResponse({"success": False, "error": f"LỖI SAO LƯU VPS (DỪNG BƯỚC 2): {str(e)}"}, status_code=500)
+            return make_api_response({"success": False, "error": str(e)}, status_code=503)
+        return make_api_response({"success": False, "error": f"LỖI SAO LƯU VPS (DỪNG BƯỚC 2): {str(e)}"}, status_code=500)
 
 
 @app.post("/api/products/apply-media-update")
@@ -6494,12 +7703,12 @@ async def apply_media_update(request: Request):
         # Chốt chặn an toàn Proxy Gateway
         proxies = get_shopify_request_proxies()
     except Exception as pe:
-        return JSONResponse({"success": False, "error": str(pe)}, status_code=503)
+        return make_api_response({"success": False, "error": str(pe)}, status_code=503)
 
     try:
         payload = await request.json()
     except Exception:
-        return JSONResponse({"success": False, "error": "Invalid JSON body"}, status_code=400)
+        return make_api_response({"success": False, "error": "Invalid JSON body"}, status_code=400)
 
     product_id = payload.get("product_id", "")
     old_media_id = payload.get("old_media_id", "")
@@ -6508,7 +7717,7 @@ async def apply_media_update(request: Request):
     position = payload.get("position")
 
     if not product_id or not old_media_id or not image_base64:
-        return JSONResponse({"success": False, "error": "Thiếu product_id, old_media_id hoặc image_base64"}, status_code=400)
+        return make_api_response({"success": False, "error": "Thiếu product_id, old_media_id hoặc image_base64"}, status_code=400)
 
     clean_prod_id = str(product_id).split("/")[-1].strip()
     clean_media_id = str(old_media_id).split("/")[-1].strip()
@@ -6542,7 +7751,7 @@ async def apply_media_update(request: Request):
                         break
 
     if not os.path.exists(backup_file) or os.path.getsize(backup_file) == 0:
-        return JSONResponse({
+        return make_api_response({
             "success": False,
             "error": "CHỐT AN TOÀN CHẶN: Chưa có bản sao lưu gốc trên VPS! Vui lòng thực hiện Bước 1 trước."
         }, status_code=400)
@@ -6554,7 +7763,7 @@ async def apply_media_update(request: Request):
         if position is None:
             position = get_image_position(clean_prod_id, old_media_id)
     except ProxySafetyException as pse:
-        return JSONResponse({"success": False, "error": str(pse)}, status_code=503)
+        return make_api_response({"success": False, "error": str(pse)}, status_code=503)
 
     # 1. Upload ảnh mới lên Shopify qua REST Admin API (qua Proxy nếu bật)
     creds = get_logo_updater_credentials()
@@ -6574,8 +7783,16 @@ async def apply_media_update(request: Request):
 
     try:
         res = requests.post(rest_url, json=upload_payload, headers=headers, proxies=proxies, timeout=45)
+        if res.status_code == 401 and creds.get("is_custom") and creds.get("client_id") and creds.get("client_secret"):
+            ok, msg, new_tok = request_custom_app_access_token(creds["shop"], creds["client_id"], creds["client_secret"])
+            if ok and new_tok:
+                creds = get_logo_updater_credentials(auto_refresh=False)
+                headers = creds["headers"]
+                graphql_url = creds["graphql_url"]
+                res = requests.post(rest_url, json=upload_payload, headers=headers, proxies=proxies, timeout=45)
+
         if not res.ok:
-            return JSONResponse({"success": False, "error": f"Lỗi upload ảnh lên Shopify REST API: {res.text}"}, status_code=500)
+            return make_api_response({"success": False, "error": f"Lỗi upload ảnh lên Shopify REST API: {res.text}"}, status_code=500)
         
         image_data = res.json().get("image", {})
         new_prod_img_id = image_data.get("id")
@@ -6587,14 +7804,14 @@ async def apply_media_update(request: Request):
     except (requests.exceptions.ProxyError, requests.exceptions.ConnectTimeout) as pe:
         if proxies:
             mark_proxy_unstable(str(pe))
-            return JSONResponse({"success": False, "error": "CHỐT CHẶN AN TOÀN: Proxy đang BẬT nhưng mất kết nối/không ổn định! Đã chặn toàn bộ request đi đến Shopify để bảo vệ gian hàng."}, status_code=503)
-        return JSONResponse({"success": False, "error": f"Lỗi kết nối Shopify API: {str(pe)}"}, status_code=500)
+            return make_api_response({"success": False, "error": "CHỐT CHẶN AN TOÀN: Proxy đang BẬT nhưng mất kết nối/không ổn định! Đã chặn toàn bộ request đi đến Shopify để bảo vệ gian hàng."}, status_code=503)
+        return make_api_response({"success": False, "error": f"Lỗi kết nối Shopify API: {str(pe)}"}, status_code=500)
     except ProxySafetyException as pse:
-        return JSONResponse({"success": False, "error": str(pse)}, status_code=503)
+        return make_api_response({"success": False, "error": str(pse)}, status_code=503)
     except Exception as e:
         if "CHỐT CHẶN AN TOÀN" in str(e):
-            return JSONResponse({"success": False, "error": str(e)}, status_code=503)
-        return JSONResponse({"success": False, "error": f"Lỗi kết nối Shopify API: {str(e)}"}, status_code=500)
+            return make_api_response({"success": False, "error": str(e)}, status_code=503)
+        return make_api_response({"success": False, "error": f"Lỗi kết nối Shopify API: {str(e)}"}, status_code=500)
 
     try:
         # 2. Xóa media cũ khỏi storefront Shopify (thử GraphQL rồi fallback REST)
@@ -6685,9 +7902,9 @@ async def apply_media_update(request: Request):
                 print(f"Error removing tag logo-updated: {rem_err}")
             all_media_updated = False
     except ProxySafetyException as pse:
-        return JSONResponse({"success": False, "error": str(pse)}, status_code=503)
+        return make_api_response({"success": False, "error": str(pse)}, status_code=503)
 
-    return JSONResponse({
+    return make_api_response({
         "success": True,
         "message": "Cập nhật ảnh có logo lên Shopify thành công. Bản sao lưu gốc trên VPS được bảo tồn vĩnh viễn!",
         "all_media_updated": all_media_updated,
@@ -6711,20 +7928,20 @@ async def rollback_media(request: Request):
         proxies = get_shopify_request_proxies()
     except (ProxySafetyException, Exception) as pe:
         if "CHỐT CHẶN AN TOÀN" in str(pe) or isinstance(pe, ProxySafetyException):
-            return JSONResponse({"success": False, "error": str(pe)}, status_code=503)
-        return JSONResponse({"success": False, "error": str(pe)}, status_code=500)
+            return make_api_response({"success": False, "error": str(pe)}, status_code=503)
+        return make_api_response({"success": False, "error": str(pe)}, status_code=500)
 
     try:
         payload = await request.json()
     except Exception:
-        return JSONResponse({"success": False, "error": "Invalid JSON body"}, status_code=400)
+        return make_api_response({"success": False, "error": "Invalid JSON body"}, status_code=400)
 
     product_id = payload.get("product_id", "")
     current_media_id = payload.get("current_media_id", "")
     original_media_id = payload.get("original_media_id", "")
 
     if not product_id or not original_media_id:
-        return JSONResponse({"success": False, "error": "Thiếu product_id hoặc original_media_id để rollback"}, status_code=400)
+        return make_api_response({"success": False, "error": "Thiếu product_id hoặc original_media_id để rollback"}, status_code=400)
 
     clean_prod_id = str(product_id).split("/")[-1].strip()
     clean_orig_id = str(original_media_id).split("/")[-1].strip()
@@ -6760,7 +7977,7 @@ async def rollback_media(request: Request):
                 clean_orig_id = orig_files[0].replace("_orig.jpg", "")
 
     if not os.path.exists(backup_file):
-        return JSONResponse({"success": False, "error": f"Không tìm thấy bản sao lưu gốc {backup_file} trên ổ cứng VPS!"}, status_code=404)
+        return make_api_response({"success": False, "error": f"Không tìm thấy bản sao lưu gốc {backup_file} trên ổ cứng VPS!"}, status_code=404)
 
     try:
         with open(backup_file, "rb") as f:
@@ -6771,7 +7988,7 @@ async def rollback_media(request: Request):
         try:
             pos = get_image_position(clean_prod_id, current_media_id)
         except ProxySafetyException as pse:
-            return JSONResponse({"success": False, "error": str(pse)}, status_code=503)
+            return make_api_response({"success": False, "error": str(pse)}, status_code=503)
 
         if (pos is None or pos == 1) and clean_orig_id in manifest:
             pos = manifest[clean_orig_id].get("position", pos or 1)
@@ -6792,14 +8009,21 @@ async def rollback_media(request: Request):
         }
         try:
             res = requests.post(rest_url, json=upload_payload, headers=headers, proxies=proxies, timeout=45)
+            if res.status_code == 401 and creds.get("is_custom") and creds.get("client_id") and creds.get("client_secret"):
+                ok, msg, new_tok = request_custom_app_access_token(creds["shop"], creds["client_id"], creds["client_secret"])
+                if ok and new_tok:
+                    creds = get_logo_updater_credentials(auto_refresh=False)
+                    headers = creds["headers"]
+                    graphql_url = creds["graphql_url"]
+                    res = requests.post(rest_url, json=upload_payload, headers=headers, proxies=proxies, timeout=45)
         except (requests.exceptions.ProxyError, requests.exceptions.ConnectTimeout) as pe:
             if proxies:
                 mark_proxy_unstable(str(pe))
-                return JSONResponse({"success": False, "error": "CHỐT CHẶN AN TOÀN: Proxy đang BẬT nhưng mất kết nối/không ổn định! Đã chặn toàn bộ request đi đến Shopify để bảo vệ gian hàng."}, status_code=503)
+                return make_api_response({"success": False, "error": "CHỐT CHẶN AN TOÀN: Proxy đang BẬT nhưng mất kết nối/không ổn định! Đã chặn toàn bộ request đi đến Shopify để bảo vệ gian hàng."}, status_code=503)
             raise
 
         if not res.ok:
-            return JSONResponse({"success": False, "error": f"Lỗi tải lại ảnh gốc: {res.text}"}, status_code=500)
+            return make_api_response({"success": False, "error": f"Lỗi tải lại ảnh gốc: {res.text}"}, status_code=500)
 
         restored_img = res.json().get("image", {})
         restored_prod_img_id = restored_img.get("id")
@@ -6842,7 +8066,7 @@ async def rollback_media(request: Request):
         except Exception:
             pass
 
-        return JSONResponse({
+        return make_api_response({
             "success": True,
             "message": "Đã khôi phục ảnh gốc thành công và gỡ bỏ tag logo-updated khỏi sản phẩm! Bản sao lưu VPS được bảo tồn vĩnh viễn.",
             "all_media_updated": False,
@@ -6857,11 +8081,11 @@ async def rollback_media(request: Request):
             }
         })
     except ProxySafetyException as pse:
-        return JSONResponse({"success": False, "error": str(pse)}, status_code=503)
+        return make_api_response({"success": False, "error": str(pse)}, status_code=503)
     except Exception as e:
         if "CHỐT CHẶN AN TOÀN" in str(e):
-            return JSONResponse({"success": False, "error": str(e)}, status_code=503)
-        return JSONResponse({"success": False, "error": f"Lỗi khôi phục ảnh gốc: {str(e)}"}, status_code=500)
+            return make_api_response({"success": False, "error": str(e)}, status_code=503)
+        return make_api_response({"success": False, "error": f"Lỗi khôi phục ảnh gốc: {str(e)}"}, status_code=500)
 
 
 @app.get("/api/products/backups")
@@ -6870,7 +8094,7 @@ async def list_vps_backups():
     try:
         backups_dir = "backups"
         if not os.path.exists(backups_dir):
-            return JSONResponse({
+            return make_api_response({
                 "success": True,
                 "total_files": 0,
                 "total_size_bytes": 0,
@@ -6936,6 +8160,7 @@ async def list_vps_backups():
                 backup_list.append({
                     "product_id": prod_id,
                     "product_title": m_info.get("product_title", ""),
+                    "store_name": m_info.get("store_name", "236qm8-w7.myshopify.com"),
                     "media_id": clean_orig_id,
                     "filename": f,
                     "file_url": f"/backups/{prod_id}/{f}",
@@ -6957,7 +8182,7 @@ async def list_vps_backups():
         else:
             total_size_fmt = f"{total_size_bytes / 1024:.1f} KB"
 
-        return JSONResponse({
+        return make_api_response({
             "success": True,
             "total_files": len(backup_list),
             "total_size_bytes": total_size_bytes,
@@ -6967,7 +8192,934 @@ async def list_vps_backups():
         })
     except Exception as e:
         print(f"Error list_vps_backups: {e}")
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+        return make_api_response({"success": False, "error": str(e)}, status_code=500)
+
+
+@app.post("/api/products/backups/delete")
+async def delete_vps_backup(request: Request):
+    """
+    Xóa 1 file media sao lưu trên VPS với chốt chặn an toàn:
+    - Nếu media đang mang logo trên Shopify (is_applied == True): Cấm xóa trừ khi có flag force=True.
+    - Cập nhật manifest.json và tự dọn thư mục sản phẩm nếu trống.
+    """
+    try:
+        payload = await request.json()
+    except Exception:
+        return make_api_response({"success": False, "error": "Invalid JSON body"}, status_code=400)
+
+    raw_prod_id = payload.get("product_id", "")
+    raw_media_id = payload.get("media_id", "")
+    force = bool(payload.get("force", False))
+
+    if not raw_prod_id or not raw_media_id:
+        return make_api_response({"success": False, "error": "Thiếu product_id hoặc media_id"}, status_code=400)
+
+    # Sanitize path để chống Path Traversal
+    clean_prod_id = re.sub(r"[^a-zA-Z0-9_-]", "", str(raw_prod_id).split("/")[-1].strip())
+    clean_media_id = re.sub(r"[^a-zA-Z0-9_-]", "", str(raw_media_id).split("/")[-1].strip())
+
+    if not clean_prod_id or not clean_media_id:
+        return make_api_response({"success": False, "error": "Định danh không hợp lệ"}, status_code=400)
+
+    prod_dir = os.path.join("backups", clean_prod_id)
+    manifest_file = os.path.join(prod_dir, "manifest.json")
+    manifest = {}
+    if os.path.exists(manifest_file):
+        try:
+            with open(manifest_file, "r", encoding="utf-8") as mf:
+                manifest = json.load(mf)
+        except Exception:
+            manifest = {}
+
+    # Tìm file backup tương ứng
+    target_file = os.path.join(prod_dir, f"{clean_media_id}_orig.jpg")
+    target_key = clean_media_id
+
+    if not os.path.exists(target_file):
+        # Thử tra cứu qua manifest
+        found = False
+        for k, v in manifest.items():
+            if k == clean_media_id or v.get("new_image_id") == clean_media_id or v.get("new_media_raw_id") == clean_media_id:
+                cand = os.path.join(prod_dir, f"{k}_orig.jpg")
+                if os.path.exists(cand):
+                    target_file = cand
+                    target_key = k
+                    found = True
+                    break
+        if not found:
+            return make_api_response({"success": False, "error": f"Không tìm thấy file sao lưu trên VPS ({target_file})"}, status_code=404)
+
+    m_info = manifest.get(target_key, {})
+    is_applied = m_info.get("is_applied", False) or (m_info.get("applied_at") and not m_info.get("restored_at"))
+
+    # CHỐT CHẶN AN TOÀN: Nếu ảnh đang được áp dụng logo trên Shopify và không có xác nhận cưỡng bức (force=True)
+    if is_applied and not force:
+        return make_api_response({
+            "success": False,
+            "error": "CHỐT CHẶN AN TOÀN: Bản sao lưu này ĐANG ĐƯỢC ÁP DỤNG TRÊN SHOPIFY (chưa Rollback)! Để tránh mất vĩnh viễn ảnh gốc ban đầu, vui lòng thực hiện Khôi phục ảnh gốc trước, hoặc xác nhận Xóa cưỡng bức (Mất gốc).",
+            "is_applied": True,
+            "requires_force": True
+        }, status_code=409)
+
+    try:
+        f_size = os.path.getsize(target_file)
+    except Exception:
+        f_size = 0
+
+    try:
+        os.remove(target_file)
+    except Exception as e:
+        return make_api_response({"success": False, "error": f"Lỗi xóa file trên VPS: {str(e)}"}, status_code=500)
+
+    # Cập nhật manifest
+    if target_key in manifest:
+        manifest.pop(target_key, None)
+        try:
+            with open(manifest_file, "w", encoding="utf-8") as mf:
+                json.dump(manifest, mf, indent=2, ensure_ascii=False)
+        except Exception:
+            pass
+
+    # Nếu thư mục sản phẩm không còn file ảnh _orig.jpg nào, dọn dẹp luôn thư mục
+    try:
+        remaining_origs = [f for f in os.listdir(prod_dir) if f.endswith("_orig.jpg")]
+        if not remaining_origs:
+            if os.path.exists(manifest_file):
+                os.remove(manifest_file)
+            os.rmdir(prod_dir)
+    except Exception:
+        pass
+
+    size_formatted = f"{f_size / (1024 * 1024):.2f} MB" if f_size >= 1024 * 1024 else f"{f_size / 1024:.1f} KB"
+    return make_api_response({
+        "success": True,
+        "message": f"Đã xóa bản sao lưu media '{clean_media_id}' thành công! (Giải phóng {size_formatted})",
+        "freed_bytes": f_size,
+        "freed_formatted": size_formatted
+    })
+
+
+@app.post("/api/products/backups/cleanup-safe")
+async def cleanup_safe_backups():
+    """
+    Dọn dẹp hàng loạt tất cả các bản sao lưu AN TOÀN (những ảnh đã Rollback về gốc trên Shopify, is_applied == False).
+    Tuyệt đối không đụng tới các ảnh đang dán logo trên Shopify (is_applied == True).
+    """
+    backups_dir = "backups"
+    if not os.path.exists(backups_dir):
+        return make_api_response({
+            "success": True,
+            "message": "Thư mục sao lưu trống.",
+            "deleted_count": 0,
+            "freed_bytes": 0,
+            "freed_formatted": "0 KB"
+        })
+
+    deleted_count = 0
+    total_freed_bytes = 0
+
+    product_dirs = [d for d in os.listdir(backups_dir) if os.path.isdir(os.path.join(backups_dir, d))]
+    for prod_id in product_dirs:
+        p_dir = os.path.join(backups_dir, prod_id)
+        manifest_file = os.path.join(p_dir, "manifest.json")
+        manifest = {}
+        if os.path.exists(manifest_file):
+            try:
+                with open(manifest_file, "r", encoding="utf-8") as mf:
+                    manifest = json.load(mf)
+            except Exception:
+                manifest = {}
+
+        orig_files = [f for f in os.listdir(p_dir) if f.endswith("_orig.jpg")]
+        for f in orig_files:
+            clean_orig_id = f.replace("_orig.jpg", "")
+            m_info = manifest.get(clean_orig_id, {})
+            is_applied = m_info.get("is_applied", False) or (m_info.get("applied_at") and not m_info.get("restored_at"))
+
+            # CHỈ XÓA KHI is_applied LÀ FALSE (ẢNH MỘC VPS / ĐÃ ROLLBACK THÀNH CÔNG)
+            if not is_applied:
+                f_path = os.path.join(p_dir, f)
+                try:
+                    f_size = os.path.getsize(f_path)
+                    os.remove(f_path)
+                    deleted_count += 1
+                    total_freed_bytes += f_size
+                    manifest.pop(clean_orig_id, None)
+                except Exception as del_err:
+                    print(f"Error deleting safe backup {f_path}: {del_err}")
+
+        # Cập nhật lại manifest sau khi xóa
+        try:
+            rem = [f for f in os.listdir(p_dir) if f.endswith("_orig.jpg")]
+            if rem:
+                with open(manifest_file, "w", encoding="utf-8") as mf:
+                    json.dump(manifest, mf, indent=2, ensure_ascii=False)
+            else:
+                if os.path.exists(manifest_file):
+                    os.remove(manifest_file)
+                os.rmdir(p_dir)
+        except Exception:
+            pass
+
+    freed_fmt = f"{total_freed_bytes / (1024 * 1024):.2f} MB" if total_freed_bytes >= 1024 * 1024 else f"{total_freed_bytes / 1024:.1f} KB"
+    return make_api_response({
+        "success": True,
+        "message": f"Đã dọn dẹp thành công {deleted_count} bản sao lưu an toàn! Giải phóng {freed_fmt}.",
+        "deleted_count": deleted_count,
+        "freed_bytes": total_freed_bytes,
+        "freed_formatted": freed_fmt
+    })
+
+
+# =====================================================================
+# SYNC / REPLACE MEDIA FROM CUSTOM STORE TO DEFAULT STORE (VIA PROXY)
+# =====================================================================
+
+@app.post("/api/products/sync-media-from-custom-store")
+async def sync_media_from_custom_store(request: Request):
+    """
+    Thay thế toàn bộ media sản phẩm trên Store Mặc định bằng media từ Store Riêng (Custom Store).
+    - Store Riêng (Custom Store): NGUỒN ĐỌC (Tuyệt đối KHÔNG xóa/sửa).
+    - Store Mặc định (Default Store): ĐÍCH ĐẾN (Nhận ảnh mới & xóa ảnh cũ để tiết kiệm dung lượng).
+    - Toàn bộ request (GraphQL, download CDN, upload, delete) BẮT BUỘC ĐI QUA PROXY.
+    """
+    # 1. Chốt chặn an toàn: Bắt buộc Proxy phải được BẬT
+    proxy_cfg = load_proxy_config()
+    if not proxy_cfg.get("enabled"):
+        return make_api_response({
+            "success": False,
+            "error": "CHỐT CHẶN AN TOÀN: Proxy bắt buộc phải được BẬT để thực hiện thay thế media từ Store riêng!"
+        }, status_code=400)
+    
+    try:
+        proxies = get_shopify_request_proxies()
+    except (ProxySafetyException, Exception) as pe:
+        return make_api_response({
+            "success": False,
+            "error": f"CHỐT CHẶN AN TOÀN: Proxy không ổn định ({str(pe)}). Đã chặn request!"
+        }, status_code=503)
+
+    # 2. Cấu hình Store Riêng (Custom Store) - Đóng vai trò NGUỒN (CHỈ ĐỌC)
+    custom_creds = get_logo_updater_credentials(auto_refresh=True)
+    if not custom_creds.get("is_custom"):
+        return make_api_response({
+            "success": False,
+            "error": "Store riêng (Custom Store) chưa được thiết lập credentials hợp lệ!"
+        }, status_code=400)
+
+    custom_shop = custom_creds.get("shop")
+    custom_headers = custom_creds.get("headers")
+    custom_graphql_url = custom_creds.get("graphql_url")
+
+    # 3. Cấu hình Store Mặc định (Default Store) - Đóng vai trò ĐÍCH (NHẬN ẢNH & XÓA CŨ)
+    default_shop = clean_shopify_domain(SHOPIFY_SHOP)
+    default_token = SHOPIFY_ADMIN_TOKEN
+    default_headers = {
+        "X-Shopify-Access-Token": default_token,
+        "Content-Type": "application/json"
+    }
+    default_graphql_url = f"https://{default_shop}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/graphql.json"
+
+    # Kiểm tra an toàn: Đảm bảo 2 store không bị trùng nhau
+    if default_shop.lower() == custom_shop.lower():
+        return make_api_response({
+            "success": False,
+            "error": "Lỗi an toàn: Store mặc định và Store riêng đang cùng là 1 domain! Dừng thao tác."
+        }, status_code=400)
+
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+
+    handle = payload.get("handle", "").strip()
+    handles = payload.get("handles", [])
+    if handle and handle not in handles:
+        handles = [handle]
+
+    if not handles:
+        return make_api_response({
+            "success": False,
+            "error": "Thiếu thông tin handle sản phẩm cần thay thế media."
+        }, status_code=400)
+
+    def process_single_handle(p_handle: str):
+        clean_h = str(p_handle).strip()
+        query_str = """
+        query getProdMedia($handle: String!) {
+          productByHandle(handle: $handle) {
+            id
+            title
+            handle
+            media(first: 50) {
+              edges {
+                node {
+                  ... on MediaImage {
+                    id
+                    image {
+                      url
+                      altText
+                      width
+                      height
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        """
+        
+        # 1. LẤY SẢN PHẨM & MEDIA TỪ STORE RIÊNG (READ-ONLY)
+        try:
+            res_c = requests.post(
+                custom_graphql_url,
+                json={"query": query_str, "variables": {"handle": clean_h}},
+                headers=custom_headers,
+                proxies=proxies,
+                timeout=30
+            )
+            if res_c.status_code == 401 and custom_creds.get("client_id") and custom_creds.get("client_secret"):
+                ok, msg, new_tok = request_custom_app_access_token(custom_shop, custom_creds["client_id"], custom_creds["client_secret"])
+                if ok and new_tok:
+                    c_creds_updated = get_logo_updater_credentials(auto_refresh=False)
+                    res_c = requests.post(
+                        c_creds_updated["graphql_url"],
+                        json={"query": query_str, "variables": {"handle": clean_h}},
+                        headers=c_creds_updated["headers"],
+                        proxies=proxies,
+                        timeout=30
+                    )
+            if not res_c.ok:
+                return {
+                    "handle": clean_h,
+                    "success": False,
+                    "error": f"Lỗi truy vấn Store riêng ({custom_shop}): HTTP {res_c.status_code}"
+                }
+            c_prod = res_c.json().get("data", {}).get("productByHandle")
+        except (requests.exceptions.ProxyError, requests.exceptions.ConnectTimeout) as pe:
+            mark_proxy_unstable(str(pe))
+            raise ProxySafetyException("CHỐT CHẶN AN TOÀN: Proxy mất kết nối trong khi truy vấn Store riêng.")
+
+        if not c_prod:
+            return {
+                "handle": clean_h,
+                "success": False,
+                "error": f"Không tìm thấy sản phẩm trên Store riêng ({custom_shop})"
+            }
+
+        c_edges = c_prod.get("media", {}).get("edges", [])
+        c_images = []
+        for edge in c_edges:
+            node = edge.get("node", {})
+            img = node.get("image")
+            if img and img.get("url"):
+                c_images.append({
+                    "url": img.get("url"),
+                    "alt": img.get("altText") or ""
+                })
+
+        if not c_images:
+            return {
+                "handle": clean_h,
+                "success": False,
+                "error": f"Sản phẩm trên Store riêng ({custom_shop}) không có ảnh nào để thay thế."
+            }
+
+        # 2. LẤY SẢN PHẨM & MEDIA CŨ TỪ STORE MẶC ĐỊNH (TARGET)
+        try:
+            res_d = requests.post(
+                default_graphql_url,
+                json={"query": query_str, "variables": {"handle": clean_h}},
+                headers=default_headers,
+                proxies=proxies,
+                timeout=30
+            )
+            if not res_d.ok:
+                return {
+                    "handle": clean_h,
+                    "success": False,
+                    "error": f"Lỗi truy vấn Store mặc định ({default_shop}): HTTP {res_d.status_code}"
+                }
+            d_prod = res_d.json().get("data", {}).get("productByHandle")
+        except (requests.exceptions.ProxyError, requests.exceptions.ConnectTimeout) as pe:
+            mark_proxy_unstable(str(pe))
+            raise ProxySafetyException("CHỐT CHẶN AN TOÀN: Proxy mất kết nối trong khi truy vấn Store mặc định.")
+
+        if not d_prod:
+            return {
+                "handle": clean_h,
+                "success": False,
+                "error": f"Không tìm thấy sản phẩm trên Store mặc định ({default_shop})"
+            }
+
+        d_prod_gid = d_prod.get("id")
+        d_clean_prod_id = d_prod_gid.split("/")[-1]
+        d_edges = d_prod.get("media", {}).get("edges", [])
+        # Lưu lại danh sách ID ảnh cũ trên Store mặc định để xóa sau khi upload ảnh mới
+        old_default_media_ids = []
+        for edge in d_edges:
+            m_id = edge.get("node", {}).get("id")
+            if m_id:
+                old_default_media_ids.append(m_id)
+
+        # 3. TẢI VÀ UPLOAD ẢNH TỪ STORE RIÊNG SANG STORE MẶC ĐỊNH THEO THỨ TỰ (QUA PROXY)
+        rest_upload_url = f"https://{default_shop}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/products/{d_clean_prod_id}/images.json"
+        new_uploaded_images = []
+
+        for idx, img_info in enumerate(c_images, start=1):
+            cdn_url = img_info["url"]
+            # Download qua Proxy
+            try:
+                img_res = requests.get(cdn_url, proxies=proxies, timeout=30)
+                if not img_res.ok or len(img_res.content) == 0:
+                    raise Exception(f"Không thể tải ảnh #{idx} từ CDN: HTTP {img_res.status_code}")
+                img_b64 = base64.b64encode(img_res.content).decode("utf-8")
+            except (requests.exceptions.ProxyError, requests.exceptions.ConnectTimeout) as pe:
+                mark_proxy_unstable(str(pe))
+                raise ProxySafetyException(f"Proxy mất kết nối khi tải ảnh #{idx} từ CDN.")
+
+            # Upload sang Store mặc định qua Proxy
+            payload_upload = {
+                "image": {
+                    "attachment": img_b64,
+                    "position": idx,
+                    "alt": img_info.get("alt", "")
+                }
+            }
+            try:
+                up_res = requests.post(rest_upload_url, json=payload_upload, headers=default_headers, proxies=proxies, timeout=45)
+                if not up_res.ok:
+                    raise Exception(f"Lỗi tải ảnh #{idx} lên Store mặc định: {up_res.text}")
+                up_img_data = up_res.json().get("image", {})
+                new_uploaded_images.append(up_img_data.get("id"))
+            except (requests.exceptions.ProxyError, requests.exceptions.ConnectTimeout) as pe:
+                mark_proxy_unstable(str(pe))
+                raise ProxySafetyException(f"Proxy mất kết nối khi upload ảnh #{idx} lên Store mặc định.")
+
+        # 4. XÓA TOÀN BỘ ẢNH CŨ TRÊN STORE MẶC ĐỊNH (KHÔNG BAO GIỜ XÓA TRÊN STORE RIÊNG)
+        deleted_count = 0
+        for old_img_id in old_default_media_ids:
+            try:
+                del_ok = delete_shopify_image_or_media(
+                    clean_prod_id=d_clean_prod_id,
+                    media_or_image_id=old_img_id,
+                    shop=default_shop,
+                    headers=default_headers,
+                    graphql_url=default_graphql_url
+                )
+                if del_ok:
+                    deleted_count += 1
+            except Exception as del_err:
+                print(f"[Sync Media] Warning xóa ảnh cũ {old_img_id} trên Store mặc định: {del_err}")
+
+        # 5. Dọn dẹp manifest cũ trên Store mặc định (nếu có) để tránh xung đột
+        manifest_file = os.path.join("backups", d_clean_prod_id, "manifest.json")
+        if os.path.exists(manifest_file):
+            try:
+                os.remove(manifest_file)
+            except Exception:
+                pass
+
+        # 6. Gỡ bỏ tag 'logo-updated' trên sản phẩm Store mặc định (vì ảnh mới chưa mang logo)
+        try:
+            if "logo-updated" in d_prod.get("tags", []):
+                remove_tags_from_product(d_prod_gid, ["logo-updated"], headers=default_headers, graphql_url=default_graphql_url)
+        except Exception:
+            pass
+
+        return {
+            "handle": clean_h,
+            "product_title": d_prod.get("title", c_prod.get("title", clean_h)),
+            "success": True,
+            "new_images_count": len(new_uploaded_images),
+            "deleted_old_count": deleted_count,
+            "default_prod_id": d_clean_prod_id,
+            "custom_shop": custom_shop,
+            "default_shop": default_shop
+        }
+
+    results = []
+    try:
+        for h in handles:
+            r = process_single_handle(h)
+            results.append(r)
+    except ProxySafetyException as pse:
+        return make_api_response({
+            "success": False,
+            "error": str(pse),
+            "processed": results
+        }, status_code=503)
+
+    all_success = all(r.get("success") for r in results)
+    return make_api_response({
+        "success": all_success,
+        "results": results,
+        "custom_shop": custom_shop,
+        "default_shop": default_shop
+    })
+
+
+# =====================================================================
+# CUSTOMERS MANAGEMENT WITH FORCED PROXY & DUAL STORE SUPPORT
+# =====================================================================
+
+def _query_shopify_customers(shop: str, token: str, proxies: dict | None, variables: dict, timeout: int = 15):
+    """
+    Thực hiện GraphQL query lấy danh sách khách hàng từ Shopify.
+    Trả về: (success: bool, data: dict | None, error_msg: str, is_proxy_err: bool, status_code: int)
+    """
+    graphql_url = f"https://{shop}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/graphql.json"
+    headers = {
+        "X-Shopify-Access-Token": token,
+        "Content-Type": "application/json"
+    }
+
+    customer_query = """
+    query getCustomers($first: Int, $last: Int, $after: String, $before: String, $query: String, $sortKey: CustomerSortKeys, $reverse: Boolean) {
+      customers(first: $first, last: $last, after: $after, before: $before, query: $query, sortKey: $sortKey, reverse: $reverse) {
+        pageInfo {
+          hasNextPage
+          hasPreviousPage
+          startCursor
+          endCursor
+        }
+        nodes {
+          id
+          legacyResourceId
+          firstName
+          lastName
+          displayName
+          email
+          phone
+          note
+          tags
+          createdAt
+          updatedAt
+          verifiedEmail
+          state
+          numberOfOrders
+          amountSpent {
+            amount
+            currencyCode
+          }
+          defaultAddress {
+            id
+            name
+            firstName
+            lastName
+            company
+            address1
+            address2
+            city
+            province
+            country
+            countryCodeV2
+            zip
+            phone
+          }
+          addresses {
+            id
+            name
+            company
+            address1
+            address2
+            city
+            province
+            country
+            countryCodeV2
+            zip
+            phone
+          }
+          emailMarketingConsent {
+            marketingState
+            marketingOptInLevel
+            consentUpdatedAt
+          }
+          smsMarketingConsent {
+            marketingState
+            marketingOptInLevel
+            consentUpdatedAt
+          }
+          orders(first: 5, sortKey: PROCESSED_AT, reverse: true) {
+            edges {
+              node {
+                id
+                name
+                processedAt
+                displayFinancialStatus
+                displayFulfillmentStatus
+                totalPriceSet {
+                  shopMoney {
+                    amount
+                    currencyCode
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    """
+
+    try:
+        res = requests.post(
+            graphql_url,
+            json={"query": customer_query, "variables": variables},
+            headers=headers,
+            proxies=proxies,
+            timeout=timeout
+        )
+
+        if res.status_code == 401:
+            return False, None, "UNAUTHORIZED", False, 401
+
+        # Nếu proxy gateway trả về lỗi 502/503/504
+        if proxies and res.status_code in (502, 503, 504):
+            return False, None, f"Proxy Gateway US trả về mã lỗi HTTP {res.status_code}", True, res.status_code
+
+        if not res.ok:
+            return False, None, f"Lỗi HTTP {res.status_code} từ Shopify: {res.text[:300]}", False, res.status_code
+
+        data = res.json()
+        if "errors" in data:
+            err_msg = "; ".join([e.get("message", "") for e in data["errors"]])
+            return False, None, f"Lỗi Shopify GraphQL: {err_msg}", False, 200
+
+        return True, data, "", False, 200
+
+    except (requests.exceptions.ProxyError, requests.exceptions.ConnectTimeout) as pe:
+        return False, None, f"Lỗi kết nối qua Proxy Gateway US: {pe}", True, 0
+    except requests.exceptions.Timeout as te:
+        return False, None, f"Hết thời gian chờ (Timeout) qua Proxy US: {te}", bool(proxies), 0
+    except requests.exceptions.ConnectionError as ce:
+        return False, None, f"Lỗi kết nối mạng qua Proxy US: {ce}", bool(proxies), 0
+    except Exception as exc:
+        return False, None, str(exc), False, 0
+
+
+def get_customers_with_proxy(
+    use_custom_store: bool = False,
+    first: int = 50,
+    last: int = None,
+    after: str = None,
+    before: str = None,
+    query: str = None,
+    sort_key: str = "CREATED_AT",
+    reverse: bool = True
+) -> dict:
+    """
+    Truy vấn danh sách khách hàng từ Shopify GraphQL API.
+    NGUYÊN TẮC KẾT NỐI & FALLBACK:
+    1. Khi Proxy TẮT (use_custom_store == False):
+       - Server kết nối TRỰC TIẾP đến STORE MẶC ĐỊNH (SHOPIFY_SHOP), không qua Proxy.
+    2. Khi Proxy BẬT (use_custom_store == True):
+       - Server kết nối đến STORE RIÊNG, BẮT BUỘC ĐI QUA PROXY GATEWAY US.
+    3. NẾU PROXY LỖI KẾT NỐI (Proxy sập, timeout, connection refused, 502/503/504, lỗi cấp token qua proxy):
+       - Server BẮT BUỘC tự động chuyển hướng dự phòng (FALLBACK) về STORE MẶC ĐỊNH (kết nối trực tiếp),
+         đảm bảo dữ liệu khách hàng không bị gián đoạn và trả về fallback_triggered=True.
+    """
+    default_shop = clean_shopify_domain(SHOPIFY_SHOP)
+    default_full_domain = f"{default_shop}.myshopify.com"
+    default_token = SHOPIFY_ADMIN_TOKEN
+    proxy_cfg = load_proxy_config()
+    proxy_ip = proxy_cfg.get("proxy_ip") or "185.124.63.174"
+
+    def _fetch_default_store(fallback_reason: str = None) -> dict:
+        """Helper gọi lấy khách hàng từ Store Mặc định (kết nối trực tiếp)."""
+        nonlocal default_token
+        variables = {
+            "sortKey": sort_key,
+            "reverse": reverse,
+            "first": first
+        }
+        # Nếu đang fallback, bỏ qua after/before của Store Riêng để tránh lỗi cursor mismatch
+        if not fallback_reason:
+            if after:
+                variables["after"] = after
+            elif before:
+                variables["first"] = None
+                variables["last"] = last or first
+                variables["before"] = before
+        if query:
+            variables["query"] = query.strip()
+
+        ok, data, err_msg, is_proxy_err, status_code = _query_shopify_customers(
+            shop=default_shop,
+            token=default_token,
+            proxies=None,
+            variables=variables,
+            timeout=20
+        )
+
+        # Xử lý tự làm mới token nếu 401
+        if not ok and status_code == 401:
+            refreshed, r_msg, new_tok = request_default_store_access_token(force_proxy=False)
+            if refreshed and new_tok:
+                default_token = new_tok
+                ok, data, err_msg, is_proxy_err, status_code = _query_shopify_customers(
+                    shop=default_shop,
+                    token=default_token,
+                    proxies=None,
+                    variables=variables,
+                    timeout=20
+                )
+
+        if not ok:
+            return {
+                "success": False,
+                "error": f"Lỗi truy vấn Store Mặc định: {err_msg}",
+                "fallback_triggered": bool(fallback_reason),
+                "fallback_reason": fallback_reason
+            }
+
+        cust_data = data.get("data", {}).get("customers", {})
+        nodes = cust_data.get("nodes", [])
+        page_info = cust_data.get("pageInfo", {})
+
+        res = {
+            "success": True,
+            "store_info": {
+                "shop": default_shop,
+                "full_domain": default_full_domain,
+                "is_custom": False,
+                "proxy_enabled": False,
+                "is_fallback": bool(fallback_reason),
+                "store_label": f"Store Mặc định ({default_full_domain})" + (" [Dự phòng]" if fallback_reason else ""),
+                "proxy_ip": proxy_ip
+            },
+            "customers": nodes,
+            "page_info": page_info,
+            "count": len(nodes)
+        }
+        if fallback_reason:
+            res["fallback_triggered"] = True
+            res["fallback_reason"] = fallback_reason
+        return res
+
+    # 1. KHI PROXY TẮT: Server kết nối trực tiếp đến Store Mặc định
+    if not use_custom_store:
+        return _fetch_default_store()
+
+    # 2. KHI PROXY BẬT: Thử kết nối đến Store Riêng qua Proxy US
+    proxy_url = proxy_cfg.get("proxy_url")
+    if not proxy_url:
+        mark_proxy_unstable("Chưa cấu hình URL Proxy Gateway trong proxy_config.json")
+        return _fetch_default_store(
+            fallback_reason="Proxy Gateway chưa được cấu hình URL kết nối! Server đã tự động chuyển hướng dự phòng (fallback) về Store Mặc định."
+        )
+
+    custom_cfg = load_logo_updater_config()
+    if not custom_cfg.get("is_custom") or not custom_cfg.get("client_id") or not custom_cfg.get("client_secret"):
+        raw_shop_hint = clean_shopify_domain(custom_cfg.get("shop_domain")) or "store-rieng"
+        return {
+            "success": False,
+            "need_config": True,
+            "full_domain": f"{raw_shop_hint}.myshopify.com",
+            "error": "Bạn đang BẬT Proxy để kết nối Store Riêng, nhưng chưa cấu hình Shopify App cho Store Riêng trong trang Cài đặt (Settings). Vui lòng vào Cài đặt để nhập Shop Domain, Client ID và Client Secret cho Store Riêng hoặc TẮT Proxy để kết nối trực tiếp Store Mặc định."
+        }
+
+    raw_shop = custom_cfg.get("shop_domain")
+    custom_shop = clean_shopify_domain(raw_shop) if raw_shop else default_shop
+    custom_full_domain = f"{custom_shop}.myshopify.com"
+    client_id = custom_cfg.get("client_id")
+    client_secret = custom_cfg.get("client_secret")
+    token = (custom_cfg.get("access_token") or "").strip()
+    expires_at = custom_cfg.get("token_expires_at")
+
+    # Kiểm tra hạn token Store Riêng
+    is_expired = False
+    if expires_at:
+        try:
+            if datetime.now().timestamp() >= (float(expires_at) - 60):
+                is_expired = True
+        except Exception:
+            pass
+
+    proxies = {"http": proxy_url, "https": proxy_url}
+
+    if not token or is_expired:
+        ok, msg, new_tok = request_custom_app_access_token(custom_shop, client_id, client_secret, force_proxy=True)
+        if ok and new_tok:
+            token = new_tok
+        else:
+            # Lỗi khi cấp token qua proxy -> Đánh dấu proxy unstable và Fallback về Store Mặc định
+            mark_proxy_unstable(f"Không thể cấp token cho Store Riêng qua Proxy: {msg}")
+            return _fetch_default_store(
+                fallback_reason=f"Không thể lấy Access Token cho Store Riêng qua Proxy US ({msg}). Hệ thống đã tự động chuyển hướng dự phòng (fallback) về Store Mặc định."
+            )
+
+    # Chuẩn bị variables query Store Riêng
+    variables = {
+        "sortKey": sort_key,
+        "reverse": reverse,
+        "first": first
+    }
+    if after:
+        variables["after"] = after
+    elif before:
+        variables["first"] = None
+        variables["last"] = last or first
+        variables["before"] = before
+    if query:
+        variables["query"] = query.strip()
+
+    # Thực hiện GraphQL Query qua Proxy US (timeout 15s)
+    ok, data, err_msg, is_proxy_err, status_code = _query_shopify_customers(
+        shop=custom_shop,
+        token=token,
+        proxies=proxies,
+        variables=variables,
+        timeout=15
+    )
+
+    # Nếu nhận 401 thì thử làm mới token 1 lần
+    if not ok and status_code == 401:
+        refreshed, r_msg, new_tok = request_custom_app_access_token(custom_shop, client_id, client_secret, force_proxy=True)
+        if refreshed and new_tok:
+            token = new_tok
+            ok, data, err_msg, is_proxy_err, status_code = _query_shopify_customers(
+                shop=custom_shop,
+                token=token,
+                proxies=proxies,
+                variables=variables,
+                timeout=15
+            )
+
+    # NẾU LỖI KẾT NỐI PROXY -> BẮT BUỘC FALLBACK VỀ STORE MẶC ĐỊNH
+    if not ok and is_proxy_err:
+        mark_proxy_unstable(err_msg)
+        return _fetch_default_store(
+            fallback_reason=f"Kết nối tới Store Riêng qua Proxy US bị gián đoạn ({err_msg}). Hệ thống đã tự động chuyển hướng dự phòng (fallback) về Store Mặc định ({default_full_domain})."
+        )
+
+    # Nếu lỗi khác (ví dụ: Shopify báo lỗi query schema hoặc quyền)
+    if not ok:
+        return {
+            "success": False,
+            "error": err_msg
+        }
+
+    cust_data = data.get("data", {}).get("customers", {})
+    nodes = cust_data.get("nodes", [])
+    page_info = cust_data.get("pageInfo", {})
+
+    return {
+        "success": True,
+        "store_info": {
+            "shop": custom_shop,
+            "full_domain": custom_full_domain,
+            "is_custom": True,
+            "proxy_enabled": True,
+            "is_fallback": False,
+            "store_label": f"Store Riêng ({custom_full_domain})",
+            "proxy_ip": proxy_ip
+        },
+        "customers": nodes,
+        "page_info": page_info,
+        "count": len(nodes)
+    }
+
+
+@app.get("/customers", response_class=HTMLResponse)
+async def customers_page(request: Request):
+    """
+    Trang Danh sách khách hàng dạng bảng, sort mới nhất đến cũ nhất,
+    có popup xem chi tiết và section bật/tắt proxy.
+    """
+    proxy_cfg = load_proxy_config()
+    custom_cfg = load_logo_updater_config()
+    is_proxy_enabled = bool(proxy_cfg.get("enabled", False))
+
+    default_clean = clean_shopify_domain(SHOPIFY_SHOP)
+    default_full = f"{default_clean}.myshopify.com"
+    custom_clean = clean_shopify_domain(custom_cfg.get("shop_domain")) if custom_cfg.get("is_custom") else default_clean
+    custom_full = f"{custom_clean}.myshopify.com"
+    active_full = custom_full if is_proxy_enabled else default_full
+
+    return templates.TemplateResponse(
+        request=request,
+        name="customers.html",
+        context={
+            "request": request,
+            "proxy_enabled": is_proxy_enabled,
+            "proxy_cfg": proxy_cfg,
+            "custom_cfg": custom_cfg,
+            "default_shop": default_clean,
+            "default_full_domain": default_full,
+            "custom_full_domain": custom_full,
+            "active_full_domain": active_full
+        }
+    )
+
+
+@app.get("/api/customers")
+async def api_get_customers(request: Request):
+    """
+    API lấy danh sách khách hàng.
+    - use_custom_store = true -> dùng Store Riêng (qua Proxy).
+    - use_custom_store = false -> dùng Store Mặc định (trực tiếp không qua Proxy).
+    """
+    params = request.query_params
+    proxy_cfg = load_proxy_config()
+
+    use_custom_raw = params.get("use_custom_store")
+    if use_custom_raw is not None:
+        custom_flag = use_custom_raw.lower() in ("true", "1", "yes")
+    else:
+        custom_flag = bool(proxy_cfg.get("enabled", False))
+
+    first_val = int(params.get("first", 50))
+    last_val = int(params.get("last")) if params.get("last") else None
+    after_val = params.get("after")
+    before_val = params.get("before")
+    query_val = params.get("query")
+    sort_key_val = params.get("sort_key", "CREATED_AT")
+    reverse_val = params.get("reverse", "true").lower() in ("true", "1", "yes")
+
+    result = get_customers_with_proxy(
+        use_custom_store=custom_flag,
+        first=first_val,
+        last=last_val,
+        after=after_val,
+        before=before_val,
+        query=query_val,
+        sort_key=sort_key_val,
+        reverse=reverse_val
+    )
+    return JSONResponse(result)
+
+
+@app.post("/api/customers/toggle-proxy")
+async def api_customers_toggle_proxy(request: Request):
+    """
+    Bật hoặc tắt Proxy cho trang Khách hàng (đồng bộ cấu hình proxy).
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+
+    enabled = bool(body.get("enabled", False))
+    cfg = load_proxy_config()
+    cfg["enabled"] = enabled
+    save_proxy_config(cfg)
+
+    custom_cfg = load_logo_updater_config()
+    target_shop = clean_shopify_domain(custom_cfg.get("shop_domain")) if (enabled and custom_cfg.get("is_custom")) else clean_shopify_domain(SHOPIFY_SHOP)
+    full_domain = f"{target_shop}.myshopify.com"
+
+    return JSONResponse({
+        "success": True,
+        "proxy_enabled": enabled,
+        "target_shop": target_shop,
+        "full_domain": full_domain,
+        "store_label": f"Store Riêng ({full_domain})" if (enabled and custom_cfg.get("is_custom")) else f"Store Mặc định ({full_domain})",
+        "message": f"Đã chuyển sang {'Store Riêng (qua Proxy US)' if enabled else 'Store Mặc định (kết nối trực tiếp)'}."
+    })
+
+
 
 
 
