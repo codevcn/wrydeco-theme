@@ -4,247 +4,298 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
-  <title>Wrydeco Scraper Console</title>
+  <title>Wrydeco Scraper Queue</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&amp;display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
 </head>
 <body>
   <header class="topbar">
     <div class="brand-mark" aria-hidden="true">W</div>
-    <div>
-      <p class="eyebrow">WRYDECO OPERATIONS</p>
-      <h1>Amazon → Shopify Scraper</h1>
-    </div>
+    <div><p class="eyebrow">WRYDECO OPERATIONS</p><h1>Amazon → Shopify Scraper</h1></div>
+    <nav class="tool-nav" aria-label="Điều hướng công cụ">
+      <button id="open-prompts" class="topbar-button" type="button" data-requires-agent>
+        <span class="button-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4z"></path></svg>
+        </span>
+        <span class="button-label">Chỉnh Prompt</span>
+      </button>
+      <button id="open-docs" class="topbar-button" type="button">
+        <span class="button-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11a3 3 0 0 1 3 3v14a3 3 0 0 0-3-3H6.5A2.5 2.5 0 0 0 4 19.5z"></path><path d="M20 5.5A2.5 2.5 0 0 0 17.5 3H14v17a3 3 0 0 1 3-3h.5a2.5 2.5 0 0 1 2.5 2.5z"></path></svg>
+        </span>
+        <span class="button-label">Xem Docs</span>
+      </button>
+    </nav>
     <div class="connection"><span class="pulse"></span><span>Local · port 5000</span></div>
   </header>
+
+  <div id="agent-startup-toast" class="agent-startup-toast" role="status" aria-live="polite" aria-atomic="true">
+    <span class="agent-startup-spinner" aria-hidden="true"></span>
+    <div>
+      <strong id="agent-startup-title">Đang khởi động Antigravity</strong>
+      <span id="agent-startup-message">Server đang tạo conversation và kiểm tra kết nối MCP. Các thao tác đang tạm khóa.</span>
+    </div>
+  </div>
 
   <main class="shell">
     <section class="hero">
       <div>
-        <p class="eyebrow">CONTROL ROOM</p>
-        <h2>Một manifest. Một agent. Một luồng kiểm chứng.</h2>
-        <p>Chuẩn bị batch, theo dõi từng checkpoint và chỉ sync Shopify sau khi giá, nội dung và media đều hợp lệ.</p>
+        <p class="eyebrow">QUEUE PIPELINE</p>
+        <h2>Một control conversation. Content context riêng cho từng sản phẩm.</h2>
+        <p>Server khởi động Antigravity, kiểm chứng kết nối MCP rồi mới mở khóa crawler và Shopify.</p>
       </div>
-      <div class="hero-stat">
-        <span id="hero-job-state" class="status-pill neutral">Sẵn sàng</span>
-        <strong id="hero-product-count">0</strong>
-        <small>sản phẩm trong manifest</small>
-      </div>
+      <div class="hero-stat"><span id="hero-job-state" class="status-pill neutral">Sẵn sàng</span><strong id="hero-product-count">0</strong><small>sản phẩm trong manifest</small></div>
     </section>
 
     <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
 
-    <section class="panel agent-connection-panel" aria-labelledby="agent-connection-title">
-      <div class="agent-connection-main">
-        <span id="agent-connection-dot" class="connection-dot neutral" aria-hidden="true"></span>
-        <div>
-          <p class="eyebrow">PERSISTENT CONVERSATION</p>
-          <h3 id="agent-connection-title">Kết nối Antigravity</h3>
-          <p id="agent-connection-message" class="muted">Đang đọc trạng thái kết nối…</p>
+    <section class="panel queue-panel" aria-labelledby="queue-title">
+      <div class="panel-heading">
+        <div><p class="eyebrow">SERVER-MANAGED CONVERSATION</p><h3 id="queue-title">Antigravity Runtime</h3><p id="agent-message" class="muted">Đang chờ trạng thái Antigravity…</p></div>
+        <div class="agent-heading-actions">
+          <button id="open-agent-sessions" class="button secondary" type="button">
+            <span class="button-icon" aria-hidden="true">◫</span><span class="button-label">Quản lý conversations</span><span id="agent-cleanup-count" class="button-count" hidden>0</span>
+          </button>
+          <span class="agent-status-badge-wrap">
+            <span id="agent-status" class="status-pill neutral" tabindex="0" aria-describedby="agent-status-tooltip">STOPPED</span>
+            <span id="agent-status-tooltip" class="agent-status-tooltip" role="tooltip">Không còn giữ được conversation; các thao tác mutation sẽ bị khóa.</span>
+          </span>
+          <button id="check-agent" class="button secondary compact" type="button" disabled><span class="button-icon" aria-hidden="true">♥</span><span class="button-label">Kiểm tra kết nối</span></button>
+          <button id="restart-agent" class="button warning" type="button" hidden><span class="button-icon">↻</span><span class="button-label">Khởi động lại Agent</span></button>
         </div>
       </div>
-      <div class="agent-connection-meta">
-        <span id="agent-connection-status" class="status-pill neutral">Chưa kết nối</span>
-        <span id="agent-conversation-id" class="mono muted">Conversation: —</span>
-        <button id="connect-agent" class="button secondary" type="button">
-          <span class="button-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 12h8M12 8v8M5 5l14 14"/></svg></span>
-          <span class="button-label">Kết nối lại</span>
-        </button>
+      <div class="agent-runtime-grid">
+        <div><span>Conversation</span><strong id="agent-conversation">—</strong></div>
+        <div><span>PID</span><strong id="agent-pid">—</strong></div>
+        <div><span>Turns</span><strong id="agent-turns">0</strong></div>
+        <div><span>Current task</span><strong id="agent-current-task">—</strong></div>
+        <div><span>Last activity</span><strong id="agent-last-activity">—</strong></div>
       </div>
+      <div class="queue-stats">
+        <div><strong id="count-queued">0</strong><span>Queued</span></div>
+        <div><strong id="count-claimed">0</strong><span>Claimed</span></div>
+        <div><strong id="count-ready">0</strong><span>Content ready</span></div>
+        <div><strong id="count-applying">0</strong><span>Applying</span></div>
+        <div><strong id="count-failed">0</strong><span>Failed</span></div>
+      </div>
+      <p class="help">Mọi mutation bị khóa cho đến khi bootstrap prompt, MCP tool check và conversation ID đều hợp lệ. Event Log hiển thị stream đã sanitize.</p>
     </section>
 
     <section class="panel manifest-panel">
       <div class="panel-heading">
         <div>
           <p class="eyebrow">01 · MANIFEST</p>
-          <h3>Danh sách sản phẩm</h3>
+          <div class="heading-with-badge">
+            <h3>Danh sách sản phẩm</h3>
+            <span id="manifest-row-count" class="heading-badge" title="Số lượng row trong danh sách">0</span>
+          </div>
         </div>
-        <button id="add-product" class="button secondary" type="button">
-          <span class="button-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>
-          <span class="button-label">Thêm sản phẩm</span>
-        </button>
+        <button id="add-product" class="button secondary" type="button"><span class="button-icon">＋</span><span class="button-label">Thêm sản phẩm</span></button>
       </div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Amazon URL</th>
-              <th>Shopify product ID</th>
-              <th>Mode</th>
-              <th>Preset / overrides</th>
-              <th><span class="sr-only">Thao tác</span></th>
-            </tr>
-          </thead>
-          <tbody id="products-body"></tbody>
-        </table>
-      </div>
-      <details class="json-preview">
-        <summary>Xem trước products.json</summary>
-        <pre id="manifest-preview"></pre>
-      </details>
+      <div class="table-wrap"><table><thead><tr><th>Amazon URL</th><th>Shopify product ID</th><th>Mode</th><th>Preset / overrides</th><th><span class="sr-only">Thao tác</span></th></tr></thead><tbody id="products-body"></tbody></table></div>
+      <details class="json-preview"><summary>Xem trước products.json</summary><pre id="manifest-preview"></pre></details>
     </section>
 
-    <section class="work-grid">
-      <article class="panel prompt-panel">
-        <div class="panel-heading compact">
-          <div>
-            <p class="eyebrow">02 · ANTIGRAVITY</p>
-            <h3>Prompt tạo nội dung</h3>
-          </div>
-          <button id="copy-prompt" class="text-button" type="button">
-            <span class="button-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg></span>
-            <span class="button-label">Copy</span>
-          </button>
-        </div>
-        <p class="help">Mặc định từ <code>scraper/AGENT_PROMPT.md</code>. Chỉnh sửa chỉ áp dụng cho lần chạy này.</p>
-        <textarea id="agent-prompt" spellcheck="false" aria-label="Antigravity prompt"></textarea>
-      </article>
-
-      <article class="panel settings-panel">
-        <div class="panel-heading compact">
-          <div>
-            <p class="eyebrow">03 · EXECUTION</p>
-            <h3>Cấu hình chạy</h3>
-          </div>
-        </div>
-        <div class="field-grid">
-          <label class="field"><span>Amazon ZIP</span><input id="postal-code" inputmode="numeric" maxlength="9"></label>
-          <label class="field"><span>Max combinations</span><input id="max-combinations" type="number" min="1" max="100"></label>
-          <label class="toggle"><input id="headless" type="checkbox"><span></span>Chạy browser ẩn</label>
-          <label class="toggle"><input id="dry-run" type="checkbox"><span></span>Dry run, không sync Shopify</label>
-        </div>
-        <div class="safety-note">
-          <strong>Fail closed</strong>
-          <p>Giá không chắc chắn, CAPTCHA hoặc mutation lỗi sẽ dừng riêng sản phẩm và giữ evidence.</p>
-        </div>
-      </article>
+    <section class="panel settings-panel">
+      <div class="panel-heading compact"><div><p class="eyebrow">02 · EXECUTION</p><h3>Cấu hình chạy</h3></div></div>
+      <div class="field-grid">
+        <label class="field"><span>Amazon ZIP</span><input id="postal-code" inputmode="numeric" maxlength="9"></label>
+        <label class="field"><span>Max combinations</span><input id="max-combinations" type="number" min="1" max="100"></label>
+        <label class="toggle"><input id="headless" type="checkbox"><span></span>Chạy browser ẩn</label>
+        <label class="toggle"><input id="dry-run" type="checkbox"><span></span>Dry run, không sync Shopify</label>
+      </div>
+      <div class="safety-note"><strong>Fail closed</strong><p>Giá không chắc chắn, CAPTCHA hoặc mutation lỗi sẽ dừng riêng sản phẩm và giữ evidence.</p></div>
     </section>
 
     <section class="action-bar">
       <div>
-        <button id="save-manifest" class="button secondary" type="button">
-          <span class="button-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 4h12l2 2v14H5z"/><path d="M8 4v6h8V4M8 20v-6h8v6"/></svg></span>
-          <span class="button-label">Lưu manifest</span>
-        </button>
-        <button id="run-batch" class="button primary" type="button">
-          <span class="button-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg></span>
-          <span class="button-label">Chạy batch</span>
-        </button>
-        <button id="resume-batch" class="button warning" type="button" hidden>
-          <span class="button-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6"/></svg></span>
-          <span class="button-label">Resume checkpoint</span>
-        </button>
+        <button id="save-manifest" class="button secondary" type="button"><span class="button-icon">▣</span><span class="button-label">Lưu manifest</span></button>
+        <button id="run-batch" class="button primary" type="button"><span class="button-icon">▶</span><span class="button-label">Chạy batch</span></button>
+        <button id="resume-crawl" class="button warning" type="button" hidden><span class="button-icon">↻</span><span class="button-label">Resume crawl</span></button>
       </div>
-      <p id="run-hint">Server chỉ cho phép một batch hoạt động tại một thời điểm.</p>
+      <p id="run-hint">Một crawler và một Shopify worker; các run đang chờ content không khóa crawler.</p>
     </section>
 
     <section class="panel content-editor-panel" aria-labelledby="content-editor-title">
       <div class="panel-heading">
-        <div>
-          <p class="eyebrow">CONTENT.JSON EDITOR</p>
-          <h3 id="content-editor-title">Nội dung sản phẩm</h3>
-        </div>
-        <div class="content-editor-toolbar">
-          <label class="sr-only" for="content-product">Chọn sản phẩm</label>
-          <select id="content-product" aria-label="Chọn sản phẩm"></select>
-          <span id="content-validation-status" class="status-pill neutral">Chưa tải</span>
-        </div>
+        <div><p class="eyebrow">CONTENT QUEUE EDITOR</p><h3 id="content-editor-title">Content draft</h3></div>
+        <div class="content-editor-toolbar"><select id="content-product" aria-label="Chọn content task"></select><span id="content-validation-status" class="status-pill neutral">Chưa tải</span></div>
       </div>
-      <div id="content-editor-empty" class="empty-state">Chọn một execution có sản phẩm để chỉnh sửa content.json.</div>
+      <div id="content-editor-empty" class="empty-state">Chọn một task content để xem hoặc chỉnh sửa.</div>
       <form id="content-editor-form" hidden>
-        <div class="content-fields">
-          <label class="field content-field">
-            <span>Product title <small data-count-for="content-title">0 / 50–70</small></span>
-            <input id="content-title" data-content-field="title" autocomplete="off">
-          </label>
-          <label class="field content-field">
-            <span>SEO product title <small data-count-for="content-seo-product-title">0 / 50–70</small></span>
-            <input id="content-seo-product-title" data-content-field="seo_product_title" autocomplete="off">
-          </label>
-          <label class="field content-field">
-            <span>SEO title <small data-count-for="content-seo-title">0 / 50–60</small></span>
-            <input id="content-seo-title" data-content-field="seo_title" autocomplete="off">
-          </label>
-          <label class="field content-field">
-            <span>Handle <small data-count-for="content-handle">0 / 50–60</small></span>
-            <input id="content-handle" data-content-field="handle" autocomplete="off" spellcheck="false">
-          </label>
-          <label class="field content-field full">
-            <span>SEO description <small data-count-for="content-seo-description">0 / 150–160</small></span>
-            <textarea id="content-seo-description" data-content-field="seo_description" rows="4"></textarea>
-          </label>
-          <label class="field content-field full">
-            <span>Description HTML</span>
-            <textarea id="content-description-html" data-content-field="description_html" rows="12" spellcheck="false"></textarea>
-          </label>
+        <div class="visual-analysis-summary">
+          <div><strong>Visual grounding</strong><span id="visual-analysis-state" class="status-pill neutral">Chưa có</span></div>
+          <p id="visual-target" class="muted">Agent chưa xác định sản phẩm chính trong gallery.</p>
+          <div id="visual-keywords" class="visual-keywords"></div>
+          <div id="content-collisions" class="content-collisions" hidden></div>
         </div>
-        <div class="content-editor-footer">
-          <p id="content-editor-message" class="muted">Các field được validate theo scraper/content.py trước khi lưu.</p>
-          <div>
-            <button id="reload-content" class="button secondary" type="button">
-              <span class="button-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6"/></svg></span>
-              <span class="button-label">Tải lại</span>
-            </button>
-            <button id="save-content" class="button primary" type="submit">
-              <span class="button-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 4h12l2 2v14H5z"/><path d="M8 4v6h8V4M8 20v-6h8v6"/></svg></span>
-              <span class="button-label">Lưu content.json</span>
-            </button>
-          </div>
+        <div class="content-fields">
+          <label class="field content-field"><span>Product title <small data-count-for="content-title"></small></span><input id="content-title" data-content-field="title"></label>
+          <label class="field content-field"><span>SEO product title <small data-count-for="content-seo-product-title"></small></span><input id="content-seo-product-title" data-content-field="seo_product_title"></label>
+          <label class="field content-field"><span>SEO title <small data-count-for="content-seo-title"></small></span><input id="content-seo-title" data-content-field="seo_title"></label>
+          <label class="field content-field"><span>Handle <small data-count-for="content-handle"></small></span><input id="content-handle" data-content-field="handle" spellcheck="false"></label>
+          <label class="field content-field full"><span>SEO description <small data-count-for="content-seo-description"></small></span><textarea id="content-seo-description" data-content-field="seo_description" rows="4"></textarea></label>
+          <label class="field content-field full"><span>Description HTML</span><textarea id="content-description-html" data-content-field="description_html" rows="12" spellcheck="false"></textarea></label>
+        </div>
+        <p id="content-editor-message" class="muted"></p>
+        <div class="content-actions">
+          <button id="reload-content" class="button secondary" type="button"><span class="button-icon">↻</span><span class="button-label">Tải lại</span></button>
+          <button id="save-content" class="button secondary" type="submit"><span class="button-icon">▣</span><span class="button-label">Lưu draft</span></button>
+          <button id="finalize-content" class="button primary" type="button"><span class="button-icon">✓</span><span class="button-label">Validate & Finalize</span></button>
+          <button id="release-claim" class="button warning" type="button" hidden><span class="button-icon">↩</span><span class="button-label">Release content claim</span></button>
+          <button id="requeue-content" class="button warning" type="button" hidden><span class="button-icon">↺</span><span class="button-label">Return to content queue</span></button>
+          <button id="retry-content" class="button warning" type="button" hidden><span class="button-icon">↻</span><span class="button-label">Retry content</span></button>
+          <button id="retry-shopify" class="button warning" type="button" hidden><span class="button-icon">↻</span><span class="button-label">Retry Shopify</span></button>
+          <button id="acknowledge-product" class="button secondary" type="button" hidden><span class="button-icon">✓</span><span class="button-label">Acknowledge & close</span></button>
         </div>
       </form>
     </section>
 
     <section class="panel progress-panel">
-      <div class="panel-heading">
-        <div>
-          <p class="eyebrow">LIVE RUN</p>
-          <h3>Tiến trình</h3>
-        </div>
-        <span id="job-id" class="mono muted">Chưa có job</span>
-      </div>
+      <div class="panel-heading"><div><p class="eyebrow">LIVE RUN</p><h3>Tiến trình</h3></div><span id="job-id" class="mono muted">Chưa có run</span></div>
       <ol id="stepper" class="stepper">
-        <li data-step="manifest"><span>1</span><div><strong>Manifest</strong><small>Validate input</small></div></li>
+        <li data-step="manifest"><span>1</span><div><strong>Manifest</strong><small>Snapshot</small></div></li>
         <li data-step="crawl"><span>2</span><div><strong>Amazon</strong><small>Media & price</small></div></li>
-        <li data-step="agent"><span>3</span><div><strong>Antigravity</strong><small>Content JSON</small></div></li>
+        <li data-step="content"><span>3</span><div><strong>Content queue</strong><small>Antigravity Agent</small></div></li>
         <li data-step="shopify"><span>4</span><div><strong>Shopify</strong><small>Apply & verify</small></div></li>
-        <li data-step="done"><span>5</span><div><strong>Complete</strong><small>Final report</small></div></li>
+        <li data-step="done"><span>5</span><div><strong>Complete</strong><small>Report</small></div></li>
       </ol>
       <div id="product-progress" class="product-progress empty-state">Chạy một batch để xem tiến trình từng ASIN.</div>
-      <div class="log-heading"><strong>Event log</strong><button id="clear-log" class="text-button" type="button">
-        <span class="button-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13"/></svg></span>
-        <span class="button-label">Clear view</span>
-      </button></div>
-      <pre id="event-log" class="event-log" aria-live="polite"></pre>
+      <div class="log-heading">
+        <strong>Event log</strong>
+        <div class="log-actions">
+          <button id="log-scroll-bottom" class="text-button" type="button">↓ <span class="button-label">Scroll to bottom</span></button>
+          <button id="clear-log" class="text-button" type="button">⌫ <span class="button-label">Clear view</span></button>
+        </div>
+      </div>
+      <pre id="event-log" class="event-log" aria-live="polite" tabindex="0"></pre>
     </section>
 
-    <section class="panel history-panel">
-      <div class="panel-heading compact"><div><p class="eyebrow">RECENT</p><h3>Lịch sử local</h3></div></div>
-      <div id="job-history" class="history-list"></div>
-    </section>
+    <section class="panel history-panel"><div class="panel-heading compact"><div><p class="eyebrow">RECENT</p><h3>Lịch sử local</h3></div></div><div id="job-history" class="history-list"></div></section>
   </main>
+
+  <nav class="page-scroll-controls" aria-label="Cuộn trang nhanh">
+    <button id="page-view-log" class="page-scroll-button" type="button" title="Đi đến Tiến trình" aria-label="Đi đến section Tiến trình">
+      <span aria-hidden="true">≡</span><span>View Log</span>
+    </button>
+    <button id="page-scroll-top" class="page-scroll-button" type="button" title="Cuộn lên đầu trang" aria-label="Cuộn lên đầu trang">
+      <span aria-hidden="true">↑</span><span>Top</span>
+    </button>
+    <button id="page-scroll-bottom" class="page-scroll-button" type="button" title="Cuộn xuống cuối trang" aria-label="Cuộn xuống cuối trang">
+      <span aria-hidden="true">↓</span><span>Bottom</span>
+    </button>
+  </nav>
+
+  <div id="product-type-modal" class="product-type-modal" role="dialog" aria-modal="true" aria-labelledby="product-type-title" hidden>
+    <div class="product-type-dialog">
+      <header class="docs-header">
+        <div class="docs-header-content"><p class="eyebrow">SHOPIFY PRODUCT TYPE</p><h2 id="product-type-title">Chọn product type</h2></div>
+        <button id="close-product-type" class="docs-close" type="button" aria-label="Đóng chọn product type">×</button>
+      </header>
+      <div class="product-type-body">
+        <p class="muted">Chọn một giá trị có sẵn hoặc nhập product type tùy chỉnh.</p>
+        <div id="product-type-options" class="product-type-options" role="listbox" aria-label="Product type có sẵn"></div>
+        <label class="field product-type-custom"><span>Product type tùy chỉnh</span><input id="product-type-custom" type="text" autocomplete="off" placeholder="ví dụ: console-table"></label>
+      </div>
+      <footer class="product-type-footer">
+        <p id="product-type-status" class="muted" role="status"></p>
+        <button id="apply-product-type" class="button primary" type="button"><span class="button-icon" aria-hidden="true">✓</span><span class="button-label">Áp dụng</span></button>
+      </footer>
+    </div>
+  </div>
+
+  <div id="docs-modal" class="docs-modal" role="dialog" aria-modal="true" aria-labelledby="docs-title" hidden>
+    <div class="docs-dialog">
+      <header class="docs-header">
+        <div class="docs-header-content"><p class="eyebrow">SCRAPER DOCUMENTATION</p><h2 id="docs-title">Trình xem Docs</h2></div>
+        <button id="close-docs" class="docs-close" type="button" aria-label="Đóng trình xem Docs">×</button>
+      </header>
+      <div class="docs-layout">
+        <aside class="docs-sidebar" aria-label="Danh sách tài liệu">
+          <div class="docs-sidebar-heading"><strong>Tài liệu</strong><span id="docs-count">0 file</span></div>
+          <div id="docs-list" class="docs-list"><p class="docs-empty">Đang tải danh sách…</p></div>
+        </aside>
+        <section class="docs-viewer" aria-labelledby="docs-current-file">
+          <div class="docs-viewer-toolbar">
+            <div><span class="docs-file-label">Đang xem</span><strong id="docs-current-file">Chưa chọn file</strong></div>
+            <button id="docs-scroll-bottom" class="button secondary" type="button" disabled>
+              <span class="button-icon" aria-hidden="true">↓</span><span class="button-label">Scroll to bottom</span>
+            </button>
+          </div>
+          <article id="docs-content" class="docs-content" tabindex="0"><p class="docs-placeholder">Chọn một file .md hoặc .txt từ danh sách bên trái.</p></article>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <div id="prompts-modal" class="prompts-modal" role="dialog" aria-modal="true" aria-labelledby="prompts-title" hidden>
+    <form id="prompts-form" class="prompts-dialog">
+      <header class="docs-header">
+        <div class="docs-header-content"><p class="eyebrow">ANTIGRAVITY CONFIGURATION</p><h2 id="prompts-title">Chỉnh Prompt</h2></div>
+        <button id="close-prompts" class="docs-close" type="button" aria-label="Đóng trình chỉnh Prompt">×</button>
+      </header>
+      <div class="prompts-body">
+        <div class="prompts-intro">
+          <div><strong>Prompt dùng lâu dài</strong><p>Thay đổi được lưu trực tiếp vào scraper và áp dụng khi server khởi động Antigravity conversation mới.</p></div>
+          <span class="status-pill neutral">2 FILES</span>
+        </div>
+        <div class="prompts-grid">
+          <label class="prompt-editor-card" for="agent-prompt-editor">
+            <span class="prompt-editor-heading"><span><strong>AGENT_PROMPT.md</strong><small>Quy tắc nội dung, title, description và SEO.</small></span><small id="agent-prompt-count">0 ký tự</small></span>
+            <textarea id="agent-prompt-editor" spellcheck="false" aria-describedby="prompts-status"></textarea>
+          </label>
+          <label class="prompt-editor-card" for="content-task-prompt-editor">
+            <span class="prompt-editor-heading"><span><strong>CONTENT_TASK_PROMPT.md</strong><small>Lệnh cố định cho từng task trong content queue.</small></span><small id="content-task-prompt-count">0 ký tự</small></span>
+            <textarea id="content-task-prompt-editor" spellcheck="false" aria-describedby="prompts-status"></textarea>
+          </label>
+        </div>
+      </div>
+      <footer class="prompts-footer">
+        <p id="prompts-status" class="muted" role="status">Đang chờ tải prompt…</p>
+        <button id="save-prompts" class="button primary" type="submit">
+          <span class="button-icon" aria-hidden="true">▣</span><span class="button-label">Lưu prompt</span>
+        </button>
+      </footer>
+    </form>
+  </div>
+
+  <div id="agent-sessions-modal" class="sessions-modal" role="dialog" aria-modal="true" aria-labelledby="agent-sessions-title" hidden>
+    <div class="sessions-dialog">
+      <header class="docs-header">
+        <div class="docs-header-content"><p class="eyebrow">SAFE CLEANUP WORKFLOW</p><h2 id="agent-sessions-title">Quản lý Antigravity Conversations</h2></div>
+        <button id="close-agent-sessions" class="docs-close" type="button" aria-label="Đóng quản lý conversations">×</button>
+      </header>
+      <div class="sessions-body">
+        <div class="cleanup-guide">
+          <div class="cleanup-guide-icon" aria-hidden="true">i</div>
+          <div>
+            <strong>Antigravity yêu cầu xác nhận xóa trong TUI</strong>
+            <p>Chọn một conversation cũ, mở TUI, gõ <code>/resume</code>, tìm đúng ID rồi nhấn <kbd>Ctrl</kbd> + <kbd>Delete</kbd> và xác nhận. Chỉ nhấn <strong>Đã xóa trong Antigravity</strong> sau khi hoàn tất.</p>
+          </div>
+        </div>
+        <div class="sessions-summary">
+          <div><span>Conversation hiện tại</span><strong id="sessions-current-count">0</strong></div>
+          <div><span>Chờ dọn</span><strong id="sessions-pending-count">0</strong></div>
+          <button id="reload-agent-sessions" class="button secondary" type="button"><span class="button-icon" aria-hidden="true">↻</span><span class="button-label">Tải lại</span></button>
+        </div>
+        <div id="agent-sessions-list" class="agent-sessions-list"><p class="docs-placeholder">Đang tải danh sách conversation…</p></div>
+      </div>
+      <footer class="sessions-footer">
+        <p class="muted">Dashboard không tự nhấn phím xóa và không chỉnh sửa thư mục <code>.gemini</code>.</p>
+        <button id="close-agent-sessions-footer" class="button secondary" type="button"><span class="button-label">Đóng</span></button>
+      </footer>
+    </div>
+  </div>
 
   <template id="product-row-template">
     <tr class="product-row">
       <td><label class="mobile-label">Amazon URL</label><input data-field="amazon_url" type="url" placeholder="https://www.amazon.com/dp/ASIN"></td>
       <td><label class="mobile-label">Shopify product ID</label><input data-field="shopify_product_id" inputmode="numeric" placeholder="103…"></td>
       <td><label class="mobile-label">Mode</label><select data-field="mode"><option value="auto">auto</option><option value="dynamic">dynamic</option><option value="preset">preset</option></select></td>
-      <td class="details-cell">
-        <div class="preset-fields" hidden>
-          <input data-field="furniture_type" placeholder="furniture type">
-          <input data-field="price_tier" placeholder="price tier">
-        </div>
-        <div class="override-fields">
-          <input data-field="product_type" placeholder="product type">
-          <input data-field="tags" placeholder="tags, separated, by comma">
-          <select data-field="status"><option value="ACTIVE">ACTIVE</option><option value="DRAFT">DRAFT</option><option value="UNLISTED">UNLISTED</option></select>
-        </div>
-      </td>
-      <td class="row-actions">
-        <button data-action="duplicate" class="icon-button" type="button" title="Duplicate">⧉</button>
-        <button data-action="remove" class="icon-button danger" type="button" title="Remove">×</button>
-      </td>
+      <td class="details-cell"><div class="preset-fields" hidden><input data-field="furniture_type" placeholder="furniture type"><input data-field="price_tier" placeholder="price tier"></div><div class="override-fields"><input data-field="product_type" class="product-type-picker" placeholder="Chọn product type" readonly aria-haspopup="dialog"><input data-field="tags" placeholder="tags, separated, by comma"><select data-field="status"><option value="ACTIVE">ACTIVE</option><option value="DRAFT">DRAFT</option><option value="UNLISTED">UNLISTED</option></select></div></td>
+      <td class="row-actions"><button data-action="duplicate" class="icon-button" type="button" title="Duplicate">⧉</button><button data-action="remove" class="icon-button danger" type="button" title="Remove">×</button></td>
     </tr>
   </template>
   <script src="{{ url_for('static', filename='dashboard.js') }}" defer></script>

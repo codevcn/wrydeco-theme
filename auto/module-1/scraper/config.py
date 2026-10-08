@@ -23,7 +23,7 @@ IGNORE_TYPES = (
     "Live edge wood may differ from photos. We'll message the best raw piece. Check messages?",
 )
 
-DEFAULT_OPTION_TYPES = ("size", "choose size", "select width")
+DEFAULT_OPTION_TYPES = ("size", "choose size", "select size", "select width")
 
 SIZE_CONFIG = {
     "standing": {

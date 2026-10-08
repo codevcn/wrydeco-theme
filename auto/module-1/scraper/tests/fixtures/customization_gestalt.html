@@ -1,0 +1,51 @@
+<!doctype html>
+<html><body>
+<button id="gestalt-popover-button-announce">Customize now</button>
+<iframe id="gc-iframe" name="gc-iframe"></iframe>
+<script>
+const frame = document.querySelector('#gc-iframe');
+frame.srcdoc = `<!doctype html><html><body>
+  <div class="gc-component gc-OptionChooserComponent">
+    <h5 class="gc-component-label">Choose Size</h5>
+    <div role="radiogroup">
+      <div class="gc-toggle-list-option" role="radio" aria-label='24"W x 60"H x 14"D'><p class="gc-swatch-label">24"W x 60"H x 14"D</p></div>
+      <div class="gc-toggle-list-option" role="radio" aria-label='26"W x 64"H x 14"D - Best Choice, + $800.00'><p class="gc-swatch-label">26"W x 64"H x 14"D - Best Choice</p><span class="gc-swatch-price">+$800 <i>.</i> 00</span></div>
+      <div class="gc-toggle-list-option" role="radio" aria-label='30"W x 68"H x 14"D, + $1,600.00'><p class="gc-swatch-label">30"W x 68"H x 14"D</p><span class="gc-swatch-price">+$1,600 <i>.</i> 00</span></div>
+    </div>
+  </div>
+  <div class="gc-component gc-OptionChooserComponent">
+    <h5 class="gc-component-label">Customization Confirmation</h5>
+    <div role="radiogroup"><div class="gc-toggle-list-option" role="radio" aria-label="Confirm"><p class="gc-swatch-label">Confirm</p></div></div>
+  </div>
+  <div class="gc-component gc-OptionChooserComponent">
+    <h5 class="gc-component-label">Review Photo Before Final Finish</h5>
+    <div role="radiogroup"><div class="gc-toggle-list-option" role="radio" aria-label="Review"><p class="gc-swatch-label">Review</p></div></div>
+  </div>
+  <div class="gc-component gc-OptionChooserComponent">
+    <h5 class="gc-component-label">Add On-Site Installation</h5>
+    <div role="radiogroup">
+      <div class="gc-toggle-list-option" role="radio" aria-label="No, I will install it myself"><p class="gc-swatch-label">No, I will install it myself</p></div>
+      <div class="gc-toggle-list-option" role="radio" aria-label="Yes, I need on-site installation, + $350.00"><p class="gc-swatch-label">Yes, I need on-site installation</p><span class="gc-swatch-price">+$350 <i>.</i> 00</span></div>
+    </div>
+  </div>
+  <div id="gc-desktop-footer-wrapper"><span class="a-price" data-a-size="xl" data-a-color="base">$3,415 <i>.</i> 00</span></div>
+  <script>
+    const groups = [...document.querySelectorAll('[role=radiogroup]')];
+    function update() {
+      let add = 0;
+      groups.forEach(group => {
+        const selected = group.querySelector('[aria-checked=true]');
+        const match = selected?.getAttribute('aria-label')?.match(/\\+ \\$(\\d[\\d,]*\\.\\d{2})/);
+        if (match) add += Number(match[1].replace(',', ''));
+      });
+      const total = (3415 + add).toLocaleString('en-US', {minimumFractionDigits: 2});
+      document.querySelector('.a-price').innerHTML = '$' + total.replace('.', ' <i>.</i> ');
+    }
+    document.querySelectorAll('[role=radio]').forEach(option => option.addEventListener('click', () => {
+      option.parentElement.querySelectorAll('[role=radio]').forEach(item => item.setAttribute('aria-checked', 'false'));
+      option.setAttribute('aria-checked', 'true'); update();
+    }));
+  <\/script>
+</body></html>`;
+</script>
+</body></html>

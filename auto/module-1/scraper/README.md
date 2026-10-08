@@ -1,45 +1,76 @@
-# Amazon–Shopify scraper
+# Amazon–Shopify queue scraper
 
-The scraper runs with a persistent Playwright Chromium profile and does not require the Chrome extension.
+The system has four independent parts:
 
-## Local dashboard
+1. One Playwright crawler verifies Amazon data and prices sequentially.
+2. SQLite stores durable content/apply queues and the Event Log.
+3. Flask owns one long-lived Antigravity control conversation plus one isolated content conversation per product.
+4. One Shopify worker applies ready products sequentially from idempotent checkpoints.
 
-Install dependencies, then start the local-only dashboard:
+Flask starts Antigravity, verifies its workspace MCP connection, and unlocks state-changing actions only after a successful bootstrap turn.
 
-```powershell
-python -m pip install -r scraper/requirements.txt
-python -m scraper serve --host 127.0.0.1 --port 5000
-```
-
-Open `http://127.0.0.1:5000`. The dashboard edits `scraper/input/products.json`, snapshots the editable
-Antigravity prompt per execution, streams progress over SSE, and resumes from the same product checkpoints.
-Only one batch runs at a time.
-
-To let the server invoke Antigravity automatically, set `ANTIGRAVITY_COMMAND_JSON=["agy"]` in `scraper/.env`.
-Opening the dashboard starts or resumes one persistent CLI conversation. Its `conversation_id`, turn count and
-connection state are saved atomically under `scraper/.runtime/server/antigravity/state.json`, so restarting the
-dashboard or Windows continues the same conversation with `--conversation`. The CLI uses `stream-json`; every
-stdout/stderr event and heartbeat appears in the dashboard Event log. Every process uses `shell=False`. When no command
-is configured, the dashboard safely stops at **waiting for Agent**; copy the prompt, create the requested
-`content.json` files manually, then press **Resume checkpoint**.
-
-The server owns crawl and Shopify operations. Antigravity only writes `content.json` and must not launch a
-second scraper process.
-
-## CLI
+## Install
 
 ```powershell
 python -m pip install -r scraper/requirements.txt
 python -m playwright install chromium
-Copy-Item scraper/input/products.example.json scraper/input/products.json
-python -m scraper run --manifest scraper/input/products.json
+Copy-Item scraper/.env.example scraper/.env
 ```
 
-The first run crawls Amazon, verifies every dynamic price combination, and writes one workspace per ASIN under `scraper/runs/<manifest-id>/<ASIN>/`. If `content.json` is absent, the product stops safely at `price_verified`. The AI Agent should read `source.json` and `evidence/`, write `content.json` according to `scraper/content.schema.json`, then run the same command again. The second run validates content and applies the product to Shopify.
+Add Shopify credentials to `scraper/.env`. Antigravity uses the existing local `agy` login; no Agent API token is stored here. The optional `ANTIGRAVITY_*` settings shown in `.env.example` override the executable and timeouts.
 
-For the content-authoring instruction used by the dashboard, see `scraper/AGENT_PROMPT.md`.
+## Dashboard and workers
 
-Use `--dry-run` to crawl/validate without Shopify mutations, `--headless` for unattended Chromium, and `--max-combinations` to lower the default safety cap of 100.
-The browser sets Amazon's delivery location to ZIP `10001` by default so US offers and customization controls render; override it with `--amazon-postal-code`.
+```powershell
+python -m scraper serve --host 127.0.0.1 --port 5000
+```
 
-`auto` first attempts Amazon Dynamic Mode. If customization is unavailable, it only falls back when that manifest item contains a valid `preset`; it never guesses a price table. CAPTCHA/challenge evidence is saved and the item becomes `needs_attention` while the batch continues.
+After the port is bound successfully, the server automatically opens `http://127.0.0.1:5000` in the default browser. The process runs the Dashboard, a single crawler, one long-lived Antigravity control conversation, isolated product content workers, and a single Shopify dispatcher. Products waiting for content do not block new crawl runs.
+
+To stop every Dashboard server registered by this workspace, run `stop-server.cmd` from the project root. The command validates registered process IDs before terminating their process trees.
+
+For a headless Shopify dispatcher without the Dashboard:
+
+```powershell
+python -m scraper worker
+```
+
+## Antigravity runtime
+
+The repository contains a workspace-local MCP definition and a restricted `wrydeco-content` Agent. `python -m scraper serve` launches a control `agy` process in stream-json mode, sends the bootstrap prompt, and keeps that process/conversation until the server stops. The control conversation only handles bootstrap, readiness, and health checks; it never receives product data.
+
+For every queued product, the server launches a separate Antigravity process/conversation restricted by `WRYDECO_EXPECTED_TASK_ID`. Retries for that product stay inside the same isolated conversation, and the process exits immediately after finalization or terminal failure. This prevents facts and copy from an earlier product leaking into later content. Finished content conversations are recorded as `pending_cleanup` in **Quản lý conversations**.
+
+Before content is queued, the crawler downloads the verified Amazon gallery, decodes and re-encodes each image without embedded EXIF/IPTC/XMP metadata, and creates `evidence/gallery/contact-sheet.jpg`. The Agent must read the contact sheet, the first gallery image, and another image when available. MCP exposes only images under `evidence/gallery/`; A+ Content images and every other non-gallery image are hidden and rejected, while `aplus_text` remains available as factual text evidence. The Agent uses the source title and product type to identify the target object, then writes `visual_analysis.json` containing design/shape keywords only. Visual analysis cannot infer material, color, finish, dimensions, performance, or certification from pixels.
+
+Content validation is fail-closed. Storefront copy must use the approved visual keywords, remain grounded in `source.json`, and pass persistent exact/near-duplicate comparison against prior finalized scraper content. A collision is returned without exposing the other product's full copy; after three unsuccessful revisions, the product moves to `needs_attention` and Shopify is not mutated.
+
+If startup reports an authentication error, run `agy` once from this project directory, complete login, exit it, then use **Khởi động lại Agent**. A later process failure is fail-closed and is never restarted automatically.
+
+Each successful server lifecycle creates a fresh Antigravity conversation. When a newer conversation becomes active, older scraper-owned conversations are marked `pending_cleanup`. Open **Quản lý conversations** in the Antigravity Runtime card, choose **Mở TUI để xóa**, then use `/resume` and `Ctrl+Delete` in Antigravity to confirm deletion of the displayed ID. After Antigravity has deleted it, click **Đã xóa trong Antigravity** to remove that session, its turns, and associated Agent events from the scraper database. The Dashboard never simulates deletion keystrokes and never edits Antigravity's `.gemini` storage.
+
+## CLI
+
+Create one crawl execution and return as soon as crawling is complete:
+
+```powershell
+python -m scraper run --manifest scraper/input/products.json --headless
+```
+
+This command only crawls/enqueues; it does not start Antigravity or run Shopify. Other commands:
+
+```powershell
+python -m scraper mcp
+python -m scraper worker
+python -m scraper status
+```
+
+## Runtime and recovery
+
+`scraper/.runtime/orchestrator.sqlite3` is the orchestration source of truth. WAL mode, foreign keys, transactional claims, claim-token hashes, and leases prevent duplicate content work. Product artifacts remain inspectable under `scraper/runs/<run-id>/<ASIN>/`.
+
+On restart, the system expires stale content leases, marks interrupted crawls for an explicit **Resume crawl**, restores interrupted apply work from `apply_progress.json`, reconciles gallery/visual artifacts, rebuilds missing content fingerprints, and enqueues valid orphaned `content.json` files. A Shopify failure is never retried automatically; use **Retry Shopify** after reviewing it.
+
+The Event Log contains crawler, sanitized Antigravity/MCP lifecycle, and Shopify events from SQLite. Claim tokens, evidence payloads, prompts, credentials, and private reasoning are never exposed to the browser.
+
+Pricing behavior remains fail-closed: `Decimal`, signed additional prices, complete combination/footer verification within `$0.01`, Wood Finish consistency checks, and the default 100-combination cap.

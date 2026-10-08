@@ -1,35 +1,181 @@
 from __future__ import annotations
 
-import asyncio
 import json
 import os
-import queue
 import secrets
+import shutil
 import subprocess
 import threading
 import time
-import uuid
-from datetime import datetime, timezone
+import webbrowser
+from html import escape
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from flask import Flask, Response, jsonify, render_template, request, stream_with_context
+from markdown_it import MarkdownIt
+from werkzeug.serving import make_server
 
-from .antigravity import AntigravityConversation, parse_antigravity_command
-from .config import PACKAGE_ROOT, Settings
-from .content import validate_content
+from .config import PACKAGE_ROOT
 from .errors import ContentValidationError, ManifestError
-from .io_utils import atomic_write_json, atomic_write_text, load_env, load_json
-from .manifest import Manifest, load_manifest, parse_manifest_payload
-from .pipeline import Pipeline
+from .io_utils import atomic_write_json, atomic_write_text, load_json
+from .manifest import parse_manifest_payload
+from .orchestrator import RunCoordinator
+from .server_control import register_server_process, unregister_server_process
+from .store import ClaimError, OrchestratorStore, QueueConflict
 
 
-TERMINAL_JOB_STATUSES = {"applied", "completed", "failed", "needs_attention", "waiting_for_agent", "interrupted"}
-ACTIVE_JOB_STATUSES = {"queued", "running", "agent_running"}
+DOC_EXTENSIONS = {".md", ".txt"}
+PROMPT_FILES = {
+    "agent_prompt": "AGENT_PROMPT.md",
+    "content_task_prompt": "CONTENT_TASK_PROMPT.md",
+}
+MAX_PROMPT_BYTES = 256 * 1024
+PRODUCT_TYPES_FILE = "product_types.json"
+DOC_MARKDOWN = MarkdownIt(
+    "commonmark",
+    {
+        "html": False,
+        "linkify": False,
+        "typographer": False,
+    },
+).enable(["table", "strikethrough"])
 
 
-def utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+def _dashboard_url(host: str, port: int) -> str:
+    browser_host = host
+    if host in {"0.0.0.0", "::", "[::]"}:
+        browser_host = "127.0.0.1"
+    if ":" in browser_host and not browser_host.startswith("["):
+        browser_host = f"[{browser_host}]"
+    return f"http://{browser_host}:{port}"
+
+
+def _open_dashboard(url: str) -> None:
+    try:
+        webbrowser.open_new_tab(url)
+    except Exception:
+        # Browser launch is a convenience; it must never bring down the server.
+        pass
+
+
+def _open_antigravity_cleanup_terminal(
+    project_root: Path,
+    conversation_id: str,
+    *,
+    executable: str = "agy",
+) -> int:
+    """Open a visible, targeted Antigravity TUI for user-confirmed deletion."""
+    resolved = shutil.which(executable) or executable
+    if os.name != "nt":
+        raise RuntimeError("Opening the Antigravity cleanup terminal is currently supported on Windows only.")
+
+    def quote(value: str) -> str:
+        return "'" + value.replace("'", "''") + "'"
+
+    command = (
+        f"Set-Location -LiteralPath {quote(str(project_root.resolve()))}; "
+        "Write-Host ''; "
+        "Write-Host 'Conversation can xoa:' -ForegroundColor Yellow; "
+        f"Write-Host {quote(conversation_id)} -ForegroundColor Cyan; "
+        "Write-Host 'Trong Antigravity: go /resume, tim dung ID, nhan Ctrl+Delete va xac nhan.'; "
+        f"& {quote(str(resolved))}"
+    )
+    process = subprocess.Popen(
+        ["powershell.exe", "-NoLogo", "-NoExit", "-Command", command],
+        creationflags=subprocess.CREATE_NEW_CONSOLE,
+        close_fds=True,
+    )
+    return int(process.pid)
+
+
+def _resolve_doc_path(docs_root: Path, raw_path: str) -> Path:
+    if not raw_path or Path(raw_path).suffix.lower() not in DOC_EXTENSIONS:
+        raise ValueError("Only .md and .txt documentation files are supported.")
+    root = docs_root.resolve()
+    candidate = (root / raw_path).resolve()
+    try:
+        candidate.relative_to(root)
+    except ValueError as exc:
+        raise ValueError("Documentation path is outside scraper/docs.") from exc
+    if not candidate.is_file():
+        raise KeyError(raw_path)
+    return candidate
+
+
+def _list_docs(docs_root: Path) -> list[dict[str, Any]]:
+    if not docs_root.is_dir():
+        return []
+    root = docs_root.resolve()
+    documents: list[dict[str, Any]] = []
+    for item in root.rglob("*"):
+        if not item.is_file() or item.suffix.lower() not in DOC_EXTENSIONS:
+            continue
+        resolved = item.resolve()
+        try:
+            relative = resolved.relative_to(root)
+        except ValueError:
+            continue
+        documents.append({
+            "path": relative.as_posix(),
+            "name": relative.name,
+            "extension": resolved.suffix.lower(),
+            "size": resolved.stat().st_size,
+        })
+    return sorted(documents, key=lambda item: item["path"].casefold())
+
+
+def _render_doc_content(extension: str, content: str) -> tuple[str, str]:
+    """Render local docs without allowing source HTML to execute in the dashboard."""
+    if extension.lower() == ".md":
+        return "markdown", DOC_MARKDOWN.render(content)
+    return "text", f'<pre class="docs-plain-text">{escape(content)}</pre>'
+
+
+def _read_prompts(package_root: Path) -> dict[str, Any]:
+    prompts: dict[str, str] = {}
+    files: dict[str, str] = {}
+    for key, filename in PROMPT_FILES.items():
+        path = package_root / filename
+        prompts[key] = path.read_text(encoding="utf-8-sig") if path.is_file() else ""
+        files[key] = filename
+    return {"prompts": prompts, "files": files}
+
+
+def _read_product_types(package_root: Path) -> list[str]:
+    payload = load_json(package_root / PRODUCT_TYPES_FILE)
+    values = payload.get("product_types") if isinstance(payload, dict) else None
+    if not isinstance(values, list):
+        raise ValueError(f"{PRODUCT_TYPES_FILE} must contain a product_types array.")
+    product_types: list[str] = []
+    seen: set[str] = set()
+    for raw in values:
+        value = str(raw).strip()
+        if not value or value in seen:
+            continue
+        seen.add(value)
+        product_types.append(value)
+    return product_types
+
+
+def _validate_prompts(payload: Any) -> dict[str, str]:
+    if not isinstance(payload, dict):
+        raise ValueError("Request must contain both prompt strings.")
+    source = payload.get("prompts", payload)
+    if not isinstance(source, dict):
+        raise ValueError("prompts must be an object.")
+    validated: dict[str, str] = {}
+    for key, filename in PROMPT_FILES.items():
+        value = source.get(key)
+        if not isinstance(value, str):
+            raise ValueError(f"{filename} must be a string.")
+        value = value.replace("\r\n", "\n").replace("\r", "\n").strip()
+        if not value:
+            raise ValueError(f"{filename} cannot be empty.")
+        if len(value.encode("utf-8")) > MAX_PROMPT_BYTES:
+            raise ValueError(f"{filename} exceeds the 256 KiB limit.")
+        validated[key] = value + "\n"
+    return validated
 
 
 def validate_run_options(payload: Any) -> dict[str, Any]:
@@ -51,609 +197,319 @@ def validate_run_options(payload: Any) -> dict[str, Any]:
     }
 
 
-class DashboardJobManager:
-    def __init__(self, package_root: Path = PACKAGE_ROOT,
-                 pipeline_runner: Callable[[Manifest, Settings, bool, Callable[[dict[str, Any]], None]], dict[str, Any]] | None = None):
-        self.package_root = package_root.resolve()
-        self.project_root = self.package_root.parent
-        self.runtime_root = self.package_root / ".runtime" / "server" / "jobs"
-        self.runtime_root.mkdir(parents=True, exist_ok=True)
-        self.pipeline_runner = pipeline_runner or self._default_pipeline_runner
-        self.antigravity: AntigravityConversation | None = None
-        self._lock = threading.RLock()
-        self._condition = threading.Condition(self._lock)
-        self._threads: dict[str, threading.Thread] = {}
-        self._mark_interrupted_jobs()
-
-    @staticmethod
-    def _default_pipeline_runner(manifest: Manifest, settings: Settings, dry_run: bool,
-                                 callback: Callable[[dict[str, Any]], None]) -> dict[str, Any]:
-        return asyncio.run(Pipeline(manifest, settings, dry_run=dry_run, event_callback=callback).run())
-
-    def _job_dir(self, job_id: str) -> Path:
-        if not job_id or any(character not in "0123456789abcdef" for character in job_id):
-            raise KeyError(job_id)
-        return self.runtime_root / job_id
-
-    def _metadata_path(self, job_id: str) -> Path:
-        return self._job_dir(job_id) / "job.json"
-
-    def _events_path(self, job_id: str) -> Path:
-        return self._job_dir(job_id) / "events.jsonl"
-
-    def _load(self, job_id: str) -> dict[str, Any]:
-        path = self._metadata_path(job_id)
-        if not path.is_file():
-            raise KeyError(job_id)
-        return load_json(path)
-
-    def _save(self, job: dict[str, Any]) -> None:
-        job["updated_at"] = utc_now()
-        atomic_write_json(self._metadata_path(job["id"]), job)
-
-    def _mark_interrupted_jobs(self) -> None:
-        for path in self.runtime_root.glob("*/job.json"):
-            try:
-                job = load_json(path)
-                if job.get("status") in ACTIVE_JOB_STATUSES:
-                    job["status"] = "interrupted"
-                    job["message"] = "Server restarted while this job was active. Resume is safe from checkpoints."
-                    job["updated_at"] = utc_now()
-                    atomic_write_json(path, job)
-            except Exception:
-                continue
-
-    def _active_job(self) -> dict[str, Any] | None:
-        for path in self.runtime_root.glob("*/job.json"):
-            try:
-                job = load_json(path)
-            except Exception:
-                continue
-            thread = self._threads.get(str(job.get("id", "")))
-            if job.get("status") in ACTIVE_JOB_STATUSES and thread and thread.is_alive():
-                return job
-        return None
-
-    def list_jobs(self, limit: int = 20) -> list[dict[str, Any]]:
-        jobs = []
-        for path in self.runtime_root.glob("*/job.json"):
-            try:
-                jobs.append(load_json(path))
-            except Exception:
-                continue
-        jobs.sort(key=lambda item: item.get("updated_at", ""), reverse=True)
-        return jobs[:limit]
-
-    def get(self, job_id: str) -> dict[str, Any]:
-        with self._lock:
-            return self._load(job_id)
-
-    def record_event(self, job_id: str, event: dict[str, Any]) -> dict[str, Any]:
-        return self._append_event(job_id, event)
-
-    def start(self, manifest: Manifest, prompt: str, options: dict[str, Any]) -> dict[str, Any]:
-        with self._lock:
-            active = self._active_job()
-            if active:
-                raise RuntimeError(f"Job {active['id']} is already running.")
-            job_id = uuid.uuid4().hex
-            execution_dir = self.package_root / "runs" / manifest.digest / "_server" / job_id
-            execution_dir.mkdir(parents=True, exist_ok=True)
-            prompt_path = execution_dir / "agent_prompt.md"
-            atomic_write_text(prompt_path, prompt.rstrip() + "\n")
-            job = {
-                "id": job_id,
-                "run_id": manifest.digest,
-                "status": "queued",
-                "message": "Queued",
-                "manifest_path": str(manifest.path),
-                "prompt_path": str(prompt_path),
-                "execution_dir": str(execution_dir),
-                "options": options,
-                "products": {item.asin: {"status": "pending", "amazon_url": item.amazon_url,
-                                           "shopify_product_id": item.shopify_product_id} for item in manifest.products},
-                "summary": None,
-                "last_event_id": 0,
-                "created_at": utc_now(),
-                "updated_at": utc_now(),
-            }
-            self._job_dir(job_id).mkdir(parents=True, exist_ok=True)
-            self._save(job)
-            self._append_event(job_id, {"event": "job_created", "message": "Manifest validated; job queued."})
-            self._launch(job_id)
-            return self._load(job_id)
-
-    def resume(self, job_id: str) -> dict[str, Any]:
-        with self._lock:
-            active = self._active_job()
-            if active:
-                raise RuntimeError(f"Job {active['id']} is already running.")
-            job = self._load(job_id)
-            if job.get("status") not in TERMINAL_JOB_STATUSES:
-                raise RuntimeError("Only a stopped job can be resumed.")
-            waiting = (job.get("summary") or {}).get("waiting_for_content") or []
-            missing_content = [
-                asin for asin in waiting
-                if not (self.package_root / "runs" / job["run_id"] / asin / "content.json").is_file()
-            ]
-            if job.get("status") == "waiting_for_agent" and missing_content:
-                try:
-                    agent_command = parse_antigravity_command(load_env(self.package_root / ".env"))
-                except ValueError as exc:
-                    raise RuntimeError(f"Antigravity configuration is invalid: {exc}") from exc
-                if agent_command is None:
-                    asin_list = ", ".join(missing_content)
-                    raise RuntimeError(
-                        "Antigravity chưa được cấu hình và content.json vẫn còn thiếu cho "
-                        f"{asin_list}. Cấu hình ANTIGRAVITY_COMMAND_JSON hoặc tạo content.json trước khi Resume."
-                    )
-            job["status"] = "queued"
-            job["message"] = "Resume queued"
-            job["resume_count"] = int(job.get("resume_count", 0)) + 1
-            self._save(job)
-            self._append_event(job_id, {"event": "job_resumed", "message": "Resuming from saved checkpoints."})
-            self._launch(job_id)
-            return self._load(job_id)
-
-    def _launch(self, job_id: str) -> None:
-        thread = threading.Thread(target=self._run_job, args=(job_id,), daemon=True,
-                                  name=f"scraper-dashboard-{job_id[:8]}")
-        self._threads[job_id] = thread
-        thread.start()
-
-    def _append_event(self, job_id: str, event: dict[str, Any]) -> dict[str, Any]:
-        with self._condition:
-            job = self._load(job_id)
-            event_id = int(job.get("last_event_id", 0)) + 1
-            record = {"id": event_id, "at": utc_now(), **event}
-            path = self._events_path(job_id)
-            path.parent.mkdir(parents=True, exist_ok=True)
-            with path.open("a", encoding="utf-8", newline="\n") as handle:
-                handle.write(json.dumps(record, ensure_ascii=False) + "\n")
-            job["last_event_id"] = event_id
-            if record.get("event") == "product_status" and record.get("asin") in job.get("products", {}):
-                product = job["products"][record["asin"]]
-                product["status"] = record.get("status", product.get("status"))
-                for key in ("error", "error_type", "stage", "current", "total"):
-                    if key in record:
-                        product[key] = record[key]
-            elif record.get("asin") in job.get("products", {}):
-                product = job["products"][record["asin"]]
-                for key in ("stage", "current", "total", "price", "kind"):
-                    if key in record:
-                        product[key] = record[key]
-            self._save(job)
-            self._condition.notify_all()
-            return record
-
-    def events_after(self, job_id: str, event_id: int) -> list[dict[str, Any]]:
-        self._load(job_id)
-        path = self._events_path(job_id)
-        if not path.exists():
-            return []
-        output = []
-        for line in path.read_text(encoding="utf-8").splitlines():
-            try:
-                event = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            if int(event.get("id", 0)) > event_id:
-                output.append(event)
-        return output
-
-    def wait_for_change(self, timeout: float = 15.0) -> None:
-        with self._condition:
-            self._condition.wait(timeout=timeout)
-
-    def _set_status(self, job_id: str, status: str, message: str, **extra: Any) -> None:
-        # Persist the terminal event and terminal status as one critical section.
-        # Otherwise an SSE reader can observe a terminal status with the previous
-        # last_event_id and close just before the final status event is appended.
-        with self._condition:
-            job = self._load(job_id)
-            job.update({"status": status, "message": message, **extra})
-            event_id = int(job.get("last_event_id", 0)) + 1
-            record = {"id": event_id, "at": utc_now(), "event": "job_status",
-                      "status": status, "message": message}
-            path = self._events_path(job_id)
-            path.parent.mkdir(parents=True, exist_ok=True)
-            with path.open("a", encoding="utf-8", newline="\n") as handle:
-                handle.write(json.dumps(record, ensure_ascii=False) + "\n")
-            job["last_event_id"] = event_id
-            self._save(job)
-            self._condition.notify_all()
-
-    def _event_callback(self, job_id: str) -> Callable[[dict[str, Any]], None]:
-        def callback(event: dict[str, Any]) -> None:
-            self._append_event(job_id, event)
-        return callback
-
-    def _run_pipeline(self, job_id: str) -> dict[str, Any]:
-        job = self._load(job_id)
-        manifest = load_manifest(Path(job["manifest_path"]))
-        options = job["options"]
-        settings = Settings(
-            env_path=self.package_root / ".env",
-            headless=bool(options["headless"]),
-            max_combinations=int(options["max_combinations"]),
-            amazon_postal_code=str(options["amazon_postal_code"]),
-        )
-        return self.pipeline_runner(manifest, settings, bool(options["dry_run"]), self._event_callback(job_id))
-
-    @staticmethod
-    def _content_failures(summary: dict[str, Any]) -> list[dict[str, Any]]:
-        return [item for item in summary.get("failed", []) if item.get("error_type") == "ContentValidationError"]
-
-    def _agent_context(self, job: dict[str, Any], summary: dict[str, Any], attempt: int) -> str:
-        waiting = summary.get("waiting_for_content", [])
-        failures = self._content_failures(summary)
-        return (
-            "\n\n---\n"
-            "SERVER EXECUTION CONTEXT (authoritative):\n"
-            "The local dashboard already ran the scraper. Do not run the scraper and do not mutate Shopify.\n"
-            f"Run ID: {job['run_id']}\n"
-            f"Run directory: {self.package_root / 'runs' / job['run_id']}\n"
-            f"Content-authoring attempt: {attempt}/3\n"
-            f"Waiting ASINs: {json.dumps(waiting, ensure_ascii=False)}\n"
-            f"Validation errors to fix: {json.dumps(failures, ensure_ascii=False)}\n"
-            "Write only the required content.json files, then exit successfully.\n"
-        )
-
-    def _run_agent(self, job_id: str, summary: dict[str, Any], attempt: int) -> tuple[bool, str]:
-        job = self._load(job_id)
-        env_values = load_env(self.package_root / ".env")
-        command = parse_antigravity_command(env_values)
-        if command is None:
-            return False, "not_configured"
-        timeout = int(env_values.get("ANTIGRAVITY_TIMEOUT_SECONDS", "3600"))
-        prompt = Path(job["prompt_path"]).read_text(encoding="utf-8") + self._agent_context(job, summary, attempt)
-        log_path = Path(job["execution_dir"]) / "agent.log"
-        self._set_status(job_id, "agent_running", f"Antigravity content attempt {attempt}/3")
-        if self.antigravity is not None:
-            with log_path.open("a", encoding="utf-8", newline="\n") as log:
-                def persist_agent_event(event: dict[str, Any]) -> None:
-                    message = str(event.get("message", ""))
-                    log.write(f"[{event.get('stream', event.get('event', 'agent'))}] {message}\n")
-                    log.flush()
-
-                return self.antigravity.run_turn(
-                    prompt,
-                    timeout=timeout,
-                    purpose=f"content attempt {attempt}/3 · run {job['run_id']}",
-                    event_callback=persist_agent_event,
-                    extra_env={
-                        "SCRAPER_MANIFEST": str(job["manifest_path"]),
-                        "SCRAPER_RUN_ID": str(job["run_id"]),
-                        "SCRAPER_RUN_DIR": str(self.package_root / "runs" / job["run_id"]),
-                        "SCRAPER_PHASE": "content",
-                    },
-                )
-        child_env = os.environ.copy()
-        child_env.update({
-            "SCRAPER_MANIFEST": str(job["manifest_path"]),
-            "SCRAPER_RUN_ID": str(job["run_id"]),
-            "SCRAPER_RUN_DIR": str(self.package_root / "runs" / job["run_id"]),
-            "SCRAPER_PHASE": "content",
-        })
-        process = subprocess.Popen(
-            command, cwd=self.project_root, env=child_env, stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8",
-            errors="replace", shell=False, bufsize=1,
-        )
-        assert process.stdin is not None
-        process.stdin.write(prompt)
-        process.stdin.close()
-        messages: queue.Queue[tuple[str, str | None]] = queue.Queue()
-
-        def reader(name: str, stream: Any) -> None:
-            for line in iter(stream.readline, ""):
-                messages.put((name, line.rstrip()))
-            messages.put((name, None))
-
-        readers = []
-        for stream_name, stream in (("stdout", process.stdout), ("stderr", process.stderr)):
-            thread = threading.Thread(target=reader, args=(stream_name, stream), daemon=True)
-            thread.start()
-            readers.append(thread)
-        deadline = time.monotonic() + timeout
-        next_heartbeat = time.monotonic() + 15
-        closed = set()
-        with log_path.open("a", encoding="utf-8", newline="\n") as log:
-            while process.poll() is None or len(closed) < 2:
-                if time.monotonic() >= deadline and process.poll() is None:
-                    process.kill()
-                    self._append_event(job_id, {"event": "agent_error", "message": "Antigravity timed out."})
-                    return False, "timeout"
-                if time.monotonic() >= next_heartbeat and process.poll() is None:
-                    elapsed = max(1, timeout - int(deadline - time.monotonic()))
-                    self._append_event(job_id, {
-                        "event": "agent_heartbeat",
-                        "message": f"Antigravity vẫn đang chạy · {elapsed}s",
-                    })
-                    next_heartbeat = time.monotonic() + 15
-                try:
-                    stream_name, line = messages.get(timeout=0.2)
-                except queue.Empty:
-                    continue
-                if line is None:
-                    closed.add(stream_name)
-                    continue
-                log.write(f"[{stream_name}] {line}\n")
-                log.flush()
-                self._append_event(job_id, {"event": "agent_log", "stream": stream_name, "message": line})
-        return_code = process.wait()
-        if return_code != 0:
-            return False, f"exit_{return_code}"
-        return True, "ok"
-
-    def _finish_from_summary(self, job_id: str, summary: dict[str, Any]) -> None:
-        job = self._load(job_id)
-        with self._lock:
-            job["summary"] = summary
-            self._save(job)
-        if summary.get("needs_attention"):
-            self._set_status(job_id, "needs_attention", "At least one product needs attention.")
-        elif summary.get("failed"):
-            self._set_status(job_id, "failed", "At least one product failed.")
-        elif job["options"].get("dry_run"):
-            self._set_status(job_id, "completed", "Dry run completed without Shopify mutations.")
-        else:
-            self._set_status(job_id, "applied", "Batch completed and Shopify is synchronized.")
-
-    def _run_job(self, job_id: str) -> None:
-        try:
-            self._set_status(job_id, "running", "Running scraper pipeline.")
-            summary = self._run_pipeline(job_id)
-            for attempt in range(1, 4):
-                needs_content = bool(summary.get("waiting_for_content") or self._content_failures(summary))
-                if not needs_content:
-                    self._finish_from_summary(job_id, summary)
-                    return
-                try:
-                    agent_ok, reason = self._run_agent(job_id, summary, attempt)
-                except (OSError, ValueError) as exc:
-                    self._set_status(job_id, "needs_attention", f"Antigravity configuration failed: {exc}")
-                    return
-                if reason == "not_configured":
-                    with self._lock:
-                        job = self._load(job_id)
-                        job["summary"] = summary
-                        self._save(job)
-                    self._set_status(job_id, "waiting_for_agent",
-                                     "Crawl complete. Copy the prompt, create content.json, then Resume.")
-                    return
-                if not agent_ok:
-                    self._set_status(job_id, "needs_attention", f"Antigravity failed: {reason}.")
-                    return
-                self._set_status(job_id, "running", "Validating Agent content and continuing pipeline.")
-                summary = self._run_pipeline(job_id)
-            self._finish_from_summary(job_id, summary)
-        except Exception as exc:
-            self._append_event(job_id, {"event": "server_error", "message": str(exc),
-                                        "error_type": type(exc).__name__})
-            self._set_status(job_id, "failed", f"Dashboard worker failed: {exc}")
+def _manifest_payload(body: Any) -> dict[str, Any]:
+    if isinstance(body, dict) and isinstance(body.get("manifest"), dict):
+        return body["manifest"]
+    if isinstance(body, dict) and isinstance(body.get("products"), list):
+        return {"products": body["products"]}
+    raise ManifestError("Request must contain a manifest with a products array.")
 
 
-def create_app(package_root: Path = PACKAGE_ROOT, manager: DashboardJobManager | None = None) -> Flask:
+def create_app(
+    package_root: Path = PACKAGE_ROOT,
+    *,
+    store: OrchestratorStore | None = None,
+    coordinator: RunCoordinator | None = None,
+    agent_runtime: Any | None = None,
+    start_workers: bool = False,
+) -> Flask:
     package_root = package_root.resolve()
     app = Flask(
         __name__,
         template_folder=str(package_root / "web" / "templates"),
         static_folder=str(package_root / "web" / "static"),
-        static_url_path="/static",
     )
-    app.config.update(JSON_SORT_KEYS=False)
-    app.extensions["dashboard_manager"] = manager or DashboardJobManager(package_root)
-    app.extensions["antigravity_conversation"] = AntigravityConversation(package_root)
-    app.extensions["dashboard_manager"].antigravity = app.extensions["antigravity_conversation"]
-    app.extensions["dashboard_csrf"] = secrets.token_urlsafe(32)
+    app.config.update(JSON_SORT_KEYS=False, MAX_CONTENT_LENGTH=2 * 1024 * 1024)
+    app.secret_key = secrets.token_hex(32)
+    orchestration = store or OrchestratorStore(package_root)
+    runner = coordinator or RunCoordinator(orchestration)
+    app.extensions["orchestrator_store"] = orchestration
+    app.extensions["run_coordinator"] = runner
+    app.extensions["antigravity_supervisor"] = agent_runtime
+    if start_workers:
+        runner.start()
 
-    def job_manager() -> DashboardJobManager:
-        return app.extensions["dashboard_manager"]
-
-    def antigravity() -> AntigravityConversation:
-        return app.extensions["antigravity_conversation"]
-
-    def manifest_path() -> Path:
-        return package_root / "input" / "products.json"
-
-    def save_manifest(payload: Any) -> Manifest:
-        manifest = parse_manifest_payload(payload, manifest_path())
-        atomic_write_json(manifest_path(), payload)
-        return manifest
+    manifest_path = package_root / "input" / "products.json"
+    docs_root = package_root / "docs"
+    csrf_token = secrets.token_urlsafe(32)
 
     @app.before_request
-    def protect_mutations() -> Response | None:
+    def guard_mutations():
         if request.method not in {"POST", "PUT", "PATCH", "DELETE"}:
             return None
-        expected_origin = request.host_url.rstrip("/")
-        origin = request.headers.get("Origin", "")
-        token = request.headers.get("X-CSRF-Token", "")
-        if origin != expected_origin or not secrets.compare_digest(token, app.extensions["dashboard_csrf"]):
-            return jsonify({"error": "Invalid Origin or CSRF token."}), 403
+        origin = request.headers.get("Origin")
+        if origin:
+            allowed = {request.host_url.rstrip("/"), f"http://{request.host}"}
+            if origin.rstrip("/") not in allowed:
+                return jsonify(error="Origin is not allowed."), 403
+        if request.headers.get("X-CSRF-Token") != csrf_token:
+            return jsonify(error="Invalid CSRF token."), 403
         if request.mimetype != "application/json":
-            return jsonify({"error": "Mutating requests require application/json."}), 415
+            return jsonify(error="Content-Type must be application/json."), 415
+        unlocked_without_agent = {
+            "restart_agent", "open_agent_cleanup_terminal", "acknowledge_agent_cleanup",
+        }
+        if agent_runtime is not None and request.endpoint not in unlocked_without_agent and not agent_runtime.is_ready():
+            state = agent_runtime.state()
+            return jsonify(
+                error="Antigravity is not ready; state-changing actions are locked.",
+                code="agent_not_ready", agent_status=state.get("status"),
+            ), 503
         return None
+
+    @app.errorhandler(KeyError)
+    def not_found(error: KeyError):
+        return jsonify(error=f"Not found: {error.args[0]}"), 404
 
     @app.errorhandler(ManifestError)
     @app.errorhandler(ContentValidationError)
+    @app.errorhandler(QueueConflict)
+    @app.errorhandler(ClaimError)
     @app.errorhandler(ValueError)
-    def bad_request(exc: Exception) -> tuple[Response, int]:
-        return jsonify({"error": str(exc)}), 400
-
-    @app.errorhandler(KeyError)
-    def not_found(_: KeyError) -> tuple[Response, int]:
-        return jsonify({"error": "Job was not found."}), 404
+    def invalid_request(error: Exception):
+        return jsonify(error=str(error)), 400
 
     @app.get("/")
-    def index() -> str:
-        antigravity().ensure_connected()
+    def index():
         return render_template("index.html")
 
     @app.get("/api/bootstrap")
-    def bootstrap() -> Response:
-        target = manifest_path()
-        if not target.exists():
-            target = package_root / "input" / "products.example.json"
-        manifest_payload = load_json(target) if target.exists() else {"products": []}
-        prompt_path = package_root / "AGENT_PROMPT.md"
-        return jsonify({
-            "manifest": manifest_payload,
-            "prompt": prompt_path.read_text(encoding="utf-8") if prompt_path.exists() else "",
-            "defaults": {"headless": True, "dry_run": False, "amazon_postal_code": "10001",
-                         "max_combinations": 100},
-            "csrf_token": app.extensions["dashboard_csrf"],
-            "jobs": job_manager().list_jobs(),
-            "agent": antigravity().state(),
-        })
+    def bootstrap():
+        manifest = load_json(manifest_path) if manifest_path.is_file() else {"products": []}
+        return jsonify(
+            csrf_token=csrf_token,
+            manifest=manifest,
+            options={"headless": True, "dry_run": False, "max_combinations": 100, "amazon_postal_code": "10001"},
+            runs=orchestration.list_runs(),
+            queue=orchestration.queue_status(),
+            product_types=_read_product_types(package_root),
+            agent_sessions=orchestration.list_agent_sessions(),
+            agent=(agent_runtime.state() if agent_runtime is not None else {
+                "status": "disabled", "ready": True, "message": "Agent gate disabled for this app instance."
+            }),
+        )
 
-    @app.get("/api/antigravity")
-    def antigravity_status() -> Response:
-        return jsonify(antigravity().state())
+    @app.get("/api/agent")
+    def agent_status():
+        if agent_runtime is None:
+            return jsonify(status="disabled", ready=True, message="Agent gate disabled for this app instance.")
+        return jsonify(agent_runtime.state())
 
-    @app.post("/api/antigravity/connect")
-    def antigravity_connect() -> tuple[Response, int]:
-        return jsonify(antigravity().ensure_connected(force=True)), 202
+    @app.get("/api/agent/sessions")
+    def list_agent_sessions():
+        sessions = orchestration.list_agent_sessions()
+        return jsonify(
+            sessions=sessions,
+            pending_cleanup=sum(item.get("cleanup_status") == "pending_cleanup" for item in sessions),
+        )
 
-    @app.get("/api/antigravity/events")
-    def antigravity_events() -> Response:
+    @app.post("/api/agent/sessions/<session_id>/open-cleanup")
+    def open_agent_cleanup_terminal(session_id: str):
+        session = orchestration.agent_session_for_cleanup(session_id)
+        executable = getattr(agent_runtime, "executable", "agy") if agent_runtime is not None else "agy"
+        pid = _open_antigravity_cleanup_terminal(
+            package_root.parent,
+            str(session["conversation_id"]),
+            executable=executable,
+        )
+        return jsonify(
+            opened=True,
+            terminal_pid=pid,
+            session_id=session_id,
+            conversation_id=session["conversation_id"],
+            instructions=[
+                "Type /resume in the Antigravity TUI.",
+                "Find the displayed conversation ID.",
+                "Press Ctrl+Delete, then Enter or Y to confirm.",
+                "Return to the dashboard and click Deleted in Antigravity.",
+            ],
+        )
+
+    @app.post("/api/agent/sessions/<session_id>/acknowledge-cleanup")
+    def acknowledge_agent_cleanup(session_id: str):
+        return jsonify(orchestration.acknowledge_agent_cleanup(session_id))
+
+    @app.get("/api/docs")
+    def list_docs():
+        return jsonify(documents=_list_docs(docs_root))
+
+    @app.get("/api/docs/content")
+    def read_doc():
+        relative_path = str(request.args.get("path", "")).strip()
+        document = _resolve_doc_path(docs_root, relative_path)
+        content = document.read_text(encoding="utf-8")
+        render_format, rendered_html = _render_doc_content(document.suffix, content)
+        return jsonify(
+            path=document.relative_to(docs_root.resolve()).as_posix(),
+            name=document.name,
+            extension=document.suffix.lower(),
+            content=content,
+            format=render_format,
+            rendered_html=rendered_html,
+        )
+
+    @app.get("/api/prompts")
+    def read_prompts():
+        return jsonify(**_read_prompts(package_root))
+
+    @app.get("/api/product-types")
+    def read_product_types():
+        return jsonify(product_types=_read_product_types(package_root), source=PRODUCT_TYPES_FILE)
+
+    @app.put("/api/prompts")
+    def save_prompts():
+        prompts = _validate_prompts(request.get_json(silent=False))
+        for key, filename in PROMPT_FILES.items():
+            atomic_write_text(package_root / filename, prompts[key])
+        return jsonify(
+            saved=True,
+            files=PROMPT_FILES,
+            restart_required=True,
+            message="Prompts saved. They will be used when the server starts its next Antigravity conversation.",
+        )
+
+    @app.post("/api/agent/restart")
+    def restart_agent():
+        if agent_runtime is None:
+            return jsonify(error="Antigravity runtime is not configured."), 409
+        return jsonify(agent_runtime.restart()), 202
+
+    @app.post("/api/agent/health-check")
+    def check_agent_health():
+        if agent_runtime is None:
+            return jsonify(error="Antigravity runtime is not configured."), 409
         try:
-            cursor = int(request.headers.get("Last-Event-ID") or request.args.get("after") or 0)
-        except ValueError:
-            cursor = 0
-
-        @stream_with_context
-        def generate():
-            nonlocal cursor
-            while True:
-                events = antigravity().events_after(cursor)
-                for event in events:
-                    cursor = int(event["id"])
-                    yield f"id: {cursor}\nevent: antigravity\ndata: {json.dumps(event, ensure_ascii=False)}\n\n"
-                if not events:
-                    yield ": heartbeat\n\n"
-                    antigravity().wait_for_change(10.0)
-
-        return Response(generate(), mimetype="text/event-stream", headers={
-            "Cache-Control": "no-cache", "X-Accel-Buffering": "no",
-        })
+            return jsonify(agent_runtime.health_check())
+        except Exception as exc:
+            return jsonify(error=str(exc), agent=agent_runtime.state()), 503
 
     @app.put("/api/manifest")
-    def update_manifest() -> Response:
-        manifest = save_manifest(request.get_json(force=False, silent=False))
-        return jsonify({"ok": True, "run_id": manifest.digest, "products": len(manifest.products)})
+    def save_manifest():
+        payload = _manifest_payload(request.get_json(silent=False))
+        parse_manifest_payload(payload, manifest_path)
+        atomic_write_json(manifest_path, payload)
+        return jsonify(saved=True, manifest=payload)
 
     @app.post("/api/runs")
-    def start_run() -> tuple[Response, int]:
-        payload = request.get_json(force=False, silent=False) or {}
-        manifest_payload = payload.get("manifest")
-        manifest = save_manifest(manifest_payload)
-        prompt = str(payload.get("prompt", "")).strip()
-        if not prompt:
-            raise ValueError("Prompt cannot be empty.")
-        options = validate_run_options(payload.get("options"))
-        try:
-            job = job_manager().start(manifest, prompt, options)
-        except RuntimeError as exc:
-            return jsonify({"error": str(exc)}), 409
-        return jsonify(job), 202
+    def create_run():
+        body = request.get_json(silent=False) or {}
+        payload = _manifest_payload(body)
+        options = validate_run_options(body.get("options"))
+        manifest = parse_manifest_payload(payload, manifest_path)
+        atomic_write_json(manifest_path, payload)
+        return jsonify(orchestration.create_run(manifest, payload, options)), 201
 
     @app.get("/api/runs")
-    def list_runs() -> Response:
-        return jsonify({"jobs": job_manager().list_jobs()})
+    def list_runs():
+        return jsonify(runs=orchestration.list_runs())
 
-    @app.get("/api/runs/<job_id>")
-    def get_run(job_id: str) -> Response:
-        return jsonify(job_manager().get(job_id))
+    @app.get("/api/runs/<run_id>")
+    def get_run(run_id: str):
+        return jsonify(orchestration.get_run(run_id))
 
-    def content_path_for(job_id: str, asin: str) -> tuple[dict[str, Any], Path]:
-        job = job_manager().get(job_id)
-        if asin not in job.get("products", {}):
-            raise KeyError(asin)
-        return job, package_root / "runs" / job["run_id"] / asin / "content.json"
+    @app.post("/api/runs/<run_id>/resume-crawl")
+    def resume_crawl(run_id: str):
+        return jsonify(orchestration.resume_crawl(run_id))
 
-    @app.get("/api/runs/<job_id>/products/<asin>/content")
-    def get_product_content(job_id: str, asin: str) -> Response:
-        job, content_path = content_path_for(job_id, asin)
-        payload = load_json(content_path) if content_path.is_file() else {}
-        validation_error = None
-        if payload:
-            try:
-                validate_content(payload)
-            except ContentValidationError as exc:
-                validation_error = str(exc)
-        return jsonify({
-            "job_id": job_id,
-            "run_id": job["run_id"],
-            "asin": asin,
-            "exists": content_path.is_file(),
-            "content": payload,
-            "valid": bool(payload) and validation_error is None,
-            "validation_error": validation_error,
-        })
+    @app.get("/api/queue")
+    def queue_status():
+        return jsonify(orchestration.queue_status(request.args.get("run_id") or None))
 
-    @app.put("/api/runs/<job_id>/products/<asin>/content")
-    def update_product_content(job_id: str, asin: str) -> Response:
-        job, content_path = content_path_for(job_id, asin)
-        payload = request.get_json(force=False, silent=False)
-        if not isinstance(payload, dict):
-            raise ValueError("content.json must contain a JSON object.")
-        normalized = validate_content(payload)
-        atomic_write_json(content_path, payload)
-        job_manager().record_event(job_id, {
-            "event": "content_saved",
-            "asin": asin,
-            "message": "content.json đã được validate và lưu atomic.",
-        })
-        return jsonify({
-            "ok": True,
-            "job_id": job_id,
-            "run_id": job["run_id"],
-            "asin": asin,
-            "valid": True,
-            "content": payload,
-            "normalized": normalized,
-        })
+    @app.get("/api/content-tasks/<task_id>/draft")
+    def get_content_draft(task_id: str):
+        return jsonify(orchestration.content_task(task_id))
 
-    @app.post("/api/runs/<job_id>/resume")
-    def resume_run(job_id: str) -> tuple[Response, int]:
+    @app.put("/api/content-tasks/<task_id>/draft")
+    def save_content_draft(task_id: str):
+        body = request.get_json(silent=False) or {}
+        return jsonify(orchestration.save_manual_draft(task_id, body.get("content", body)))
+
+    @app.post("/api/content-tasks/<task_id>/finalize")
+    def finalize_content(task_id: str):
+        return jsonify(orchestration.finalize_manual_content(task_id))
+
+    @app.post("/api/content-tasks/<task_id>/release")
+    def release_content(task_id: str):
+        body = request.get_json(silent=False) or {}
+        return jsonify(orchestration.force_release_content(task_id, str(body.get("reason", "Released from dashboard."))))
+
+    @app.post("/api/content-tasks/<task_id>/requeue")
+    def requeue_content(task_id: str):
+        return jsonify(orchestration.return_content_to_queue(task_id))
+
+    @app.post("/api/content-tasks/<task_id>/retry")
+    def retry_content(task_id: str):
+        return jsonify(orchestration.retry_failed_content(task_id))
+
+    @app.post("/api/apply-tasks/<task_id>/retry")
+    def retry_apply(task_id: str):
+        return jsonify(orchestration.retry_apply(task_id))
+
+    @app.post("/api/products/<product_id>/acknowledge")
+    def acknowledge_product(product_id: str):
+        return jsonify(orchestration.acknowledge_product(product_id))
+
+    def event_stream(run_id: str | None):
         try:
-            job = job_manager().resume(job_id)
-        except RuntimeError as exc:
-            return jsonify({"error": str(exc)}), 409
-        return jsonify(job), 202
-
-    @app.get("/api/runs/<job_id>/events")
-    def stream_events(job_id: str) -> Response:
-        job_manager().get(job_id)
-        try:
-            cursor = int(request.headers.get("Last-Event-ID") or request.args.get("after") or 0)
+            cursor = int(request.args.get("after", request.headers.get("Last-Event-ID", "0")) or 0)
         except ValueError:
             cursor = 0
 
         @stream_with_context
         def generate():
             nonlocal cursor
+            heartbeat = time.monotonic()
             while True:
-                events = job_manager().events_after(job_id, cursor)
-                for event in events:
+                for event in orchestration.events_after(cursor, run_id=run_id):
                     cursor = int(event["id"])
-                    yield f"id: {cursor}\nevent: progress\ndata: {json.dumps(event, ensure_ascii=False)}\n\n"
-                job = job_manager().get(job_id)
-                if job.get("status") in TERMINAL_JOB_STATUSES and cursor >= int(job.get("last_event_id", 0)):
-                    return
-                if not events:
-                    yield ": heartbeat\n\n"
-                    job_manager().wait_for_change(10.0)
+                    yield f"id: {cursor}\ndata: {json.dumps(event, ensure_ascii=False)}\n\n"
+                if time.monotonic() - heartbeat >= 15:
+                    yield ": keep-alive\n\n"
+                    heartbeat = time.monotonic()
+                time.sleep(0.75)
 
-        return Response(generate(), mimetype="text/event-stream", headers={
-            "Cache-Control": "no-cache", "X-Accel-Buffering": "no",
-        })
+        return Response(generate(), mimetype="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+    @app.get("/api/runs/<run_id>/events")
+    def run_events(run_id: str):
+        orchestration.get_run(run_id)
+        return event_stream(run_id)
+
+    @app.get("/api/queue/events")
+    def queue_events():
+        return event_stream(None)
 
     return app
 
 
 def serve(host: str = "127.0.0.1", port: int = 5000) -> None:
-    if host not in {"127.0.0.1", "localhost", "::1"}:
-        raise ValueError("The scraper dashboard only binds to a loopback address.")
-    create_app().run(host=host, port=port, threaded=True, use_reloader=False)
+    from .antigravity import AntigravitySupervisor
+
+    store = OrchestratorStore(PACKAGE_ROOT)
+    readiness_gate = threading.Event()
+    coordinator = RunCoordinator(store, readiness_gate=readiness_gate)
+    agent = AntigravitySupervisor(PACKAGE_ROOT, store, readiness_gate)
+    app = create_app(PACKAGE_ROOT, store=store, coordinator=coordinator, agent_runtime=agent)
+    http_server = make_server(host, port, app, threaded=True)
+    registration = register_server_process(PACKAGE_ROOT, host, port)
+    dashboard_url = _dashboard_url(host, port)
+    try:
+        coordinator.start()
+        agent.start()
+        browser_timer = threading.Timer(0.2, _open_dashboard, args=(dashboard_url,))
+        browser_timer.daemon = True
+        browser_timer.start()
+        print(" * Serving Flask app 'scraper.server'", flush=True)
+        print(" * Debug mode: off", flush=True)
+        print("WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.", flush=True)
+        print(f" * Running on {dashboard_url}", flush=True)
+        print("Press CTRL+C to quit", flush=True)
+        http_server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        readiness_gate.clear()
+        http_server.server_close()
+        coordinator.stop()
+        agent.stop()
+        unregister_server_process(registration)

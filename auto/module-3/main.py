@@ -1980,6 +1980,126 @@ def get_products_by_duplicate_asin(sort_by="created_desc"):
         "productsCount": {"count": len(duplicate_edges)}
     }
 
+def get_products_by_duplicate_title(sort_by="created_desc"):
+    query = """
+    query getProducts($after: String) {
+      products(first: 50, after: $after) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        edges {
+          node {
+            id
+            handle
+            title
+            descriptionHtml
+            createdAt
+            productType
+            category {
+              name
+            }
+            priceRangeV2 {
+              minVariantPrice {
+                amount
+              }
+            }
+            options {
+              name
+            }
+            collections(first: 20) {
+              edges {
+                node {
+                  title
+                }
+              }
+            }
+            amazon_link: metafield(namespace: "custom", key: "amazon_link") {
+              value
+            }
+            media(first: 50) {
+              edges {
+                node {
+                  ... on MediaImage {
+                    id
+                    image {
+                      url
+                    }
+                  }
+                  ... on Video {
+                    id
+                    preview {
+                      image {
+                        url
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    """
+    all_edges = []
+    has_next = True
+    cursor = None
+    
+    while has_next:
+        variables = {}
+        if cursor:
+            variables["after"] = cursor
+            
+        res = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=HEADERS)
+        res.raise_for_status()
+        data = res.json()
+        if "errors" in data:
+            print("GraphQL Errors:", data["errors"])
+            break
+            
+        products_data = data["data"]["products"]
+        all_edges.extend(products_data["edges"])
+                
+        page_info = products_data.get("pageInfo", {})
+        has_next = page_info.get("hasNextPage", False)
+        cursor = page_info.get("endCursor")
+        
+    title_counts = {}
+    for edge in all_edges:
+        raw_title = edge["node"].get("title")
+        if raw_title:
+            norm_title = raw_title.strip().lower()
+            if norm_title:
+                title_counts[norm_title] = title_counts.get(norm_title, 0) + 1
+                
+    duplicate_edges = []
+    for edge in all_edges:
+        raw_title = edge["node"].get("title")
+        if raw_title:
+            norm_title = raw_title.strip().lower()
+            if norm_title and title_counts.get(norm_title, 0) > 1:
+                duplicate_edges.append(edge)
+
+    def get_sort_key(edge):
+        if sort_by in ["price_asc", "price_desc"]:
+            price_data = edge["node"].get("priceRangeV2")
+            if price_data and price_data.get("minVariantPrice"):
+                return float(price_data["minVariantPrice"].get("amount", 0))
+            return 0.0
+        return edge["node"].get("createdAt", "")
+        
+    reverse_sort = sort_by in ["created_desc", "price_desc"]
+    duplicate_edges.sort(key=get_sort_key, reverse=reverse_sort)
+        
+    return {
+        "products": {
+            "edges": duplicate_edges,
+            "pageInfo": {"hasNextPage": False, "hasPreviousPage": False}
+        },
+        "productsCount": {"count": len(duplicate_edges)}
+    }
+
 @app.post("/update-token")
 async def update_token(request: Request, access_token: str = Form(...)):
     global SHOPIFY_ADMIN_TOKEN, HEADERS
@@ -2137,6 +2257,8 @@ async def read_root(request: Request, after: str = None, before: str = None, fil
             data = get_products_by_rich_description_status(special_filter == "has_rich", sort_by=sort_by)
         elif special_filter and special_filter == "duplicate_asin":
             data = get_products_by_duplicate_asin(sort_by=sort_by)
+        elif special_filter and special_filter == "duplicate_title":
+            data = get_products_by_duplicate_title(sort_by=sort_by)
         elif filter_value and filter_type in ["metafield_amazon_link", "metafield_amazon_link_list"]:
             data = get_products_by_metafield_amazon_link_list(filter_value, sort_by=sort_by)
         elif filter_value and filter_type == "metafield_rich_description":

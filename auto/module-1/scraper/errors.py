@@ -18,6 +18,10 @@ class ContentValidationError(ScraperError):
     """AI-authored product content does not satisfy the contract."""
 
 
+class ImageEvidenceError(ScraperError):
+    """Verified product imagery could not be prepared for visual grounding."""
+
+
 class ShopifyError(ScraperError):
     """A Shopify request or mutation failed."""
 
