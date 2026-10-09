@@ -80,3 +80,33 @@ def test_media_attach_filters_existing_ids(tmp_path):
     client = ShopifyClient(config(tmp_path), session)
     assert client.attach_media("123", [{"url": "https://cdn/image.jpg", "alt": "Alt"}], ["old"]) == ["new"]
 
+
+def test_products_by_amazon_asins_normalizes_urls_and_paginates(tmp_path):
+    session = Session([
+        Response(200, {"data": {"products": {
+            "nodes": [{
+                "id": "gid://shopify/Product/111", "title": "First", "handle": "first",
+                "amazonLink": {"value": "https://www.amazon.com/dp/B0H7H28CFG/ref=abc?th=1"},
+            }, {
+                "id": "gid://shopify/Product/999", "title": "Ignored", "handle": "ignored",
+                "amazonLink": {"value": "not-a-valid-amazon-url"},
+            }],
+            "pageInfo": {"hasNextPage": True, "endCursor": "page-2"},
+        }}}),
+        Response(200, {"data": {"products": {
+            "nodes": [{
+                "id": "gid://shopify/Product/222", "title": "Second", "handle": "second",
+                "amazonLink": {"value": "https://amazon.com/gp/product/B000000000?tag=source"},
+            }],
+            "pageInfo": {"hasNextPage": False, "endCursor": None},
+        }}}),
+    ])
+    client = ShopifyClient(config(tmp_path), session)
+    matches = client.products_by_amazon_asins({"b0h7h28cfg", "B000000000", "B111111111"})
+
+    assert matches["B0H7H28CFG"][0]["shopify_product_id"] == "111"
+    assert matches["B0H7H28CFG"][0]["amazon_url"].endswith("/ref=abc?th=1")
+    assert matches["B000000000"][0]["shopify_product_id"] == "222"
+    assert matches["B111111111"] == []
+    assert session.calls[1][1]["json"]["variables"]["after"] == "page-2"
+

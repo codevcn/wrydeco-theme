@@ -1,5 +1,7 @@
 const $ = (selector) => document.querySelector(selector);
-const state = { csrf: "", manifest: { products: [] }, runs: [], currentRun: null, currentTask: null, refreshTimer: null, agent: null, agentReady: false, agentSessions: [], documents: [], currentDocument: null, prompts: null, productTypes: [], productTypeTarget: null };
+const state = { csrf: "", manifest: { products: [] }, runs: [], currentRun: null, currentTask: null, refreshTimer: null, agent: null, agentReady: false, agentSessions: [], documents: [], currentDocument: null, prompts: null, productTypes: [], productTypeTarget: null, eventLines: [], pendingEvents: [], eventFlushTimer: null, eventCursor: 0, eventSource: null };
+const INITIAL_EVENT_LOG_LIMIT = 250;
+const MAX_EVENT_LOG_LINES = 500;
 
 const labels = {
   pending: "Chờ crawl", crawling: "Đang crawl", crawled: "Đã crawl", price_verified: "Giá hợp lệ",
@@ -334,6 +336,7 @@ function handleMultiValuePaste(event, fieldName, startRow) {
     const input = targetRow.querySelector(`[data-field="${fieldName}"]`);
     if (input) {
       input.value = value;
+      if (["amazon_url", "shopify_product_id"].includes(fieldName)) clearStoreExistence(targetRow);
     }
   });
 
@@ -363,13 +366,44 @@ function addRow(product = {}) {
     }
   });
   const amazonUrlInput = row.querySelector('[data-field="amazon_url"]');
+  amazonUrlInput.addEventListener("input", () => clearStoreExistence(row));
   amazonUrlInput.addEventListener("paste", (event) => handleMultiValuePaste(event, "amazon_url", row));
   const shopifyIdInput = row.querySelector('[data-field="shopify_product_id"]');
+  shopifyIdInput.addEventListener("input", () => clearStoreExistence(row));
   shopifyIdInput.addEventListener("paste", (event) => handleMultiValuePaste(event, "shopify_product_id", row));
   row.querySelector('[data-action="remove"]').addEventListener("click", () => { row.remove(); updatePreview(); });
   row.querySelector('[data-action="duplicate"]').addEventListener("click", () => addRow(readRow(row)));
   $("#products-body").append(row); togglePreset(); applyAgentGate(); updatePreview();
   return row;
+}
+
+function clearStoreExistence(row) {
+  const status = row.querySelector('[data-role="store-existence"]');
+  status.hidden = true;
+  status.textContent = "";
+  status.className = "store-existence-status";
+  row.classList.remove("store-product-exists", "store-product-conflict");
+}
+
+function renderShopifyPreflight(preflight) {
+  const allRows = Array.from(document.querySelectorAll("#products-body .product-row"));
+  allRows.forEach(clearStoreExistence);
+  const rows = manifestRows();
+  (preflight.products || []).forEach((result) => {
+    const row = rows[result.index];
+    if (!row || !result.exists) return;
+    const status = row.querySelector('[data-role="store-existence"]');
+    const ids = (result.matches || []).map((item) => item.shopify_product_id).filter(Boolean);
+    const uniqueIds = [...new Set(ids)];
+    const matchesTarget = Boolean(result.matches_target_product);
+    status.hidden = false;
+    status.classList.add(matchesTarget ? "matched" : "conflict");
+    status.textContent = matchesTarget
+      ? `✓ ASIN ${result.asin} đã tồn tại trên sản phẩm này`
+      : `! ASIN ${result.asin} đã tồn tại ở Shopify ID ${uniqueIds.join(", ")}`;
+    status.title = (result.matches || []).map((item) => `${item.title || "Untitled"} · ${item.amazon_url}`).join("\n");
+    row.classList.add(matchesTarget ? "store-product-exists" : "store-product-conflict");
+  });
 }
 
 function readRow(row) {
@@ -382,9 +416,15 @@ function readRow(row) {
 }
 
 function collectManifest() {
-  const products = [...document.querySelectorAll(".product-row")].map(readRow)
-    .filter((item) => item.amazon_url || item.shopify_product_id);
-  return { products };
+  return { products: manifestRows().map(readRow) };
+}
+
+function manifestRows() {
+  return [...document.querySelectorAll(".product-row")]
+    .filter((row) => {
+      const item = readRow(row);
+      return item.amazon_url || item.shopify_product_id;
+    });
 }
 function updatePreview() {
   state.manifest = collectManifest();
@@ -406,6 +446,23 @@ function tone(status) {
   if (["content_queued", "content_claimed", "waiting_for_content", "interrupted", "initializing", "starting"].includes(status)) return "warning";
   if (["crawling", "applying", "running", "apply_queued", "busy", "ready"].includes(status)) return "running";
   return "neutral";
+}
+
+function updateBatchFlowIndicator() {
+  const indicator = $("#batch-flow-indicator");
+  const activeStatuses = new Set(["crawling", "waiting_for_content", "applying"]);
+  const activeRuns = state.runs.filter((run) => activeStatuses.has(run.status));
+  const isRunning = activeRuns.length > 0;
+  indicator.classList.toggle("running", isRunning);
+  indicator.classList.toggle("stopped", !isRunning);
+  if (!isRunning) {
+    $("#batch-flow-title").textContent = "Batch đã dừng";
+    return;
+  }
+  const phase = activeRuns.some((run) => run.status === "applying")
+    ? "Đang sync Shopify"
+    : (activeRuns.some((run) => run.status === "crawling") ? "Đang crawl Amazon" : "Đang xử lý content");
+  $("#batch-flow-title").textContent = "Batch đang chạy";
 }
 
 function applyAgentGate() {
@@ -567,6 +624,7 @@ function renderHistory() {
   const root = $("#job-history");
   root.innerHTML = state.runs.length ? state.runs.map((run) => `<button class="history-item history-button" data-run="${run.id}"><span><strong>${run.id.slice(0, 12)}</strong><small>${new Date(run.created_at).toLocaleString("vi-VN")} · <span class="history-relative-time">${relativeElapsed(run.created_at)}</span> · ${Object.keys(run.products || {}).length} sản phẩm · crawl ${run.crawl_status}</small></span><span class="status-pill ${tone(run.status)}">${run.status.replaceAll("_", " ")}</span></button>`).join("") : '<div class="empty-state">Chưa có execution.</div>';
   root.querySelectorAll("[data-run]").forEach((button) => button.addEventListener("click", () => selectRun(button.dataset.run)));
+  updateBatchFlowIndicator();
 }
 
 async function selectRun(id) { try { renderRun(await api(`/api/runs/${id}`)); } catch (error) { notify(error.message, true); } }
@@ -591,13 +649,56 @@ async function refreshState() {
   } catch (error) { notify(error.message, true); }
 }
 
-function connectEvents() {
-  const source = new EventSource("/api/queue/events");
+function renderEventLines(scrollToBottom = false) {
+  const log = $("#event-log");
+  log.textContent = state.eventLines.length ? `${state.eventLines.join("\n")}\n` : "";
+  if (scrollToBottom) log.scrollTop = log.scrollHeight;
+}
+
+function flushPendingEvents() {
+  state.eventFlushTimer = null;
+  if (!state.pendingEvents.length) return;
+  const log = $("#event-log");
+  const wasNearBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 80;
+  const events = state.pendingEvents.splice(0);
+  state.eventLines.push(...events.map(eventText));
+  if (state.eventLines.length > MAX_EVENT_LOG_LINES) {
+    state.eventLines.splice(0, state.eventLines.length - MAX_EVENT_LOG_LINES);
+  }
+  renderEventLines(wasNearBottom);
+  scheduleRefresh();
+}
+
+function queueEvent(event) {
+  const eventId = Number(event.id || 0);
+  if (eventId && eventId <= state.eventCursor) return;
+  if (eventId) state.eventCursor = eventId;
+  state.pendingEvents.push(event);
+  if (!state.eventFlushTimer) state.eventFlushTimer = setTimeout(flushPendingEvents, 100);
+}
+
+function connectEvents(after = 0) {
+  if (state.eventSource) state.eventSource.close();
+  const source = new EventSource(`/api/queue/events?after=${encodeURIComponent(after)}`);
+  state.eventSource = source;
   source.onmessage = (message) => {
-    const event = JSON.parse(message.data), log = $("#event-log");
-    log.textContent += `${eventText(event)}\n`; log.scrollTop = log.scrollHeight; scheduleRefresh();
+    try { queueEvent(JSON.parse(message.data)); } catch (_error) { /* Ignore malformed event frames. */ }
   };
   source.onerror = () => { $("#agent-message").textContent = "Event stream đang kết nối lại…"; };
+}
+
+async function initializeEventLog() {
+  try {
+    const payload = await api(`/api/events/recent?limit=${INITIAL_EVENT_LOG_LIMIT}`);
+    const events = payload.events || [];
+    state.eventLines = events.map(eventText).slice(-MAX_EVENT_LOG_LINES);
+    state.eventCursor = Number(payload.cursor || 0);
+    renderEventLines(true);
+    connectEvents(state.eventCursor);
+  } catch (error) {
+    notify(`Không thể tải Event Log: ${error.message}`, true);
+    connectEvents(state.eventCursor);
+  }
 }
 
 async function action(button, callback) {
@@ -616,7 +717,8 @@ async function bootstrap() {
     (data.manifest.products || []).forEach(addRow); if (!data.manifest.products?.length) addRow();
     $("#headless").checked = data.options.headless; $("#dry-run").checked = data.options.dry_run;
     $("#max-combinations").value = data.options.max_combinations; $("#postal-code").value = data.options.amazon_postal_code;
-    updateQueue(data.queue); updateAgent(data.agent); updateAgentCleanupCount(); renderHistory(); renderRun(state.runs[0] || null); updatePreview(); connectEvents();
+    updateQueue(data.queue); updateAgent(data.agent); updateAgentCleanupCount(); renderHistory(); renderRun(state.runs[0] || null); updatePreview();
+    initializeEventLog();
   } catch (error) { notify(error.message, true); }
 }
 
@@ -630,8 +732,22 @@ function updatePageScrollControls() {
 $("#add-product").addEventListener("click", () => addRow());
 $("#save-manifest").addEventListener("click", (event) => action(event.currentTarget, async () => { await api("/api/manifest", { method: "PUT", body: JSON.stringify(collectManifest()) }); notify("Đã lưu products.json atomically."); }));
 $("#run-batch").addEventListener("click", (event) => action(event.currentTarget, async () => {
-  const run = await api("/api/runs", { method: "POST", body: JSON.stringify({ manifest: collectManifest(), options: optionsPayload() }) });
-  state.runs.unshift(run); renderHistory(); renderRun(run); notify("Đã tạo run. Crawler sẽ nhận task tuần tự.");
+  const manifest = collectManifest();
+  const result = await api("/api/runs", { method: "POST", body: JSON.stringify({
+    manifest,
+    options: optionsPayload(),
+    skip_existing_store_products: true,
+  }) });
+  renderShopifyPreflight(result.preflight);
+  if (!result.run) {
+    notify(`Đã bỏ qua ${result.skipped_existing} row vì toàn bộ sản phẩm đã tồn tại trên store.`);
+    return;
+  }
+  const run = result.run;
+  state.runs.unshift(run); renderHistory(); renderRun(run);
+  notify(result.skipped_existing
+    ? `Đã tạo run cho ${Object.keys(run.products || {}).length} sản phẩm; bỏ qua ${result.skipped_existing} row đã tồn tại.`
+    : `Đã tạo run. Tiền kiểm tra ${result.preflight.checked} sản phẩm không phát hiện ASIN đã tồn tại.`);
 }));
 $("#resume-crawl").addEventListener("click", (event) => action(event.currentTarget, async () => { renderRun(await api(`/api/runs/${state.currentRun.id}/resume-crawl`, { method: "POST", body: "{}" })); notify("Crawler đã được đưa lại vào queue."); }));
 $("#restart-agent").addEventListener("click", (event) => action(event.currentTarget, async () => { updateAgent(await api("/api/agent/restart", { method: "POST", body: "{}" })); notify("Đang khởi động một Antigravity conversation mới."); }));
@@ -676,7 +792,11 @@ $("#apply-product-type").addEventListener("click", () => {
 });
 window.addEventListener("scroll", updatePageScrollControls, { passive: true });
 window.addEventListener("resize", updatePageScrollControls);
-$("#clear-log").addEventListener("click", () => { $("#event-log").textContent = ""; });
+$("#clear-log").addEventListener("click", () => {
+  state.eventLines = [];
+  state.pendingEvents = [];
+  renderEventLines();
+});
 $("#open-docs").addEventListener("click", (event) => action(event.currentTarget, openDocs));
 $("#close-docs").addEventListener("click", closeDocs);
 $("#docs-modal").addEventListener("click", (event) => { if (event.target === event.currentTarget) closeDocs(); });

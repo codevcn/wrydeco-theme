@@ -17,11 +17,12 @@ from markdown_it import MarkdownIt
 from werkzeug.serving import make_server
 
 from .config import PACKAGE_ROOT
-from .errors import ContentValidationError, ManifestError
+from .errors import ContentValidationError, ManifestError, ShopifyError
 from .io_utils import atomic_write_json, atomic_write_text, load_json
 from .manifest import parse_manifest_payload
 from .orchestrator import RunCoordinator
 from .server_control import register_server_process, unregister_server_process
+from .shopify import ShopifyClient, ShopifyConfig
 from .store import ClaimError, OrchestratorStore, QueueConflict
 
 
@@ -211,6 +212,7 @@ def create_app(
     store: OrchestratorStore | None = None,
     coordinator: RunCoordinator | None = None,
     agent_runtime: Any | None = None,
+    shopify_client_factory: Any | None = None,
     start_workers: bool = False,
 ) -> Flask:
     package_root = package_root.resolve()
@@ -232,6 +234,32 @@ def create_app(
     manifest_path = package_root / "input" / "products.json"
     docs_root = package_root / "docs"
     csrf_token = secrets.token_urlsafe(32)
+
+    def preflight_shopify_products(payload: dict[str, Any]) -> dict[str, Any]:
+        manifest = parse_manifest_payload(payload, manifest_path)
+        factory = shopify_client_factory or (
+            lambda: ShopifyClient(ShopifyConfig.from_env(package_root / ".env"))
+        )
+        matches_by_asin = factory().products_by_amazon_asins({item.asin for item in manifest.products})
+        products = []
+        for index, item in enumerate(manifest.products):
+            matches = matches_by_asin.get(item.asin, [])
+            products.append({
+                "index": index,
+                "asin": item.asin,
+                "amazon_url": item.amazon_url,
+                "shopify_product_id": item.shopify_product_id,
+                "exists": bool(matches),
+                "matches_target_product": any(
+                    match.get("shopify_product_id") == item.shopify_product_id for match in matches
+                ),
+                "matches": matches,
+            })
+        return {
+            "checked": len(products),
+            "existing": sum(item["exists"] for item in products),
+            "products": products,
+        }
 
     @app.before_request
     def guard_mutations():
@@ -259,6 +287,10 @@ def create_app(
     @app.errorhandler(ValueError)
     def invalid_request(error: Exception):
         return jsonify(error=str(error)), 400
+
+    @app.errorhandler(ShopifyError)
+    def shopify_request_failed(error: ShopifyError):
+        return jsonify(error=f"Shopify preflight failed: {error}"), 502
 
     @app.get("/")
     def index():
@@ -381,12 +413,46 @@ def create_app(
         atomic_write_json(manifest_path, payload)
         return jsonify(saved=True, manifest=payload)
 
+    @app.post("/api/shopify/preflight-products")
+    def preflight_products():
+        payload = _manifest_payload(request.get_json(silent=False))
+        return jsonify(preflight_shopify_products(payload))
+
     @app.post("/api/runs")
     def create_run():
         body = request.get_json(silent=False) or {}
         payload = _manifest_payload(body)
         options = validate_run_options(body.get("options"))
         manifest = parse_manifest_payload(payload, manifest_path)
+        if body.get("skip_existing_store_products") is True:
+            preflight = preflight_shopify_products(payload)
+            skipped_indexes = {
+                item["index"] for item in preflight["products"] if item["exists"]
+            }
+            runnable_payload = {
+                "products": [
+                    product for index, product in enumerate(payload["products"])
+                    if index not in skipped_indexes
+                ]
+            }
+            # Keep the user's complete input list on disk. The immutable run
+            # snapshot contains only products that still need processing.
+            atomic_write_json(manifest_path, payload)
+            if not runnable_payload["products"]:
+                return jsonify(
+                    run=None,
+                    preflight=preflight,
+                    skipped_existing=len(skipped_indexes),
+                    message="All manifest products already exist on Shopify; no run was created.",
+                )
+            runnable_manifest = parse_manifest_payload(runnable_payload, manifest_path)
+            run = orchestration.create_run(runnable_manifest, runnable_payload, options)
+            return jsonify(
+                run=run,
+                preflight=preflight,
+                skipped_existing=len(skipped_indexes),
+                message=f"Skipped {len(skipped_indexes)} existing Shopify product(s).",
+            ), 201
         atomic_write_json(manifest_path, payload)
         return jsonify(orchestration.create_run(manifest, payload, options)), 201
 
@@ -405,6 +471,15 @@ def create_app(
     @app.get("/api/queue")
     def queue_status():
         return jsonify(orchestration.queue_status(request.args.get("run_id") or None))
+
+    @app.get("/api/events/recent")
+    def recent_events():
+        try:
+            limit = int(request.args.get("limit", "250"))
+        except ValueError:
+            limit = 250
+        events = orchestration.recent_events(limit=limit, run_id=request.args.get("run_id") or None)
+        return jsonify({"events": events, "cursor": int(events[-1]["id"]) if events else 0})
 
     @app.get("/api/content-tasks/<task_id>/draft")
     def get_content_draft(task_id: str):
@@ -442,7 +517,9 @@ def create_app(
 
     def event_stream(run_id: str | None):
         try:
-            cursor = int(request.args.get("after", request.headers.get("Last-Event-ID", "0")) or 0)
+            # EventSource sends Last-Event-ID after a reconnect. Prefer it over
+            # the initial query cursor so reconnects cannot replay duplicates.
+            cursor = int(request.headers.get("Last-Event-ID") or request.args.get("after", "0") or 0)
         except ValueError:
             cursor = 0
 
@@ -451,7 +528,7 @@ def create_app(
             nonlocal cursor
             heartbeat = time.monotonic()
             while True:
-                for event in orchestration.events_after(cursor, run_id=run_id):
+                for event in orchestration.events_after(cursor, run_id=run_id, limit=200):
                     cursor = int(event["id"])
                     yield f"id: {cursor}\ndata: {json.dumps(event, ensure_ascii=False)}\n\n"
                 if time.monotonic() - heartbeat >= 15:

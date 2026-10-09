@@ -8,8 +8,9 @@ from typing import Any, Mapping
 
 import requests
 
-from .errors import ShopifyError
+from .errors import ManifestError, ShopifyError
 from .io_utils import load_env, update_env_value
+from .manifest import extract_asin
 
 
 def gid(kind: str, identifier: str) -> str:
@@ -128,6 +129,55 @@ class ShopifyClient:
             for item in nodes
             if item.get("namespace") and item.get("key") and (item.get("type") or {}).get("name")
         }
+
+    def products_by_amazon_asins(self, asins: set[str]) -> dict[str, list[dict[str, str]]]:
+        """Return Shopify products whose custom.amazon_link contains a requested ASIN.
+
+        The comparison intentionally uses the normalized ASIN rather than the full URL,
+        so harmless Amazon query strings and path suffixes do not affect matching.
+        """
+        requested = {str(asin).strip().upper() for asin in asins if str(asin).strip()}
+        matches: dict[str, list[dict[str, str]]] = {asin: [] for asin in requested}
+        if not requested:
+            return matches
+        query = """
+        query ProductsByAmazonLink($after: String) {
+          products(first: 250, after: $after) {
+            nodes {
+              id title handle
+              amazonLink: metafield(namespace: "custom", key: "amazon_link") { value }
+            }
+            pageInfo { hasNextPage endCursor }
+          }
+        }"""
+        cursor: str | None = None
+        while True:
+            connection = self.graphql(query, {"after": cursor}).get("products") or {}
+            for product in connection.get("nodes") or []:
+                amazon_url = str((product.get("amazonLink") or {}).get("value") or "").strip()
+                if not amazon_url:
+                    continue
+                try:
+                    asin = extract_asin(amazon_url)
+                except ManifestError:
+                    # A malformed legacy metafield must not make the whole catalog
+                    # preflight unusable; it simply cannot match a normalized ASIN.
+                    continue
+                if asin not in requested:
+                    continue
+                product_gid = str(product.get("id") or "")
+                matches[asin].append({
+                    "shopify_product_id": product_gid.rsplit("/", 1)[-1],
+                    "title": str(product.get("title") or ""),
+                    "handle": str(product.get("handle") or ""),
+                    "amazon_url": amazon_url,
+                })
+            page_info = connection.get("pageInfo") or {}
+            if not page_info.get("hasNextPage"):
+                return matches
+            cursor = page_info.get("endCursor")
+            if not cursor:
+                raise ShopifyError("Shopify products pagination hasNextPage without an endCursor.")
 
     def _snapshot_connection(self, product_id: str, field: str, selection: str) -> list[dict[str, Any]]:
         if field not in {"variants", "media", "metafields", "resourcePublicationsV2"}:

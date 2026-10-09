@@ -1770,6 +1770,9 @@ def get_products_by_rich_description_status(has_rich: bool, sort_by="created_des
             rich_description: metafield(namespace: "custom", key: "rich_description") {
               value
             }
+            amazon_link: metafield(namespace: "custom", key: "amazon_link") {
+              value
+            }
             media(first: 50) {
               edges {
                 node {
@@ -2324,12 +2327,14 @@ async def read_root(request: Request, after: str = None, before: str = None, fil
                 price = float(price_data["minVariantPrice"].get("amount", 0))
                 
             asin = ""
+            amazon_link = ""
             amz_link_node = node.get("amazon_link")
             if not amz_link_node and filter_type in ["metafield_amazon_link", "metafield_amazon_link_list"]:
                 amz_link_node = node.get("metafield")
                 
             if amz_link_node and amz_link_node.get("value"):
-                match = re.search(r'(?:/dp/|/gp/product/)([a-zA-Z0-9]+)', amz_link_node.get("value"))
+                amazon_link = amz_link_node.get("value") or ""
+                match = re.search(r'(?:/dp/|/gp/product/)([a-zA-Z0-9]+)', amazon_link)
                 if match:
                     asin = match.group(1)
                 
@@ -2358,7 +2363,8 @@ async def read_root(request: Request, after: str = None, before: str = None, fil
                 "options": options,
                 "collections": collections,
                 "media": media_urls,
-                "asin": asin
+                "asin": asin,
+                "amazon_link": amazon_link
             })
             
         page_info = products_data.get("pageInfo", {})

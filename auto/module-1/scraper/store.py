@@ -603,17 +603,7 @@ class OrchestratorStore:
         with self._condition:
             self._condition.wait(timeout)
 
-    def events_after(self, event_id: int, *, run_id: str | None = None) -> list[dict[str, Any]]:
-        connection = self._connect()
-        try:
-            if run_id:
-                rows = connection.execute(
-                    "SELECT * FROM events WHERE id > ? AND run_id = ? ORDER BY id", (event_id, run_id)
-                ).fetchall()
-            else:
-                rows = connection.execute("SELECT * FROM events WHERE id > ? ORDER BY id", (event_id,)).fetchall()
-        finally:
-            connection.close()
+    def _serialize_event_rows(self, rows: list[sqlite3.Row]) -> list[dict[str, Any]]:
         output: list[dict[str, Any]] = []
         for row in rows:
             payload = self._public_value(_loads(row["payload_json"], {}))
@@ -623,6 +613,52 @@ class OrchestratorStore:
                 "product_id": row["product_id"], **payload,
             })
         return output
+
+    def events_after(
+        self,
+        event_id: int,
+        *,
+        run_id: str | None = None,
+        limit: int = 200,
+    ) -> list[dict[str, Any]]:
+        """Return a bounded event page after a cursor.
+
+        Bounding the page prevents a new SSE client from flooding the browser with
+        the complete lifetime history in one response.
+        """
+        safe_limit = max(1, min(int(limit), 500))
+        connection = self._connect()
+        try:
+            if run_id:
+                rows = connection.execute(
+                    "SELECT * FROM events WHERE id > ? AND run_id = ? ORDER BY id LIMIT ?",
+                    (event_id, run_id, safe_limit),
+                ).fetchall()
+            else:
+                rows = connection.execute(
+                    "SELECT * FROM events WHERE id > ? ORDER BY id LIMIT ?", (event_id, safe_limit)
+                ).fetchall()
+        finally:
+            connection.close()
+        return self._serialize_event_rows(rows)
+
+    def recent_events(self, limit: int = 250, *, run_id: str | None = None) -> list[dict[str, Any]]:
+        """Return only the newest events, ordered oldest-to-newest for display."""
+        safe_limit = max(1, min(int(limit), 500))
+        connection = self._connect()
+        try:
+            if run_id:
+                rows = connection.execute(
+                    "SELECT * FROM events WHERE run_id = ? ORDER BY id DESC LIMIT ?",
+                    (run_id, safe_limit),
+                ).fetchall()
+            else:
+                rows = connection.execute(
+                    "SELECT * FROM events ORDER BY id DESC LIMIT ?", (safe_limit,)
+                ).fetchall()
+        finally:
+            connection.close()
+        return self._serialize_event_rows(list(reversed(rows)))
 
     def create_run(self, manifest: Manifest, manifest_payload: dict[str, Any], options: dict[str, Any]) -> dict[str, Any]:
         run_id = uuid.uuid4().hex
@@ -1430,13 +1466,17 @@ class OrchestratorStore:
                 })
         return collisions
 
-    def _validate_complete_content(
+    def _validate_content_evidence(
         self,
         product: dict[str, Any],
         content_or_path: dict[str, Any] | Path,
-        *,
-        record_events: bool,
-    ) -> dict[str, str]:
+    ) -> tuple[dict[str, str], str, dict[str, Any]]:
+        """Validate product-local facts and visual grounding without cross-product work.
+
+        Applied products already passed uniqueness before their apply task was created.
+        Recovery only needs to prove their persisted artifacts are still internally
+        valid before rebuilding a missing fingerprint index.
+        """
         workspace = self.workspace(product)
         content = validate_content_grounding(content_or_path, workspace / "source.json")
         visual_path = workspace / "visual_analysis.json"
@@ -1449,6 +1489,17 @@ class OrchestratorStore:
             expected_source_digest=expected_digest,
         )
         validate_visual_keyword_usage(content, visual)
+        return content, expected_digest, visual
+
+    def _validate_complete_content(
+        self,
+        product: dict[str, Any],
+        content_or_path: dict[str, Any] | Path,
+        *,
+        record_events: bool,
+    ) -> dict[str, str]:
+        workspace = self.workspace(product)
+        content, expected_digest, visual = self._validate_content_evidence(product, content_or_path)
         collisions = self._content_collisions(product["id"], content)
         source_payload = load_json(workspace / "source.json")
         atomic_write_json(workspace / "content_validation.json", {
@@ -2009,7 +2060,7 @@ class OrchestratorStore:
                 if product["status"] in {"applied", "dry_run_complete"} and final.is_file():
                     try:
                         normalized = (
-                            self._validate_complete_content(product, final, record_events=False)
+                            self._validate_content_evidence(product, final)[0]
                             if visual.is_file()
                             else validate_content_grounding(final, workspace / "source.json")
                         )

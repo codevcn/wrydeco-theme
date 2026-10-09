@@ -99,6 +99,10 @@ def test_dashboard_has_agent_startup_toast_and_event_log_scroll_control():
     assert 'id="check-agent"' in html
     assert 'id="agent-status-tooltip"' in html
     assert 'id="manifest-row-count"' in html
+    assert 'id="batch-flow-indicator"' in html
+    assert 'id="batch-flow-title"' in html
+    assert 'class="batch-flow-spinner"' in html
+    assert 'viewBox="0 0 16 16"' in html
 
     js = (Path(__file__).parents[1] / "web" / "static" / "dashboard.js").read_text(encoding="utf-8")
     assert "handleMultiValuePaste" in js
@@ -106,6 +110,23 @@ def test_dashboard_has_agent_startup_toast_and_event_log_scroll_control():
     assert 'shopifyIdInput.addEventListener("paste"' in js
     assert "manifest-row-count" in js
     assert "product-index" in js
+    assert "updateBatchFlowIndicator" in js
+    assert 'new Set(["crawling", "waiting_for_content", "applying"])' in js
+    assert 'api(`/api/events/recent?limit=${INITIAL_EVENT_LOG_LIMIT}`)' in js
+    assert "MAX_EVENT_LOG_LINES = 500" in js
+    assert "log.textContent +=" not in js
+
+
+def test_recent_events_api_returns_only_the_tail_and_a_resume_cursor(tmp_path):
+    root = package_root(tmp_path)
+    store = OrchestratorStore(root)
+    event_ids = [store.event(f"event-{index}") for index in range(6)]
+    client = create_app(root, store=store).test_client()
+
+    payload = client.get("/api/events/recent?limit=2").get_json()
+
+    assert [event["id"] for event in payload["events"]] == event_ids[-2:]
+    assert payload["cursor"] == event_ids[-1]
 
 
 def test_product_types_are_loaded_from_dedicated_json(tmp_path):
@@ -328,6 +349,111 @@ def test_api_requires_csrf_and_origin_then_creates_uuid_run(tmp_path):
     payload = created.get_json()
     assert len(payload["id"]) == 32
     assert payload["id"] != payload["manifest_digest"]
+
+
+def test_shopify_product_preflight_matches_by_asin_and_reports_target_product(tmp_path):
+    root = package_root(tmp_path)
+
+    class FakeShopifyClient:
+        def products_by_amazon_asins(self, asins):
+            assert asins == {"B000000000"}
+            return {"B000000000": [{
+                "shopify_product_id": "10344740683833",
+                "title": "Existing product",
+                "handle": "existing-product",
+                "amazon_url": "https://www.amazon.com/dp/B000000000/ref=detail?th=1",
+            }]}
+
+    app = create_app(
+        root,
+        store=OrchestratorStore(root),
+        shopify_client_factory=FakeShopifyClient,
+    )
+    client = app.test_client()
+    csrf = client.get("/api/bootstrap").get_json()["csrf_token"]
+    response = client.post(
+        "/api/shopify/preflight-products",
+        json={"manifest": MANIFEST},
+        headers=headers(csrf),
+    )
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["checked"] == 1
+    assert payload["existing"] == 1
+    assert payload["products"][0]["asin"] == "B000000000"
+    assert payload["products"][0]["exists"] is True
+    assert payload["products"][0]["matches_target_product"] is True
+    assert payload["products"][0]["matches"][0]["shopify_product_id"] == "10344740683833"
+
+
+def test_run_skips_existing_store_rows_but_preserves_full_input_manifest(tmp_path):
+    root = package_root(tmp_path)
+    payload = {"products": [
+        MANIFEST["products"][0],
+        {
+            "amazon_url": "https://www.amazon.com/dp/B111111111?th=1",
+            "shopify_product_id": "10344740683834",
+            "mode": "auto",
+            "overrides": {"product_type": "console-table", "tags": ["source_amazon"], "status": "ACTIVE"},
+        },
+    ]}
+
+    class FakeShopifyClient:
+        def products_by_amazon_asins(self, asins):
+            assert asins == {"B000000000", "B111111111"}
+            return {
+                "B000000000": [{
+                    "shopify_product_id": "10344740683833", "title": "Existing",
+                    "handle": "existing", "amazon_url": "https://amazon.com/dp/B000000000",
+                }],
+                "B111111111": [],
+            }
+
+    store = OrchestratorStore(root)
+    app = create_app(root, store=store, shopify_client_factory=FakeShopifyClient)
+    client = app.test_client()
+    csrf = client.get("/api/bootstrap").get_json()["csrf_token"]
+    response = client.post("/api/runs", json={
+        "manifest": payload,
+        "options": {"dry_run": True},
+        "skip_existing_store_products": True,
+    }, headers=headers(csrf))
+
+    assert response.status_code == 201
+    result = response.get_json()
+    assert result["skipped_existing"] == 1
+    assert set(result["run"]["products"]) == {"B111111111"}
+    assert json.loads((root / "input" / "products.json").read_text(encoding="utf-8")) == payload
+    snapshot = json.loads(Path(store.run_record(result["run"]["id"])["manifest_snapshot_path"]).read_text(encoding="utf-8"))
+    assert [item["amazon_url"] for item in snapshot["products"]] == ["https://www.amazon.com/dp/B111111111?th=1"]
+
+
+def test_run_creates_no_execution_when_every_store_product_exists(tmp_path):
+    root = package_root(tmp_path)
+
+    class FakeShopifyClient:
+        def products_by_amazon_asins(self, asins):
+            return {"B000000000": [{
+                "shopify_product_id": "999", "title": "Already there", "handle": "already-there",
+                "amazon_url": "https://www.amazon.com/dp/B000000000/ref=source?th=1",
+            }]}
+
+    store = OrchestratorStore(root)
+    app = create_app(root, store=store, shopify_client_factory=FakeShopifyClient)
+    client = app.test_client()
+    csrf = client.get("/api/bootstrap").get_json()["csrf_token"]
+    response = client.post("/api/runs", json={
+        "manifest": MANIFEST,
+        "options": {"dry_run": True},
+        "skip_existing_store_products": True,
+    }, headers=headers(csrf))
+
+    assert response.status_code == 200
+    result = response.get_json()
+    assert result["run"] is None
+    assert result["skipped_existing"] == 1
+    assert store.list_runs() == []
 
 
 def test_content_editor_saves_draft_finalizes_and_requeues(tmp_path):

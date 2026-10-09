@@ -159,6 +159,33 @@ def test_reconcile_valid_orphan_content_but_never_retries_shopify_error(tmp_path
     assert task["apply_task"]["state"] == "needs_attention"
 
 
+def test_recover_applied_product_rebuilds_fingerprints_without_uniqueness_scan(tmp_path, monkeypatch):
+    store = OrchestratorStore(make_root(tmp_path))
+    _, product = create_run(store, dry_run=True)
+    queue_product(store, product)
+    claim = store.claim_next_content("recovery-agent")
+    prime_visual(store, product, claim)
+    store.write_content_draft(product["id"], claim["claim_token"], content())
+    store.finalize_content(product["id"], claim["claim_token"])
+    store.claim_next_apply()
+    store.finish_apply(product["id"], "dry_run_complete")
+    with store.transaction(immediate=True) as connection:
+        connection.execute("DELETE FROM content_fingerprints WHERE product_id=?", (product["id"],))
+
+    def unexpected_collision_scan(*_args, **_kwargs):
+        raise AssertionError("final products must not rerun cross-product uniqueness during recovery")
+
+    monkeypatch.setattr(store, "_content_collisions", unexpected_collision_scan)
+    store.recover()
+
+    with store._connect() as connection:
+        count = connection.execute(
+            "SELECT COUNT(*) FROM content_fingerprints WHERE product_id=? AND active=1",
+            (product["id"],),
+        ).fetchone()[0]
+    assert count == 6
+
+
 def test_duplicate_open_product_is_rejected_and_closed_product_is_reusable(tmp_path):
     store = OrchestratorStore(make_root(tmp_path))
     _, product = create_run(store)
@@ -175,6 +202,14 @@ def test_events_are_monotonic_and_cursor_safe(tmp_path):
     second = store.event("second", message="two")
     events = store.events_after(first)
     assert [event["id"] for event in events] == [second]
+
+
+def test_event_queries_are_bounded_and_recent_events_keep_display_order(tmp_path):
+    store = OrchestratorStore(make_root(tmp_path))
+    event_ids = [store.event(f"event-{index}") for index in range(8)]
+
+    assert [event["id"] for event in store.events_after(0, limit=3)] == event_ids[:3]
+    assert [event["id"] for event in store.recent_events(limit=3)] == event_ids[-3:]
 
 
 def test_shopify_dispatcher_claims_only_one_task_at_a_time(tmp_path):
