@@ -288,20 +288,24 @@ class FakeAgentRuntime:
         return {"active": True, "drift_seconds": 1, "agent": self.state()}
 
 
-def test_mutations_are_gated_until_agent_is_ready_but_restart_remains_available(tmp_path):
+def test_manifest_and_crawler_mutations_do_not_wait_for_agent_bootstrap(tmp_path):
     root = package_root(tmp_path)
     runtime = FakeAgentRuntime()
     app = create_app(root, store=OrchestratorStore(root), agent_runtime=runtime)
     client = app.test_client()
     csrf = client.get("/api/bootstrap").get_json()["csrf_token"]
-    blocked = client.put("/api/manifest", json=MANIFEST, headers=headers(csrf))
-    assert blocked.status_code == 503
-    assert blocked.get_json()["code"] == "agent_not_ready"
+    saved = client.put("/api/manifest", json=MANIFEST, headers=headers(csrf))
+    assert saved.status_code == 200
+    created = client.post(
+        "/api/runs",
+        json={"manifest": MANIFEST, "options": {"dry_run": True}},
+        headers=headers(csrf),
+    )
+    assert created.status_code == 201
     restarted = client.post("/api/agent/restart", json={}, headers=headers(csrf))
     assert restarted.status_code == 202
     assert runtime.restarts == 1
     runtime.ready = True
-    assert client.put("/api/manifest", json=MANIFEST, headers=headers(csrf)).status_code == 200
     checked = client.post("/api/agent/health-check", json={}, headers=headers(csrf))
     assert checked.status_code == 200
     assert checked.get_json()["active"] is True

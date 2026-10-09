@@ -7,7 +7,7 @@ The system has four independent parts:
 3. Flask owns one long-lived Antigravity control conversation plus one isolated content conversation per product.
 4. One Shopify worker applies ready products sequentially from idempotent checkpoints.
 
-Flask starts Antigravity, verifies its workspace MCP connection, and unlocks state-changing actions only after a successful bootstrap turn.
+Flask starts Antigravity and verifies its workspace MCP connection in the background. Manifest editing and crawler runs are available immediately; queued content waits for a successful Agent bootstrap, while Shopify consumes only already-validated `content.json` tasks.
 
 ## Install
 
@@ -25,7 +25,7 @@ Add Shopify credentials to `scraper/.env`. Antigravity uses the existing local `
 python -m scraper serve --host 127.0.0.1 --port 5000
 ```
 
-After the port is bound successfully, the server automatically opens `http://127.0.0.1:5000` in the default browser. The process runs the Dashboard, a single crawler, one long-lived Antigravity control conversation, isolated product content workers, and a single Shopify dispatcher. Products waiting for content do not block new crawl runs.
+After the port is bound successfully, the server automatically opens `http://127.0.0.1:5000` in the default browser. The process runs the Dashboard, a single crawler, one long-lived Antigravity control conversation, isolated product content workers, and a single Shopify dispatcher. The crawler and Shopify dispatcher are driven by their durable queues rather than the Agent readiness gate, so Antigravity cold-start latency never blocks manifest work or new crawl runs.
 
 To stop every Dashboard server registered by this workspace, run `stop-server.cmd` from the project root. The command validates registered process IDs before terminating their process trees.
 
@@ -37,7 +37,7 @@ python -m scraper worker
 
 ## Antigravity runtime
 
-The repository contains a workspace-local MCP definition and a restricted `wrydeco-content` Agent. `python -m scraper serve` launches a control `agy` process in stream-json mode, sends the bootstrap prompt, and keeps that process/conversation until the server stops. The control conversation only handles bootstrap, readiness, and health checks; it never receives product data.
+The repository contains a workspace-local MCP definition and a restricted `wrydeco-content` Agent. `python -m scraper serve` launches a control `agy` process in stream-json mode, sends a minimal bootstrap prompt that calls `queue_status`, and keeps that process/conversation until the server stops. The control conversation only handles bootstrap, readiness, and health checks; it never receives product data. The API exposes `process_ready` after the CLI has supplied a valid conversation ID and MCP tool bridge, while `ready` becomes true only after the bootstrap result and marker are verified.
 
 For every queued product, the server launches a separate Antigravity process/conversation restricted by `WRYDECO_EXPECTED_TASK_ID`. Retries for that product stay inside the same isolated conversation, and the process exits immediately after finalization or terminal failure. This prevents facts and copy from an earlier product leaking into later content. Finished content conversations are recorded as `pending_cleanup` in **Quản lý conversations**.
 

@@ -189,6 +189,7 @@ class AntigravitySupervisor:
             "current_asin": None,
             "started_at": None,
             "ready_at": None,
+            "process_ready": False,
             "last_activity_at": None,
             "last_error": None,
         }
@@ -202,6 +203,7 @@ class AntigravitySupervisor:
             state = dict(self._state)
             process = self._process
             state["process_alive"] = bool(process and process.poll() is None)
+            state["process_ready"] = bool(state.get("process_ready") and state["process_alive"])
             state["ready"] = self.is_ready()
             state["session_id"] = self._session_id
             return state
@@ -304,6 +306,8 @@ class AntigravitySupervisor:
 
     def _set_status(self, status: str, message: str, **updates: Any) -> None:
         now = utc_now()
+        if status in {"failed", "stopping", "stopped", "interrupted"}:
+            updates["process_ready"] = False
         with self._lock:
             self._state.update({"status": status, "message": message, "last_activity_at": now, **updates})
             session_id = self._session_id
@@ -363,7 +367,8 @@ class AntigravitySupervisor:
                 "status": "starting", "message": "Antigravity process started.",
                 "conversation_id": None, "pid": process.pid, "num_turns": 0,
                 "current_task_id": None, "current_asin": None, "started_at": started,
-                "ready_at": None, "last_activity_at": started, "last_error": None,
+                "ready_at": None, "process_ready": False,
+                "last_activity_at": started, "last_error": None,
             })
         self._set_status("initializing", "Running Antigravity bootstrap prompt.", pid=process.pid)
 
@@ -399,6 +404,7 @@ class AntigravitySupervisor:
             self._validate_tools(tools)
             with self._lock:
                 self._state["conversation_id"] = conversation_id
+                self._state["process_ready"] = bool(conversation_id)
             self.store.event(
                 "agent_init", source="antigravity", session_id=self._session_id,
                 conversation_id=conversation_id, message="Wrydeco MCP bridges loaded; runtime call allowlist enforced.",

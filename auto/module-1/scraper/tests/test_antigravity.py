@@ -65,6 +65,7 @@ for line in sys.stdin:
     supervisor.start()
     wait_for(supervisor.is_ready)
     first = supervisor.state()
+    assert first["process_ready"] is True
     result = supervisor._run_turn("second", purpose="test", timeout=5)
     assert result["conversation_id"] == first["conversation_id"] == "conversation-one"
     assert supervisor.state()["pid"] == first["pid"]

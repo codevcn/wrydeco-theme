@@ -251,17 +251,11 @@ class RunCoordinator:
         self.store = store
         self.crawler = CrawlService(store)
         self.shopify = ShopifyApplyService(store)
+        # Compatibility-only: crawler and Shopify readiness now comes from their
+        # durable queues/checkpoints, never from an AI process.
         self.readiness_gate = readiness_gate
         self._stop = threading.Event()
         self._threads: list[threading.Thread] = []
-
-    def _wait_until_ready(self) -> bool:
-        if self.readiness_gate is None:
-            return True
-        while not self._stop.is_set():
-            if self.readiness_gate.wait(0.5):
-                return True
-        return False
 
     def start(self, *, crawler: bool = True, apply: bool = True) -> None:
         self.store.recover()
@@ -286,8 +280,6 @@ class RunCoordinator:
 
     def _crawl_loop(self) -> None:
         while not self._stop.is_set():
-            if not self._wait_until_ready():
-                return
             run_id = self.store.claim_next_crawl_run()
             if not run_id:
                 self.store.wait_for_change(0.5)
@@ -303,8 +295,6 @@ class RunCoordinator:
 
     def _apply_loop(self) -> None:
         while not self._stop.is_set():
-            if not self._wait_until_ready():
-                return
             product = self.store.claim_next_apply()
             if not product:
                 self.store.wait_for_change(0.5)

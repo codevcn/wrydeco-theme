@@ -12,9 +12,9 @@ const agentStatusHelp = {
   busy: "Conversation còn sống và đang xử lý một prompt.",
   starting: "Antigravity đang khởi động.",
   initializing: "Antigravity đang khởi động và kiểm tra bootstrap.",
-  failed: "Không còn giữ được conversation; các thao tác mutation sẽ bị khóa.",
-  stopped: "Không còn giữ được conversation; các thao tác mutation sẽ bị khóa.",
-  interrupted: "Không còn giữ được conversation; các thao tác mutation sẽ bị khóa.",
+  failed: "Không còn giữ được conversation; content queue sẽ chờ Agent hoạt động lại.",
+  stopped: "Không còn giữ được conversation; content queue sẽ chờ Agent hoạt động lại.",
+  interrupted: "Không còn giữ được conversation; content queue sẽ chờ Agent hoạt động lại.",
 };
 const fieldIds = {
   title: "content-title", description_html: "content-description-html", seo_product_title: "content-seo-product-title",
@@ -73,9 +73,9 @@ async function openPrompts() {
     $("#prompts-status").textContent = `Không thể tải prompt: ${error.message}`;
     $("#prompts-status").classList.add("error-text");
   } finally {
-    $("#agent-prompt-editor").disabled = !state.agentReady;
-    $("#content-task-prompt-editor").disabled = !state.agentReady;
-    $("#save-prompts").disabled = !state.agentReady;
+    $("#agent-prompt-editor").disabled = false;
+    $("#content-task-prompt-editor").disabled = false;
+    $("#save-prompts").disabled = false;
   }
 }
 
@@ -409,16 +409,15 @@ function tone(status) {
 }
 
 function applyAgentGate() {
-  const locked = !state.agentReady;
-  document.querySelectorAll(".manifest-panel input,.manifest-panel select,.manifest-panel button,.settings-panel input,.settings-panel select,.action-bar button,.content-editor-panel input,.content-editor-panel textarea,.content-editor-panel select,.content-editor-panel button,[data-product-action],[data-requires-agent],.prompts-dialog textarea,#save-prompts")
-    .forEach((control) => { control.disabled = locked; });
-  if (!locked && state.currentTask) {
+  if (state.currentTask) {
     const taskLocked = state.currentTask.state === "claimed" || state.currentTask.is_final;
     Object.values(fieldIds).forEach((id) => { $("#" + id).disabled = taskLocked; });
     $("#save-content").disabled = taskLocked; $("#finalize-content").disabled = taskLocked;
   }
   const hint = $("#run-hint");
-  if (hint) hint.textContent = locked ? "Pipeline đang khóa cho đến khi Antigravity bootstrap thành công." : "Một crawler, một Antigravity turn và một Shopify worker; mỗi hàng đợi chạy tuần tự.";
+  if (hint) hint.textContent = state.agentReady
+    ? "Một crawler, một Antigravity turn và một Shopify worker; mỗi hàng đợi chạy tuần tự."
+    : "Crawler có thể chạy ngay; content queue sẽ tự tiếp tục khi Antigravity sẵn sàng.";
 }
 
 function updateAgentStartupToast(agent) {
@@ -435,7 +434,7 @@ function updateAgentStartupToast(agent) {
   $("#agent-startup-title").textContent = failed ? "Antigravity chưa sẵn sàng" : "Đang khởi động Antigravity";
   $("#agent-startup-message").textContent = failed
     ? (agent?.message || "Không thể khởi tạo conversation. Hãy kiểm tra Event log rồi khởi động lại Agent.")
-    : (agent?.message || "Server đang tạo conversation và kiểm tra kết nối MCP. Các thao tác đang tạm khóa.");
+    : (agent?.message || "Server đang tạo conversation và kiểm tra kết nối MCP trong nền. Crawler vẫn có thể chạy.");
 }
 
 function updateAgent(agent) {
@@ -544,7 +543,7 @@ async function loadTask(taskId) {
     $("#content-collisions").hidden = !collisions.length;
     $("#content-collisions").innerHTML = collisions.length ? `<strong>Content collision</strong><br>${collisions.map((item) => `${escapeHtml(item.field)} ↔ ${escapeHtml(item.conflicting_asin)} (${Number(item.score).toFixed(2)})`).join("<br>")}` : "";
     $("#content-editor-empty").hidden = true; $("#content-editor-form").hidden = false;
-    const locked = !state.agentReady || task.state === "claimed" || task.is_final;
+    const locked = task.state === "claimed" || task.is_final;
     Object.values(fieldIds).forEach((id) => { $("#" + id).disabled = locked; });
     $("#save-content").disabled = locked; $("#finalize-content").disabled = locked;
     $("#release-claim").hidden = task.state !== "claimed";

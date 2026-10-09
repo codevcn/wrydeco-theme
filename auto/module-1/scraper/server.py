@@ -246,15 +246,6 @@ def create_app(
             return jsonify(error="Invalid CSRF token."), 403
         if request.mimetype != "application/json":
             return jsonify(error="Content-Type must be application/json."), 415
-        unlocked_without_agent = {
-            "restart_agent", "open_agent_cleanup_terminal", "acknowledge_agent_cleanup",
-        }
-        if agent_runtime is not None and request.endpoint not in unlocked_without_agent and not agent_runtime.is_ready():
-            state = agent_runtime.state()
-            return jsonify(
-                error="Antigravity is not ready; state-changing actions are locked.",
-                code="agent_not_ready", agent_status=state.get("status"),
-            ), 503
         return None
 
     @app.errorhandler(KeyError)
@@ -487,7 +478,7 @@ def serve(host: str = "127.0.0.1", port: int = 5000) -> None:
 
     store = OrchestratorStore(PACKAGE_ROOT)
     readiness_gate = threading.Event()
-    coordinator = RunCoordinator(store, readiness_gate=readiness_gate)
+    coordinator = RunCoordinator(store)
     agent = AntigravitySupervisor(PACKAGE_ROOT, store, readiness_gate)
     app = create_app(PACKAGE_ROOT, store=store, coordinator=coordinator, agent_runtime=agent)
     http_server = make_server(host, port, app, threaded=True)
