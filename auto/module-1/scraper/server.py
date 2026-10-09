@@ -216,12 +216,23 @@ def create_app(
     start_workers: bool = False,
 ) -> Flask:
     package_root = package_root.resolve()
+    template_folder = package_root / "web" / "templates"
+    if not template_folder.is_dir():
+        template_folder = PACKAGE_ROOT / "web" / "templates"
+    static_folder = package_root / "web" / "static"
+    if not static_folder.is_dir():
+        static_folder = PACKAGE_ROOT / "web" / "static"
+
     app = Flask(
         __name__,
-        template_folder=str(package_root / "web" / "templates"),
-        static_folder=str(package_root / "web" / "static"),
+        template_folder=str(template_folder),
+        static_folder=str(static_folder),
     )
-    app.config.update(JSON_SORT_KEYS=False, MAX_CONTENT_LENGTH=2 * 1024 * 1024)
+    app.config.update(
+        JSON_SORT_KEYS=False,
+        MAX_CONTENT_LENGTH=2 * 1024 * 1024,
+        TEMPLATES_AUTO_RELOAD=True,
+    )
     app.secret_key = secrets.token_hex(32)
     orchestration = store or OrchestratorStore(package_root)
     runner = coordinator or RunCoordinator(orchestration)
@@ -295,6 +306,22 @@ def create_app(
     @app.get("/")
     def index():
         return render_template("index.html")
+
+    @app.get("/favicon.ico")
+    def favicon_ico():
+        return app.send_static_file("favicon.ico")
+
+    @app.get("/favicon.svg")
+    def favicon_svg():
+        return app.send_static_file("favicon.svg")
+
+    @app.get("/apple-touch-icon.png")
+    def apple_touch_icon():
+        return app.send_static_file("apple-touch-icon.png")
+
+    @app.get("/site.webmanifest")
+    def site_webmanifest():
+        return app.send_static_file("site.webmanifest")
 
     @app.get("/api/bootstrap")
     def bootstrap():

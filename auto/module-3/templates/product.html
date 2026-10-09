@@ -44,9 +44,29 @@
             cursor: pointer;
             transition: transform 0.2s ease, box-shadow 0.2s ease, outline 0.2s ease;
         }
-        #rich-description-content img:hover {
+        #rich-description-content:not(.delete-mode-active) img:hover {
             outline: 3px solid #6366f1;
             box-shadow: 0 4px 14px rgba(99, 102, 241, 0.3);
+        }
+        #rich-description-content.delete-mode-active img {
+            cursor: pointer;
+        }
+        #rich-description-content.delete-mode-active img:hover {
+            outline: 3px dashed #ef4444;
+            box-shadow: 0 4px 14px rgba(239, 68, 68, 0.25);
+        }
+        .rich-desc-selected-img {
+            outline: 4px solid #ef4444 !important;
+            outline-offset: 3px !important;
+            opacity: 0.8 !important;
+            filter: brightness(0.95);
+            box-shadow: 0 6px 18px rgba(239, 68, 68, 0.4) !important;
+        }
+        .rich-desc-trash-badge {
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .rich-desc-img-wrapper:hover .rich-desc-trash-badge {
+            transform: scale(1.1);
         }
     </style>
 </head>
@@ -250,20 +270,6 @@
 
             <!-- Right column: Metadata (SEO, Metafields, Type, Tags) -->
             <div class="space-y-8">
-                <!-- Duplicate This Product Card -->
-                <div class="bg-white rounded-xl shadow-sm border border-indigo-100 p-6">
-                    <h2 class="text-lg font-bold text-indigo-700 mb-4 border-b border-indigo-50 pb-3 flex items-center gap-2">
-                        <iconify-icon icon="mdi:content-copy" class="text-indigo-600 text-xl"></iconify-icon>
-                        Nhân bản sản phẩm
-                    </h2>
-                    <div class="space-y-4">
-                        <button type="button" onclick="openDuplicatePopup()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-4 rounded-lg flex justify-center items-center gap-2 transition-colors cursor-pointer shadow-sm">
-                            <iconify-icon icon="mdi:content-copy" class="text-lg"></iconify-icon>
-                            <span>DUPLICATE</span>
-                        </button>
-                    </div>
-                </div>
-
                 <!-- Remove This Product -->
                 <div class="bg-white rounded-xl shadow-sm border border-red-100 p-6">
                     <h2 class="text-lg font-bold text-red-600 mb-4 border-b border-red-50 pb-3 flex items-center gap-2">
@@ -512,21 +518,49 @@
                         <svg class="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"></path></svg>
                         Rich Description (custom.rich_description)
                     </h2>
-                    <span class="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full hidden sm:inline-flex items-center gap-1">
+                    <span id="rich-desc-mode-hint" class="text-xs text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full hidden sm:inline-flex items-center gap-1 transition-all">
                         <iconify-icon icon="mdi:cursor-default-click-outline"></iconify-icon> Click vào ảnh để copy URL
                     </span>
                 </div>
-                <button type="button" data-val="{{ mf.value | escape }}" onclick="openInternalEditor('metafield:{{ mf.namespace }}:{{ mf.key }}:{{ mf.type }}', this.getAttribute('data-val'), 'Metafield {{ mf.namespace }}.{{ mf.key }}')" class="p-2 px-4 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-lg transition-colors flex items-center gap-1 text-base font-medium">
-                    <iconify-icon icon="mdi:pencil"></iconify-icon> Chỉnh sửa
-                </button>
+                <div class="flex items-center gap-2">
+                    <!-- Nút màu đỏ "Chọn và xóa" -->
+                    <button type="button" id="btn-rich-desc-select-delete" onclick="startRichDescDeleteMode()" class="px-3.5 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors flex items-center gap-1.5 text-sm font-semibold shadow-sm cursor-pointer" title="Chọn và xóa element ảnh trong Rich Description">
+                        <iconify-icon icon="mdi:trash-can-outline" class="text-base"></iconify-icon>
+                        <span>Chọn và xóa</span>
+                    </button>
+
+                    <!-- Nhóm 2 nút "Save" và "Cancel" (mặc định ẩn) -->
+                    <div id="rich-desc-delete-actions" class="hidden items-center gap-2">
+                        <button type="button" id="btn-rich-desc-cancel" onclick="cancelRichDescDeleteMode()" class="px-3.5 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 cursor-pointer">
+                            <iconify-icon icon="mdi:close" class="text-base"></iconify-icon>
+                            <span>Cancel</span>
+                        </button>
+                        <button type="button" id="btn-rich-desc-save" onclick="saveRichDescAfterDelete()" class="px-4 py-2 text-white bg-green-600 hover:bg-green-700 rounded-lg text-sm font-bold shadow-sm transition-colors flex items-center gap-1.5 cursor-pointer">
+                            <iconify-icon icon="mdi:check-bold" class="text-base"></iconify-icon>
+                            <span id="btn-rich-desc-save-text">Save</span>
+                        </button>
+                    </div>
+
+                    <!-- Nút Chỉnh sửa -->
+                    <button type="button" id="btn-rich-desc-edit" data-val="{{ mf.value | escape }}" onclick="openInternalEditor('metafield:{{ mf.namespace }}:{{ mf.key }}:{{ mf.type }}', this.getAttribute('data-val'), 'Metafield {{ mf.namespace }}.{{ mf.key }}')" class="p-2 px-4 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-lg transition-colors flex items-center gap-1 text-base font-medium cursor-pointer">
+                        <iconify-icon icon="mdi:pencil"></iconify-icon> Chỉnh sửa
+                    </button>
+                </div>
             </div>
             <div class="prose max-w-none text-gray-700" id="rich-description-content">
                 {{ mf.value | safe }}
             </div>
 
-            <!-- Nút Chỉnh sửa neo góc dưới bên trái section Rich Description khi cuộn qua section title -->
-            <div id="rich-desc-floating-wrapper" class="sticky bottom-8 left-0 z-30 pointer-events-none flex justify-start -mt-12 h-12 ml-2 sm:ml-0 transition-all duration-300 opacity-0 translate-y-3">
-                <button type="button" data-val="{{ mf.value | escape }}" onclick="openInternalEditor('metafield:{{ mf.namespace }}:{{ mf.key }}:{{ mf.type }}', this.getAttribute('data-val'), 'Metafield {{ mf.namespace }}.{{ mf.key }}')" class="pointer-events-auto bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center gap-2 text-sm border border-indigo-500/30 cursor-pointer group" title="Chỉnh sửa Rich Description">
+            <!-- Các nút thao tác neo góc dưới bên trái section Rich Description khi cuộn qua section title -->
+            <div id="rich-desc-floating-wrapper" class="fixed bottom-8 left-[22px] z-30 pointer-events-none flex flex-col items-start gap-2.5 transition-all duration-300 opacity-0 translate-y-3">
+                <!-- Nút "Chọn và xóa" nằm bên trên nút "Chỉnh sửa" -->
+                <button type="button" id="btn-rich-desc-floating-select-delete" onclick="startRichDescDeleteMode()" class="pointer-events-auto bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-3.5 rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center gap-2 text-sm border border-red-500/30 cursor-pointer group shadow-red-600/20 hover:scale-105 active:scale-95" title="Chọn và xóa ảnh trong Rich Description">
+                    <iconify-icon icon="mdi:trash-can-outline" class="text-base group-hover:scale-110 transition-transform"></iconify-icon>
+                    <span>Chọn và xóa</span>
+                </button>
+
+                <!-- Nút "Chỉnh sửa" nằm bên dưới -->
+                <button type="button" id="btn-rich-desc-floating-edit" data-val="{{ mf.value | escape }}" onclick="openInternalEditor('metafield:{{ mf.namespace }}:{{ mf.key }}:{{ mf.type }}', this.getAttribute('data-val'), 'Metafield {{ mf.namespace }}.{{ mf.key }}')" class="pointer-events-auto bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-3.5 rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center gap-2 text-sm border border-indigo-500/30 cursor-pointer group hover:scale-105 active:scale-95" title="Chỉnh sửa Rich Description">
                     <iconify-icon icon="mdi:pencil" class="text-base group-hover:rotate-12 transition-transform"></iconify-icon>
                     <span>Chỉnh sửa</span>
                 </button>
@@ -778,6 +812,11 @@
 
     <!-- Scroll Buttons -->
     <div class="fixed bottom-8 right-8 flex flex-col gap-3 z-50">
+        <!-- Nút nhảy đến Rich Description (nằm trên 2 nút scroll to top và scroll to bottom) -->
+        <button id="scrollToRichDescBtn" onclick="scrollToRichDesc()" class="bg-orange-500 hover:bg-orange-600 text-white p-3 rounded-full shadow-lg transition-all cursor-pointer flex items-center justify-center border-none hover:scale-110 active:scale-95 shadow-orange-500/20" title="Nhảy đến Rich Description">
+            <iconify-icon icon="mdi:card-text-outline" class="text-2xl"></iconify-icon>
+        </button>
+
         <button id="scrollToTopBtn" onclick="window.scrollTo({top: 0, behavior: 'instant'})" class="bg-indigo-600 text-white p-3 rounded-full shadow-lg hover:bg-indigo-700 transition-all opacity-0 pointer-events-none" title="Cuộn lên đầu trang">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
         </button>
@@ -789,8 +828,28 @@
     <script>
         const scrollToTopBtn = document.getElementById('scrollToTopBtn');
         const scrollToBottomBtn = document.getElementById('scrollToBottomBtn');
+        const scrollToRichDescBtn = document.getElementById('scrollToRichDescBtn');
+        
+        function scrollToRichDesc() {
+            const header = document.getElementById('rich-desc-header');
+            if (header) {
+                header.scrollIntoView({ behavior: 'instant', block: 'center' });
+                const section = document.getElementById('rich-description-section');
+                if (section) {
+                    section.classList.add('ring-4', 'ring-orange-400', 'transition-all');
+                    setTimeout(() => {
+                        section.classList.remove('ring-4', 'ring-orange-400');
+                    }, 1500);
+                }
+            } else {
+                showCopyToast('Sản phẩm này không có Rich Description');
+            }
+        }
         
         function toggleScrollButtons() {
+            if (scrollToRichDescBtn && !document.getElementById('rich-description-section')) {
+                scrollToRichDescBtn.classList.add('hidden');
+            }
             if (window.scrollY > 300) {
                 scrollToTopBtn.classList.remove('opacity-0', 'pointer-events-none');
             } else {
@@ -804,10 +863,21 @@
             }
         }
 
+        let isRichDescDeleteMode = false;
+        let selectedRichImgIndices = new Set();
+        let lastSelectedRichImgIdx = null;
+
         function toggleRichDescFloatingBtn() {
+            const wrapper = document.getElementById('rich-desc-floating-wrapper');
+            if (isRichDescDeleteMode) {
+                if (wrapper) {
+                    wrapper.classList.add('opacity-0', 'translate-y-3', 'pointer-events-none');
+                    wrapper.classList.remove('opacity-100', 'translate-y-0');
+                }
+                return;
+            }
             const header = document.getElementById('rich-desc-header');
             const section = document.getElementById('rich-description-section');
-            const wrapper = document.getElementById('rich-desc-floating-wrapper');
             if (!header || !section || !wrapper) return;
             
             const headerRect = header.getBoundingClientRect();
@@ -823,6 +893,273 @@
             } else {
                 wrapper.classList.add('opacity-0', 'translate-y-3', 'pointer-events-none');
                 wrapper.classList.remove('opacity-100', 'translate-y-0');
+            }
+        }
+
+        function startRichDescDeleteMode() {
+            const content = document.getElementById('rich-description-content');
+            if (!content) {
+                showToast('Lỗi', 'Không tìm thấy nội dung Rich Description!', 'error');
+                return;
+            }
+
+            const imgs = Array.from(content.querySelectorAll('img'));
+            if (imgs.length === 0) {
+                showToast('Thông báo', 'Không thể xác định element ảnh trong Rich Description để xóa!', 'info');
+                return;
+            }
+
+            isRichDescDeleteMode = true;
+            selectedRichImgIndices.clear();
+            lastSelectedRichImgIdx = null;
+
+            // 1. Chuyển đổi hiển thị các nút
+            const selectDeleteBtn = document.getElementById('btn-rich-desc-select-delete');
+            const editBtn = document.getElementById('btn-rich-desc-edit');
+            const actionsGroup = document.getElementById('rich-desc-delete-actions');
+            
+            if (selectDeleteBtn) selectDeleteBtn.classList.add('hidden');
+            if (editBtn) editBtn.classList.add('hidden');
+            if (actionsGroup) {
+                actionsGroup.classList.remove('hidden');
+                actionsGroup.classList.add('flex');
+            }
+            
+            const saveTxt = document.getElementById('btn-rich-desc-save-text');
+            if (saveTxt) saveTxt.textContent = 'Save (0)';
+
+            // Cập nhật hint badge trên header
+            const hint = document.getElementById('rich-desc-mode-hint');
+            if (hint) {
+                hint.className = 'text-xs text-red-700 bg-red-50 border border-red-200 px-3 py-1 rounded-full inline-flex items-center gap-1.5 font-semibold animate-pulse shadow-xs';
+                hint.innerHTML = '<iconify-icon icon="mdi:cursor-default-click"></iconify-icon> Chế độ xóa: Nhấn vào ảnh để chọn / bỏ chọn (nhấn giữ phím Shift để chọn nhiều ảnh cùng lúc)';
+            }
+
+            // 2. Thêm class delete-mode-active cho content
+            content.classList.add('delete-mode-active');
+
+            // 3. Bọc từng img bằng 1 container có badge thùng rác
+            imgs.forEach((img, idx) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'rich-desc-img-wrapper relative inline-block my-2 mr-2 cursor-pointer select-none';
+                wrapper.setAttribute('data-rich-idx', idx);
+
+                const badge = document.createElement('div');
+                badge.className = 'rich-desc-trash-badge hidden absolute top-3 right-3 bg-red-600 text-white rounded-xl p-2 shadow-2xl flex items-center justify-center z-30 pointer-events-none ring-2 ring-white scale-100';
+                badge.innerHTML = '<iconify-icon icon="mdi:trash-can" class="text-xl"></iconify-icon>';
+
+                img.parentNode.insertBefore(wrapper, img);
+                wrapper.appendChild(img);
+                wrapper.appendChild(badge);
+
+                img.setAttribute('data-rich-idx', idx);
+                img.removeAttribute('title');
+
+                wrapper.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    toggleRichImgSelection(idx, img, badge, e);
+                });
+            });
+
+            // Ẩn floating buttons nếu đang hiện
+            const floatingWrapper = document.getElementById('rich-desc-floating-wrapper');
+            if (floatingWrapper) {
+                floatingWrapper.classList.add('opacity-0', 'pointer-events-none');
+                floatingWrapper.classList.remove('opacity-100');
+            }
+        }
+
+        function updateRichImgUI(idx, isSelected) {
+            const wrapper = document.querySelector(`.rich-desc-img-wrapper[data-rich-idx="${idx}"]`);
+            if (!wrapper) return;
+            const img = wrapper.querySelector('img');
+            const badge = wrapper.querySelector('.rich-desc-trash-badge');
+            if (isSelected) {
+                selectedRichImgIndices.add(idx);
+                if (img) img.classList.add('rich-desc-selected-img');
+                if (badge) badge.classList.remove('hidden');
+            } else {
+                selectedRichImgIndices.delete(idx);
+                if (img) img.classList.remove('rich-desc-selected-img');
+                if (badge) badge.classList.add('hidden');
+            }
+        }
+
+        function toggleRichImgSelection(idx, img, badge, event) {
+            if (!isRichDescDeleteMode) return;
+
+            const isShift = event && event.shiftKey;
+
+            if (isShift && lastSelectedRichImgIdx !== null) {
+                // Xóa selection văn bản nếu trình duyệt bôi đen do giữ Shift
+                if (window.getSelection) {
+                    window.getSelection().removeAllRanges();
+                }
+                const start = Math.min(lastSelectedRichImgIdx, idx);
+                const end = Math.max(lastSelectedRichImgIdx, idx);
+                for (let i = start; i <= end; i++) {
+                    updateRichImgUI(i, true);
+                }
+                lastSelectedRichImgIdx = idx;
+            } else {
+                if (selectedRichImgIndices.has(idx)) {
+                    updateRichImgUI(idx, false);
+                    lastSelectedRichImgIdx = idx;
+                } else {
+                    updateRichImgUI(idx, true);
+                    lastSelectedRichImgIdx = idx;
+                }
+            }
+
+            const count = selectedRichImgIndices.size;
+            const saveTxt = document.getElementById('btn-rich-desc-save-text');
+            if (saveTxt) {
+                saveTxt.textContent = count > 0 ? `Save (${count})` : 'Save (0)';
+            }
+        }
+
+        function cancelRichDescDeleteMode() {
+            isRichDescDeleteMode = false;
+            selectedRichImgIndices.clear();
+            lastSelectedRichImgIdx = null;
+
+            const content = document.getElementById('rich-description-content');
+            if (content) {
+                content.classList.remove('delete-mode-active');
+                
+                // Unwrap tất cả các img
+                const wrappers = Array.from(content.querySelectorAll('.rich-desc-img-wrapper'));
+                wrappers.forEach(wrapper => {
+                    const img = wrapper.querySelector('img');
+                    if (img) {
+                        img.classList.remove('rich-desc-selected-img');
+                        img.style.outline = '';
+                        img.style.opacity = '';
+                        img.setAttribute('title', 'Nhấn để copy URL ảnh');
+                        wrapper.parentNode.insertBefore(img, wrapper);
+                    }
+                    wrapper.remove();
+                });
+            }
+
+            // Khôi phục hiển thị nút
+            const selectDeleteBtn = document.getElementById('btn-rich-desc-select-delete');
+            const editBtn = document.getElementById('btn-rich-desc-edit');
+            const actionsGroup = document.getElementById('rich-desc-delete-actions');
+            
+            if (selectDeleteBtn) selectDeleteBtn.classList.remove('hidden');
+            if (editBtn) editBtn.classList.remove('hidden');
+            if (actionsGroup) {
+                actionsGroup.classList.add('hidden');
+                actionsGroup.classList.remove('flex');
+            }
+
+            // Khôi phục hint ban đầu
+            const hint = document.getElementById('rich-desc-mode-hint');
+            if (hint) {
+                hint.className = 'text-xs text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full hidden sm:inline-flex items-center gap-1 font-normal';
+                hint.innerHTML = '<iconify-icon icon="mdi:cursor-default-click-outline"></iconify-icon> Click vào ảnh để copy URL';
+            }
+
+            showToast('Thông báo', 'Đã hủy thao tác chọn và xóa ảnh', 'info');
+        }
+
+        async function saveRichDescAfterDelete() {
+            if (selectedRichImgIndices.size === 0) {
+                showToast('Lưu ý', 'Vui lòng nhấn chọn ít nhất một ảnh để xóa, hoặc nhấn Cancel để thoát!', 'info');
+                return;
+            }
+
+            const editBtn = document.getElementById('btn-rich-desc-edit');
+            const rawVal = editBtn ? editBtn.getAttribute('data-val') : '';
+            if (!rawVal) {
+                showToast('Lỗi', 'Không thể xác định element ảnh (thiếu dữ liệu gốc của Rich Description)!', 'error');
+                return;
+            }
+
+            // Phân tích HTML gốc
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(rawVal, 'text/html');
+            const docImgs = Array.from(doc.querySelectorAll('img'));
+
+            if (docImgs.length === 0) {
+                showToast('Lỗi', 'Không thể xác định element ảnh trong văn bản HTML!', 'error');
+                return;
+            }
+
+            // Kiểm tra các index đã chọn
+            const sortedIndices = Array.from(selectedRichImgIndices).sort((a, b) => b - a);
+            for (const idx of sortedIndices) {
+                if (idx < 0 || idx >= docImgs.length) {
+                    showToast('Lỗi', 'Không thể xác định element ảnh trong văn bản HTML (Cấu trúc bị thay đổi)!', 'error');
+                    return;
+                }
+            }
+
+            // Xóa các element ảnh đã chọn khỏi doc
+            for (const idx of sortedIndices) {
+                const targetImg = docImgs[idx];
+                if (!targetImg) {
+                    showToast('Lỗi', 'Không thể xác định element ảnh trong văn bản HTML!', 'error');
+                    return;
+                }
+                const parent = targetImg.parentNode;
+                targetImg.remove();
+                
+                // Nếu thẻ cha (như <a> hoặc <p>) rỗng hoàn toàn sau khi xóa ảnh thì dọn dẹp
+                if (parent && (parent.tagName === 'A' || parent.tagName === 'P') && parent.innerHTML.trim() === '') {
+                    parent.remove();
+                }
+            }
+
+            let newHtml = doc.body.innerHTML.trim();
+            
+            // Xác định metafield type từ attribute onclick của nút Chỉnh sửa
+            const editBtnOnclick = editBtn ? editBtn.getAttribute('onclick') || '' : '';
+            let mfType = 'single_line_text_field';
+            if (editBtnOnclick.includes('multi_line_text_field')) {
+                mfType = 'multi_line_text_field';
+            } else if (editBtnOnclick.includes('single_line_text_field')) {
+                mfType = 'single_line_text_field';
+            }
+            
+            if (mfType === 'single_line_text_field') {
+                newHtml = newHtml.replace(/[\r\n]+/g, ' ').replace(/\s{2,}/g, ' ').trim();
+            }
+
+            const saveBtn = document.getElementById('btn-rich-desc-save');
+            const origHtml = saveBtn.innerHTML;
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<iconify-icon icon="mdi:loading" class="animate-spin text-base"></iconify-icon> <span>Đang lưu...</span>';
+
+            const formData = new FormData();
+            formData.append('product_id', '{{ product.id }}');
+            formData.append('target_field', `metafield:custom:rich_description:${mfType}`);
+            formData.append('new_value', newHtml);
+
+            try {
+                const response = await fetch('/internal-edit-product', {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json' },
+                    body: formData
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showToast('Thành công', `Đã xóa ${sortedIndices.length} ảnh khỏi Rich Description! Đang tải lại...`, 'success');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1200);
+                } else {
+                    showToast('Lỗi', data.message || 'Lỗi khi lưu Rich Description', 'error');
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = origHtml;
+                }
+            } catch (err) {
+                showToast('Lỗi', 'Lỗi mạng khi lưu: ' + err.message, 'error');
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = origHtml;
             }
         }
 
@@ -1062,6 +1399,7 @@
             const richDescEl = document.getElementById('rich-description-content');
             if (richDescEl) {
                 richDescEl.addEventListener('click', function(e) {
+                    if (isRichDescDeleteMode) return;
                     const img = e.target.closest('img');
                     if (!img) return;
                     const url = img.getAttribute('data-src') || img.currentSrc || img.src;

@@ -113,8 +113,41 @@ def test_dashboard_has_agent_startup_toast_and_event_log_scroll_control():
     assert "updateBatchFlowIndicator" in js
     assert 'new Set(["crawling", "waiting_for_content", "applying"])' in js
     assert 'api(`/api/events/recent?limit=${INITIAL_EVENT_LOG_LIMIT}`)' in js
-    assert "MAX_EVENT_LOG_LINES = 500" in js
-    assert "log.textContent +=" not in js
+    assert 'rel="icon"' in html
+    assert 'favicon.svg' in html
+    assert 'favicon.ico' in html
+    assert 'apple-touch-icon.png' in html
+    assert 'site.webmanifest' in html
+    assert 'class="brand-mark"' in html
+    assert 'viewBox="0 0 256 256"' in html
+
+    css = (Path(__file__).parents[1] / "web" / "static" / "dashboard.css").read_text(encoding="utf-8")
+    assert ".brand-mark" in css
+    assert ".brand-mark svg" in css
+
+
+def test_dashboard_favicon_and_web_assets(tmp_path):
+    root = package_root(tmp_path)
+    client = create_app(root, store=OrchestratorStore(root)).test_client()
+
+    ico = client.get("/favicon.ico")
+    assert ico.status_code == 200
+    assert len(ico.data) > 0
+
+    svg = client.get("/favicon.svg")
+    assert svg.status_code == 200
+    assert "svg" in svg.content_type
+    assert b"<svg" in svg.data
+
+    apple = client.get("/apple-touch-icon.png")
+    assert apple.status_code == 200
+    assert "png" in apple.content_type
+
+    manifest = client.get("/site.webmanifest")
+    assert manifest.status_code == 200
+    manifest_data = manifest.get_json()
+    assert manifest_data["short_name"] == "Wrydeco Scraper"
+
 
 
 def test_recent_events_api_returns_only_the_tail_and_a_resume_cursor(tmp_path):

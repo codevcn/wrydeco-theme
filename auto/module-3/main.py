@@ -625,6 +625,7 @@ def request_default_store_access_token(timeout: int = 25, force_proxy: bool = Fa
             if new_tok:
                 SHOPIFY_ADMIN_TOKEN = new_tok
                 HEADERS["X-Shopify-Access-Token"] = new_tok
+                os.environ["SHOPIFY_ADMIN_TOKEN"] = new_tok
                 try:
                     env_file = ".env"
                     if os.path.exists(env_file):
@@ -2589,11 +2590,6 @@ def get_all_product_identifiers():
     all_products = []
     has_next_page = True
     cursor = None
-    clean_token = (os.getenv("SHOPIFY_ADMIN_TOKEN") or SHOPIFY_ADMIN_TOKEN).strip().strip('"').strip("'")
-    headers = {
-        "X-Shopify-Access-Token": clean_token,
-        "Content-Type": "application/json"
-    }
     proxies = get_shopify_request_proxies()
 
     while has_next_page:
@@ -2601,7 +2597,7 @@ def get_all_product_identifiers():
         if cursor:
             variables["after"] = cursor
             
-        res = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=headers, proxies=proxies, timeout=30)
+        res = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=HEADERS, proxies=proxies, timeout=30)
         res.raise_for_status()
         data = res.json()
         
@@ -2683,13 +2679,8 @@ async def api_get_product_detail(product_id: str):
     }
     """
     try:
-        clean_token = (os.getenv("SHOPIFY_ADMIN_TOKEN") or SHOPIFY_ADMIN_TOKEN).strip().strip('"').strip("'")
-        headers = {
-            "X-Shopify-Access-Token": clean_token,
-            "Content-Type": "application/json"
-        }
         proxies = get_shopify_request_proxies()
-        res = requests.post(GRAPHQL_URL, json={"query": query, "variables": {"id": gid}}, headers=headers, proxies=proxies, timeout=20)
+        res = requests.post(GRAPHQL_URL, json={"query": query, "variables": {"id": gid}}, headers=HEADERS, proxies=proxies, timeout=20)
         res.raise_for_status()
         data = res.json()
         
@@ -5387,6 +5378,7 @@ async def reset_token(request: Request):
         global SHOPIFY_ADMIN_TOKEN
         SHOPIFY_ADMIN_TOKEN = access_token
         HEADERS["X-Shopify-Access-Token"] = access_token
+        os.environ["SHOPIFY_ADMIN_TOKEN"] = access_token
         
         # Save to .env
         env_path = ".env"
