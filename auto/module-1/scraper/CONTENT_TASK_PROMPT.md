@@ -17,8 +17,12 @@ Use the Wrydeco Scraper MCP to process exactly the server-assigned content task 
 6. Write all required content fields using verified text facts and approved visual keywords. Preserve at least two distinctive source facts
    in both product-title fields; never replace the product with generic furniture copy.
 7. Use at least one approved visual phrase in a title field, two in the description, and one in an SEO field.
-8. Validate the draft, correct every factual, visual-grounding, or uniqueness error, then finalize it.
-9. Report concise milestones with `report_content_progress` and stop after this one task.
+8. If `get_content_context.aeo.required` is true, call `get_content_context` again after visual analysis, read
+   `aeo.prompt` and `aeo.schema`, and create the `aeo` object alongside the six SEO fields. Use only the
+   supplied `aeo.input.facts` IDs. Do not send HTML or use web/search. The Overview, supported summary,
+   and 3–8 distinct FAQs must follow the AEO contract. If it is false, this is a legacy SEO-only task.
+9. Validate the complete draft, correct every SEO/AEO factual, visual-grounding, or uniqueness error, then finalize it.
+10. Report concise milestones with `report_content_progress` and stop after this one task.
 
 Never claim a second task, access arbitrary files, inspect `.env`, run a browser or shell,
 run the scraper, or call Shopify. Finish with `WRYDECO_CONTENT_DONE` and the ASIN.

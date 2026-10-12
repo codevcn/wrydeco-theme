@@ -241,6 +241,9 @@ class ShopifyClient:
 
     def product_set(self, product_id: str, content: Mapping[str, str], option_names: list[str], variants: list[dict[str, Any]],
                     settings: Mapping[str, Any]) -> dict[str, Any]:
+        codes = [str(row.get("sku") or "").casefold() for row in variants]
+        if not codes or any(not code or len(code) > 40 for code in codes) or len(codes) != len(set(codes)):
+            raise ShopifyError("productSet requires a nonempty, unique SKU of at most 40 characters for every variant.")
         options = []
         for name in option_names:
             values = []
@@ -254,6 +257,7 @@ class ShopifyClient:
         variant_inputs = [{
             "optionValues": [{"optionName": item["name"], "name": item["value"]} for item in variant["options"]],
             "price": str(variant["price"]),
+            "sku": variant["sku"],
             "inventoryItem": {"tracked": False},
         } for variant in variants]
         product_input = {
@@ -266,11 +270,53 @@ class ShopifyClient:
         }
         mutation = """mutation Set($input: ProductSetInput!, $identifier: ProductSetIdentifiers) {
           productSet(input: $input, identifier: $identifier, synchronous: true) {
-          product { id title handle variants(first: 250) { nodes { id price selectedOptions { name value } inventoryItem { id tracked } } } }
+          product { id title handle variants(first: 250) { nodes { id price sku selectedOptions { name value } inventoryItem { id tracked } } } }
           userErrors { field message code }
         }}"""
         return self._checked(self.graphql(mutation, {"input": product_input,
                                                        "identifier": {"id": gid("Product", product_id)}}), "productSet")["product"]
+
+    def variant_sku_owners(self, prefix: str, identity: str, product_id: str) -> dict[str, list[str]]:
+        """Search the relevant namespace, paginate, and compare actual returned SKUs."""
+        import re
+        if not re.fullmatch(r"[A-Za-z0-9-]+", prefix + "-" + identity):
+            raise ShopifyError("Invalid SKU namespace.")
+        query = """query SkuOwners($query: String!, $after: String) {
+          productVariants(first: 250, query: $query, after: $after) {
+            nodes { id sku product { id } } pageInfo { hasNextPage endCursor }
+          }
+        }"""
+        cursor = None
+        owners: dict[str, list[str]] = {}
+        # Shopify SKU search is case-insensitive; exact comparison below remains conservative.
+        search = f"sku:{prefix}-{identity}-*"
+        while True:
+            connection = self.graphql(query, {"query": search, "after": cursor})["productVariants"]
+            for row in connection["nodes"]:
+                if row["sku"] and row["product"]["id"] != gid("Product", product_id):
+                    owners.setdefault(row["sku"].casefold(), []).append(row["id"])
+            if not connection["pageInfo"]["hasNextPage"]:
+                return owners
+            next_cursor = connection["pageInfo"]["endCursor"]
+            if not next_cursor or next_cursor == cursor:
+                raise ShopifyError("SKU owner pagination did not advance.")
+            cursor = next_cursor
+
+    def update_variant_skus(self, product_id: str, updates: list[dict[str, str]]) -> None:
+        mutation = """mutation SetSkus($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
+          productVariantsBulkUpdate(productId: $productId, variants: $variants, allowPartialUpdates: false) {
+            productVariants { id sku } userErrors { field message }
+          }
+        }"""
+        for start in range(0, len(updates), 250):
+            self._checked(self.graphql(mutation, {
+                "productId": gid("Product", product_id),
+                "variants": [{"id": row["id"], "inventoryItem": {"sku": row["sku"]}}
+                             for row in updates[start:start + 250]],
+            }), "productVariantsBulkUpdate")
+
+    def read_variants(self, product_id: str) -> list[dict[str, Any]]:
+        return self._snapshot_connection(product_id, "variants", "id sku selectedOptions { name value } price")
 
     def set_metafields(self, product_id: str, metafields: list[dict[str, Any]]) -> None:
         if not metafields:
@@ -280,6 +326,44 @@ class ShopifyClient:
           metafields { id namespace key } userErrors { field message code }
         }}"""
         self._checked(self.graphql(mutation, {"metafields": inputs}), "metafieldsSet")
+
+    def read_aeo_metafield(self, product_id: str) -> dict[str, Any] | None:
+        data = self.graphql('''query AeoMetafield($id: ID!) {
+          product(id: $id) { metafield(namespace: "custom", key: "aeo_html") { id type value compareDigest } }
+        }''', {"id": gid("Product", product_id)})
+        if not data.get("product"):
+            raise ShopifyError(f"Shopify product {product_id} was not found while reading AEO.")
+        return data["product"]["metafield"]
+
+    def ensure_aeo_definition(self) -> None:
+        def read():
+            return self.graphql('''query AeoDefinition {
+              metafieldDefinitions(first: 2, ownerType: PRODUCT, namespace: "custom", key: "aeo_html") {
+                nodes { id type { name } }
+              }
+            }''')["metafieldDefinitions"]["nodes"]
+        definitions = read()
+        if not definitions:
+            result = self.graphql('''mutation AeoDefinitionCreate($definition: MetafieldDefinitionInput!) {
+              metafieldDefinitionCreate(definition: $definition) {
+                createdDefinition { id } userErrors { field message code }
+              }
+            }''', {"definition": {"name": "Product AEO HTML", "namespace": "custom", "key": "aeo_html",
+                                 "ownerType": "PRODUCT", "type": "multi_line_text_field"}})
+            # Read back also handles another worker creating the same definition.
+            definitions = read()
+            if not definitions:
+                self._checked(result, "metafieldDefinitionCreate")
+                raise ShopifyError("AEO metafield definition was not readable after creation.")
+        if len(definitions) != 1 or definitions[0]["type"]["name"] != "multi_line_text_field":
+            raise ShopifyError("custom.aeo_html definition must be multi_line_text_field; existing type was preserved.")
+
+    def write_aeo_metafield(self, product_id: str, value: str, compare_digest: str | None) -> None:
+        result = self.graphql('''mutation AeoWrite($fields: [MetafieldsSetInput!]!) {
+          metafieldsSet(metafields: $fields) { metafields { id } userErrors { field message code } }
+        }''', {"fields": [{"ownerId": gid("Product", product_id), "namespace": "custom", "key": "aeo_html",
+                          "type": "multi_line_text_field", "value": value, "compareDigest": compare_digest}]})
+        self._checked(result, "metafieldsSet")
 
     def attach_media(self, product_id: str, files: list[dict[str, str]], existing_ids: list[str] | None = None) -> list[str]:
         if not files:

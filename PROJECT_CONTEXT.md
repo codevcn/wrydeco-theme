@@ -28,7 +28,7 @@ WRYDECO converts traffic through two parallel, equally critical paths:
 - **Hero Category: Handcrafted Tree-Branch Furniture:** Freestanding tree bookshelves, wall-mounted branch shelves, corner tree shelves, and branching displays ($1,000 – $6,000).
 - **Supporting Sculptural Furniture:** Organic wave oak coffee tables, live-edge root centerpieces, platform beds with branch canopy headboards, tall carved floor sculptures, and architectural wine racks ($1,500 – $8,000+).
 - **Bespoke Commissions:** Fully tailored measurements, finish matching, and room integrations ($2,000 – $10,000+).
-- **Live Catalog Size:** 93 live products organized into 35 public automated collections.
+- **Catalog Structure:** Products are organized into automated public collections by functional rooms (Living, Bedroom, Dining, Office, Nursery), wood types, and sculptural forms. Catalog counts dynamically grow over time and must be queried via Shopify Admin API rather than hardcoded.
 
 ### 1.5 Two-Tier Product Naming Architecture
 To preserve the gallery aesthetic while maximizing commercial search visibility:
@@ -46,7 +46,20 @@ The studio features **6 official master artisans** modeled as Shopify Metaobject
 
 *(Detailed reference: [doc/BUSINESS_CONTEXT.md](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/doc/BUSINESS_CONTEXT.md))*
 
+### 1.7 Master Variant SKU Architecture & Taxonomy
+To guarantee 100% uniqueness (zero collisions), seamless crating/shipping operations, and barcode compatibility (Code 128 / 4x6 labels), every product variant follows a standardized, human-readable SKU schema:
+- **Amazon-Linked Products:**
+  $$\text{Format: } \mathbf{AMZ\text{-}\{ASIN\}\text{-}\{COLOR/FINISH\}\text{-}\{SIZE\}\text{-}\{INDEX:02d\}}$$
+  *Example:* `AMZ-B0H6BXFX52-WARM-W65H65D7-01`
+  * Components: Platform prefix (`AMZ-`), 10-char ASIN from `custom.amazon_link`, clean color/finish code (`NAT`, `WARM`, `CD-WOOD`, `L-OAK`, `WAL`, `BLK`), sanitized dimension string (`W65H65D7`), and a 2-digit zero-padded variant index.
+- **Studio & Non-Amazon Products (e.g. Wall Mirrors, Bespoke Works):**
+  $$\text{Format: } \mathbf{WRY\text{-}\{HANDLE\_CODE\}\text{-}\{COLOR/FINISH\}\text{-}\{SIZE\}\text{-}\{INDEX:02d\}}$$
+  *Example:* `WRY-ORGFLU-NAT-16X12-01`
+- **Key Characteristics:** 100% unique across all live variants, length strictly controlled between 18 and 41 characters (averaging ~33 chars), compliant with Amazon Seller Central ($\le 40$ chars) and warehouse scanning standards.
+*(Detailed implementation & verification reference: [doc/catalog-sku-update-report.md](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/doc/catalog-sku-update-report.md))*
+
 ---
+
 
 ## 2. Project Architecture & Directory Layout
 
@@ -63,6 +76,7 @@ The studio features **6 official master artisans** modeled as Shopify Metaobject
 ├── doc/                 # Business requirements, API documentation, room mappings, guidelines
 │   ├── BUSINESS_CONTEXT.md # Master business reference document
 │   ├── WEB-REQUIREMENTS.md # Original UI/UX specifications
+│   ├── catalog-sku-update-report.md # Master SKU architecture, normalization & audit report
 │   ├── consultation-service-flow.md # Deep dive into bespoke consultation process
 │   └── temp-server-api-doc/ # Endpoints documentation for consultations & custom size
 ├── extensions/          # Shopify Apps / Checkout UI extensions (product-note-checkout)
@@ -70,9 +84,9 @@ The studio features **6 official master artisans** modeled as Shopify Metaobject
 ├── locales/             # Internationalization dictionaries (en.default.json)
 ├── my-tools/            # Internal developer tooling (iconify MCP Python server)
 ├── scripts/             # Local developer lifecycle scripts (lead-capture test hooks)
-├── sections/            # 60 modular, customizable Shopify Liquid sections
-├── snippets/            # 43 reusable Liquid components, popups, and SEO helpers
-└── templates/           # 20 JSON templates mapping sections to pages
+├── sections/            # Modular, customizable Shopify Liquid sections
+├── snippets/            # Reusable Liquid components, popups, and SEO helpers
+└── templates/           # JSON templates mapping sections to pages
 ```
 
 ---
@@ -82,7 +96,7 @@ The studio features **6 official master artisans** modeled as Shopify Metaobject
 ### 3.1 Live URL Routing Map
 | Page Type | Storefront URL | Template / Section Implementation |
 | :--- | :--- | :--- |
-| **Homepage** | `/` | [templates/index.json](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/templates/index.json) (14 curated editorial sections) |
+| **Homepage** | `/` | [templates/index.json](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/templates/index.json) (Curated editorial sections) |
 | **Catalog / All** | `/collections/all` | [templates/collection.json](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/templates/collection.json) (Filtered product grid) |
 | **Collection Detail** | `/collections/[handle]` | [templates/collection.json](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/templates/collection.json) (`tree-bookshelves`, `coffee-tables`, etc.) |
 | **Product Detail** | `/products/[handle]` | [templates/product.json](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/templates/product.json) (Gallery, maker badge, specs, buy box) |
@@ -140,7 +154,7 @@ All styling variables, tokens, and utility classes must align with `assets/base.
 
 ---
 
-## 5. Mandatory Coding Rules (13 Core Rules)
+## 5. Mandatory Coding Rules (14 Core Rules)
 
 Every developer and AI agent must strictly follow the rules in [CODING_RULES.md](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/CODING_RULES.md):
 
@@ -157,6 +171,8 @@ Every developer and AI agent must strictly follow the rules in [CODING_RULES.md]
 11. **Cart Interaction & Drawer Architecture:** WRYDECO strictly uses the slide-out Cart Drawer (`sections/cart-drawer.liquid`). Any attempt to access `/cart` is globally redirected to `/collections/all` while automatically opening the drawer. Never link directly to `/cart`.
 12. **Tiered Spending Discount System:** The store features 10 tiered codes (`WRY100` to `WRY1000`). Evaluation and checkout injection are strictly managed by `assets/wry-discount-auto-apply-v2.js` and `window.WrydecoCustomerDiscountEligible`. Do not write competing discount scripts.
 13. **Theme Build & Release Cleanup:** Before running `compress-store-src.cmd` to create a production theme zip, always execute `scripts/lead-capture-test/remove-test-src.cmd` to purge local test/debug elements.
+14. **Variant SKU Architecture & Zero-Collision Rule:** All newly added or modified product variants must strictly adhere to the store's SKU taxonomy (`AMZ-{ASIN}-{COLOR}-{SIZE}-{INDEX:02d}` or `WRY-{HANDLE}-{COLOR}-{SIZE}-{INDEX:02d}`). Never assign duplicate, blank, or unstructured random SKUs.
+
 
 ---
 
@@ -260,3 +276,5 @@ When interacting with or generating code for WRYDECO:
 | Never alter `.shopify-section { display: block; }` | Keep standard section block formatting to avoid breaking Shopify grid layouts |
 | Never use custom `alert()` or bespoke popup code for user feedback | Always call `window.showToast({ message, type })` |
 | Never package theme zip files manually | Always run `compress-store-src.cmd` so test code is purged and versions bump cleanly |
+| Never assign duplicate, blank, or arbitrary random SKUs to variants | Always adhere to the standardized SKU schema (`AMZ-{ASIN}-...` or `WRY-{HANDLE}-...`) with zero collisions |
+

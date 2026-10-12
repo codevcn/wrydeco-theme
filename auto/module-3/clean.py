@@ -24,6 +24,7 @@ KEEP_CONTENT = [
     "logo_updater_config.json",
     "logo.png",
     "main.py",
+    "notes.json",
     "proxy_config.json",
     "requirements.txt",
     "shopify-admin-app.conf",

@@ -24,12 +24,14 @@ from .orchestrator import RunCoordinator
 from .server_control import register_server_process, unregister_server_process
 from .shopify import ShopifyClient, ShopifyConfig
 from .store import ClaimError, OrchestratorStore, QueueConflict
+from .aeo.lifecycle import prompt_text
 
 
 DOC_EXTENSIONS = {".md", ".txt"}
 PROMPT_FILES = {
     "agent_prompt": "AGENT_PROMPT.md",
     "content_task_prompt": "CONTENT_TASK_PROMPT.md",
+    "aeo_prompt": "aeo/PROMPT.md",
 }
 MAX_PROMPT_BYTES = 256 * 1024
 PRODUCT_TYPES_FILE = "product_types.json"
@@ -139,6 +141,8 @@ def _read_prompts(package_root: Path) -> dict[str, Any]:
     for key, filename in PROMPT_FILES.items():
         path = package_root / filename
         prompts[key] = path.read_text(encoding="utf-8-sig") if path.is_file() else ""
+        if key == "aeo_prompt" and not prompts[key]:
+            prompts[key] = prompt_text(package_root)
         files[key] = filename
     return {"prompts": prompts, "files": files}
 
@@ -159,15 +163,17 @@ def _read_product_types(package_root: Path) -> list[str]:
     return product_types
 
 
-def _validate_prompts(payload: Any) -> dict[str, str]:
+def _validate_prompts(payload: Any, package_root: Path = PACKAGE_ROOT) -> dict[str, str]:
     if not isinstance(payload, dict):
-        raise ValueError("Request must contain both prompt strings.")
+        raise ValueError("Request must contain prompt strings.")
     source = payload.get("prompts", payload)
     if not isinstance(source, dict):
         raise ValueError("prompts must be an object.")
     validated: dict[str, str] = {}
     for key, filename in PROMPT_FILES.items():
         value = source.get(key)
+        if key == "aeo_prompt" and value is None:
+            value = prompt_text(package_root)
         if not isinstance(value, str):
             raise ValueError(f"{filename} must be a string.")
         value = value.replace("\r\n", "\n").replace("\r", "\n").strip()
@@ -195,6 +201,7 @@ def validate_run_options(payload: Any) -> dict[str, Any]:
         "dry_run": bool(raw.get("dry_run", False)),
         "max_combinations": maximum,
         "amazon_postal_code": postal,
+        "aeo_version": 1,
     }
 
 
@@ -408,14 +415,14 @@ def create_app(
 
     @app.put("/api/prompts")
     def save_prompts():
-        prompts = _validate_prompts(request.get_json(silent=False))
+        prompts = _validate_prompts(request.get_json(silent=False), package_root)
         for key, filename in PROMPT_FILES.items():
             atomic_write_text(package_root / filename, prompts[key])
         return jsonify(
             saved=True,
             files=PROMPT_FILES,
             restart_required=True,
-            message="Prompts saved. They will be used when the server starts its next Antigravity conversation.",
+            message="Prompts saved. AEO is snapshotted for new batches; coordination prompts require a server restart.",
         )
 
     @app.post("/api/agent/restart")

@@ -25,6 +25,8 @@ from .content import (
 from .errors import ContentValidationError
 from .io_utils import atomic_write_json, load_json
 from .manifest import Manifest
+from .aeo import validate_and_render
+from .aeo.lifecycle import enabled as aeo_enabled, freeze_contract, read_contract, workspace_input
 
 
 CONTENT_FIELDS = (
@@ -685,6 +687,8 @@ class OrchestratorStore:
                         )
                 run_root.mkdir(parents=True, exist_ok=False)
                 atomic_write_json(snapshot_path, manifest_payload)
+                if aeo_enabled(options):
+                    freeze_contract(self.package_root, run_root)
                 connection.execute(
                     "INSERT INTO runs VALUES (?, ?, ?, ?, 'queued', ?, ?)",
                     (run_id, manifest.digest, str(snapshot_path), _json(options), now, now),
@@ -852,9 +856,11 @@ class OrchestratorStore:
         progress = load_json(progress_path) if progress_path.exists() else {}
         result["shopify_checkpoint"] = {
             key: bool(progress.get(key))
-            for key in ("product_set", "new_media_ids", "media_verified", "old_media_deleted", "metafields_set", "published")
+            for key in ("product_set", "sku_verified", "new_media_ids", "media_verified", "old_media_deleted", "metafields_set", "aeo_verified", "published")
             if progress.get(key)
         }
+        if progress.get("aeo_status"):
+            result["shopify_checkpoint"]["aeo_status"] = str(progress["aeo_status"])
         return self._public_value(result)
 
     def set_run_crawl_status(self, run_id: str, status: str, *, message: str | None = None) -> None:
@@ -1266,6 +1272,15 @@ class OrchestratorStore:
         agent_source = dict(source) if isinstance(source, dict) else {}
         agent_source.pop("aplus_images", None)
         agent_source.pop("aplus_html", None)
+        aeo = {"required": False}
+        content_schema = load_json(self.package_root / "content.schema.json")
+        if aeo_enabled(self.run_record(product["run_id"])["options"]):
+            contract = read_contract(self.runs_root / product["run_id"])
+            aeo = {"required": True, "prompt": contract["prompt"], "schema": contract["schema"],
+                   "input": workspace_input(product, workspace)}
+            content_schema = dict(content_schema)
+            content_schema["required"] = list(dict.fromkeys([*content_schema.get("required", []), "aeo"]))
+            content_schema["properties"] = {**content_schema.get("properties", {}), "aeo": contract["schema"]}
         return {
             "task": self._public_task_product(product),
             "revision": revision,
@@ -1274,7 +1289,8 @@ class OrchestratorStore:
             "pricing": load_json(pricing_path) if pricing_path.exists() else {},
             "draft": load_json(draft_path) if draft_path.exists() else {field: "" for field in CONTENT_FIELDS},
             "rules": (self.package_root / "AGENT_PROMPT.md").read_text(encoding="utf-8"),
-            "schema": load_json(self.package_root / "content.schema.json"),
+            "schema": content_schema,
+            "aeo": aeo,
             "visual_analysis_schema": VISUAL_ANALYSIS_SCHEMA,
         }
 
@@ -1355,6 +1371,7 @@ class OrchestratorStore:
     def write_visual_analysis(self, product_id: str, token: str, payload: dict[str, Any]) -> dict[str, Any]:
         product = self.require_claim(product_id, token)
         workspace = self.workspace(product)
+        refresh_aeo_context = aeo_enabled(self.run_record(product["run_id"])["options"])
         with self.transaction(immediate=True) as connection:
             row, read_images, required = self._visual_requirements_conn(connection, product_id, token)
             if row["context_read_revision"] is None or int(row["context_read_revision"]) != int(row["revision"]):
@@ -1377,6 +1394,8 @@ class OrchestratorStore:
                 "UPDATE content_tasks SET visual_analysis_state='ready', updated_at=? WHERE product_id=?",
                 (now, product_id),
             )
+            if refresh_aeo_context:
+                connection.execute("UPDATE content_tasks SET context_read_revision=NULL WHERE product_id=?", (product_id,))
             self._event_conn(
                 connection, "visual_keywords_ready", run_id=product["run_id"], product_id=product_id,
                 source="mcp", asin=product["asin"],
@@ -1432,6 +1451,7 @@ class OrchestratorStore:
             "seo_description": 0.85,
             "description_html": 0.82,
             "handle": 1.0,
+            "aeo_html": 0.97,
         }
         connection = self._connect()
         try:
@@ -1454,7 +1474,7 @@ class OrchestratorStore:
             if field not in current or field not in thresholds:
                 continue
             exact = str(row["sha256"]) == current[field]["sha256"]
-            score = 1.0 if exact else content_similarity(field, content[field], str(row["normalized_text"]))
+            score = 1.0 if exact else content_similarity(field, current[field]["normalized"], str(row["normalized_text"]))
             if exact or score >= thresholds[field]:
                 collisions.append({
                     "field": field,
@@ -1489,6 +1509,10 @@ class OrchestratorStore:
             expected_source_digest=expected_digest,
         )
         validate_visual_keyword_usage(content, visual)
+        if aeo_enabled(self.run_record(product["run_id"])["options"]):
+            context = workspace_input(product, workspace)
+            output = validate_and_render(context, content.get("aeo"))
+            content["aeo"], content["aeo_html"] = output["draft"], output["html"]
         return content, expected_digest, visual
 
     def _validate_complete_content(
@@ -1499,8 +1523,27 @@ class OrchestratorStore:
         record_events: bool,
     ) -> dict[str, str]:
         workspace = self.workspace(product)
-        content, expected_digest, visual = self._validate_content_evidence(product, content_or_path)
+        try:
+            content, expected_digest, visual = self._validate_content_evidence(product, content_or_path)
+        except ContentValidationError as exc:
+            if aeo_enabled(self.run_record(product["run_id"])["options"]):
+                context = workspace_input(product, workspace)
+                atomic_write_json(workspace / "aeo_input.json", context)
+                atomic_write_json(workspace / "aeo_validation.json", {
+                    "valid": False, "input_digest": context["input_digest"], "version": 1,
+                    "error": str(exc), "validated_at": utc_now(),
+                })
+            raise
         collisions = self._content_collisions(product["id"], content)
+        if content.get("aeo"):
+            context = workspace_input(product, workspace)
+            atomic_write_json(workspace / "aeo_input.json", context)
+            atomic_write_json(workspace / "aeo_validation.json", {
+                "valid": not collisions, "input_digest": context["input_digest"],
+                "faq_count": len(content["aeo"]["faq"]), "version": 1,
+            })
+            from .io_utils import atomic_write_text
+            atomic_write_text(workspace / "aeo.html", content["aeo_html"])
         source_payload = load_json(workspace / "source.json")
         atomic_write_json(workspace / "content_validation.json", {
             "valid": not collisions,
@@ -1568,6 +1611,8 @@ class OrchestratorStore:
                 return self._validate_complete_content(product, final, record_events=False)
             raise ContentValidationError("content.temp.json does not exist.")
         normalized = self._validate_complete_content(product, draft, record_events=True)
+        if aeo_enabled(self.run_record(product["run_id"])["options"]):
+            atomic_write_json(draft, normalized)
         draft.replace(final)
         return normalized
 
@@ -1741,12 +1786,22 @@ class OrchestratorStore:
             self._validate_complete_content(product, content, record_events=False)
         except ContentValidationError as exc:
             validation_error = str(exc)
+        preview = ""
+        if content.get("aeo"):
+            try:
+                from .aeo.core import normalize_draft, render_html
+                preview = render_html(normalize_draft(content["aeo"]))
+            except ContentValidationError:
+                pass
         return {
             "task_id": product_id, "run_id": product["run_id"], "asin": product["asin"],
             **dict(row), "content": content, "is_final": final.exists(),
             "visual_analysis": load_json(visual_path) if visual_path.is_file() else None,
             "content_validation": load_json(validation_path) if validation_path.is_file() else None,
             "valid": validation_error is None, "validation_error": validation_error,
+            "aeo_required": aeo_enabled(self.run_record(product["run_id"])["options"]),
+            "aeo_preview_html": preview,
+            "aeo_input": workspace_input(product, workspace) if aeo_enabled(self.run_record(product["run_id"])["options"]) else None,
         }
 
     def save_manual_draft(self, product_id: str, content: dict[str, Any]) -> dict[str, Any]:

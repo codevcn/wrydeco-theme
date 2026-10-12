@@ -7,6 +7,7 @@ from typing import Any
 from .errors import PriceValidationError
 from .manifest import ProductJob
 from .pricing import infer_wood_finish_deltas, money, normalize_name
+from .variant_options import clean_variant_values
 
 
 def _product_settings(job: ProductJob) -> dict[str, Any]:
@@ -69,7 +70,8 @@ def _build_rich_description(uploaded: list[dict[str, str]], title: str) -> str:
     return '<div class="description-root">' + " ".join(images) + "</div>"
 
 
-def _build_final_variants(pricing: dict[str, Any], snapshot: dict[str, Any]) -> tuple[list[str], list[dict[str, Any]], dict[str, str]]:
+def _build_final_variants(pricing: dict[str, Any], snapshot: dict[str, Any], *,
+                          clean_options: bool = True) -> tuple[list[str], list[dict[str, Any]], dict[str, str]]:
     variants = pricing.get("variants") or []
     if not variants:
         raise PriceValidationError("No price-verified variants are available.")
@@ -92,7 +94,11 @@ def _build_final_variants(pricing: dict[str, Any], snapshot: dict[str, Any]) -> 
                               "price": money(base + delta)})
         else:
             final.append({"options": variant["options"], "price": base})
-    keys = [tuple((item["name"], item["value"]) for item in variant["options"]) for variant in final]
-    if len(keys) != len(set(keys)):
-        raise PriceValidationError("Duplicate final Shopify variant combinations were produced.")
+    # Also protect cached pricing, preset mode, and existing Wood Finish values.
+    if clean_options:
+        final = clean_variant_values(final, price_key="price")
+    else:
+        keys = [tuple((item["name"], item["value"]) for item in variant["options"]) for variant in final]
+        if len(keys) != len(set(keys)):
+            raise PriceValidationError("Duplicate final Shopify variant combinations were produced.")
     return option_names, final, {key: str(value) for key, value in wood_deltas.items()}

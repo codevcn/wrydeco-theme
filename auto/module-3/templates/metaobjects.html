@@ -474,6 +474,39 @@
                     <span id="edit-entry-alert-msg" class="font-medium"></span>
                 </div>
 
+                <!-- Status Switch Box (Active / Draft) -->
+                <div id="entryStatusBox" class="p-3.5 bg-emerald-50/50 border border-emerald-200/80 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all shadow-2xs">
+                    <div class="flex items-center gap-3">
+                        <div id="entryStatusIconBg" class="w-9 h-9 rounded-xl flex items-center justify-center text-lg bg-emerald-100 text-emerald-700 shrink-0 transition-all shadow-2xs">
+                            <svg id="entryStatusIconActive" class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <svg id="entryStatusIconDraft" class="w-5 h-5 text-gray-500 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-bold uppercase tracking-wider text-gray-700">Trạng Thái:</span>
+                                <span id="entryStatusBadge" class="px-2 py-0.5 text-[11px] font-black rounded-md bg-emerald-600 text-white tracking-wide shadow-2xs">ACTIVE</span>
+                            </div>
+                            <p id="entryStatusHint" class="text-[11px] text-gray-500 mt-0.5">Bản ghi đang được xuất bản (Active) trên Shopify Storefront & API.</p>
+                        </div>
+                    </div>
+
+                    <!-- Switch Controls -->
+                    <div class="flex items-center gap-2.5 self-end sm:self-auto bg-white px-3 py-1.5 rounded-xl border border-gray-200 shadow-2xs">
+                        <button type="button" id="entryDraftLabelBtn" class="text-xs font-medium text-gray-400 hover:text-gray-700 cursor-pointer select-none transition-colors" onclick="setEntryModalStatus(false, true)">
+                            Draft
+                        </button>
+
+                        <label class="relative inline-flex items-center cursor-pointer select-none" title="Gạt để chuyển giữa Active và Draft">
+                            <input type="checkbox" id="entryStatusSwitch" class="sr-only peer" onchange="setEntryModalStatus(this.checked, true)">
+                            <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600 shadow-inner"></div>
+                        </label>
+
+                        <button type="button" id="entryActiveLabelBtn" class="text-xs font-bold text-emerald-700 hover:text-emerald-800 cursor-pointer select-none transition-colors" onclick="setEntryModalStatus(true, true)">
+                            Active
+                        </button>
+                    </div>
+                </div>
+
                 <div class="text-xs text-gray-500 mb-2">
                     Nhập giá trị mới cho các trường dưới đây và nhấn <strong>Save</strong> để lưu trực tiếp vào Shopify Store.
                 </div>
@@ -742,20 +775,40 @@
             // Render Tab Entries (Cho phép bấm vào từng bản ghi để chỉnh sửa popup)
             const entriesContent = document.getElementById('panel-entries-content');
             if (entriesCount > 0) {
-                entriesContent.innerHTML = def.entries.map((e, idx) => `
+                entriesContent.innerHTML = def.entries.map((e, idx) => {
+                    const isActive = (e.status || 'ACTIVE').toUpperCase() === 'ACTIVE';
+                    return `
                     <div 
                         onclick="openEditEntryModal('${def.type}', '${e.numeric_id}')"
-                        class="p-2.5 bg-gray-50 hover:bg-indigo-50/70 border border-gray-200 hover:border-indigo-300 rounded-lg flex items-center justify-between cursor-pointer transition-all group shadow-2xs"
+                        class="p-2.5 bg-gray-50 hover:bg-indigo-50/70 border border-gray-200 hover:border-indigo-300 rounded-lg flex items-center justify-between cursor-pointer transition-all group shadow-2xs gap-2"
                         title="Nhấn để chỉnh sửa bản ghi này"
                     >
-                        <div class="truncate max-w-[210px]">
+                        <div class="truncate max-w-[190px]">
                             <div class="font-bold text-gray-800 group-hover:text-indigo-600 text-xs truncate transition-colors flex items-center gap-1.5">
-                                <svg class="w-5 h-5 text-gray-400 group-hover:text-indigo-600 transition-colors shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                <svg class="w-4 h-4 text-gray-400 group-hover:text-indigo-600 transition-colors shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                                 <span class="truncate">${e.displayName || e.handle || 'Bản ghi #' + (idx + 1)}</span>
                             </div>
-                            <div class="text-[10px] text-gray-400 font-mono truncate mt-0.5">ID: ${e.numeric_id || ''} • Click để sửa</div>
+                            <div class="flex items-center gap-1.5 mt-0.5">
+                                <span class="text-[10px] text-gray-400 font-mono truncate">ID: ${e.numeric_id || ''}</span>
+                                <span id="entry-badge-${e.numeric_id}" class="px-1.5 py-0.2 rounded text-[9px] font-bold ${isActive ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-gray-200 text-gray-600 border border-gray-300'}">
+                                    ${isActive ? 'Active' : 'Draft'}
+                                </span>
+                            </div>
                         </div>
-                        <div class="flex items-center gap-1" onclick="event.stopPropagation()">
+                        <div class="flex items-center gap-2 shrink-0" onclick="event.stopPropagation()">
+                            <!-- Switch Toggle nhanh Active / Draft -->
+                            <div class="flex items-center" title="Chuyển đổi trạng thái ${isActive ? 'Draft' : 'Active'}">
+                                <label class="relative inline-flex items-center cursor-pointer select-none">
+                                    <input 
+                                        type="checkbox" 
+                                        id="switch-entry-${e.numeric_id}"
+                                        ${isActive ? 'checked' : ''} 
+                                        onchange="quickToggleEntryStatus('${def.type}', '${e.numeric_id}', this.checked, this)" 
+                                        class="sr-only peer"
+                                    >
+                                    <div class="w-8 h-4 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-emerald-600 shadow-inner"></div>
+                                </label>
+                            </div>
                             <button 
                                 type="button"
                                 onclick="openEditEntryModal('${def.type}', '${e.numeric_id}')"
@@ -765,11 +818,12 @@
                                 Sửa
                             </button>
                             <a target="_blank" rel="noopener noreferrer" href="https://admin.shopify.com/store/{{ shopify_shop }}/content/metaobjects/entries/${def.type}/${e.numeric_id}" class="p-1 text-gray-400 hover:text-indigo-600 hover:bg-gray-100 rounded transition-colors" title="Mở trên Shopify">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
                             </a>
                         </div>
                     </div>
-                `).join('');
+                    `;
+                }).join('');
             } else {
                 entriesContent.innerHTML = '<div class="text-xs text-gray-400 italic">Chưa có bản ghi nào thuộc loại này.</div>';
             }
@@ -840,6 +894,133 @@
             document.getElementById('detail-modal').classList.add('hidden');
         }
 
+        let currentEditingStatus = 'ACTIVE';
+
+        // Cập nhật giao diện Switch trạng thái trong Edit Entry Modal
+        function setEntryModalStatus(isActive, isUserAction = false) {
+            currentEditingStatus = isActive ? 'ACTIVE' : 'DRAFT';
+            
+            const switchEl = document.getElementById('entryStatusSwitch');
+            if (switchEl) switchEl.checked = isActive;
+
+            const boxEl = document.getElementById('entryStatusBox');
+            const badgeEl = document.getElementById('entryStatusBadge');
+            const hintEl = document.getElementById('entryStatusHint');
+            const iconBg = document.getElementById('entryStatusIconBg');
+            const iconActive = document.getElementById('entryStatusIconActive');
+            const iconDraft = document.getElementById('entryStatusIconDraft');
+            const draftBtn = document.getElementById('entryDraftLabelBtn');
+            const activeBtn = document.getElementById('entryActiveLabelBtn');
+
+            if (boxEl && badgeEl && hintEl) {
+                if (isActive) {
+                    boxEl.className = "p-3.5 bg-emerald-50/50 border border-emerald-200/80 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all shadow-2xs";
+                    badgeEl.className = "px-2 py-0.5 text-[11px] font-black rounded-md bg-emerald-600 text-white tracking-wide shadow-2xs";
+                    badgeEl.textContent = "ACTIVE";
+                    hintEl.textContent = "Bản ghi đang được xuất bản (Active) trên Shopify Storefront & API.";
+                    if (iconBg) iconBg.className = "w-9 h-9 rounded-xl flex items-center justify-center text-lg bg-emerald-100 text-emerald-700 shrink-0 transition-all shadow-2xs";
+                    if (iconActive) iconActive.classList.remove('hidden');
+                    if (iconDraft) iconDraft.classList.add('hidden');
+                    if (draftBtn) draftBtn.className = "text-xs font-medium text-gray-400 hover:text-gray-700 cursor-pointer select-none transition-colors";
+                    if (activeBtn) activeBtn.className = "text-xs font-bold text-emerald-700 hover:text-emerald-800 cursor-pointer select-none transition-colors";
+                } else {
+                    boxEl.className = "p-3.5 bg-gray-100/70 border border-gray-300 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all shadow-2xs";
+                    badgeEl.className = "px-2 py-0.5 text-[11px] font-black rounded-md bg-gray-500 text-white tracking-wide shadow-2xs";
+                    badgeEl.textContent = "DRAFT";
+                    hintEl.textContent = "Bản ghi đang ở trạng thái nháp (Draft), không công khai ngoài Storefront.";
+                    if (iconBg) iconBg.className = "w-9 h-9 rounded-xl flex items-center justify-center text-lg bg-gray-200 text-gray-600 shrink-0 transition-all shadow-2xs";
+                    if (iconActive) iconActive.classList.add('hidden');
+                    if (iconDraft) iconDraft.classList.remove('hidden');
+                    if (draftBtn) draftBtn.className = "text-xs font-bold text-gray-800 hover:text-gray-900 cursor-pointer select-none transition-colors";
+                    if (activeBtn) activeBtn.className = "text-xs font-medium text-gray-400 hover:text-gray-700 cursor-pointer select-none transition-colors";
+                }
+            }
+
+            // Nếu người dùng chủ động gạt switch trong modal, cập nhật ngay lập tức
+            if (isUserAction && currentEditingEntry) {
+                quickUpdateEntryStatus(currentEditingDef ? currentEditingDef.type : '', currentEditingEntry.numeric_id, currentEditingStatus);
+            }
+        }
+
+        // Toggle nhanh trạng thái trên danh sách Entries
+        async function quickToggleEntryStatus(defType, numericId, isChecked, switchEl) {
+            const newStatus = isChecked ? 'ACTIVE' : 'DRAFT';
+            if (switchEl) switchEl.disabled = true;
+
+            try {
+                const response = await fetch(`/api/metaobjects/entries/${numericId}/status`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                const result = await response.json();
+                if (response.ok && result.success) {
+                    const def = definitionsMap[defType];
+                    if (def && def.entries) {
+                        const entry = def.entries.find(e => String(e.numeric_id) === String(numericId));
+                        if (entry) {
+                            entry.status = newStatus;
+                        }
+                    }
+                    // Cập nhật badge tại chỗ
+                    const badge = document.getElementById(`entry-badge-${numericId}`);
+                    if (badge) {
+                        badge.textContent = newStatus === 'ACTIVE' ? 'Active' : 'Draft';
+                        badge.className = `px-1.5 py-0.2 rounded text-[9px] font-bold ${newStatus === 'ACTIVE' ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-gray-200 text-gray-600 border border-gray-300'}`;
+                    }
+                } else {
+                    alert('Lỗi cập nhật trạng thái: ' + (result.message || 'Không xác định'));
+                    if (switchEl) switchEl.checked = !isChecked;
+                }
+            } catch (err) {
+                console.error('Lỗi khi chuyển đổi trạng thái entry:', err);
+                alert('Lỗi kết nối máy chủ: ' + err.message);
+                if (switchEl) switchEl.checked = !isChecked;
+            } finally {
+                if (switchEl) switchEl.disabled = false;
+            }
+        }
+
+        // Cập nhật trạng thái ngay khi gạt switch trong modal
+        async function quickUpdateEntryStatus(defType, numericId, newStatus) {
+            try {
+                showEditAlert('success', `Đang lưu trạng thái sang ${newStatus}...`);
+                const response = await fetch(`/api/metaobjects/entries/${numericId}/status`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                const result = await response.json();
+                if (response.ok && result.success) {
+                    showEditAlert('success', `Đã chuyển trạng thái sang ${newStatus === 'ACTIVE' ? 'Active' : 'Draft'} thành công!`);
+                    if (currentEditingEntry) {
+                        currentEditingEntry.status = newStatus;
+                    }
+                    const def = definitionsMap[defType];
+                    if (def && def.entries) {
+                        const entry = def.entries.find(e => String(e.numeric_id) === String(numericId));
+                        if (entry) entry.status = newStatus;
+                    }
+                    // Cập nhật badge và switch ngoài panel nếu đang mở
+                    const badge = document.getElementById(`entry-badge-${numericId}`);
+                    if (badge) {
+                        badge.textContent = newStatus === 'ACTIVE' ? 'Active' : 'Draft';
+                        badge.className = `px-1.5 py-0.2 rounded text-[9px] font-bold ${newStatus === 'ACTIVE' ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-gray-200 text-gray-600 border border-gray-300'}`;
+                    }
+                    const panelSwitch = document.getElementById(`switch-entry-${numericId}`);
+                    if (panelSwitch) {
+                        panelSwitch.checked = newStatus === 'ACTIVE';
+                    }
+                } else {
+                    showEditAlert('error', 'Lỗi chuyển trạng thái: ' + (result.message || 'Không xác định'));
+                    setEntryModalStatus(newStatus !== 'ACTIVE', false);
+                }
+            } catch (err) {
+                showEditAlert('error', 'Lỗi kết nối: ' + err.message);
+                setEntryModalStatus(newStatus !== 'ACTIVE', false);
+            }
+        }
+
         // ==========================================
         // POPUP CHỈNH SỬA BẢN GHI (EDIT ENTRY MODAL)
         // ==========================================
@@ -859,6 +1040,10 @@
             document.getElementById('edit-modal-title').textContent = `Chỉnh sửa: ${entry.displayName || entry.handle || 'Bản ghi #' + numericId}`;
             document.getElementById('edit-modal-subtitle').textContent = `Định nghĩa: ${def.name} (${def.type}) • ID: ${numericId}`;
             document.getElementById('edit-modal-shopify-link').href = `https://admin.shopify.com/store/{{ shopify_shop }}/content/metaobjects/entries/${def.type}/${numericId}`;
+
+            // Cập nhật trạng thái Switch theo entry
+            const initialStatus = (entry.status || 'ACTIVE').toUpperCase();
+            setEntryModalStatus(initialStatus === 'ACTIVE', false);
 
             // Reset Save Button
             resetSaveButton();
@@ -1127,7 +1312,8 @@
                     },
                     body: JSON.stringify({
                         id: currentEditingEntry.id,
-                        fields: fieldsToUpdate
+                        fields: fieldsToUpdate,
+                        status: currentEditingStatus
                     })
                 });
 
@@ -1139,11 +1325,15 @@
                     btn.className = 'inline-flex items-center gap-1.5 px-5 py-2 bg-emerald-600 text-white text-xs font-bold rounded-lg shadow-sm transition-all';
                     icon.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
 
-                    if (result.metaobject && result.metaobject.fields) {
-                        currentEditingEntry.fields = result.metaobject.fields;
+                    if (result.metaobject) {
+                        if (result.metaobject.fields) {
+                            currentEditingEntry.fields = result.metaobject.fields;
+                        }
                         if (result.metaobject.displayName) {
                             currentEditingEntry.displayName = result.metaobject.displayName;
                         }
+                        const updatedStatus = result.metaobject.capabilities?.publishable?.status || currentEditingStatus;
+                        currentEditingEntry.status = updatedStatus;
                     } else {
                         fieldsToUpdate.forEach(uf => {
                             const existing = currentEditingEntry.fields.find(f => f.key === uf.key);
@@ -1153,6 +1343,7 @@
                                 currentEditingEntry.fields.push({ key: uf.key, value: uf.value });
                             }
                         });
+                        currentEditingEntry.status = currentEditingStatus;
                     }
 
                     if (currentEditingDef) {

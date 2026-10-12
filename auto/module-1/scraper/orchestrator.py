@@ -10,6 +10,9 @@ from typing import Any
 from .browser import AmazonBrowser, json_ready
 from .config import Settings
 from .content import validate_content
+from .aeo import validate_and_render
+from .aeo.lifecycle import enabled as aeo_enabled, workspace_input
+from .aeo.shopify_adapter import apply_html as apply_aeo_html
 from .errors import ContentValidationError, ImageEvidenceError, NeedsAttention, PriceValidationError, ShopifyError
 from .io_utils import atomic_write_json, load_json
 from .manifest import ProductJob, load_manifest
@@ -18,6 +21,7 @@ from .pipeline import _build_final_variants, _build_rich_description, _metafield
 from .pricing import preset_variants
 from .shopify import ShopifyClient, ShopifyConfig
 from .store import OrchestratorStore
+from .sku_service import SKU_MUTATION_LOCK, plan_for_product, verify_and_repair
 
 
 def settings_for_run(package_root: Path, options: dict[str, Any]) -> Settings:
@@ -146,15 +150,18 @@ class ShopifyApplyService:
         return callback
 
     def apply_product(self, product: dict[str, Any]) -> dict[str, Any]:
+        with SKU_MUTATION_LOCK:
+            return self._apply_product(product)
+
+    def _apply_product(self, product: dict[str, Any]) -> dict[str, Any]:
         run = self.store.run_record(product["run_id"])
         options = run["options"]
         workspace = self.store.workspace(product)
-        content = validate_content(workspace / "content.json")
-        if options.get("dry_run"):
-            report = {"status": "dry_run_complete", "content": content}
-            atomic_write_json(workspace / "report.json", report)
-            return report
-
+        use_aeo = aeo_enabled(options)
+        content = validate_content(workspace / "content.json", require_aeo=use_aeo)
+        if use_aeo:
+            output = validate_and_render(workspace_input(product, workspace), content["aeo"])
+            content["aeo_html"] = output["html"]
         settings = settings_for_run(self.store.package_root, options)
         job = ProductJob(
             product["amazon_url"], product["shopify_product_id"], product["asin"],
@@ -167,7 +174,39 @@ class ShopifyApplyService:
             atomic_write_json(snapshot_path, snapshot)
 
         pricing = load_json(workspace / "pricing.json")
-        option_names, variants, wood = _build_final_variants(pricing, snapshot)
+        progress_path = workspace / "apply_progress.json"
+        progress = load_json(progress_path) if progress_path.exists() else {}
+        final_path = workspace / "final_config.json"
+        if progress.get("product_set") and final_path.exists():
+            # Once productSet has run, verify the exact options that were written.
+            # Updating cleanup rules must not rename options during an SKU retry.
+            saved_final = load_json(final_path)
+            option_names, variants = saved_final["option_names"], saved_final["variants"]
+            wood = saved_final.get("wood_finish_surcharges", {})
+        else:
+            option_names, variants, wood = _build_final_variants(
+                pricing, snapshot, clean_options=not bool(progress.get("product_set")),
+            )
+        product_settings = _product_settings(job)
+        if use_aeo and any(item.get("namespace", "custom") == "custom" and item.get("key") == "aeo_html"
+                           for item in product_settings.get("metafields", [])):
+            raise ShopifyError("custom.aeo_html is managed by the AEO empty-only adapter, not metafield overrides.")
+        plan_path = workspace / "sku_plan.json"
+        plan = plan_for_product(
+            client, job.shopify_product_id, variants, tags=product_settings["tags"],
+            asin=job.asin, handle=snapshot["handle"], existing=client.read_variants(job.shopify_product_id),
+            previous=load_json(plan_path) if plan_path.exists() else None,
+        )
+        atomic_write_json(plan_path, plan)
+        for variant, sku_row in zip(variants, plan["variants"]):
+            variant["sku"] = sku_row["sku"]
+        self._event(product, "sku_planned", count=len(variants), prefix=plan["prefix"],
+                    collisions_resolved=sum(row["collisions_resolved"] for row in plan["variants"]),
+                    message=f"Planned {len(variants)} unique variant SKUs.")
+        if options.get("dry_run"):
+            report = {"status": "dry_run_complete", "content": content, "sku_plan": plan}
+            atomic_write_json(workspace / "report.json", report)
+            return report
         source = load_json(workspace / "source.json")
         gallery_urls = source.get("gallery_images") or []
         if not gallery_urls:
@@ -186,7 +225,6 @@ class ShopifyApplyService:
             prefix="rich", add_logo=False, event_callback=self._media_event(product), asin=product["asin"],
         )
         rich_description = _build_rich_description(uploaded_rich, content["title"])
-        product_settings = _product_settings(job)
         product_settings["metafields"] = _metafields_for_product(
             snapshot, content, job, product_settings, client.product_metafield_definitions(), rich_description
         )
@@ -195,12 +233,11 @@ class ShopifyApplyService:
             "option_names": option_names, "variants": json_ready(variants),
             "wood_finish_surcharges": wood, "uploaded_media": uploaded_gallery,
             "uploaded_rich": uploaded_rich, "settings": product_settings,
+            "sku_plan": plan,
         }
         atomic_write_json(workspace / "final_config.json", final_config)
 
         old_media_ids = [item["id"] for item in (snapshot.get("media") or {}).get("nodes", [])]
-        progress_path = workspace / "apply_progress.json"
-        progress = load_json(progress_path) if progress_path.exists() else {}
         if not progress.get("product_set"):
             self._event(product, "shopify_stage", stage="product_set")
             shopify_product = client.product_set(
@@ -210,6 +247,23 @@ class ShopifyApplyService:
             atomic_write_json(progress_path, progress)
         else:
             shopify_product = progress.get("product") or {"id": snapshot["id"]}
+        def save_sku_plan(updated: dict[str, Any]) -> None:
+            atomic_write_json(plan_path, updated)
+            final_config["sku_plan"] = updated
+            for variant, sku_row in zip(final_config["variants"], updated["variants"]):
+                variant["sku"] = sku_row["sku"]
+            atomic_write_json(workspace / "final_config.json", final_config)
+
+        # Recheck even on resumed checkpoints: Shopify may have changed externally.
+        self._event(product, "shopify_stage", stage="sku_verify")
+        sku_result = verify_and_repair(
+            client, job.shopify_product_id, plan, tags=product_settings["tags"],
+            asin=job.asin, handle=snapshot["handle"], save=save_sku_plan,
+        )
+        progress["sku_verified"] = True
+        atomic_write_json(progress_path, progress)
+        self._event(product, "sku_verified", count=sku_result["count"],
+                    message=f"Verified {sku_result['count']} nonempty, unique SKUs on Shopify.")
         if not progress.get("new_media_ids"):
             self._event(product, "shopify_stage", stage="media_attach")
             progress["new_media_ids"] = client.attach_media(
@@ -232,6 +286,15 @@ class ShopifyApplyService:
             client.set_metafields(job.shopify_product_id, final_config["settings"].get("metafields", []))
             progress["metafields_set"] = True
             atomic_write_json(progress_path, progress)
+        if use_aeo:
+            self._event(product, "shopify_stage", stage="aeo_verify")
+            aeo_result = apply_aeo_html(client, job.shopify_product_id, content["aeo_html"])
+            progress["aeo_verified"] = True
+            progress["aeo_status"] = aeo_result["status"]
+            atomic_write_json(workspace / "aeo_shopify.json", aeo_result)
+            atomic_write_json(progress_path, progress)
+            self._event(product, "aeo_verified", status=aeo_result["status"],
+                        message=f"AEO metafield {aeo_result['status']}; existing content preserved by policy.")
         if not progress.get("published"):
             self._event(product, "shopify_stage", stage="publications")
             channels = final_config["settings"].get("channels")
@@ -241,7 +304,10 @@ class ShopifyApplyService:
                 client.publish(job.shopify_product_id, final_config["settings"].get("publication_ids", []))
             progress["published"] = True
             atomic_write_json(progress_path, progress)
-        report = {"status": "applied", "product": shopify_product, "new_media_ids": new_media_ids}
+        report = {"status": "applied", "product": shopify_product, "new_media_ids": new_media_ids,
+                  "sku_verified": True, "sku_count": sku_result["count"]}
+        if use_aeo:
+            report.update(aeo_verified=progress.get("aeo_verified", False), aeo_status=progress.get("aeo_status"))
         atomic_write_json(workspace / "report.json", report)
         return report
 

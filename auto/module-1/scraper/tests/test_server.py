@@ -60,7 +60,7 @@ def test_manifest_payload_and_run_options_are_validated(tmp_path):
     manifest = parse_manifest_payload(MANIFEST, tmp_path / "products.json")
     assert manifest.products[0].asin == "B000000000"
     assert validate_run_options({"headless": True, "amazon_postal_code": "10001", "max_combinations": 42}) == {
-        "headless": True, "dry_run": False, "amazon_postal_code": "10001", "max_combinations": 42,
+        "headless": True, "dry_run": False, "amazon_postal_code": "10001", "max_combinations": 42, "aeo_version": 1,
     }
     with pytest.raises(ValueError):
         validate_run_options({"max_combinations": 101})
@@ -94,7 +94,7 @@ def test_dashboard_has_agent_startup_toast_and_event_log_scroll_control():
     assert 'id="agent-sessions-list"' in html
     assert 'id="page-scroll-top"' in html
     assert 'id="page-scroll-bottom"' in html
-    assert 'id="page-view-log"' in html
+    assert 'id="page-view-progress"' in html
     assert 'id="product-type-modal"' in html
     assert 'id="check-agent"' in html
     assert 'id="agent-status-tooltip"' in html
@@ -252,10 +252,11 @@ def test_prompts_api_reads_and_saves_only_fixed_prompt_files(tmp_path):
 
     loaded = client.get("/api/prompts")
     assert loaded.status_code == 200
-    assert loaded.get_json()["prompts"] == {
+    assert {key: value for key, value in loaded.get_json()["prompts"].items() if key != "aeo_prompt"} == {
         "agent_prompt": "Write factual content.",
         "content_task_prompt": "Process one queued task.",
     }
+    assert "evidence_ids" in loaded.get_json()["prompts"]["aeo_prompt"]
     saved = client.put("/api/prompts", json={"prompts": {
         "agent_prompt": "Updated agent prompt.",
         "content_task_prompt": "Updated task prompt.\r\nSecond line.",
@@ -577,3 +578,15 @@ def test_sse_cursor_skips_old_events(tmp_path):
     assert f"id: {second}" in chunk
     assert "second" in chunk
     assert "first" not in chunk
+
+
+@pytest.mark.parametrize("endpoint", ["sku-plan", "set-skus"])
+def test_removed_sku_actions_cannot_trigger_shopify_mutations(tmp_path, endpoint):
+    root = package_root(tmp_path)
+    def unexpected_client():
+        raise AssertionError("Removed SKU actions must not instantiate a Shopify client.")
+    client = create_app(root, store=OrchestratorStore(root),
+                        shopify_client_factory=unexpected_client).test_client()
+    csrf = client.get("/api/bootstrap").get_json()["csrf_token"]
+    response = client.post(f"/api/shopify/{endpoint}", json={"manifest": MANIFEST}, headers=headers(csrf))
+    assert response.status_code == 404

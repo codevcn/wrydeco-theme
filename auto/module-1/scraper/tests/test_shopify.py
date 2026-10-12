@@ -110,3 +110,38 @@ def test_products_by_amazon_asins_normalizes_urls_and_paginates(tmp_path):
     assert matches["B111111111"] == []
     assert session.calls[1][1]["json"]["variables"]["after"] == "page-2"
 
+
+def test_product_set_sends_sku_and_inventory_tracking_together(tmp_path):
+    session = Session([Response(200, {"data": {"productSet": {"product": {"id": "123"}, "userErrors": []}}})])
+    client = ShopifyClient(config(tmp_path), session)
+    client.product_set("123", {"title": "Title", "handle": "handle", "description_html": "<p>Text</p>",
+                               "seo_title": "SEO", "seo_description": "Description"}, ["Size"],
+                       [{"options": [{"name": "Size", "value": "Large"}], "price": "99", "sku": "amz-B000000000-NA-LAR-01"}], {})
+    variant = session.calls[0][1]["json"]["variables"]["input"]["variants"][0]
+    assert variant["sku"] == "amz-B000000000-NA-LAR-01"
+    assert variant["inventoryItem"] == {"tracked": False}
+
+
+def test_sku_bulk_update_uses_inventory_item_and_chunks_at_250(tmp_path):
+    session = Session([Response(200, {"data": {"productVariantsBulkUpdate": {"userErrors": []}}}) for _ in range(2)])
+    client = ShopifyClient(config(tmp_path), session)
+    client.update_variant_skus("123", [{"id": str(i), "sku": f"SKU-{i}"} for i in range(251)])
+    calls = [call[1]["json"]["variables"]["variants"] for call in session.calls]
+    assert [len(batch) for batch in calls] == [250, 1]
+    assert calls[0][0] == {"id": "0", "inventoryItem": {"sku": "SKU-0"}}
+
+
+def test_sku_owners_paginate_and_exclude_only_the_target_product(tmp_path):
+    session = Session([
+        Response(200, {"data": {"productVariants": {"nodes": [
+            {"id": "own", "sku": "AMZ-B000000000-NAT-01", "product": {"id": "gid://shopify/Product/123"}},
+            {"id": "other", "sku": "AMZ-B000000000-NAT-01", "product": {"id": "gid://shopify/Product/456"}},
+        ], "pageInfo": {"hasNextPage": True, "endCursor": "next"}}}}),
+        Response(200, {"data": {"productVariants": {"nodes": [
+            {"id": "other2", "sku": "amz-B000000000-WAL-02", "product": {"id": "gid://shopify/Product/789"}},
+        ], "pageInfo": {"hasNextPage": False, "endCursor": None}}}}),
+    ])
+    result = ShopifyClient(config(tmp_path), session).variant_sku_owners("amz", "B000000000", "123")
+    assert result == {"amz-b000000000-nat-01": ["other"], "amz-b000000000-wal-02": ["other2"]}
+    assert session.calls[1][1]["json"]["variables"]["after"] == "next"
+

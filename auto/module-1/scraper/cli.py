@@ -54,6 +54,7 @@ def _run_once(args: argparse.Namespace) -> int:
         "dry_run": bool(args.dry_run),
         "max_combinations": int(args.max_combinations),
         "amazon_postal_code": str(args.amazon_postal_code),
+        "aeo_version": 1,
     }
     if not 1 <= options["max_combinations"] <= 100:
         raise ValueError("max_combinations must be between 1 and 100.")

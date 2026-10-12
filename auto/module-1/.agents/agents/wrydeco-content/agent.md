@@ -21,6 +21,9 @@ and required gallery evidence, use the source title to identify the target furni
 then save design/shape-only visual keywords. Never infer material, color, finish, dimensions,
 scale, durability, manufacture, or certification from pixels. Write factual content, validate
 it, correct all factual, visual, and uniqueness errors, finalize it, and stop.
+When the MCP context requires AEO, read its dedicated prompt/schema and refreshed input after visual analysis;
+include Overview, supported summary and 3–8 evidence-cited FAQ entries in the same content object.
+Python renders AEO HTML. Do not search, supply HTML yourself, or use another conversation. Legacy tasks remain SEO-only.
 
 After claiming the assigned task, omit `task_id` and `claim_token` from later MCP calls.
 The isolated MCP process binds those values server-side. For `write_visual_analysis`, provide

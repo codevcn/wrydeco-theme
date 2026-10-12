@@ -67,12 +67,9 @@ try:
         except (FileNotFoundError, IOError):
             upload_file("proxy_config.json", f"{app_dir}/proxy_config.json")
 
-    # Upload logo_updater_config.json if not present on remote
+    # Upload logo_updater_config.json
     if os.path.exists("logo_updater_config.json"):
-        try:
-            sftp.stat(f"{app_dir}/logo_updater_config.json")
-        except (FileNotFoundError, IOError):
-            upload_file("logo_updater_config.json", f"{app_dir}/logo_updater_config.json")
+        upload_file("logo_updater_config.json", f"{app_dir}/logo_updater_config.json")
 
     # Upload notes.json if not present on remote
     if os.path.exists("notes.json"):

@@ -124,8 +124,12 @@ def mark_proxy_unstable(err: str, latency: int = 0):
 def test_proxy_connectivity(proxy_url: str = None, timeout: int = 8):
     if not proxy_url:
         cfg = load_proxy_config()
-        proxy_url = cfg.get("proxy_url")
+        proxy_url = cfg.get("proxy_url") or os.getenv("PROXY_URL")
     
+    if not proxy_url or not str(proxy_url).strip():
+        return False, 0, "Chưa cấu hình URL Proxy Gateway!"
+
+    proxy_url = str(proxy_url).strip()
     proxies = {
         "http": proxy_url,
         "https": proxy_url
@@ -175,8 +179,12 @@ def fetch_proxy_egress_geo(proxy_url: str = None, timeout: int = 6):
     """
     if not proxy_url:
         cfg = load_proxy_config()
-        proxy_url = cfg.get("proxy_url")
+        proxy_url = cfg.get("proxy_url") or os.getenv("PROXY_URL")
     
+    if not proxy_url or not str(proxy_url).strip():
+        return None
+
+    proxy_url = str(proxy_url).strip()
     proxies = {
         "http": proxy_url,
         "https": proxy_url
@@ -2447,12 +2455,29 @@ def get_product_by_handle(handle: str):
             }
           }
         }
+        aeoMetafield: metafield(namespace: "custom", key: "aeo_html") {
+          id
+          namespace
+          key
+          value
+          type
+        }
         variants(first: 250) {
           edges {
             node {
+              id
               title
               price
               compareAtPrice
+              sku
+              barcode
+              image {
+                url
+              }
+              selectedOptions {
+                name
+                value
+              }
             }
           }
         }
@@ -2495,6 +2520,26 @@ async def read_product(request: Request, product_handle: str):
         product_data = get_product_by_handle(product_handle)
         
         if not product_data:
+            clean_str = product_handle.strip()
+            if clean_str.isdigit() or clean_str.startswith("gid://shopify/Product/"):
+                try:
+                    num_id = clean_str.split("/")[-1]
+                    gid = f"gid://shopify/Product/{num_id}"
+                    id_query = """
+                    query getHandleById($id: ID!) {
+                      product(id: $id) {
+                        handle
+                      }
+                    }
+                    """
+                    proxies = get_shopify_request_proxies()
+                    res = requests.post(GRAPHQL_URL, json={"query": id_query, "variables": {"id": gid}}, headers=HEADERS, proxies=proxies, timeout=15)
+                    if res.ok:
+                        prod_node = res.json().get("data", {}).get("product")
+                        if prod_node and prod_node.get("handle"):
+                            return RedirectResponse(url=f"/products/{prod_node['handle']}", status_code=307)
+                except Exception:
+                    pass
             return templates.TemplateResponse(request=request, name="404.html", context={"request": request}, status_code=404)
             
         media_list = []
@@ -2506,12 +2551,25 @@ async def read_product(request: Request, product_handle: str):
             elif "preview" in media_node and media_node["preview"] and media_node["preview"]["image"]:
                 media_list.append({"id": media_id, "url": media_node["preview"]["image"]["url"]})
                 
-        # Extract unique prices
+        # Extract variants with SKU & Barcode
+        variants_list = []
         prices = set()
         for variant_edge in product_data.get("variants", {}).get("edges", []):
-            price = variant_edge["node"].get("price")
-            if price:
-                prices.add(price)
+            v_node = variant_edge["node"]
+            v_price = v_node.get("price")
+            if v_price:
+                prices.add(v_price)
+            variants_list.append({
+                "id": v_node.get("id", "").split("/")[-1],
+                "gid": v_node.get("id", ""),
+                "title": v_node.get("title", ""),
+                "price": v_price or "",
+                "compare_at_price": v_node.get("compareAtPrice") or "",
+                "sku": v_node.get("sku") or "",
+                "barcode": v_node.get("barcode") or "",
+                "image_url": v_node.get("image", {}).get("url") if v_node.get("image") else None,
+                "selected_options": v_node.get("selectedOptions", [])
+            })
         sorted_prices = sorted(list(prices), key=lambda x: float(x))
                 
         # Extract metafields
@@ -2538,6 +2596,15 @@ async def read_product(request: Request, product_handle: str):
                 "is_published": pub_node.get("isPublished", False)
             })
             
+        # Extract aeo_html metafield if available
+        aeo_mf_node = product_data.get("aeoMetafield")
+        aeo_html_val = aeo_mf_node.get("value") if aeo_mf_node else None
+        if not aeo_html_val:
+            for mf in metafields:
+                if mf.get("namespace") == "custom" and mf.get("key") == "aeo_html":
+                    aeo_html_val = mf.get("value")
+                    break
+
         product = {
             "id": product_data["id"].split("/")[-1],
             "title": product_data["title"],
@@ -2550,9 +2617,11 @@ async def read_product(request: Request, product_handle: str):
             "description": product_data.get("descriptionHtml", ""),
             "seo": product_data.get("seo", {}),
             "options": product_data.get("options", []),
+            "variants": variants_list,
             "media": media_list,
             "prices": sorted_prices,
             "metafields": metafields,
+            "aeo_html": aeo_html_val,
             "publications": publications,
             "collections": product_data.get("collections", {})
         }
@@ -2568,6 +2637,30 @@ async def read_product(request: Request, product_handle: str):
             "product": None,
             "error": str(e)
         })
+
+@app.get("/api/products/{product_handle}/variants")
+async def get_product_variants_api(product_handle: str):
+    try:
+        product_data = get_product_by_handle(product_handle)
+        if not product_data:
+            return JSONResponse({"success": False, "message": "Product not found", "variants": []}, status_code=404)
+        variants_list = []
+        for variant_edge in product_data.get("variants", {}).get("edges", []):
+            v_node = variant_edge["node"]
+            variants_list.append({
+                "id": v_node.get("id", "").split("/")[-1],
+                "gid": v_node.get("id", ""),
+                "title": v_node.get("title", ""),
+                "price": v_node.get("price") or "",
+                "compare_at_price": v_node.get("compareAtPrice") or "",
+                "sku": v_node.get("sku") or "",
+                "barcode": v_node.get("barcode") or "",
+                "image_url": v_node.get("image", {}).get("url") if v_node.get("image") else None,
+                "selected_options": v_node.get("selectedOptions", [])
+            })
+        return JSONResponse({"success": True, "variants": variants_list, "total": len(variants_list)})
+    except Exception as e:
+        return JSONResponse({"success": False, "message": str(e), "variants": []}, status_code=500)
 
 def get_all_product_identifiers():
     query = """
@@ -4890,6 +4983,41 @@ async def internal_edit_product(request: Request):
             else:
                 return HTMLResponse(content=json.dumps({"success": False, "message": "Sai định dạng metafield"}), media_type="application/json")
                 
+            if new_value == "__DELETE__":
+                del_mutation = '''
+                mutation metafieldsDelete($metafields: [MetafieldIdentifierInput!]!) {
+                  metafieldsDelete(metafields: $metafields) {
+                    deletedMetafields {
+                      key
+                      namespace
+                      ownerId
+                    }
+                    userErrors {
+                      field
+                      message
+                    }
+                  }
+                }
+                '''
+                del_variables = {
+                    "metafields": [
+                        {
+                            "ownerId": product_id,
+                            "namespace": mf_namespace,
+                            "key": mf_key
+                        }
+                    ]
+                }
+                res = requests.post(GRAPHQL_URL, json={"query": del_mutation, "variables": del_variables}, headers=HEADERS)
+                res.raise_for_status()
+                data = res.json()
+                if "errors" in data:
+                    return HTMLResponse(content=json.dumps({"success": False, "message": f"GraphQL Error: {data['errors'][0]['message']}"}), media_type="application/json")
+                user_errs = data.get("data", {}).get("metafieldsDelete", {}).get("userErrors", [])
+                if user_errs:
+                    return HTMLResponse(content=json.dumps({"success": False, "message": f"Lỗi từ Shopify: {user_errs[0]['message']}"}), media_type="application/json")
+                return HTMLResponse(content=json.dumps({"success": True, "message": "Đã xóa metafield thành công"}), media_type="application/json")
+
             mutation = '''
             mutation productUpdate($input: ProductInput!) {
               productUpdate(input: $input) {
@@ -5987,6 +6115,11 @@ def get_metaobject_definitions_data():
                       type
                       displayName
                       updatedAt
+                      capabilities {{
+                        publishable {{
+                          status
+                        }}
+                      }}
                       fields {{
                         key
                         value
@@ -6007,6 +6140,8 @@ def get_metaobject_definitions_data():
                         for e in result.get("edges", []):
                             entry = e["node"]
                             entry["numeric_id"] = entry["id"].split("/")[-1]
+                            raw_status = entry.get("capabilities", {}).get("publishable", {}).get("status", "ACTIVE")
+                            entry["status"] = raw_status if raw_status in ("ACTIVE", "DRAFT") else "ACTIVE"
                             raw_time = entry.get("updatedAt", "")
                             if raw_time:
                                 try:
@@ -6101,6 +6236,7 @@ async def update_metaobject_entry(request: Request):
         body = await request.json()
         entry_id = body.get("id")
         fields = body.get("fields", [])
+        status_val = (body.get("status") or "").strip().upper()
         
         if not entry_id:
             return JSONResponse({"success": False, "message": "Thiếu ID bản ghi metaobject"}, status_code=400)
@@ -6116,6 +6252,16 @@ async def update_metaobject_entry(request: Request):
             v = f.get("value")
             if k is not None and v is not None:
                 cleaned_fields.append({"key": str(k), "value": str(v)})
+
+        metaobject_input = {
+            "fields": cleaned_fields
+        }
+        if status_val in ("ACTIVE", "DRAFT"):
+            metaobject_input["capabilities"] = {
+                "publishable": {
+                    "status": status_val
+                }
+            }
                 
         mutation = """
         mutation updateMetaobject($id: ID!, $metaobject: MetaobjectUpdateInput!) {
@@ -6125,6 +6271,11 @@ async def update_metaobject_entry(request: Request):
               handle
               displayName
               updatedAt
+              capabilities {
+                publishable {
+                  status
+                }
+              }
               fields {
                 key
                 value
@@ -6144,9 +6295,7 @@ async def update_metaobject_entry(request: Request):
             "query": mutation,
             "variables": {
                 "id": gid,
-                "metaobject": {
-                    "fields": cleaned_fields
-                }
+                "metaobject": metaobject_input
             }
         }, headers=HEADERS)
         res.raise_for_status()
@@ -6163,6 +6312,78 @@ async def update_metaobject_entry(request: Request):
             
         updated_obj = update_res.get("metaobject")
         return JSONResponse({"success": True, "message": "Đã lưu bản ghi thành công!", "metaobject": updated_obj})
+    except Exception as e:
+        return JSONResponse({"success": False, "message": f"Lỗi hệ thống: {str(e)}"}, status_code=500)
+
+
+@app.post("/api/metaobjects/entries/{entry_id:path}/status")
+async def update_metaobject_entry_status(entry_id: str, request: Request):
+    try:
+        body = await request.json()
+        new_status = (body.get("status") or "").strip().upper()
+        if new_status not in ("ACTIVE", "DRAFT"):
+            return JSONResponse({"success": False, "message": "Trạng thái không hợp lệ. Chỉ chấp nhận ACTIVE hoặc DRAFT."}, status_code=400)
+            
+        raw_id = entry_id.strip()
+        if not raw_id.startswith("gid://shopify/Metaobject/"):
+            gid = f"gid://shopify/Metaobject/{raw_id.split('/')[-1]}"
+        else:
+            gid = raw_id
+            
+        mutation = """
+        mutation updateMetaobjectStatus($id: ID!, $metaobject: MetaobjectUpdateInput!) {
+          metaobjectUpdate(id: $id, metaobject: $metaobject) {
+            metaobject {
+              id
+              handle
+              displayName
+              updatedAt
+              capabilities {
+                publishable {
+                  status
+                }
+              }
+            }
+            userErrors {
+              field
+              message
+              code
+            }
+          }
+        }
+        """
+        res = requests.post(GRAPHQL_URL, json={
+            "query": mutation,
+            "variables": {
+                "id": gid,
+                "metaobject": {
+                    "capabilities": {
+                        "publishable": {
+                            "status": new_status
+                        }
+                    }
+                }
+            }
+        }, headers=HEADERS)
+        res.raise_for_status()
+        data = res.json()
+        
+        if "errors" in data:
+            return JSONResponse({"success": False, "message": str(data["errors"])}, status_code=400)
+            
+        update_res = data.get("data", {}).get("metaobjectUpdate", {})
+        user_errors = update_res.get("userErrors", [])
+        if user_errors:
+            error_msgs = [e.get("message", "Lỗi không xác định") for e in user_errors]
+            return JSONResponse({"success": False, "message": "; ".join(error_msgs), "errors": user_errors}, status_code=400)
+            
+        updated_obj = update_res.get("metaobject")
+        return JSONResponse({
+            "success": True,
+            "message": f"Đã chuyển trạng thái sang {'Active' if new_status == 'ACTIVE' else 'Draft'} thành công!",
+            "status": new_status,
+            "metaobject": updated_obj
+        })
     except Exception as e:
         return JSONResponse({"success": False, "message": f"Lỗi hệ thống: {str(e)}"}, status_code=500)
 
@@ -9791,10 +10012,1868 @@ async def api_vps_health(force: bool = False):
     return JSONResponse(health_data)
 
 
+# =====================================================================
+# REAL HOMES, REAL SPACES - BACKEND MANAGER & CASCADE SYNC
+# =====================================================================
+
+DEFAULT_FALLBACK_IMAGE = "https://cdn.shopify.com/s/files/1/0805/4410/4505/files/in-real-spaces-img-1.jpg?v=1791729239"
 
 
+def get_real_homes_client(target_store: str = "default") -> dict:
+    """
+    Xác định ngữ cảnh kết nối cho phân hệ Real Homes:
+    - target_store == "custom": BẮT BUỘC PHẢI ĐI QUA PROXY GATEWAY US.
+      1. Đọc URL proxy từ proxy_config.json hoặc .env (PROXY_URL). Nếu thiếu, từ chối ngay lập tức.
+      2. Kiểm tra độ ổn định kết nối qua proxy (test_proxy_connectivity). Nếu proxy lỗi hoặc không phản hồi, ném ProxySafetyException chặn toàn bộ request.
+      3. Đọc thông tin xác thực trực tiếp của Store Riêng từ logo_updater_config.json (shop_domain, client_id, client_secret, access_token).
+      4. Tự động gia hạn access token qua proxy (force_proxy=True) nếu token trống hoặc đã hết hạn.
+      5. Gán proxies = {"http": proxy_url, "https": proxy_url} bắt buộc, tuyệt đối không được là None.
+    - target_store == "default": Kết nối trực tiếp từ server bằng credentials trong .env, proxies=None.
+    """
+    store_key = (target_store or "default").strip().lower()
+    if store_key == "custom":
+        p_cfg = load_proxy_config()
+        proxy_url = (p_cfg.get("proxy_url") or os.getenv("PROXY_URL") or "").strip()
+        if not proxy_url:
+            raise ProxySafetyException(
+                "CHỐT CHẶN AN TOÀN TUYỆT ĐỐI: Chưa cấu hình URL Proxy Gateway! "
+                "Mọi request tới Store Riêng bắt buộc phải đi qua Proxy để bảo vệ gian hàng."
+            )
+
+        proxies = {"http": proxy_url, "https": proxy_url}
+
+        # 1. Kiểm tra độ ổn định Proxy Gateway US
+        is_ok, latency, err = test_proxy_connectivity(proxy_url=proxy_url, timeout=8)
+        if not is_ok:
+            raise ProxySafetyException(
+                f"CHỐT CHẶN AN TOÀN: Proxy Gateway US đang không ổn định hoặc mất kết nối ({err}). "
+                f"Toàn bộ kết nối tới Store Riêng bị chặn để bảo vệ gian hàng."
+            )
+
+        # 2. Đọc trực tiếp cấu hình Store Riêng từ logo_updater_config.json
+        custom_cfg = load_logo_updater_config()
+        raw_shop = (custom_cfg.get("shop_domain") or "").strip()
+        shop = clean_shopify_domain(raw_shop)
+        if not shop:
+            raise ProxySafetyException(
+                "CHỐT CHẶN AN TOÀN: Chưa cấu hình Shop Domain cho Store Riêng trong logo_updater_config.json."
+            )
+
+        client_id = (custom_cfg.get("client_id") or "").strip()
+        client_secret = (custom_cfg.get("client_secret") or "").strip()
+        custom_token = (custom_cfg.get("access_token") or "").strip()
+        expires_at = custom_cfg.get("token_expires_at")
+
+        is_expired = False
+        if expires_at:
+            try:
+                if datetime.now().timestamp() >= (float(expires_at) - 60):
+                    is_expired = True
+            except Exception:
+                pass
+
+        if (not custom_token or is_expired) and client_id and client_secret:
+            # Yêu cầu cấp token mới BẮT BUỘC QUA PROXY
+            ok, msg, new_tok = request_custom_app_access_token(shop, client_id, client_secret, force_proxy=True)
+            if ok and new_tok:
+                custom_token = new_tok
+            else:
+                raise ProxySafetyException(
+                    f"CHỐT CHẶN AN TOÀN: Không thể cấp Access Token cho Store Riêng qua Proxy: {msg}"
+                )
+
+        if not custom_token:
+            raise ProxySafetyException(
+                "CHỐT CHẶN AN TOÀN: Store Riêng chưa có Access Token hợp lệ. Vui lòng cấu hình Client ID & Secret."
+            )
+
+        headers = {
+            "X-Shopify-Access-Token": custom_token,
+            "Content-Type": "application/json"
+        }
+        graphql_url = f"https://{shop}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/graphql.json"
+        shop_name = custom_cfg.get("shop_name") or f"{shop}.myshopify.com"
+
+        return {
+            "shop": shop,
+            "headers": headers,
+            "proxies": proxies, # LUÔN LUÔN LÀ proxies ĐÃ ĐƯỢC TEST THÀNH CÔNG, KHÔNG BAO GIỜ LÀ NONE
+            "store_name": shop_name,
+            "is_proxy_active": True,
+            "graphql_url": graphql_url,
+            "store_type": "custom"
+        }
+    else:
+        shop = clean_shopify_domain(SHOPIFY_SHOP)
+        token = SHOPIFY_ADMIN_TOKEN
+        headers = {
+            "X-Shopify-Access-Token": token,
+            "Content-Type": "application/json"
+        }
+        graphql_url = f"https://{shop}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/graphql.json"
+        return {
+            "shop": shop,
+            "headers": headers,
+            "proxies": None,
+            "store_name": f"Store Mặc Định ({shop})",
+            "is_proxy_active": False,
+            "graphql_url": graphql_url,
+            "store_type": "default"
+        }
 
 
+def execute_real_homes_graphql(client_info: dict, query: str, variables: dict = None) -> dict:
+    """
+    Thực thi truy vấn Shopify GraphQL với cơ chế tự động làm mới access token
+    khi gặp mã lỗi 401 Unauthorized cho cả Store Mặc Định và Store Riêng,
+    đồng thời kiểm tra và ném lỗi nếu có GraphQL errors.
+    BẢO VỆ TUYỆT ĐỐI: Bất kỳ request nào của Store Riêng nếu thiếu proxies sẽ bị chặn ngay lập tức.
+    """
+    if client_info.get("store_type") == "custom":
+        proxies = client_info.get("proxies")
+        if not proxies or not proxies.get("https"):
+            raise ProxySafetyException(
+                "CHỐT CHẶN AN TOÀN TUYỆT ĐỐI: Phát hiện request GraphQL tới Store Riêng không có Proxy! "
+                "Hệ thống đã chặn request ngay tại cổng ra để bảo vệ an toàn cho Store Riêng."
+            )
+
+    payload = {"query": query}
+    if variables:
+        payload["variables"] = variables
+
+    resp = requests.post(
+        client_info["graphql_url"],
+        json=payload,
+        headers=client_info["headers"],
+        proxies=client_info["proxies"],
+        timeout=30
+    )
+
+    if resp.status_code == 401:
+        if client_info["store_type"] == "custom":
+            cfg = load_logo_updater_config()
+            ok, msg, new_tok = request_custom_app_access_token(
+                cfg.get("shop_domain", ""),
+                cfg.get("client_id", ""),
+                cfg.get("client_secret", ""),
+                force_proxy=True
+            )
+            if ok and new_tok:
+                client_info["headers"]["X-Shopify-Access-Token"] = new_tok
+                resp = requests.post(
+                    client_info["graphql_url"],
+                    json=payload,
+                    headers=client_info["headers"],
+                    proxies=client_info["proxies"],
+                    timeout=30
+                )
+        else:
+            ok, msg, new_tok = request_default_store_access_token()
+            if ok and new_tok:
+                client_info["headers"]["X-Shopify-Access-Token"] = new_tok
+                resp = requests.post(
+                    client_info["graphql_url"],
+                    json=payload,
+                    headers=client_info["headers"],
+                    proxies=client_info["proxies"],
+                    timeout=30
+                )
+
+    resp.raise_for_status()
+    data = resp.json()
+    if "errors" in data and not data.get("data"):
+        err_msg = "; ".join([e.get("message", "Lỗi GraphQL") for e in data["errors"]])
+        raise RuntimeError(f"Shopify GraphQL Error: {err_msg}")
+    return data
 
 
+def clean_media_url_for_comparison(u: str) -> str:
+    if not u:
+        return ""
+    return u.split("?")[0].strip().lower().rstrip("/")
+
+
+def extract_media_filename(u: str) -> str:
+    if not u:
+        return ""
+    clean = u.split("?")[0].strip().lower().rstrip("/")
+    return clean.split("/")[-1]
+
+
+def cascade_remove_media_from_real_in_spaces(deleted_urls: list[str], client_info: dict) -> dict:
+    """
+    Cơ chế đồng bộ 2 chiều (Cascade Sync):
+    Khi xóa file media trong Section 2, tự động quét toàn bộ bản ghi Metaobject `real_in_spaces`
+    của store hiện tại và gỡ bỏ URL file đó khỏi featured_image, video_poster, và gallery_media.
+    Đảm bảo:
+    - Nếu featured_image bị xóa: Tự động đôn ảnh hợp lệ tiếp theo trong gallery_media lên làm featured_image.
+      Nếu không còn ảnh nào, sử dụng DEFAULT_FALLBACK_IMAGE để tuân thủ bắt buộc (required: true) của Shopify.
+    - Nếu toàn bộ gallery_media bị xóa: Đặt gallery_media = featured_image để tuân thủ required: true của Shopify.
+    - Kiểm tra userErrors khi update Metaobject để đảm bảo tính toàn vẹn dữ liệu.
+    """
+    cleaned_del_urls = set(clean_media_url_for_comparison(u) for u in deleted_urls if u)
+    del_filenames = set(extract_media_filename(u) for u in deleted_urls if u and len(extract_media_filename(u)) > 4)
+
+    if not cleaned_del_urls and not del_filenames:
+        return {"affected_count": 0, "details": []}
+
+    def matches_deleted(u: str) -> bool:
+        if not u:
+            return False
+        clean = clean_media_url_for_comparison(u)
+        if clean in cleaned_del_urls:
+            return True
+        fn = extract_media_filename(u)
+        if fn and len(fn) > 4 and fn in del_filenames:
+            return True
+        return False
+
+    query = """
+    query getAllRealInSpacesCascade {
+      metaobjects(type: "real_in_spaces", first: 250) {
+        edges {
+          node {
+            id
+            handle
+            displayName
+            fields {
+              key
+              value
+            }
+          }
+        }
+      }
+    }
+    """
+    res = execute_real_homes_graphql(client_info, query)
+    edges = res.get("data", {}).get("metaobjects", {}).get("edges", [])
+    affected_count = 0
+    details = []
+
+    for edge in edges:
+        node = edge["node"]
+        entry_id = node["id"]
+        title = node.get("displayName") or node.get("handle") or entry_id
+        fields_dict = {f["key"]: f.get("value") or "" for f in node.get("fields", [])}
+
+        modified = False
+        changes = []
+
+        # 1. Kiểm tra gallery_media (Single Source of Truth)
+        gm = fields_dict.get("gallery_media", "")
+        items = [u.strip() for u in gm.split(",") if u.strip()]
+        new_gallery_items = [u for u in items if not matches_deleted(u)]
+        if len(new_gallery_items) != len(items):
+            modified = True
+            changes.append(f"gallery_media (loại bỏ {len(items) - len(new_gallery_items)} link)")
+
+        # Nếu toàn bộ gallery_media bị xóa rỗng, fallback sang DEFAULT_FALLBACK_IMAGE
+        if not new_gallery_items:
+            new_gallery_items = [DEFAULT_FALLBACK_IMAGE]
+            modified = True
+
+        fields_dict["gallery_media"] = ",".join(new_gallery_items)
+
+        # 2. Kiểm tra video_poster (optional)
+        vp = fields_dict.get("video_poster", "")
+        if vp and matches_deleted(vp):
+            fields_dict["video_poster"] = ""
+            modified = True
+            changes.append("video_poster (đã xóa)")
+
+        # 3. Dọn sạch featured_image cũ nếu nó chứa URL file bị xóa
+        fi = fields_dict.get("featured_image", "")
+        if fi and matches_deleted(fi):
+            fields_dict["featured_image"] = ""
+            modified = True
+            changes.append("featured_image (đã xóa)")
+
+        if modified:
+            update_fields = []
+            for k, v in fields_dict.items():
+                if k in ("gallery_media", "video_poster", "title", "source_type", "product_handle", "author", "is_featured"):
+                    update_fields.append({"key": k, "value": v or ""})
+
+            update_mutation = """
+            mutation updateRealInSpacesCascade($id: ID!, $metaobject: MetaobjectUpdateInput!) {
+              metaobjectUpdate(id: $id, metaobject: $metaobject) {
+                metaobject {
+                  id
+                  displayName
+                }
+                userErrors {
+                  field
+                  message
+                }
+              }
+            }
+            """
+            try:
+                up_res = execute_real_homes_graphql(client_info, update_mutation, {
+                    "id": entry_id,
+                    "metaobject": {"fields": update_fields}
+                })
+                mo_update = up_res.get("data", {}).get("metaobjectUpdate", {})
+                u_errs = mo_update.get("userErrors", [])
+                if u_errs:
+                    print(f"Lỗi cascade update cho entry {entry_id}: {u_errs}")
+                else:
+                    affected_count += 1
+                    details.append({
+                        "entry_id": entry_id,
+                        "title": title,
+                        "changes": changes
+                    })
+            except Exception as e_up:
+                print(f"Lỗi ngoại lệ cascade update cho entry {entry_id}: {e_up}")
+
+    return {"affected_count": affected_count, "details": details}
+
+
+def upload_media_file_to_shopify(client_info: dict, filename: str, content_bytes: bytes, mime_type: str, alt_text: str = "") -> dict:
+    """
+    Quy trình Staged Upload tải file hình ảnh/video lên Shopify Files CDN:
+    1. stagedUploadsCreate
+    2. POST binary data lên S3/GCS staged target
+    3. fileCreate mutation
+    4. Chờ và lấy link CDN hoàn chỉnh
+    """
+    if client_info.get("store_type") == "custom":
+        proxies = client_info.get("proxies")
+        if not proxies or not proxies.get("https"):
+            raise ProxySafetyException(
+                "CHỐT CHẶN AN TOÀN TUYỆT ĐỐI: Không thể upload media tới Store Riêng vì thiếu Proxy Gateway!"
+            )
+
+    is_video = mime_type.startswith("video/") or any(filename.lower().endswith(ext) for ext in [".mp4", ".mov", ".webm"])
+    resource = "VIDEO" if is_video else "IMAGE"
+    content_type = "VIDEO" if is_video else "IMAGE"
+
+    staged_mutation = """
+    mutation stagedUploadsCreate($input: [StagedUploadInput!]!) {
+      stagedUploadsCreate(input: $input) {
+        stagedTargets {
+          url
+          resourceUrl
+          parameters {
+            name
+            value
+          }
+        }
+        userErrors {
+          field
+          message
+        }
+      }
+    }
+    """
+    res = execute_real_homes_graphql(client_info, staged_mutation, {
+        "input": [{
+            "filename": filename,
+            "mimeType": mime_type,
+            "resource": resource,
+            "httpMethod": "POST",
+            "fileSize": str(len(content_bytes))
+        }]
+    })
+
+    payload = res.get("data", {}).get("stagedUploadsCreate", {})
+    errors = payload.get("userErrors", [])
+    if errors:
+        raise RuntimeError(f"stagedUploadsCreate thất bại: {errors[0].get('message')}")
+
+    targets = payload.get("stagedTargets", [])
+    if not targets:
+        raise RuntimeError("Shopify không trả về mục tiêu Staged Upload.")
+    target = targets[0]
+
+    form_data = {p["name"]: p["value"] for p in target.get("parameters", [])}
+    files = {"file": (filename, content_bytes, mime_type)}
+
+    upload_resp = requests.post(
+        target["url"],
+        data=form_data,
+        files=files,
+        proxies=client_info["proxies"],
+        timeout=60
+    )
+    if upload_resp.status_code >= 400:
+        raise RuntimeError(f"Lỗi tải file lên Shopify Staged Storage (HTTP {upload_resp.status_code}): {upload_resp.text[:300]}")
+
+    file_create_mutation = """
+    mutation fileCreate($files: [FileCreateInput!]!) {
+      fileCreate(files: $files) {
+        files {
+          id
+          fileStatus
+          alt
+          createdAt
+          ... on MediaImage {
+            image {
+              url
+              width
+              height
+            }
+          }
+          ... on Video {
+            sources {
+              url
+              format
+              mimeType
+            }
+            preview {
+              image {
+                url
+              }
+            }
+          }
+          ... on GenericFile {
+            url
+          }
+        }
+        userErrors {
+          field
+          message
+        }
+      }
+    }
+    """
+    file_input = {
+        "contentType": content_type,
+        "originalSource": target["resourceUrl"],
+        "filename": filename,
+        "duplicateResolutionMode": "APPEND_UUID"
+    }
+    if alt_text:
+        file_input["alt"] = alt_text
+
+    fc_res = execute_real_homes_graphql(client_info, file_create_mutation, {"files": [file_input]})
+    fc_payload = fc_res.get("data", {}).get("fileCreate", {})
+    fc_errors = fc_payload.get("userErrors", [])
+    if fc_errors:
+        raise RuntimeError(f"fileCreate thất bại: {fc_errors[0].get('message')}")
+
+    created_files = fc_payload.get("files", [])
+    if not created_files:
+        raise RuntimeError("fileCreate không trả về file được tạo.")
+    file_node = created_files[0]
+    file_id = file_node["id"]
+
+    final_url = ""
+    preview_url = ""
+    if file_node.get("image") and file_node["image"].get("url"):
+        final_url = file_node["image"]["url"]
+        preview_url = final_url
+    elif file_node.get("sources"):
+        srcs = file_node.get("sources", [])
+        if srcs and srcs[0].get("url"):
+            final_url = srcs[0]["url"]
+        if file_node.get("preview", {}).get("image", {}).get("url"):
+            preview_url = file_node["preview"]["image"]["url"]
+    elif file_node.get("url"):
+        final_url = file_node["url"]
+        preview_url = final_url
+
+    if not final_url:
+        poll_query = """
+        query getFileStatusPoll($id: ID!) {
+          node(id: $id) {
+            ... on MediaImage {
+              fileStatus
+              image {
+                url
+              }
+            }
+            ... on Video {
+              fileStatus
+              sources {
+                url
+              }
+              preview {
+                image {
+                  url
+                }
+              }
+            }
+            ... on GenericFile {
+              fileStatus
+              url
+            }
+          }
+        }
+        """
+        for _ in range(5):
+            time.sleep(1.0)
+            try:
+                poll_res = execute_real_homes_graphql(client_info, poll_query, {"id": file_id})
+                p_node = poll_res.get("data", {}).get("node", {})
+                if p_node.get("image", {}).get("url"):
+                    final_url = p_node["image"]["url"]
+                    preview_url = final_url
+                    break
+                elif p_node.get("sources"):
+                    srcs = p_node.get("sources", [])
+                    if srcs and srcs[0].get("url"):
+                        final_url = srcs[0]["url"]
+                    if p_node.get("preview", {}).get("image", {}).get("url"):
+                        preview_url = p_node["preview"]["image"]["url"]
+                    break
+                elif p_node.get("url"):
+                    final_url = p_node["url"]
+                    preview_url = final_url
+                    break
+            except Exception:
+                pass
+
+    return {
+        "id": file_id,
+        "url": final_url or target.get("resourceUrl", ""),
+        "preview_url": preview_url or final_url or target.get("resourceUrl", ""),
+        "filename": filename,
+        "is_video": is_video,
+        "file_status": file_node.get("fileStatus", "READY")
+    }
+
+
+# =====================================================================
+# REAL HOMES - API & VIEW ROUTING
+# =====================================================================
+
+@app.get("/real-homes", response_class=HTMLResponse)
+async def page_real_homes(request: Request):
+    """
+    Giao diện quản trị Real Homes, Real Spaces.
+    """
+    proxy_cfg = load_proxy_config()
+    custom_cfg = load_logo_updater_config()
+    default_shop = clean_shopify_domain(SHOPIFY_SHOP)
+    custom_shop = clean_shopify_domain(custom_cfg.get("shop_domain", ""))
+
+    default_shop_domain = f"{default_shop}.myshopify.com" if default_shop and not default_shop.endswith(".myshopify.com") else (default_shop or "wrydeco.myshopify.com")
+    raw_custom_domain = (custom_cfg.get("shop_domain") or "").strip()
+    if raw_custom_domain and raw_custom_domain.endswith(".myshopify.com"):
+        custom_shop_domain = raw_custom_domain
+    elif custom_shop:
+        custom_shop_domain = f"{custom_shop}.myshopify.com"
+    else:
+        custom_shop_domain = "custom.myshopify.com"
+
+    return templates.TemplateResponse(
+        request=request,
+        name="real_homes.html",
+        context={
+            "request": request,
+            "shopify_shop": SHOPIFY_SHOP,
+            "default_shop": default_shop,
+            "custom_shop": custom_shop,
+            "default_shop_domain": default_shop_domain,
+            "custom_shop_domain": custom_shop_domain,
+            "proxy_cfg": proxy_cfg,
+            "custom_cfg": custom_cfg
+        }
+    )
+
+
+@app.post("/api/real-homes/store/switch")
+async def api_real_homes_store_switch(request: Request):
+    """
+    Kiểm tra và kích hoạt chuyển đổi giữa Store Mặc Định (.env) và Store Riêng (logo_updater_config.json).
+    Nếu chọn Store Riêng: BẮT BUỘC kiểm tra độ ổn định của proxy.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    target_store = body.get("store", "default")
+
+    if target_store == "custom":
+        p_cfg = load_proxy_config()
+        proxy_url = (p_cfg.get("proxy_url") or os.getenv("PROXY_URL") or "").strip()
+        if not proxy_url:
+            return JSONResponse({
+                "success": False,
+                "stable": False,
+                "store": "custom",
+                "error": "Chưa cấu hình URL Proxy Gateway",
+                "message": "CHỐT CHẶN AN TOÀN TUYỆT ĐỐI: Chưa cấu hình URL Proxy Gateway! Mọi request tới Store Riêng bắt buộc phải đi qua Proxy để bảo vệ gian hàng."
+            }, status_code=503)
+
+        is_ok, latency, err = test_proxy_connectivity(proxy_url=proxy_url, timeout=8)
+        geo = None
+        custom_cfg = load_logo_updater_config()
+        raw_custom = (custom_cfg.get("shop_domain") or "").strip()
+        custom_shop = clean_shopify_domain(raw_custom)
+        custom_domain = raw_custom if raw_custom.endswith(".myshopify.com") else (f"{custom_shop}.myshopify.com" if custom_shop else "")
+
+        if is_ok:
+            geo = fetch_proxy_egress_geo(proxy_url=proxy_url, timeout=6)
+            custom_tok = (custom_cfg.get("access_token") or "").strip()
+            if not custom_tok and custom_cfg.get("client_id") and custom_cfg.get("client_secret"):
+                request_custom_app_access_token(
+                    custom_cfg.get("shop_domain", ""),
+                    custom_cfg["client_id"],
+                    custom_cfg["client_secret"],
+                    force_proxy=True
+                )
+
+        return JSONResponse({
+            "success": is_ok,
+            "stable": is_ok,
+            "store": "custom",
+            "shop_domain": custom_domain,
+            "latency_ms": latency,
+            "error": err if not is_ok else None,
+            "geo": geo,
+            "message": "Proxy US ổn định, kết nối Store Riêng thành công qua Proxy US." if is_ok else f"Proxy không ổn định: {err}"
+        }, status_code=200 if is_ok else 503)
+    else:
+        default_shop = clean_shopify_domain(SHOPIFY_SHOP)
+        default_domain = f"{default_shop}.myshopify.com" if default_shop and not default_shop.endswith(".myshopify.com") else (default_shop or "wrydeco.myshopify.com")
+        return JSONResponse({
+            "success": True,
+            "stable": True,
+            "store": "default",
+            "shop_domain": default_domain,
+            "message": "Kết nối trực tiếp Store Mặc Định thành công."
+        })
+
+
+@app.get("/api/real-homes/entries")
+async def api_real_homes_get_entries(store: str = "default"):
+    """
+    Lấy danh sách các thẻ tác phẩm trưng bày `real_in_spaces`.
+    """
+    try:
+        client_info = get_real_homes_client(store)
+    except ProxySafetyException as pe:
+        return JSONResponse({"success": False, "message": str(pe), "is_proxy_blocked": True}, status_code=503)
+    except Exception as e:
+        return JSONResponse({"success": False, "message": str(e)}, status_code=400)
+
+    query = """
+    query getRealInSpacesEntries {
+      metaobjects(type: "real_in_spaces", first: 100, sortKey: "updated_at", reverse: true) {
+        edges {
+          node {
+            id
+            handle
+            displayName
+            updatedAt
+            capabilities {
+              publishable {
+                status
+              }
+            }
+            fields {
+              key
+              value
+              type
+              reference {
+                ... on Metaobject {
+                  id
+                  handle
+                  displayName
+                  type
+                  fields {
+                    key
+                    value
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    """
+
+    try:
+        data = execute_real_homes_graphql(client_info, query)
+        edges = data.get("data", {}).get("metaobjects", {}).get("edges", [])
+        entries = []
+
+        for e in edges:
+            node = e["node"]
+            entry_id = node["id"]
+            fields = {f["key"]: f.get("value") or "" for f in node.get("fields", [])}
+            refs = {f["key"]: f.get("reference") for f in node.get("fields", [])}
+
+            # Parse author info
+            author_ref = refs.get("author")
+            author_id = fields.get("author", "")
+            author_name = ""
+            author_avatar = ""
+            author_role = ""
+            if author_ref:
+                author_name = author_ref.get("displayName") or ""
+                author_id = author_ref.get("id") or author_id
+                for af in author_ref.get("fields", []):
+                    if af.get("key") == "author_name" and af.get("value"):
+                        author_name = af["value"]
+                    elif af.get("key") == "author_image_url" and af.get("value"):
+                        author_avatar = af["value"]
+                    elif af.get("key") == "role" and af.get("value"):
+                        author_role = af["value"]
+
+            # Parse gallery media
+            gm_str = fields.get("gallery_media", "")
+            gallery_list = [u.strip() for u in gm_str.split(",") if u.strip()]
+
+            # Parse is_featured
+            raw_feat = str(fields.get("is_featured", "")).strip().lower()
+            is_feat = raw_feat in ("true", "1", "yes")
+
+            # Parse status (ACTIVE / DRAFT)
+            pub_status = node.get("capabilities", {}).get("publishable", {}).get("status", "ACTIVE") or "ACTIVE"
+
+            entries.append({
+                "id": entry_id,
+                "numeric_id": entry_id.split("/")[-1],
+                "handle": node.get("handle", ""),
+                "displayName": node.get("displayName", ""),
+                "status": pub_status,
+                "title": fields.get("title") or node.get("displayName", ""),
+                "source_type": fields.get("source_type", "customer_home"),
+                "featured_image": fields.get("featured_image", ""),
+                "gallery_media": gm_str,
+                "gallery_list": gallery_list,
+                "views_count": len(gallery_list) if gallery_list else 1,
+                "video_poster": fields.get("video_poster", ""),
+                "product_handle": fields.get("product_handle", ""),
+                "author_id": author_id,
+                "author_name": author_name,
+                "author_avatar": author_avatar,
+                "author_role": author_role,
+                "is_featured": is_feat,
+                "updatedAt": node.get("updatedAt", "")
+            })
+
+        return JSONResponse({"success": True, "entries": entries, "store": store})
+    except Exception as exc:
+        return JSONResponse({"success": False, "message": f"Lỗi truy vấn: {str(exc)}"}, status_code=500)
+
+
+@app.post("/api/real-homes/entries/create")
+async def api_real_homes_create_entry(request: Request):
+    """
+    Thêm mới tác phẩm vào Metaobject `real_in_spaces`.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"success": False, "message": "Dữ liệu JSON không hợp lệ."}, status_code=400)
+
+    store = body.get("store", "default")
+    try:
+        client_info = get_real_homes_client(store)
+    except ProxySafetyException as pe:
+        return JSONResponse({"success": False, "message": str(pe), "is_proxy_blocked": True}, status_code=503)
+
+    title = (body.get("title") or "").strip()
+    if not title:
+        return JSONResponse({"success": False, "message": "Vui lòng nhập Tiêu đề dự án."}, status_code=400)
+
+    author_id = (body.get("author") or "").strip()
+    if not author_id:
+        return JSONResponse({"success": False, "message": "Vui lòng chọn Nghệ nhân thực hiện (Author)."}, status_code=400)
+
+    product_handle = (body.get("product_handle") or "").strip()
+    if not product_handle:
+        return JSONResponse({"success": False, "message": "Vui lòng chọn hoặc nhập Sản phẩm trưng bày (Product Handle)."}, status_code=400)
+
+    gallery_media = (body.get("gallery_media") or "").strip()
+    if not gallery_media:
+        featured_image = (body.get("featured_image") or "").strip()
+        if featured_image:
+            gallery_media = featured_image
+
+    if not gallery_media:
+        return JSONResponse({"success": False, "message": "Vui lòng cung cấp ít nhất một URL ảnh hoặc video trong Bộ Sưu Tập Media (Gallery Media)."}, status_code=400)
+
+    source_type = (body.get("source_type") or "customer_home").strip()
+    video_poster = (body.get("video_poster") or "").strip()
+    is_featured = bool(body.get("is_featured", False))
+
+    fields = [
+        {"key": "title", "value": title},
+        {"key": "source_type", "value": source_type},
+        {"key": "gallery_media", "value": gallery_media},
+        {"key": "video_poster", "value": video_poster},
+        {"key": "product_handle", "value": product_handle},
+        {"key": "author", "value": author_id},
+        {"key": "is_featured", "value": "true" if is_featured else "false"}
+    ]
+
+    cleaned_fields = [f for f in fields if f["value"] or f["key"] in ("title", "source_type", "is_featured")]
+
+    status_val = (body.get("status") or "ACTIVE").strip().upper()
+    if status_val not in ("ACTIVE", "DRAFT"):
+        status_val = "ACTIVE"
+
+    custom_handle = (body.get("handle") or "").strip()
+    metaobject_input = {
+        "type": "real_in_spaces",
+        "fields": cleaned_fields,
+        "capabilities": {
+            "publishable": {
+                "status": status_val
+            }
+        }
+    }
+    if custom_handle:
+        metaobject_input["handle"] = custom_handle
+
+    mutation = """
+    mutation createRealInSpaces($metaobject: MetaobjectCreateInput!) {
+      metaobjectCreate(metaobject: $metaobject) {
+        metaobject {
+          id
+          handle
+          displayName
+          updatedAt
+          capabilities {
+            publishable {
+              status
+            }
+          }
+        }
+        userErrors {
+          field
+          message
+          code
+        }
+      }
+    }
+    """
+    try:
+        res = execute_real_homes_graphql(client_info, mutation, {"metaobject": metaobject_input})
+        data = res.get("data", {}).get("metaobjectCreate", {})
+        user_errors = data.get("userErrors", [])
+        if user_errors:
+            err_msg = "; ".join([e.get("message", "Lỗi") for e in user_errors])
+            return JSONResponse({"success": False, "message": err_msg, "errors": user_errors}, status_code=400)
+
+        created_mo = data.get("metaobject")
+        return JSONResponse({"success": True, "message": "Đã tạo dự án mới thành công!", "metaobject": created_mo})
+    except Exception as exc:
+        return JSONResponse({"success": False, "message": f"Lỗi tạo dự án: {str(exc)}"}, status_code=500)
+
+
+@app.post("/api/real-homes/entries/{entry_id:path}/update")
+async def api_real_homes_update_entry(entry_id: str, request: Request):
+    """
+    Chỉnh sửa thông tin tác phẩm `real_in_spaces`.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"success": False, "message": "Dữ liệu JSON không hợp lệ."}, status_code=400)
+
+    store = body.get("store", "default")
+    try:
+        client_info = get_real_homes_client(store)
+    except ProxySafetyException as pe:
+        return JSONResponse({"success": False, "message": str(pe), "is_proxy_blocked": True}, status_code=503)
+
+    from urllib.parse import unquote
+    raw_id = unquote((body.get("id") or entry_id or "").strip())
+    if not raw_id.startswith("gid://shopify/Metaobject/"):
+        gid = f"gid://shopify/Metaobject/{raw_id.split('/')[-1]}"
+    else:
+        gid = raw_id
+
+    title = (body.get("title") or "").strip()
+    if not title:
+        return JSONResponse({"success": False, "message": "Vui lòng nhập Tiêu đề dự án."}, status_code=400)
+
+    author_id = (body.get("author") or "").strip()
+    if not author_id:
+        return JSONResponse({"success": False, "message": "Vui lòng chọn Nghệ nhân thực hiện (Author)."}, status_code=400)
+
+    product_handle = (body.get("product_handle") or "").strip()
+    if not product_handle:
+        return JSONResponse({"success": False, "message": "Vui lòng chọn hoặc nhập Sản phẩm trưng bày (Product Handle)."}, status_code=400)
+
+    gallery_media = (body.get("gallery_media") or "").strip()
+    if not gallery_media:
+        featured_image = (body.get("featured_image") or "").strip()
+        if featured_image:
+            gallery_media = featured_image
+
+    if not gallery_media:
+        return JSONResponse({"success": False, "message": "Vui lòng cung cấp ít nhất một URL ảnh hoặc video trong Bộ Sưu Tập Media (Gallery Media)."}, status_code=400)
+
+    source_type = (body.get("source_type") or "customer_home").strip()
+    video_poster = (body.get("video_poster") or "").strip()
+    is_featured = bool(body.get("is_featured", False))
+
+    fields = [
+        {"key": "title", "value": title},
+        {"key": "source_type", "value": source_type},
+        {"key": "gallery_media", "value": gallery_media},
+        {"key": "video_poster", "value": video_poster},
+        {"key": "product_handle", "value": product_handle},
+        {"key": "author", "value": author_id},
+        {"key": "is_featured", "value": "true" if is_featured else "false"}
+    ]
+
+    cleaned_fields = [f for f in fields if f["value"] or f["key"] in ("title", "source_type", "is_featured")]
+
+    status_val = (body.get("status") or "").strip().upper()
+    metaobject_input = {"fields": cleaned_fields}
+    if status_val in ("ACTIVE", "DRAFT"):
+        metaobject_input["capabilities"] = {
+            "publishable": {
+                "status": status_val
+            }
+        }
+
+    mutation = """
+    mutation updateRealInSpaces($id: ID!, $metaobject: MetaobjectUpdateInput!) {
+      metaobjectUpdate(id: $id, metaobject: $metaobject) {
+        metaobject {
+          id
+          handle
+          displayName
+          updatedAt
+          capabilities {
+            publishable {
+              status
+            }
+          }
+        }
+        userErrors {
+          field
+          message
+          code
+        }
+      }
+    }
+    """
+    try:
+        res = execute_real_homes_graphql(client_info, mutation, {
+            "id": gid,
+            "metaobject": metaobject_input
+        })
+        data = res.get("data", {}).get("metaobjectUpdate", {})
+        user_errors = data.get("userErrors", [])
+        if user_errors:
+            err_msg = "; ".join([e.get("message", "Lỗi") for e in user_errors])
+            return JSONResponse({"success": False, "message": err_msg, "errors": user_errors}, status_code=400)
+
+        updated_mo = data.get("metaobject")
+        return JSONResponse({"success": True, "message": "Đã cập nhật dự án thành công!", "metaobject": updated_mo})
+    except Exception as exc:
+        return JSONResponse({"success": False, "message": f"Lỗi cập nhật: {str(exc)}"}, status_code=500)
+
+
+@app.post("/api/real-homes/entries/{entry_id:path}/status")
+async def api_real_homes_update_entry_status(entry_id: str, request: Request):
+    """
+    Chuyển đổi trạng thái Active / Draft nhanh cho entry Metaobject `real_in_spaces`.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"success": False, "message": "Dữ liệu JSON không hợp lệ."}, status_code=400)
+
+    store = body.get("store", "default")
+    try:
+        client_info = get_real_homes_client(store)
+    except ProxySafetyException as pe:
+        return JSONResponse({"success": False, "message": str(pe), "is_proxy_blocked": True}, status_code=503)
+
+    from urllib.parse import unquote
+    raw_id = unquote((body.get("id") or entry_id or "").strip())
+    if not raw_id.startswith("gid://shopify/Metaobject/"):
+        gid = f"gid://shopify/Metaobject/{raw_id.split('/')[-1]}"
+    else:
+        gid = raw_id
+
+    new_status = (body.get("status") or "").strip().upper()
+    if new_status not in ("ACTIVE", "DRAFT"):
+        return JSONResponse({"success": False, "message": "Trạng thái không hợp lệ. Chỉ chấp nhận ACTIVE hoặc DRAFT."}, status_code=400)
+
+    mutation = """
+    mutation updateRealInSpacesStatus($id: ID!, $metaobject: MetaobjectUpdateInput!) {
+      metaobjectUpdate(id: $id, metaobject: $metaobject) {
+        metaobject {
+          id
+          handle
+          displayName
+          updatedAt
+          capabilities {
+            publishable {
+              status
+            }
+          }
+        }
+        userErrors {
+          field
+          message
+          code
+        }
+      }
+    }
+    """
+    try:
+        res = execute_real_homes_graphql(client_info, mutation, {
+            "id": gid,
+            "metaobject": {
+                "capabilities": {
+                    "publishable": {
+                        "status": new_status
+                    }
+                }
+            }
+        })
+        data = res.get("data", {}).get("metaobjectUpdate", {})
+        user_errors = data.get("userErrors", [])
+        if user_errors:
+            err_msg = "; ".join([e.get("message", "Lỗi") for e in user_errors])
+            return JSONResponse({"success": False, "message": err_msg, "errors": user_errors}, status_code=400)
+
+        updated_mo = data.get("metaobject")
+        return JSONResponse({
+            "success": True,
+            "message": f"Đã chuyển trạng thái sang {'Active' if new_status == 'ACTIVE' else 'Draft'} thành công!",
+            "status": new_status,
+            "metaobject": updated_mo
+        })
+    except Exception as exc:
+        return JSONResponse({"success": False, "message": f"Lỗi cập nhật trạng thái: {str(exc)}"}, status_code=500)
+
+
+def get_entry_media_urls(client_info, entry_gid: str) -> list:
+    """
+    Truy vấn Metaobject entry và lấy tất cả URL media liên quan (featured_image, gallery_media, video_poster).
+    """
+    get_q = """
+    query getMoEntryMediaUrls($id: ID!) {
+      metaobject(id: $id) {
+        id
+        fields { key value }
+      }
+    }
+    """
+    urls = []
+    try:
+        res = execute_real_homes_graphql(client_info, get_q, {"id": entry_gid})
+        mo_node = res.get("data", {}).get("metaobject")
+        if mo_node:
+            fields_map = {f["key"]: f.get("value") or "" for f in mo_node.get("fields", [])}
+            feat_img = fields_map.get("featured_image", "").strip()
+            if feat_img:
+                urls.append(feat_img)
+            gm = fields_map.get("gallery_media", "").strip()
+            if gm:
+                for item in gm.split(","):
+                    item_clean = item.strip()
+                    if item_clean:
+                        urls.append(item_clean)
+            vp = fields_map.get("video_poster", "").strip()
+            if vp:
+                urls.append(vp)
+    except Exception as e:
+        print(f"[WARN] Error fetching media urls for entry {entry_gid}: {e}")
+    return urls
+
+
+def delete_media_urls_from_shopify(client_info, urls: list) -> list:
+    """
+    Xóa vĩnh viễn danh sách các media URL khỏi Shopify Content Files để giải phóng dung lượng lưu trữ.
+    Bỏ qua ảnh fallback mặc định.
+    """
+    if not urls:
+        return []
+
+    unique_urls = []
+    seen = set()
+    for u in urls:
+        u_str = (u or "").strip()
+        if not u_str:
+            continue
+        # Bỏ qua ảnh fallback mặc định
+        if "artisan-default-avatar.png" in u_str:
+            continue
+        clean_u = clean_media_url_for_comparison(u_str)
+        if clean_u not in seen:
+            seen.add(clean_u)
+            unique_urls.append(u_str)
+
+    if not unique_urls:
+        return []
+
+    # Tìm file IDs tương ứng từ Shopify Files API theo filename
+    file_ids_to_delete = set()
+    for u_str in unique_urls:
+        fn = extract_media_filename(u_str)
+        if not fn or len(fn) < 3:
+            continue
+        find_q = """
+        query findFileIdByFilename($q: String!) {
+          files(first: 10, query: $q) {
+            edges {
+              node {
+                id
+                ... on MediaImage { image { url } }
+                ... on Video { sources { url } }
+                ... on GenericFile { url }
+              }
+            }
+          }
+        }
+        """
+        try:
+            f_res = execute_real_homes_graphql(client_info, find_q, {"q": f"filename:{fn}"})
+            f_edges = f_res.get("data", {}).get("files", {}).get("edges", [])
+            for edge in f_edges:
+                node = edge.get("node", {})
+                n_urls = []
+                if node.get("image", {}).get("url"):
+                    n_urls.append(node["image"]["url"])
+                if node.get("sources"):
+                    for s in node["sources"]:
+                        if s.get("url"):
+                            n_urls.append(s["url"])
+                if node.get("url"):
+                    n_urls.append(node["url"])
+
+                if any(clean_media_url_for_comparison(nu) == clean_media_url_for_comparison(u_str) for nu in n_urls) or any(fn in nu for nu in n_urls):
+                    if node.get("id"):
+                        file_ids_to_delete.add(node["id"])
+        except Exception as e_find:
+            print(f"[WARN] Error finding file for {fn}: {e_find}")
+
+    if not file_ids_to_delete:
+        return []
+
+    # Xóa fileIds theo batch 20 files
+    deleted_ids = []
+    file_ids_list = list(file_ids_to_delete)
+    del_mutation = """
+    mutation deleteShopifyFiles($fileIds: [ID!]!) {
+      fileDelete(fileIds: $fileIds) {
+        deletedFileIds
+        userErrors { field message }
+      }
+    }
+    """
+    for i in range(0, len(file_ids_list), 20):
+        chunk = file_ids_list[i:i+20]
+        try:
+            res = execute_real_homes_graphql(client_info, del_mutation, {"fileIds": chunk})
+            data = res.get("data", {}).get("fileDelete", {})
+            deleted_ids.extend(data.get("deletedFileIds", []))
+        except Exception as e_del:
+            print(f"[WARN] Error executing fileDelete chunk: {e_del}")
+
+    return deleted_ids
+
+
+@app.post("/api/real-homes/entries/{entry_id:path}/delete")
+async def api_real_homes_delete_entry(entry_id: str, request: Request):
+    """
+    Xóa tác phẩm khỏi Metaobject `real_in_spaces` và tự động xóa sạch file media liên quan trên Shopify Content Files.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+
+    store = body.get("store", "default")
+    try:
+        client_info = get_real_homes_client(store)
+    except ProxySafetyException as pe:
+        return JSONResponse({"success": False, "message": str(pe), "is_proxy_blocked": True}, status_code=503)
+
+    from urllib.parse import unquote
+    raw_id = unquote((body.get("id") or entry_id or "").strip())
+    if not raw_id.startswith("gid://shopify/Metaobject/"):
+        gid = f"gid://shopify/Metaobject/{raw_id.split('/')[-1]}"
+    else:
+        gid = raw_id
+
+    # 1. Thu thập toàn bộ URL media liên quan trước khi xóa Metaobject
+    media_urls = get_entry_media_urls(client_info, gid)
+    client_urls = body.get("media_urls", [])
+    if isinstance(client_urls, list):
+        media_urls.extend(client_urls)
+
+    # 2. Xóa các file media này khỏi Shopify Content Files để chống phình dung lượng
+    deleted_files = delete_media_urls_from_shopify(client_info, media_urls)
+
+    # 3. Xóa Metaobject entry
+    mutation = """
+    mutation deleteRealInSpaces($id: ID!) {
+      metaobjectDelete(id: $id) {
+        deletedId
+        userErrors {
+          field
+          message
+        }
+      }
+    }
+    """
+    try:
+        res = execute_real_homes_graphql(client_info, mutation, {"id": gid})
+        data = res.get("data", {}).get("metaobjectDelete", {})
+        user_errors = data.get("userErrors", [])
+        if user_errors:
+            err_msg = "; ".join([e.get("message", "Lỗi") for e in user_errors])
+            return JSONResponse({"success": False, "message": err_msg}, status_code=400)
+
+        return JSONResponse({
+            "success": True,
+            "deleted_id": data.get("deletedId"),
+            "deleted_media_count": len(deleted_files),
+            "message": f"Đã xóa dự án và dọn dẹp {len(deleted_files)} file media liên quan thành công!"
+        })
+    except Exception as exc:
+        return JSONResponse({"success": False, "message": f"Lỗi xóa dự án: {str(exc)}"}, status_code=500)
+
+
+@app.post("/api/real-homes/entries/bulk-delete")
+async def api_real_homes_bulk_delete(request: Request):
+    """
+    Xóa hàng loạt các tác phẩm khỏi Metaobject `real_in_spaces` và tự động xóa sạch toàn bộ file media liên quan khỏi Shopify Content Files.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+
+    store = body.get("store", "default")
+    try:
+        client_info = get_real_homes_client(store)
+    except ProxySafetyException as pe:
+        return JSONResponse({"success": False, "message": str(pe), "is_proxy_blocked": True}, status_code=503)
+
+    ids = body.get("ids", [])
+    if not ids or not isinstance(ids, list):
+        return JSONResponse({"success": False, "message": "Vui lòng chọn ít nhất một dự án để xóa."}, status_code=400)
+
+    from urllib.parse import unquote
+    clean_gids = []
+    for raw_id in ids:
+        clean_raw = unquote(str(raw_id).strip())
+        if not clean_raw:
+            continue
+        gid = clean_raw if clean_raw.startswith("gid://shopify/Metaobject/") else f"gid://shopify/Metaobject/{clean_raw.split('/')[-1]}"
+        clean_gids.append(gid)
+
+    if not clean_gids:
+        return JSONResponse({"success": False, "message": "Không tìm thấy ID dự án hợp lệ để xóa."}, status_code=400)
+
+    # 1. Thu thập tất cả media URLs của tất cả các dự án được chọn
+    all_media_urls = []
+    client_media_urls_map = body.get("media_urls_map", {})
+    for gid in clean_gids:
+        server_urls = get_entry_media_urls(client_info, gid)
+        all_media_urls.extend(server_urls)
+        client_urls = client_media_urls_map.get(gid) or []
+        if isinstance(client_urls, list):
+            all_media_urls.extend(client_urls)
+
+    # 2. Xóa toàn bộ file media này khỏi Shopify Content Files
+    deleted_files = delete_media_urls_from_shopify(client_info, all_media_urls)
+
+    # 3. Xóa các Metaobject entries
+    deleted_entry_ids = []
+    errors = []
+    del_mutation = """
+    mutation deleteRealInSpaces($id: ID!) {
+      metaobjectDelete(id: $id) {
+        deletedId
+        userErrors {
+          field
+          message
+        }
+      }
+    }
+    """
+    for gid in clean_gids:
+        try:
+            res = execute_real_homes_graphql(client_info, del_mutation, {"id": gid})
+            data = res.get("data", {}).get("metaobjectDelete", {})
+            user_errors = data.get("userErrors", [])
+            if user_errors:
+                errors.append("; ".join(e.get("message", "Lỗi") for e in user_errors))
+            else:
+                deleted_id = data.get("deletedId")
+                if deleted_id:
+                    deleted_entry_ids.append(deleted_id)
+        except Exception as e_del:
+            errors.append(str(e_del))
+
+    if not deleted_entry_ids and errors:
+        return JSONResponse({"success": False, "message": f"Lỗi xóa dự án: {'; '.join(errors)}"}, status_code=400)
+
+    msg = f"Đã xóa thành công {len(deleted_entry_ids)} dự án"
+    if deleted_files:
+        msg += f" và dọn dẹp sạch {len(deleted_files)} file media trên Shopify Files!"
+    else:
+        msg += "!"
+
+    return JSONResponse({
+        "success": True,
+        "deleted_count": len(deleted_entry_ids),
+        "deleted_ids": deleted_entry_ids,
+        "deleted_media_count": len(deleted_files),
+        "errors": errors if errors else None,
+        "message": msg
+    })
+
+
+@app.get("/api/real-homes/authors")
+async def api_real_homes_get_authors(store: str = "default"):
+    """
+    Lấy danh sách các nghệ nhân / tác giả từ Metaobject `product_author`.
+    """
+    try:
+        client_info = get_real_homes_client(store)
+    except ProxySafetyException as pe:
+        return JSONResponse({"success": False, "message": str(pe), "is_proxy_blocked": True}, status_code=503)
+    except Exception as e:
+        return JSONResponse({"success": False, "message": str(e)}, status_code=400)
+
+    query = """
+    query getProductAuthors {
+      metaobjects(type: "product_author", first: 50) {
+        edges {
+          node {
+            id
+            handle
+            displayName
+            fields {
+              key
+              value
+            }
+          }
+        }
+      }
+    }
+    """
+    try:
+        res = execute_real_homes_graphql(client_info, query)
+        edges = res.get("data", {}).get("metaobjects", {}).get("edges", [])
+        authors = []
+        for e in edges:
+            node = e["node"]
+            fields = {f["key"]: f.get("value") or "" for f in node.get("fields", [])}
+            name = fields.get("author_name") or node.get("displayName") or node.get("handle")
+            avatar = fields.get("author_image_url") or ""
+            role = fields.get("role") or ""
+            slogan = fields.get("author_slogan") or ""
+            exp = fields.get("exp_years") or ""
+            authors.append({
+                "id": node["id"],
+                "handle": node.get("handle", ""),
+                "name": name,
+                "avatar": avatar,
+                "role": role,
+                "slogan": slogan,
+                "exp_years": exp
+            })
+        return JSONResponse({"success": True, "authors": authors})
+    except Exception as exc:
+        return JSONResponse({"success": False, "message": str(exc)}, status_code=500)
+
+
+@app.get("/api/real-homes/products-search")
+async def api_real_homes_search_products(q: str = "", store: str = "default"):
+    """
+    Live search danh sách sản phẩm theo từ khóa để gắn vào trường product_handle.
+    """
+    try:
+        client_info = get_real_homes_client(store)
+    except ProxySafetyException as pe:
+        return JSONResponse({"success": False, "message": str(pe), "is_proxy_blocked": True}, status_code=503)
+    except Exception as e:
+        return JSONResponse({"success": False, "message": str(e)}, status_code=400)
+
+    query = """
+    query searchProducts($query: String) {
+      products(first: 20, query: $query) {
+        edges {
+          node {
+            id
+            title
+            handle
+            featuredImage {
+              url
+            }
+            priceRangeV2 {
+              minVariantPrice {
+                amount
+                currencyCode
+              }
+            }
+          }
+        }
+      }
+    }
+    """
+    query_str = q.strip() if q else None
+    try:
+        res = execute_real_homes_graphql(client_info, query, {"query": query_str})
+        edges = res.get("data", {}).get("products", {}).get("edges", [])
+        products = []
+        for e in edges:
+            node = e["node"]
+            img_url = node.get("featuredImage", {}).get("url") if node.get("featuredImage") else ""
+            min_price = node.get("priceRangeV2", {}).get("minVariantPrice", {})
+            price_fmt = f"${float(min_price.get('amount', 0)):.2f}" if min_price.get("amount") else ""
+            products.append({
+                "id": node["id"],
+                "title": node.get("title", ""),
+                "handle": node.get("handle", ""),
+                "image": img_url,
+                "price": price_fmt,
+                "currency": min_price.get("currencyCode", "USD")
+            })
+        return JSONResponse({"success": True, "products": products})
+    except Exception as exc:
+        return JSONResponse({"success": False, "message": str(exc)}, status_code=500)
+
+
+@app.get("/api/real-homes/media")
+async def api_real_homes_get_media(store: str = "default", first: int = 50, after: str = None):
+    """
+    Truy vấn danh sách Media Files đã upload lên Shopify Files CDN.
+    """
+    try:
+        client_info = get_real_homes_client(store)
+    except ProxySafetyException as pe:
+        return JSONResponse({"success": False, "message": str(pe), "is_proxy_blocked": True}, status_code=503)
+    except Exception as e:
+        return JSONResponse({"success": False, "message": str(e)}, status_code=400)
+
+    query = """
+    query getShopifyFiles($first: Int!, $after: String) {
+      files(first: $first, after: $after, sortKey: CREATED_AT, reverse: true) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        edges {
+          cursor
+          node {
+            id
+            createdAt
+            fileStatus
+            alt
+            ... on MediaImage {
+              image {
+                url
+                width
+                height
+              }
+              mimeType
+            }
+            ... on Video {
+              sources {
+                url
+                format
+                mimeType
+                width
+                height
+              }
+              preview {
+                image {
+                  url
+                }
+              }
+            }
+            ... on GenericFile {
+              url
+              originalFileSize
+              mimeType
+            }
+          }
+        }
+      }
+    }
+    """
+    try:
+        res = execute_real_homes_graphql(client_info, query, {"first": min(first, 100), "after": after})
+        files_data = res.get("data", {}).get("files", {})
+        edges = files_data.get("edges", [])
+        page_info = files_data.get("pageInfo", {})
+        items = []
+
+        for e in edges:
+            node = e["node"]
+            node_id = node["id"]
+            created_at = node.get("createdAt", "")
+            media_type = "IMAGE"
+            primary_url = ""
+            preview_url = ""
+            width = None
+            height = None
+            size_bytes = node.get("originalFileSize") or 0
+
+            if node.get("image"):
+                media_type = "IMAGE"
+                primary_url = node["image"].get("url") or ""
+                preview_url = primary_url
+                width = node["image"].get("width")
+                height = node["image"].get("height")
+            elif node.get("sources"):
+                media_type = "VIDEO"
+                srcs = node.get("sources", [])
+                if srcs:
+                    primary_url = srcs[0].get("url") or ""
+                    width = srcs[0].get("width")
+                    height = srcs[0].get("height")
+                if node.get("preview", {}).get("image"):
+                    preview_url = node["preview"]["image"].get("url") or ""
+                if not preview_url:
+                    preview_url = primary_url
+            elif node.get("url"):
+                media_type = "GENERIC"
+                primary_url = node.get("url") or ""
+                preview_url = primary_url
+
+            # Format size or dimensions
+            if width and height:
+                size_fmt = f"{width}x{height} px"
+            elif size_bytes:
+                if size_bytes >= 1024 * 1024:
+                    size_fmt = f"{size_bytes / (1024 * 1024):.1f} MB"
+                elif size_bytes >= 1024:
+                    size_fmt = f"{size_bytes / 1024:.0f} KB"
+                else:
+                    size_fmt = f"{size_bytes} B"
+            else:
+                size_fmt = "--"
+
+            items.append({
+                "id": node_id,
+                "cursor": e.get("cursor"),
+                "createdAt": created_at,
+                "fileStatus": node.get("fileStatus", "READY"),
+                "alt": node.get("alt") or "",
+                "mediaType": media_type,
+                "url": primary_url,
+                "previewUrl": preview_url,
+                "width": width,
+                "height": height,
+                "size_formatted": size_fmt
+            })
+
+        return JSONResponse({
+            "success": True,
+            "files": items,
+            "pageInfo": page_info,
+            "total": len(items)
+        })
+    except Exception as exc:
+        return JSONResponse({"success": False, "message": str(exc)}, status_code=500)
+
+
+@app.post("/api/real-homes/media/upload")
+async def api_real_homes_upload_media(
+    file: UploadFile = File(...),
+    store: str = Form("default"),
+    alt: str = Form(""),
+    entry_id: str = Form("")
+):
+    """
+    Tải file hình ảnh/video mới lên Shopify Files CDN qua Staged Uploads.
+    Nếu có entry_id, tự động cập nhật URL mới vào gallery_media của Metaobject tương ứng.
+    """
+    try:
+        client_info = get_real_homes_client(store)
+    except ProxySafetyException as pe:
+        return JSONResponse({"success": False, "message": str(pe), "is_proxy_blocked": True}, status_code=503)
+    except Exception as e:
+        return JSONResponse({"success": False, "message": str(e)}, status_code=400)
+
+    try:
+        content_bytes = await file.read()
+        filename = file.filename or "upload.jpg"
+        clean_name = re.sub(r'[^a-zA-Z0-9._-]', '_', filename)
+        mime_type = file.content_type or "image/jpeg"
+
+        result = upload_media_file_to_shopify(
+            client_info=client_info,
+            filename=clean_name,
+            content_bytes=content_bytes,
+            mime_type=mime_type,
+            alt_text=alt
+        )
+
+        updated_gallery_media = None
+        updated_entry = None
+
+        # Nếu truyền entry_id, tự động cập nhật ngay vào Metaobject của dự án
+        if entry_id and entry_id.strip():
+            raw_eid = entry_id.strip()
+            gid = raw_eid if raw_eid.startswith("gid://shopify/Metaobject/") else f"gid://shopify/Metaobject/{raw_eid.split('/')[-1]}"
+            
+            get_q = """
+            query getMoEntryForMediaAppend($id: ID!) {
+              metaobject(id: $id) {
+                id
+                fields {
+                  key
+                  value
+                }
+              }
+            }
+            """
+            try:
+                mo_res = execute_real_homes_graphql(client_info, get_q, {"id": gid})
+                mo_node = mo_res.get("data", {}).get("metaobject")
+                if mo_node:
+                    fields_map = {f["key"]: f.get("value") or "" for f in mo_node.get("fields", [])}
+                    cur_gm = fields_map.get("gallery_media", "").strip()
+                    new_url = result.get("url", "")
+                    if new_url:
+                        if cur_gm:
+                            items = [u.strip() for u in cur_gm.split(",") if u.strip()]
+                            if new_url not in items:
+                                items.append(new_url)
+                            new_gm = ",".join(items)
+                        else:
+                            new_gm = new_url
+                        
+                        update_m = """
+                        mutation appendMediaToMo($id: ID!, $metaobject: MetaobjectUpdateInput!) {
+                          metaobjectUpdate(id: $id, metaobject: $metaobject) {
+                            metaobject {
+                              id
+                              displayName
+                              updatedAt
+                            }
+                            userErrors {
+                              field
+                              message
+                            }
+                          }
+                        }
+                        """
+                        up_res = execute_real_homes_graphql(client_info, update_m, {
+                            "id": gid,
+                            "metaobject": {"fields": [{"key": "gallery_media", "value": new_gm}]}
+                        })
+                        updated_gallery_media = new_gm
+                        updated_entry = up_res.get("data", {}).get("metaobjectUpdate", {}).get("metaobject")
+            except Exception as e_up:
+                print(f"[WARN] Error appending media to entry {gid}: {e_up}")
+
+        return JSONResponse({
+            "success": True,
+            "message": "Đã tải file lên Shopify CDN thành công!",
+            "file": result,
+            "url": result.get("url"),
+            "file_id": result.get("id"),
+            "entry_id": entry_id,
+            "updated_gallery_media": updated_gallery_media,
+            "entry": {"gallery_media": updated_gallery_media} if updated_gallery_media else None,
+            "updated_entry": updated_entry
+        })
+    except Exception as exc:
+        return JSONResponse({"success": False, "message": f"Lỗi tải file: {str(exc)}"}, status_code=500)
+
+
+@app.post("/api/real-homes/media/delete")
+async def api_real_homes_delete_media(request: Request):
+    """
+    Xóa file media vĩnh viễn khỏi Shopify Files API để giải phóng dung lượng lưu trữ,
+    đồng thời gỡ bỏ URL khỏi Metaobject entry tương ứng và chạy Cascade Sync.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"success": False, "message": "Dữ liệu JSON không hợp lệ."}, status_code=400)
+
+    store = body.get("store", "default")
+    file_id = body.get("file_id")
+    file_url = (body.get("file_url") or "").strip()
+    entry_id = (body.get("entry_id") or "").strip()
+
+    if not file_id and not file_url:
+        return JSONResponse({"success": False, "message": "Vui lòng cung cấp file_id hoặc file_url cần xóa."}, status_code=400)
+
+    try:
+        client_info = get_real_homes_client(store)
+    except ProxySafetyException as pe:
+        return JSONResponse({"success": False, "message": str(pe), "is_proxy_blocked": True}, status_code=503)
+
+    urls_to_cascade = []
+    if file_url:
+        urls_to_cascade.append(file_url)
+
+    # Nếu chưa có file_id nhưng có file_url, tìm kiếm ID trong Shopify Files API theo filename
+    if not file_id and file_url:
+        fn = extract_media_filename(file_url)
+        if fn:
+            find_q = """
+            query findFileIdByFilename($q: String!) {
+              files(first: 10, query: $q) {
+                edges {
+                  node {
+                    id
+                    ... on MediaImage {
+                      image { url }
+                    }
+                    ... on Video {
+                      sources { url }
+                    }
+                    ... on GenericFile {
+                      url
+                    }
+                  }
+                }
+              }
+            }
+            """
+            try:
+                f_res = execute_real_homes_graphql(client_info, find_q, {"q": f"filename:{fn}"})
+                f_edges = f_res.get("data", {}).get("files", {}).get("edges", [])
+                for edge in f_edges:
+                    node = edge.get("node", {})
+                    n_urls = []
+                    if node.get("image", {}).get("url"):
+                        n_urls.append(node["image"]["url"])
+                    if node.get("sources"):
+                        for s in node["sources"]:
+                            if s.get("url"):
+                                n_urls.append(s["url"])
+                    if node.get("url"):
+                        n_urls.append(node["url"])
+                    
+                    if any(clean_media_url_for_comparison(u) == clean_media_url_for_comparison(file_url) for u in n_urls) or not file_id:
+                        file_id = node.get("id")
+                        urls_to_cascade.extend(n_urls)
+                        break
+            except Exception as e_find:
+                print(f"[WARN] Error finding file_id by filename {fn}: {e_find}")
+
+    deleted_file_ids = []
+    if file_id:
+        if not str(file_id).startswith("gid://shopify/"):
+            gid = f"gid://shopify/MediaImage/{file_id}"
+        else:
+            gid = str(file_id)
+
+        # Thu thập toàn bộ URL liên quan trước khi xóa để phục vụ Cascade Sync
+        try:
+            node_q = """
+            query getMediaUrlBeforeDelete($id: ID!) {
+              node(id: $id) {
+                ... on MediaImage { image { url } }
+                ... on Video { sources { url } }
+                ... on GenericFile { url }
+              }
+            }
+            """
+            n_res = execute_real_homes_graphql(client_info, node_q, {"id": gid})
+            n_node = n_res.get("data", {}).get("node", {})
+            if n_node.get("image", {}).get("url"):
+                urls_to_cascade.append(n_node["image"]["url"])
+            if n_node.get("sources"):
+                for s in n_node["sources"]:
+                    if s.get("url"):
+                        urls_to_cascade.append(s["url"])
+            if n_node.get("url"):
+                urls_to_cascade.append(n_node["url"])
+        except Exception:
+            pass
+
+        mutation = """
+        mutation deleteShopifyFile($fileIds: [ID!]!) {
+          fileDelete(fileIds: $fileIds) {
+            deletedFileIds
+            userErrors {
+              field
+              message
+            }
+          }
+        }
+        """
+        try:
+            res = execute_real_homes_graphql(client_info, mutation, {"fileIds": [gid]})
+            data = res.get("data", {}).get("fileDelete", {})
+            user_errors = data.get("userErrors", [])
+            if user_errors:
+                err_msg = "; ".join([e.get("message", "Lỗi") for e in user_errors])
+                return JSONResponse({"success": False, "message": err_msg}, status_code=400)
+            deleted_file_ids = data.get("deletedFileIds", [])
+        except Exception as exc:
+            return JSONResponse({"success": False, "message": f"Lỗi xóa file trên Shopify Files: {str(exc)}"}, status_code=500)
+
+    # Nếu có entry_id, cập nhật trực tiếp Metaobject của dự án đó
+    updated_gallery_media = None
+    if entry_id:
+        raw_eid = entry_id.strip()
+        entry_gid = raw_eid if raw_eid.startswith("gid://shopify/Metaobject/") else f"gid://shopify/Metaobject/{raw_eid.split('/')[-1]}"
+        get_q = """
+        query getMoEntryForMediaRemove($id: ID!) {
+          metaobject(id: $id) {
+            id
+            fields { key value }
+          }
+        }
+        """
+        try:
+            mo_res = execute_real_homes_graphql(client_info, get_q, {"id": entry_gid})
+            mo_node = mo_res.get("data", {}).get("metaobject")
+            if mo_node:
+                fields_map = {f["key"]: f.get("value") or "" for f in mo_node.get("fields", [])}
+                cur_gm = fields_map.get("gallery_media", "")
+                items = [u.strip() for u in cur_gm.split(",") if u.strip()]
+                
+                cleaned_del_urls = set(clean_media_url_for_comparison(u) for u in urls_to_cascade if u)
+                fn_del = set(extract_media_filename(u) for u in urls_to_cascade if u and len(extract_media_filename(u)) > 4)
+                
+                def is_del(u_str: str) -> bool:
+                    if clean_media_url_for_comparison(u_str) in cleaned_del_urls:
+                        return True
+                    fn = extract_media_filename(u_str)
+                    if fn and fn in fn_del:
+                        return True
+                    return False
+
+                new_items = [u for u in items if not is_del(u)]
+                if not new_items:
+                    new_items = [DEFAULT_FALLBACK_IMAGE]
+                new_gm_str = ",".join(new_items)
+                
+                up_fields = [{"key": "gallery_media", "value": new_gm_str}]
+                cur_vp = fields_map.get("video_poster", "")
+                if cur_vp and is_del(cur_vp):
+                    up_fields.append({"key": "video_poster", "value": ""})
+                
+                up_m = """
+                mutation removeMediaFromMo($id: ID!, $metaobject: MetaobjectUpdateInput!) {
+                  metaobjectUpdate(id: $id, metaobject: $metaobject) {
+                    metaobject { id displayName updatedAt }
+                    userErrors { field message }
+                  }
+                }
+                """
+                execute_real_homes_graphql(client_info, up_m, {
+                    "id": entry_gid,
+                    "metaobject": {"fields": up_fields}
+                })
+                updated_gallery_media = new_gm_str
+        except Exception as e_rm:
+            print(f"[WARN] Error updating entry {entry_gid} on delete media: {e_rm}")
+
+    # Chạy Cascade Sync bổ trợ trên toàn bộ store
+    cascade_result = {"affected_count": 0, "details": []}
+    if urls_to_cascade:
+        cascade_result = cascade_remove_media_from_real_in_spaces(urls_to_cascade, client_info)
+
+    return JSONResponse({
+        "success": True,
+        "message": "Đã xóa vĩnh viễn file khỏi Shopify Content Files và cập nhật dự án thành công!",
+        "deleted_file_ids": deleted_file_ids,
+        "entry_id": entry_id,
+        "updated_gallery_media": updated_gallery_media,
+        "cascade_sync": cascade_result
+    })
 

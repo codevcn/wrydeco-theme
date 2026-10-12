@@ -11,6 +11,7 @@ from typing import Any
 
 from .errors import ContentValidationError
 from .io_utils import load_json
+from .aeo.core import normalize_draft, render_html
 
 
 _WORD_RE = re.compile(r"[a-z0-9]+")
@@ -125,7 +126,7 @@ def _require_length(label: str, value: str, low: int, high: int) -> None:
         raise ContentValidationError(f"{label} must be {low}-{high} characters; got {len(value)}.")
 
 
-def validate_content(payload_or_path: dict[str, Any] | Path) -> dict[str, str]:
+def validate_content(payload_or_path: dict[str, Any] | Path, *, require_aeo: bool = False) -> dict[str, Any]:
     payload = load_json(payload_or_path) if isinstance(payload_or_path, Path) else payload_or_path
     if not isinstance(payload, dict):
         raise ContentValidationError("content.json must contain an object.")
@@ -169,6 +170,9 @@ def validate_content(payload_or_path: dict[str, Any] | Path) -> dict[str, str]:
         raise
     except Exception as exc:
         raise ContentValidationError(f"Invalid description HTML: {exc}") from exc
+    if require_aeo or payload.get("aeo") is not None:
+        result["aeo"] = normalize_draft(payload.get("aeo"))
+        result["aeo_html"] = render_html(result["aeo"])
     return result
 
 
@@ -205,7 +209,8 @@ def validate_content_grounding(
             "title and seo_product_title must preserve at least two distinctive facts from the Amazon source title."
         )
 
-    generated_text = unicodedata.normalize("NFKC", " ".join(content.values())).casefold()
+    generated_text = unicodedata.normalize("NFKC", " ".join(value for key, value in content.items()
+                                           if key not in {"aeo", "aeo_html"})).casefold()
     for term in sorted(_GROUNDING_TERMS, key=len, reverse=True):
         if re.search(rf"\b{re.escape(term)}\b", generated_text) and not re.search(
             rf"\b{re.escape(term)}\b", source_text
@@ -316,7 +321,7 @@ def validate_visual_keyword_usage(content: dict[str, str], visual: dict[str, Any
 
 def normalize_content_field(field: str, value: str) -> str:
     text = unicodedata.normalize("NFKC", value).casefold()
-    if field == "description_html":
+    if field in {"description_html", "aeo_html"}:
         text = _HTML_TAG_RE.sub(" ", text)
     if field == "seo_title":
         text = re.sub(r"\s*\|\s*wrydeco\s*$", "", text)
@@ -334,6 +339,11 @@ def _token_shingles(value: str, size: int = 3) -> set[tuple[str, ...]]:
 def content_fingerprints(content: dict[str, str]) -> dict[str, dict[str, Any]]:
     output: dict[str, dict[str, Any]] = {}
     for field, value in content.items():
+        if field == "aeo":
+            continue
+        if field == "aeo_html" and content.get("aeo"):
+            draft = content["aeo"]
+            value = " ".join([draft["overview"]["text"], *(item["answer"] for item in draft["faq"])])
         normalized = normalize_content_field(field, value)
         output[field] = {
             "normalized": normalized,

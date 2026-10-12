@@ -22,7 +22,9 @@ Use only the `wrydeco-scraper` MCP server. A content conversation is isolated to
 3. Use `source.title` and `product_type` to identify the target furniture item among scene props.
 4. Read `visual_analysis_schema` from the returned content context. Call `write_visual_analysis` with only the semantic `analysis` fields; the server injects trusted task/source identifiers. Use design/shape-only keywords; never infer material, color, finish, dimensions, scale, durability, manufacture, certification, or unsupported function from images.
 5. Call `report_content_progress` for meaningful milestones only.
-6. Create all six required content fields and call `write_content_draft`.
+6. Create all six required SEO fields. When `get_content_context.aeo.required` is true, read its AEO prompt/schema,
+   read context again after visual analysis, and add the structured `aeo` object to the same content draft.
+   Python renders its HTML; never browse/search or invent evidence IDs. Call `write_content_draft` with the complete object.
 7. Call `validate_content_draft`; correct every factual, visual, or uniqueness error.
 8. Call `finalize_content` only after validation succeeds, then stop.
 
@@ -39,4 +41,7 @@ keywords from A+ Content images or any other non-gallery image. `aplus_text` may
 - `handle`: 50–60 characters, lowercase ASCII kebab-case.
 
 Write natural, specific English copy. Prefer verifiable product form, function, and style over generic marketing language.
+For AEO-enabled tasks, factual accuracy precedes buying intent. Overview and 3–8 FAQ answers must cite the
+compiler-issued facts; verified option choices may support dimensions/finishes, while visual evidence supports shape only.
+Legacy tasks with `aeo.required=false` keep their six-field SEO contract.
 Mention storage only when the source explicitly describes storage. Never mention Amazon or the scraping process in storefront content.

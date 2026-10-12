@@ -30,7 +30,10 @@ function notify(message, error = false) {
 
 function loading(button, active) {
   if (!button) return;
-  button.disabled = active; button.classList.toggle("is-loading", active);
+  const buttons = button.id === "run-batch" ? [button, $("#run-batch-floating")] : [button];
+  buttons.forEach((item) => {
+    item.disabled = active; item.classList.toggle("is-loading", active);
+  });
   if (!active) applyAgentGate();
 }
 
@@ -47,6 +50,7 @@ async function api(url, options = {}) {
 function updatePromptCounts() {
   $("#agent-prompt-count").textContent = `${$("#agent-prompt-editor").value.length.toLocaleString("vi-VN")} ký tự`;
   $("#content-task-prompt-count").textContent = `${$("#content-task-prompt-editor").value.length.toLocaleString("vi-VN")} ký tự`;
+  $("#aeo-prompt-count").textContent = `${$("#aeo-prompt-editor").value.length.toLocaleString("vi-VN")} ký tự`;
 }
 
 function closePrompts() {
@@ -59,7 +63,8 @@ async function openPrompts() {
   const modal = $("#prompts-modal");
   modal.hidden = false;
   document.body.classList.add("prompts-open");
-  $("#prompts-status").textContent = "Đang tải hai prompt…";
+  $("#prompts-status").textContent = "Đang tải ba prompt…";
+  $("#aeo-prompt-editor").disabled = true;
   $("#agent-prompt-editor").disabled = true;
   $("#content-task-prompt-editor").disabled = true;
   $("#save-prompts").disabled = true;
@@ -69,7 +74,8 @@ async function openPrompts() {
     state.prompts = payload.prompts;
     $("#agent-prompt-editor").value = payload.prompts.agent_prompt || "";
     $("#content-task-prompt-editor").value = payload.prompts.content_task_prompt || "";
-    $("#prompts-status").textContent = "Prompt đang dùng được tải từ scraper. Lưu thay đổi để dùng từ lần khởi động server kế tiếp.";
+    $("#aeo-prompt-editor").value = payload.prompts.aeo_prompt || "";
+    $("#prompts-status").textContent = "Prompt AEO được chốt khi tạo batch mới. Hai prompt điều phối có hiệu lực khi khởi động lại server.";
     updatePromptCounts();
   } catch (error) {
     $("#prompts-status").textContent = `Không thể tải prompt: ${error.message}`;
@@ -77,6 +83,7 @@ async function openPrompts() {
   } finally {
     $("#agent-prompt-editor").disabled = false;
     $("#content-task-prompt-editor").disabled = false;
+    $("#aeo-prompt-editor").disabled = false;
     $("#save-prompts").disabled = false;
   }
 }
@@ -86,13 +93,14 @@ async function savePrompts() {
     prompts: {
       agent_prompt: $("#agent-prompt-editor").value,
       content_task_prompt: $("#content-task-prompt-editor").value,
+      aeo_prompt: $("#aeo-prompt-editor").value,
     },
   };
   const result = await api("/api/prompts", { method: "PUT", body: JSON.stringify(payload) });
   state.prompts = payload.prompts;
   $("#prompts-status").classList.remove("error-text");
-  $("#prompts-status").textContent = "Đã lưu. Conversation hiện tại không đổi; prompt mới có hiệu lực từ lần khởi động server kế tiếp.";
-  notify(result.message || "Đã lưu hai prompt.");
+  $("#prompts-status").textContent = "Đã lưu. AEO dùng prompt mới từ batch kế tiếp; hai prompt điều phối cần khởi động lại server.";
+  notify("Đã lưu ba prompt.");
 }
 
 function closeAgentSessions() {
@@ -469,6 +477,7 @@ function applyAgentGate() {
   if (state.currentTask) {
     const taskLocked = state.currentTask.state === "claimed" || state.currentTask.is_final;
     Object.values(fieldIds).forEach((id) => { $("#" + id).disabled = taskLocked; });
+    $("#content-aeo-json").disabled = taskLocked || !state.currentTask.aeo_required;
     $("#save-content").disabled = taskLocked; $("#finalize-content").disabled = taskLocked;
   }
   const hint = $("#run-hint");
@@ -590,6 +599,12 @@ async function loadTask(taskId) {
   try {
     const task = await api(`/api/content-tasks/${taskId}/draft`); state.currentTask = task;
     Object.entries(fieldIds).forEach(([field, id]) => { $("#" + id).value = task.content?.[field] || ""; });
+    $("#aeo-editor-panel").hidden = !task.aeo_required && !task.content?.aeo;
+    $("#content-aeo-json").value = JSON.stringify(task.content?.aeo || { overview: { text: "", evidence_ids: [] }, summary: [], faq: [] }, null, 2);
+    $("#aeo-evidence-json").textContent = JSON.stringify(task.aeo_input || {}, null, 2);
+    $("#aeo-editor-status").textContent = task.aeo_required ? (task.valid ? "Hợp lệ · custom.aeo_html" : "Cần kiểm định · custom.aeo_html") : "Batch cũ";
+    const preview = task.aeo_preview_html || "<p>Chưa có draft AEO hợp lệ để xem trước.</p>";
+    $("#aeo-preview").srcdoc = '<!doctype html><html lang="en"><meta charset="utf-8"><style>body{font:15px/1.6 system-ui,sans-serif;color:#292b26;margin:20px}h2{font-size:21px;margin:0 0 14px}h2:not(:first-child){margin-top:24px}h3{font-size:16px;margin:18px 0 6px}p{margin:0 0 14px}ul{padding-left:22px}</style><body>' + preview + '</body></html>';
     const visual = task.visual_analysis;
     $("#visual-analysis-state").textContent = visual ? "Sẵn sàng" : "Chưa có";
     $("#visual-analysis-state").className = `status-pill ${visual ? "success" : "neutral"}`;
@@ -615,7 +630,15 @@ async function loadTask(taskId) {
   } catch (error) { clearEditor(); notify(error.message, true); }
 }
 
-function collectContent() { const output = {}; Object.entries(fieldIds).forEach(([key, id]) => { output[key] = $("#" + id).value.trim(); }); return output; }
+function collectContent() {
+  const output = {};
+  Object.entries(fieldIds).forEach(([key, id]) => { output[key] = $("#" + id).value.trim(); });
+  if (state.currentTask?.aeo_required) {
+    try { output.aeo = JSON.parse($("#content-aeo-json").value); }
+    catch { throw new Error("Draft AEO phải là JSON hợp lệ. Hãy kiểm tra dấu ngoặc và dấu phẩy."); }
+  }
+  return output;
+}
 function updateCounts() {
   Object.values(fieldIds).forEach((id) => { const target = document.querySelector(`[data-count-for="${id}"]`); if (target) target.textContent = `${$("#" + id).value.length} ký tự`; });
 }
@@ -749,6 +772,10 @@ $("#run-batch").addEventListener("click", (event) => action(event.currentTarget,
     ? `Đã tạo run cho ${Object.keys(run.products || {}).length} sản phẩm; bỏ qua ${result.skipped_existing} row đã tồn tại.`
     : `Đã tạo run. Tiền kiểm tra ${result.preflight.checked} sản phẩm không phát hiện ASIN đã tồn tại.`);
 }));
+$("#run-batch-floating").addEventListener("click", () => {
+  const button = $("#run-batch");
+  if (!button.disabled) button.click();
+});
 $("#resume-crawl").addEventListener("click", (event) => action(event.currentTarget, async () => { renderRun(await api(`/api/runs/${state.currentRun.id}/resume-crawl`, { method: "POST", body: "{}" })); notify("Crawler đã được đưa lại vào queue."); }));
 $("#restart-agent").addEventListener("click", (event) => action(event.currentTarget, async () => { updateAgent(await api("/api/agent/restart", { method: "POST", body: "{}" })); notify("Đang khởi động một Antigravity conversation mới."); }));
 $("#check-agent").addEventListener("click", (event) => action(event.currentTarget, async () => {
@@ -772,7 +799,13 @@ $("#retry-content").addEventListener("click", (event) => action(event.currentTar
 $("#retry-shopify").addEventListener("click", (event) => action(event.currentTarget, async () => { await api(`/api/apply-tasks/${state.currentTask.task_id}/retry`, { method: "POST", body: "{}" }); await refreshState(); notify("Đã queue Retry Shopify từ checkpoint."); }));
 $("#acknowledge-product").addEventListener("click", (event) => action(event.currentTarget, async () => { await api(`/api/products/${state.currentTask.task_id}/acknowledge`, { method: "POST", body: "{}" }); await refreshState(); notify("Đã đóng task; ASIN và Shopify product ID được giải phóng."); }));
 $("#log-scroll-bottom").addEventListener("click", () => { const log = $("#event-log"); log.scrollTop = log.scrollHeight; log.focus({ preventScroll: true }); });
-$("#page-view-log").addEventListener("click", () => $(".progress-panel").scrollIntoView());
+function scrollToSection(selector) {
+  const top = window.scrollY + $(selector).getBoundingClientRect().top;
+  const headerHeight = $(".topbar").getBoundingClientRect().height;
+  window.scrollTo({ top: Math.max(0, top - headerHeight - 24), behavior: "instant" });
+}
+$("#page-view-progress").addEventListener("click", () => scrollToSection("#progress-panel"));
+$("#page-view-links").addEventListener("click", () => scrollToSection("#manifest-panel"));
 $("#page-scroll-top").addEventListener("click", () => window.scrollTo(0, 0));
 $("#page-scroll-bottom").addEventListener("click", () => window.scrollTo(0, document.documentElement.scrollHeight));
 $("#close-product-type").addEventListener("click", closeProductTypePicker);
@@ -807,6 +840,7 @@ $("#prompts-modal").addEventListener("click", (event) => { if (event.target === 
 $("#prompts-form").addEventListener("submit", (event) => { event.preventDefault(); action($("#save-prompts"), savePrompts); });
 $("#agent-prompt-editor").addEventListener("input", updatePromptCounts);
 $("#content-task-prompt-editor").addEventListener("input", updatePromptCounts);
+$("#aeo-prompt-editor").addEventListener("input", updatePromptCounts);
 document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape") return;
   if (!$("#product-type-modal").hidden) closeProductTypePicker();
@@ -815,6 +849,11 @@ document.addEventListener("keydown", (event) => {
   else if (!$("#docs-modal").hidden) closeDocs();
 });
 
+function updateFloatingBatchPosition() {
+  $("#run-batch-floating").style.top = `${$(".topbar").getBoundingClientRect().height + 12}px`;
+}
+new ResizeObserver(updateFloatingBatchPosition).observe($(".topbar"));
+updateFloatingBatchPosition();
 applyAgentGate();
 updatePageScrollControls();
 bootstrap();

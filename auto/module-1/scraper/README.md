@@ -74,3 +74,52 @@ On restart, the system expires stale content leases, marks interrupted crawls fo
 The Event Log contains crawler, sanitized Antigravity/MCP lifecycle, and Shopify events from SQLite. Claim tokens, evidence payloads, prompts, credentials, and private reasoning are never exposed to the browser.
 
 Pricing behavior remains fail-closed: `Decimal`, signed additional prices, complete combination/footer verification within `$0.01`, Wood Finish consistency checks, and the default 100-combination cap.
+
+## Product AEO
+
+New Dashboard and CLI batches generate AEO in the same isolated product conversation as SEO.
+Existing-ASIN preflight still skips products already on Shopify; earlier unversioned runs keep their original contract.
+The module in `aeo/` compiles source text, price-verified options and approved visual shape/design facts into
+an evidence-ID input. Antigravity writes an English Overview (80–140 words), supported summary attributes and
+3–8 FAQs (30–80 words per answer). No search API is required or available in the content conversation.
+
+Validation checks the draft contract, evidence IDs, restricted claims, numbers, dimension axes/units and duplicates.
+Python renders escaped HTML and the Shopify adapter writes only `custom.aeo_html` (`multi_line_text_field`, Product).
+Empty-only compare-and-set writes and independent read-back preserve existing content, including concurrent edits.
+Failed content validation blocks only that product; existing Agent retry limits and needs_attention handling apply.
+These mechanical checks do not prove every semantic claim: the authoring prompt requires factual grounding.
+
+The Dashboard's **Product Overview & FAQ · AEO** editor accepts structured JSON, shows the available evidence,
+and previews escaped HTML in a sandbox. Claim/finalization locks apply to AEO as they do to SEO.
+The AEO prompt is editable in **Chỉnh Prompt** and is snapshotted with its schema in `aeo-contract.json` for each new run.
+Inspect `aeo_input.json`, `aeo_validation.json`, `aeo.html` and `aeo_shopify.json` in the product workspace.
+Storefront/theme rendering is separate. See `docs/aeo-plan.md` for requirements and module input/output.
+
+## Variant SKUs
+
+Every batch now plans SKUs after building the final variant combinations. Tags containing
+`amazon` select `amz`; other tags select `wry`, even when the source URL is Amazon.
+Colors/finishes are always abbreviated, marketing phrases are removed from SKU components,
+and collisions are regenerated using the next available suffix. Rules and source aliases
+are editable in `sku_rules.json`; see `docs/product-sku-rules.md` for the full contract.
+
+The apply worker writes SKUs with `productSet`, reads every live variant back, and marks
+`sku_verified` only after matching the saved plan and checking other SKU owners. Resume
+can repair SKU-less old checkpoints by variant ID without replaying `productSet`.
+Dry runs read Shopify to produce an inspectable `sku_plan.json` without mutations.
+
+SKU assignment runs automatically in the batch. The separate Preview SKU/Set SKU
+buttons, their API endpoints, and their results panel have been removed. Batch SKU
+plans, verification events, and retry checkpoints remain available in run artifacts.
+Floating **VIEW LINKS** instantly scrolls to the product list; **VIEW PROGRESS**
+instantly scrolls to the progress section. Both leave space below the sticky header.
+An additional **Chạy batch** button stays fixed at the upper right below the header.
+It uses the same batch action as the original button; both disable while submitting
+the request to prevent duplicate submissions.
+
+Crawled option values now share the SKU marketing filter. Original selections are
+all price-verified before cleanup; their source labels and DOM/ASIN identities stay
+in evidence. Cleaned values are used for Shopify options, including cached pricing.
+Equivalent combinations merge only at equal verified prices; conflicting prices or
+empty labels stop the product. Resuming an already-applied product preserves its
+saved option labels when verifying or repairing SKUs.

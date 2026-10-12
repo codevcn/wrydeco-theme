@@ -94,6 +94,9 @@ async def _test_gestalt_customization_prices_and_ignored_groups(tmp_path):
             Decimal("4215.00"), Decimal("4565.00"),
             Decimal("5015.00"), Decimal("5365.00"),
         ]
+        assert pricing["variants"][0]["options"][0]["value"] == '26"W x 64"H x 14"D'
+        assert pricing["variants"][0]["selection"][0]["dom_index"] == 1
+        assert pricing["option_types"][0]["options"][0]["source_value"].endswith("Best Choice")
         await browser.close()
 
 
@@ -114,4 +117,6 @@ async def _test_standard_pdp_variations_are_clicked_and_price_verified(tmp_path)
         pricing = await scraper._extract_pdp_variations(page, Decimal("100.00"))
         assert pricing["source"] == "pdp_variation"
         assert [item["verified_total"] for item in pricing["variants"]] == [Decimal("100.00"), Decimal("125.00")]
+        assert [item["options"][0]["value"] for item in pricing["variants"]] == ["Natural", "Walnut"]
+        assert pricing["variants"][0]["options"][0]["source_value"] == "Natural (Recommended)"
         await browser.close()

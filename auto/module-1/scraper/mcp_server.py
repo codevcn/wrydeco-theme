@@ -28,7 +28,7 @@ run the crawler, call Shopify, or access arbitrary filesystem paths."""
 def _validation_error(error: Exception, report: dict[str, Any] | None = None) -> dict[str, Any]:
     message = str(error)
     field = next(
-        (name for name in ("description_html", "seo_product_title", "seo_description", "seo_title", "handle", "title") if name in message),
+        (name for name in ("aeo", "description_html", "seo_product_title", "seo_description", "seo_title", "handle", "title") if name in message),
         "content",
     )
     report = report or {}

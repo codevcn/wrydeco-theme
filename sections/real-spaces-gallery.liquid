@@ -1,0 +1,1323 @@
+{%- liquid
+  assign real_space_entries = metaobjects.real_in_spaces.values
+  assign featured_entry = blank
+
+  for entry in real_space_entries
+    if entry.is_featured.value == true
+      assign featured_entry = entry
+      break
+    endif
+  endfor
+
+  if featured_entry == blank
+    assign featured_entry = real_space_entries | first
+  endif
+
+  assign featured_gallery = featured_entry.gallery_media.value | append: ''
+  assign featured_gallery_items = featured_gallery | split: ','
+  assign featured_media = featured_gallery_items | first | strip
+  assign featured_media_normalized = featured_media | downcase
+  assign featured_media_is_video = false
+  if featured_media_normalized contains '.mp4'
+    assign featured_media_is_video = true
+  elsif featured_media_normalized contains '.webm'
+    assign featured_media_is_video = true
+  elsif featured_media_normalized contains '.mov'
+    assign featured_media_is_video = true
+  endif
+  assign featured_gallery_count = 0
+  for gallery_item in featured_gallery_items
+    assign normalized_gallery_item = gallery_item | strip
+    if normalized_gallery_item != blank
+      assign featured_gallery_count = featured_gallery_count | plus: 1
+    endif
+  endfor
+  assign featured_product_url = '/products/' | append: featured_entry.product_handle.value
+  assign featured_author = featured_entry.author.value
+  assign featured_product = all_products[featured_entry.product_handle.value]
+  assign featured_description = featured_product.description | strip_html | strip | truncate: 380
+-%}
+
+<section class="real-spaces" id="RealSpaces-{{ section.id }}" data-real-spaces>
+  {%- if featured_entry != blank -%}
+    <header class="real-spaces__hero" aria-labelledby="RealSpacesTitle-{{ section.id }}">
+      <div class="real-spaces__hero-copy custom-scrollbar">
+        <p class="real-spaces__eyebrow">The WRYDECO Journal</p>
+        <h1 id="RealSpacesTitle-{{ section.id }}">Wrydeco in Real Spaces</h1>
+        <p class="real-spaces__intro">
+          An evolving archive of WRYDECO pieces chosen by clients, handcrafted to order, and documented on their
+          journey into real spaces.
+        </p>
+
+        <div class="real-spaces__featured-meta">
+          <p class="real-spaces__featured-label">Featured project</p>
+          <h2>{{ featured_entry.title.value | escape }}</h2>
+          {%- if featured_author != blank -%}
+            <p>
+              Crafted by
+              <a href="{{ featured_author.system.url }}">{{ featured_author.author_name.value | escape }}</a>
+            </p>
+          {%- endif -%}
+          <a class="real-spaces__text-link" href="{{ featured_product_url }}">View the Piece</a>
+        </div>
+      </div>
+
+      <button
+        class="real-spaces__hero-media"
+        type="button"
+        data-lightbox-trigger
+        data-gallery="{{ featured_gallery | escape }}"
+        data-title="{{ featured_entry.title.value | escape }}"
+        data-poster="{{ featured_entry.video_poster.value | escape }}"
+        data-author="{{ featured_author.author_name.value | escape }}"
+        data-author-url="{{ featured_author.system.url | escape }}"
+        data-description="{{ featured_description | escape }}"
+        data-product-url="{{ featured_product_url | escape }}"
+        data-featured="true"
+        aria-label="Open {{ featured_entry.title.value | escape }} gallery"
+      >
+        {%- if featured_media_is_video -%}
+          <video
+            data-viewport-video
+            data-src="{{ featured_media | escape }}"
+            poster="{{ featured_entry.video_poster.value | escape }}"
+            preload="none"
+            muted
+            playsinline
+            loop
+            aria-label="{{ featured_entry.title.value | escape }} featured project video"
+          ></video>
+          <span class="real-space-card__play" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+              <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/>
+            </svg>
+          </span>
+        {%- else -%}
+          <img
+            src="{{ featured_media | escape }}"
+            alt="{{ featured_entry.title.value | escape }} handcrafted WRYDECO piece"
+            width="1920"
+            height="2560"
+            loading="eager"
+            fetchpriority="high"
+          >
+        {%- endif -%}
+        <span class="real-spaces__media-index"
+          >01 / {{ featured_gallery_count | prepend: '0' | slice: -2, 2 -}}
+        </span>
+      </button>
+    </header>
+  {%- endif -%}
+
+  <section class="real-spaces__projects" aria-labelledby="RealProjectsTitle-{{ section.id }}">
+    <div class="real-spaces__section-heading">
+      <div>
+        <p class="real-spaces__eyebrow">Made for real spaces</p>
+        <h2 id="RealProjectsTitle-{{ section.id }}">Client Pieces, Real Homes</h2>
+      </div>
+      <p>
+        A growing archive of WRYDECO designs chosen by clients—each one handcrafted to order and documented as it
+        comes to life.
+      </p>
+    </div>
+
+    <div class="real-spaces__project-grid" data-project-grid="projects">
+      {%- assign project_index = 0 -%}
+      {%- for entry in real_space_entries -%}
+        {%- assign card_gallery = entry.gallery_media.value | append: '' -%}
+        {%- assign card_gallery_items = card_gallery | split: ',' -%}
+        {%- assign card_media = card_gallery_items | first | strip -%}
+        {%- if card_media != blank -%}
+          {%- assign project_index = project_index | plus: 1 -%}
+          {%- assign card_media_normalized = card_media | downcase -%}
+          {%- assign card_media_is_video = false -%}
+          {%- if card_media_normalized contains '.mp4' -%}
+            {%- assign card_media_is_video = true -%}
+          {%- elsif card_media_normalized contains '.webm' -%}
+            {%- assign card_media_is_video = true -%}
+          {%- elsif card_media_normalized contains '.mov' -%}
+            {%- assign card_media_is_video = true -%}
+          {%- endif -%}
+          {%- assign card_gallery_count = 0 -%}
+          {%- for gallery_item in card_gallery_items -%}
+            {%- assign normalized_gallery_item = gallery_item | strip -%}
+            {%- if normalized_gallery_item != blank -%}
+              {%- assign card_gallery_count = card_gallery_count | plus: 1 -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {%- assign card_author = entry.author.value -%}
+          {%- comment -%}Reserve one of Shopify's 20 all_products lookups for the featured project.{%- endcomment -%}
+          {%- assign card_description = blank -%}
+          {%- if entry.product_handle.value == featured_entry.product_handle.value -%}
+            {%- assign card_description = featured_description -%}
+          {%- elsif forloop.index <= 19 -%}
+            {%- assign card_product = all_products[entry.product_handle.value] -%}
+            {%- assign card_description = card_product.description | strip_html | strip | truncate: 380 -%}
+          {%- endif -%}
+          <article
+            class="real-space-card real-space-card--project"
+            data-project-card
+          >
+            <button
+              class="real-space-card__media"
+              type="button"
+              data-lightbox-trigger
+              data-gallery="{{ card_gallery | escape }}"
+              data-title="{{ entry.title.value | escape }}"
+              data-poster="{{ entry.video_poster.value | escape }}"
+              data-author="{{ card_author.author_name.value | escape }}"
+              data-author-url="{{ card_author.system.url | escape }}"
+              data-description="{{ card_description | escape }}"
+              data-product-url="/products/{{ entry.product_handle.value | escape }}"
+              data-featured="{% if entry.system.id == featured_entry.system.id %}true{% else %}false{% endif %}"
+              aria-label="Open {{ entry.title.value | escape }} gallery"
+            >
+              {%- if card_media_is_video -%}
+                <video
+                  data-viewport-video
+                  data-src="{{ card_media | escape }}"
+                  poster="{{ entry.video_poster.value | escape }}"
+                  preload="none"
+                  muted
+                  playsinline
+                  loop
+                  aria-label="{{ entry.title.value | escape }} project video"
+                ></video>
+                <span class="real-space-card__play" aria-hidden="true">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                    <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/>
+                  </svg>
+                </span>
+              {%- else -%}
+                <img
+                  src="{{ card_media | escape }}"
+                  alt="{{ entry.title.value | escape }} by {{ card_author.author_name.value | escape }}"
+                  width="1920"
+                  height="2560"
+                  loading="lazy"
+                  decoding="async"
+                >
+              {%- endif -%}
+              <span class="real-space-card__count">{{ card_gallery_count }} views</span>
+            </button>
+            <div class="real-space-card__details">
+              <div>
+                <span class="real-space-card__number"
+                  >Commissioned piece {{ project_index | prepend: '0' | slice: -2, 2 }}</span
+                >
+                <h3>{{ entry.title.value | escape }}</h3>
+                {%- if card_author != blank -%}
+                  <p>
+                    Crafted by <a href="{{ card_author.system.url }}">{{ card_author.author_name.value | escape }}</a>
+                  </p>
+                {%- endif -%}
+              </div>
+              <a class="real-spaces__text-link" href="/products/{{ entry.product_handle.value | escape }}"
+                >View the Piece</a
+              >
+            </div>
+          </article>
+        {%- endif -%}
+      {%- endfor -%}
+    </div>
+
+  </section>
+
+  <div class="real-spaces-lightbox" data-lightbox hidden>
+    <div class="real-spaces-lightbox__backdrop" data-lightbox-close></div>
+    <div
+      class="real-spaces-lightbox__dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="RealSpacesLightboxTitle-{{ section.id }}"
+    >
+      <button class="real-spaces-lightbox__close" type="button" data-lightbox-close aria-label="Close gallery">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+          <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 6L6 18M6 6l12 12"/>
+        </svg>
+      </button>
+      <div class="real-spaces-lightbox__media-panel">
+        <div class="real-spaces-lightbox__stage" data-lightbox-stage></div>
+        <button class="real-spaces-lightbox__arrow real-spaces-lightbox__arrow--previous" type="button" data-lightbox-previous aria-label="Previous media">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+            <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m15 18l-6-6l6-6"/>
+          </svg>
+        </button>
+        <button class="real-spaces-lightbox__arrow real-spaces-lightbox__arrow--next" type="button" data-lightbox-next aria-label="Next media">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+            <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 18l6-6l-6-6"/>
+          </svg>
+        </button>
+      </div>
+      <div class="real-spaces-lightbox__content custom-scrollbar">
+        <div class="real-spaces-lightbox__project-info">
+          <p class="real-spaces-lightbox__eyebrow" data-lightbox-label>Client project</p>
+          <h2 id="RealSpacesLightboxTitle-{{ section.id }}" data-lightbox-title>Project gallery</h2>
+          <p class="real-spaces-lightbox__author" data-lightbox-author></p>
+          <p class="real-spaces-lightbox__description" data-lightbox-description></p>
+          <a class="real-spaces-lightbox__product-link" data-lightbox-product>View the Piece</a>
+        </div>
+        <div class="real-spaces-lightbox__gallery">
+          <p data-lightbox-counter aria-live="polite">1 / 1</p>
+          <div class="real-spaces-lightbox__thumbnails" data-lightbox-thumbnails role="group" aria-label="Project media"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% stylesheet %}
+  body:has(.real-spaces) .header__icon--search,
+  body:has(.real-spaces) .header__icon--wishlist,
+  body:has(.real-spaces) .header__icon--cart,
+  body:has(.real-spaces) .header__icon--menu,
+  body:has(.real-spaces) .header__icon--account,
+  body:has(.real-spaces) .header__localization .loc-picker__code,
+  body:has(.real-spaces) .header__localization .loc-picker__chevron {
+    color: var(--color-earth-brown);
+  }
+
+  body:has(.real-spaces) .Vtl-WishlistHeader__HeartIconWrapper {
+    fill: var(--color-earth-brown) !important;
+  }
+
+  body:has(.real-spaces) .loc-picker__option .loc-picker__code {
+    color: var(--color-earth-brown) !important;
+  }
+
+  .real-spaces {
+    --rs-ink: var(--color-earth-brown, #4a2c18);
+    --rs-cream: var(--color-cream, #f7f2ec);
+    --rs-line: rgba(74, 44, 24, 0.2);
+    background-color: #fefbf7;
+    color: var(--rs-ink);
+    font-family: var(--font-body);
+    padding-top: calc(var(--gap-main-content-to-header) + 20px);
+  }
+
+  .real-spaces button,
+  .real-spaces a {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .real-spaces__hero {
+    display: grid;
+    grid-template-columns: minmax(360px, 0.72fr) minmax(0, 1.15fr);
+    height: min(830px, 100vh);
+    max-height: 100vh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .real-spaces__hero-copy {
+    display: flex;
+    flex-direction: column;
+    justify-content: safe center;
+    min-height: 0;
+    overflow-y: auto;
+    padding: clamp(22px,8vw,42px) clamp(30px,6.5vw,88px);
+    background: var(--rs-cream);
+  }
+
+  .real-spaces__eyebrow {
+    margin: 0 0 22px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    line-height: 1.4;
+    text-transform: uppercase;
+  }
+
+  .real-spaces__hero h1 {
+    max-width: 620px;
+    margin: 0;
+    font-family: var(--font-heading, var(--font-body));
+    font-size: clamp(54px, 5.6vw, 94px);
+    font-weight: 400;
+    letter-spacing: -0.055em;
+    line-height: 0.96;
+  }
+
+  .real-spaces__intro {
+    max-width: 570px;
+    margin: 32px 0 0;
+    font-size: clamp(17px, 1.3vw, 21px);
+    line-height: 1.65;
+  }
+
+  .real-spaces__featured-meta {
+    margin-top: clamp(58px, 8vh, 100px);
+    padding-top: 24px;
+    border-top: 1px solid var(--rs-line);
+  }
+
+  .real-spaces__featured-label {
+    margin: 0 0 10px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  .real-spaces__featured-meta h2 {
+    margin: 0 0 8px;
+    font-size: clamp(24px, 2vw, 34px);
+    font-weight: 500;
+    letter-spacing: -0.03em;
+  }
+
+  .real-spaces__featured-meta p:not(.real-spaces__featured-label),
+  .real-space-card__details p {
+    margin: 0;
+    color: rgba(74, 44, 24, 0.72);
+    font-size: 14px;
+  }
+
+  .real-spaces__featured-meta a,
+  .real-space-card__details p a {
+    color: inherit;
+    text-decoration-color: rgba(74, 44, 24, 0.35);
+    text-underline-offset: 3px;
+  }
+
+  .real-spaces__text-link {
+    display: inline-flex;
+    margin-top: 20px;
+    border-bottom: 1px solid currentColor;
+    color: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    line-height: 1.8;
+    text-decoration: none;
+    text-transform: uppercase;
+  }
+
+  .real-spaces__hero-media,
+  .real-space-card__media {
+    position: relative;
+    display: block;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+    background: #ded7ce;
+    color: inherit;
+    cursor: zoom-in;
+  }
+
+  .real-spaces__hero-media img,
+  .real-spaces__hero-media video,
+  .real-space-card__media img,
+  .real-space-card__media video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .real-spaces__hero-media img,
+  .real-spaces__hero-media video {
+    position: absolute;
+    inset: 0;
+  }
+
+  .real-spaces__hero-media:hover img,
+  .real-spaces__hero-media:hover video,
+  .real-space-card__media:hover img,
+  .real-space-card__media:hover video {
+    transform: scale(1.025);
+  }
+
+  .real-spaces__media-index,
+  .real-space-card__count {
+    position: absolute;
+    z-index: 2;
+    right: 18px;
+    bottom: 18px;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.88);
+    color: var(--rs-ink);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .real-spaces__projects {
+    max-width: var(--layout-showcase-max-width, 1520px);
+    margin: 0 auto;
+    padding: 86px var(--layout-padding-desktop, 48px) 84px;
+  }
+
+  .real-spaces__section-heading {
+    display: grid;
+    grid-template-columns: 1.25fr 0.75fr;
+    align-items: end;
+    gap: 72px;
+    margin-bottom: 48px;
+  }
+
+  .real-spaces__section-heading .real-spaces__eyebrow {
+    margin-bottom: 14px;
+  }
+
+  .real-spaces__section-heading h2 {
+    margin: 0;
+    font-family: var(--font-heading, var(--font-body));
+    font-size: clamp(46px, 5vw, 76px);
+    font-weight: 400;
+    letter-spacing: -0.05em;
+    line-height: 1;
+  }
+
+  .real-spaces__section-heading > p {
+    max-width: 480px;
+    margin: 0 0 5px auto;
+    font-size: 17px;
+    line-height: 1.65;
+  }
+
+  .real-spaces__project-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 420px));
+    align-items: start;
+    gap: 24px;
+    padding: 4px 0 10px;
+  }
+
+  .real-spaces__project-grid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .real-spaces__project-grid.is-dragging {
+    cursor: grabbing;
+    scroll-behavior: auto;
+    scroll-snap-type: none;
+    user-select: none;
+  }
+
+  .real-space-card {
+    min-width: 0;
+  }
+
+  .real-space-card--project {
+    position: relative;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) 124px;
+    box-sizing: border-box;
+    height: min(760px, 90vh);
+    max-height: 90vh;
+    padding: 10px 10px 20px;
+    border: 1px solid rgba(74, 44, 24, 0.26);
+    border-radius: 2px;
+    background: color-mix(in srgb, var(--color-cream, #f7f2ec) 82%, #fff 18%);
+    box-shadow:
+      0 18px 46px rgba(74, 44, 24, 0.09),
+      inset 0 0 0 4px rgba(255, 255, 255, 0.38);
+    scroll-snap-align: start;
+    cursor: pointer;
+    transition:
+      border-color 260ms ease,
+      box-shadow 260ms ease;
+  }
+
+  .real-space-card--project:hover {
+    border-color: rgba(74, 44, 24, 0.48);
+    box-shadow:
+      0 24px 58px rgba(74, 44, 24, 0.14),
+      inset 0 0 0 4px rgba(255, 255, 255, 0.48);
+  }
+
+  .real-space-card--project .real-space-card__media {
+    min-height: 0;
+    height: 100%;
+    border: 1px solid rgba(74, 44, 24, 0.18);
+  }
+
+  .real-space-card__details {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 20px 8px 4px;
+  }
+
+  .real-space-card__details h3 {
+    display: -webkit-box;
+    margin: 0 0 6px;
+    font-size: 19px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1.25;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .real-space-card__details > div {
+    min-width: 0;
+  }
+
+  .real-space-card__number {
+    display: block;
+    margin-bottom: 9px;
+    color: rgba(74, 44, 24, 0.58);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    line-height: 1.4;
+    text-transform: uppercase;
+  }
+
+  .real-space-card__details .real-spaces__text-link {
+    flex: 0 0 auto;
+    margin-top: 1px;
+    font-size: 10px;
+  }
+
+  .real-space-card__play {
+    position: absolute;
+    z-index: 2;
+    top: 50%;
+    left: 50%;
+    display: grid;
+    width: 54px;
+    height: 54px;
+    place-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    border-radius: 50%;
+    background: rgba(43, 29, 14, 0.28);
+    color: #fff;
+    transform: translate(-50%, -50%);
+    transition: opacity 220ms ease;
+    pointer-events: none;
+  }
+
+  .real-spaces__hero-media:has(video.is-playing) .real-space-card__play,
+  .real-space-card__media:has(video.is-playing) .real-space-card__play {
+    opacity: 0;
+  }
+
+  .real-spaces-lightbox {
+    position: fixed;
+    z-index: 2147483646;
+    inset: 0;
+    color: #faf5ed;
+  }
+
+  .real-spaces-lightbox__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(35, 25, 15, 0.93);
+    backdrop-filter: blur(12px);
+  }
+
+  .real-spaces-lightbox__dialog {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    width: 100%;
+    max-width: 1680px;
+    height: 100%;
+    grid-template-columns: minmax(0, 1.5fr) minmax(300px, 0.9fr);
+    grid-template-rows: minmax(0, 1fr);
+    align-items: center;
+    gap: clamp(72px, 5vw, 88px);
+    padding: 24px 80px;
+    margin: 0 auto;
+  }
+
+  .real-spaces-lightbox__close {
+    position: absolute;
+    z-index: 3;
+    top: 20px;
+    right: 20px;
+    display: grid;
+    width: 56px;
+    min-height: 56px;
+    place-items: center;
+    gap: 4px;
+    border: 0;
+    background: transparent;
+    color: #fff;
+    cursor: pointer;
+  }
+
+  .real-spaces-lightbox__close span {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+
+  .real-spaces-lightbox__media-panel {
+    position: relative;
+    min-width: 0;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .real-spaces-lightbox__stage {
+    position: relative;
+    display: grid;
+    min-height: 0;
+    height: 100%;
+    place-items: center;
+    overflow: hidden;
+    touch-action: pan-y;
+  }
+
+  .real-spaces-lightbox__stage img,
+  .real-spaces-lightbox__stage video {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+
+  .real-spaces-lightbox__arrow {
+    position: absolute;
+    top: 50%;
+    display: grid;
+    width: 52px;
+    height: 52px;
+    place-items: center;
+    padding: 0;
+    border: 1px solid #bf9a69;
+    border-radius: 50%;
+    background: rgba(35, 25, 15, 0.6);
+    color: inherit;
+    transform: translateY(-50%);
+    cursor: pointer;
+    transition: background 180ms ease, border-color 180ms ease;
+  }
+
+  .real-spaces-lightbox__arrow--previous { left: -32px; }
+  .real-spaces-lightbox__arrow--next { right: -32px; }
+
+  .real-spaces-lightbox__arrow:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+
+  .real-spaces-lightbox__content {
+    min-width: 0;
+    max-height: 100%;
+    padding: 24px 14px 0 24px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+
+  .real-spaces-lightbox__eyebrow {
+    margin: 0 0 20px;
+    color: #e0b984;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+  }
+
+  .real-spaces-lightbox__content h2 {
+    margin: 0 0 20px;
+    color: inherit;
+    font-family: var(--font-heading, var(--font-body));
+    font-size: clamp(30px, 3vw, 48px);
+    font-weight: 400;
+    line-height: 1.12;
+    letter-spacing: -0.035em;
+    overflow-wrap: anywhere;
+  }
+
+  .real-spaces-lightbox__author {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  .real-spaces-lightbox__author a {
+    color: inherit;
+    text-underline-offset: 4px;
+  }
+
+  .real-spaces-lightbox__description {
+    margin: 32px 0 0;
+    padding-top: 28px;
+    border-top: 1px solid rgba(224, 185, 132, 0.4);
+    color: rgba(250, 245, 237, 0.84);
+    font-size: 16px;
+    line-height: 1.8;
+    overflow-wrap: anywhere;
+  }
+
+  .real-spaces-lightbox__product-link {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    margin-top: 20px;
+    color: #e0b984;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-underline-offset: 5px;
+    text-transform: uppercase;
+  }
+
+  .real-spaces-lightbox__gallery { margin-top: 40px; }
+
+  .real-spaces-lightbox__gallery > p {
+    margin: 0 0 18px;
+    font-size: 13px;
+    letter-spacing: 0.14em;
+  }
+
+  .real-spaces-lightbox__thumbnails {
+    display: flex;
+    gap: 12px;
+    padding: 2px 0 8px;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+
+  .real-spaces-lightbox__thumbnail {
+    position: relative;
+    flex: 0 0 76px;
+    height: 92px;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid rgba(250, 245, 237, 0.45);
+    border-radius: 0;
+    background: rgba(250, 245, 237, 0.08);
+    color: inherit;
+    font: inherit;
+    font-size: 10px;
+    cursor: pointer;
+  }
+
+  .real-spaces-lightbox__thumbnail[aria-pressed='true'] {
+    border: 2px solid #e0b984;
+  }
+
+  .real-spaces-lightbox__thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .real-spaces-lightbox__thumbnail span {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    padding: 5px;
+    background: rgba(35, 25, 15, 0.8);
+  }
+
+  .real-spaces-lightbox button:focus-visible,
+  .real-spaces-lightbox a:focus-visible {
+    outline: 2px solid #e0b984;
+    outline-offset: 3px;
+  }
+
+  body.real-spaces-lightbox-open {
+    overflow: hidden;
+  }
+
+  @media (max-width: 1279px) {
+    .real-spaces__project-grid {
+      grid-template-columns: repeat(2, minmax(0, 420px));
+    }
+  }
+
+  @media (max-width: 859px) {
+    .real-spaces {
+      padding-top: calc(var(--gap-main-content-to-header-mobile) + 20px);
+    }
+  }
+
+  @media (max-width: 1099px) {
+    .real-spaces__hero {
+      grid-template-columns: 1fr;
+      grid-template-rows: minmax(0, 0.48fr) minmax(0, 0.52fr);
+      height: 100vh;
+      min-height: 0;
+    }
+
+    .real-spaces__hero-media {
+      min-height: 0;
+      grid-row: 1;
+    }
+
+    .real-spaces__hero-copy {
+      grid-row: 2;
+      padding: 24px 28px;
+    }
+
+    .real-spaces__hero h1 {
+      font-size: clamp(42px, 6vw, 64px);
+    }
+
+    .real-spaces__featured-meta {
+      margin-top: 24px;
+    }
+
+    .real-spaces__projects {
+      padding: 88px 24px 96px;
+    }
+
+    .real-spaces__section-heading {
+      grid-template-columns: 1fr;
+      gap: 24px;
+      margin-bottom: 44px;
+    }
+
+    .real-spaces__section-heading > p {
+      margin-left: 0;
+    }
+
+    .real-spaces__project-grid {
+      gap: 16px;
+    }
+
+    .real-spaces-lightbox__dialog {
+      grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+      gap: 28px;
+      padding: 64px 28px 24px;
+    }
+
+    .real-spaces-lightbox__arrow--previous { left: 8px; }
+    .real-spaces-lightbox__arrow--next { right: 8px; }
+
+    .real-spaces-lightbox__content { padding: 12px 0; }
+
+  }
+
+  @media (max-width: 749px) {
+    .real-spaces {
+      padding-top: calc(var(--gap-main-content-to-header-mobile) + 20px);
+    }
+
+    .real-spaces__hero-media {
+      min-height: 0;
+    }
+
+    .real-spaces__hero-copy {
+      padding: 24px 20px;
+    }
+
+    .real-spaces__eyebrow {
+      margin-bottom: 16px;
+      font-size: 10px;
+    }
+
+    .real-spaces__hero h1 {
+      font-size: clamp(32px, 9vw, 44px);
+    }
+
+    .real-spaces__intro {
+      margin-top: 16px;
+      font-size: 15px;
+    }
+
+    .real-spaces__projects {
+      padding: 72px 16px 80px;
+    }
+
+    .real-spaces__section-heading h2 {
+      font-size: 44px;
+    }
+
+    .real-spaces__section-heading > p {
+      font-size: 15px;
+    }
+
+    .real-space-card__details {
+      gap: 12px;
+      padding: 14px 2px 0;
+    }
+
+    .real-space-card__details h3 {
+      font-size: 17px;
+    }
+
+    .real-space-card__details .real-spaces__text-link {
+      display: none;
+    }
+
+    .real-spaces__projects {
+      padding-right: 0;
+      padding-left: 16px;
+      overflow: hidden;
+    }
+
+    .real-spaces__projects .real-spaces__section-heading {
+      padding-right: 16px;
+    }
+
+    .real-spaces__project-grid {
+      display: flex;
+      gap: 14px;
+      padding-right: 16px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scroll-behavior: smooth;
+      scroll-snap-type: x mandatory;
+      scrollbar-width: none;
+      cursor: grab;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .real-space-card--project {
+      flex: 0 0 min(78vw, 350px);
+      height: min(600px, 90vh);
+      grid-template-rows: minmax(0, 1fr) 118px;
+      padding: 8px 8px 16px;
+      scroll-snap-align: start;
+    }
+
+    .real-spaces-lightbox__dialog {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto auto;
+      align-items: start;
+      gap: 28px;
+      padding: 64px 16px 28px;
+      overflow-y: auto;
+    }
+
+    .real-spaces-lightbox__close {
+      position: fixed;
+      top: 8px;
+      right: 8px;
+      width: 44px;
+      min-height: 44px;
+      background: rgba(35, 25, 15, 0.9);
+    }
+
+    .real-spaces-lightbox__media-panel {
+      height: min(82vh, 680px);
+    }
+
+    .real-spaces-lightbox__arrow {
+      width: 44px;
+      height: 44px;
+    }
+
+    .real-spaces-lightbox__content {
+      max-height: none;
+      padding: 0;
+      overflow: visible;
+    }
+
+    .real-spaces-lightbox__content h2 { font-size: 32px; }
+    .real-spaces-lightbox__description { font-size: 15px; }
+    .real-spaces-lightbox__gallery { margin-top: 24px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .real-spaces__hero-media img,
+    .real-space-card__media img,
+    .real-space-card__media video {
+      transition: none;
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  (() => {
+    const roots = document.querySelectorAll('[data-real-spaces]:not([data-real-spaces-ready])');
+
+    roots.forEach((root) => {
+      root.dataset.realSpacesReady = 'true';
+
+      root.querySelectorAll('[data-project-grid]').forEach((slider) => {
+        let pointerId = null;
+        let startX = 0;
+        let startScrollLeft = 0;
+        let wasDragged = false;
+
+        slider.addEventListener('pointerdown', (event) => {
+          if (getComputedStyle(slider).display !== 'flex') return;
+          if (event.pointerType !== 'mouse' || event.button !== 0) return;
+          pointerId = event.pointerId;
+          startX = event.clientX;
+          startScrollLeft = slider.scrollLeft;
+          wasDragged = false;
+        });
+
+        slider.addEventListener('pointermove', (event) => {
+          if (event.pointerId !== pointerId) return;
+          const distance = event.clientX - startX;
+          if (Math.abs(distance) > 5) {
+            wasDragged = true;
+            slider.classList.add('is-dragging');
+            if (!slider.hasPointerCapture(pointerId)) slider.setPointerCapture(pointerId);
+          }
+          if (wasDragged) slider.scrollLeft = startScrollLeft - distance;
+        });
+
+        const endDrag = (event) => {
+          if (event.pointerId !== pointerId) return;
+          if (slider.hasPointerCapture(pointerId)) slider.releasePointerCapture(pointerId);
+          pointerId = null;
+          slider.classList.remove('is-dragging');
+        };
+
+        slider.addEventListener('pointerup', endDrag);
+        slider.addEventListener('pointercancel', endDrag);
+        slider.addEventListener('lostpointercapture', () => {
+          pointerId = null;
+          slider.classList.remove('is-dragging');
+        });
+        slider.addEventListener('dragstart', (event) => event.preventDefault());
+        slider.addEventListener(
+          'click',
+          (event) => {
+            if (!wasDragged) return;
+            event.preventDefault();
+            event.stopPropagation();
+            wasDragged = false;
+          },
+          true
+        );
+      });
+
+      root.querySelectorAll('[data-project-card]').forEach((card) => {
+        card.addEventListener('click', (event) => {
+          if (event.target.closest('a, button')) return;
+          const trigger = card.querySelector('[data-lightbox-trigger]');
+          if (trigger) trigger.click();
+        });
+      });
+
+      const viewportVideos = root.querySelectorAll('[data-viewport-video]');
+      viewportVideos.forEach((video) => {
+        video.addEventListener('playing', () => video.classList.add('is-playing'));
+        video.addEventListener('pause', () => video.classList.remove('is-playing'));
+      });
+      const startViewportVideos = () => {
+        if (!('IntersectionObserver' in window)) return;
+        const observer = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              const video = entry.target;
+              if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+                if (!video.src && video.dataset.src) {
+                  video.src = video.dataset.src;
+                  video.load();
+                }
+                video.play().catch(() => {});
+              } else {
+                video.pause();
+              }
+            });
+          },
+          { threshold: [0, 0.5, 1] }
+        );
+        viewportVideos.forEach((video) => observer.observe(video));
+      };
+
+      if (document.readyState === 'complete') startViewportVideos();
+      else window.addEventListener('load', startViewportVideos, { once: true });
+
+      const lightbox = root.querySelector('[data-lightbox]');
+      const dialog = root.querySelector('.real-spaces-lightbox__dialog');
+      const lightboxContent = root.querySelector('.real-spaces-lightbox__content');
+      const stage = root.querySelector('[data-lightbox-stage]');
+      const counter = root.querySelector('[data-lightbox-counter]');
+      const title = root.querySelector('[data-lightbox-title]');
+      const projectLabel = root.querySelector('[data-lightbox-label]');
+      const projectAuthor = root.querySelector('[data-lightbox-author]');
+      const projectDescription = root.querySelector('[data-lightbox-description]');
+      const productLink = root.querySelector('[data-lightbox-product]');
+      const thumbnails = root.querySelector('[data-lightbox-thumbnails]');
+      const previousButton = root.querySelector('[data-lightbox-previous]');
+      const nextButton = root.querySelector('[data-lightbox-next]');
+      const closeButton = root.querySelector('.real-spaces-lightbox__close');
+      let mediaItems = [];
+      let currentIndex = 0;
+      let poster = '';
+      let returnFocus = null;
+      let touchStartX = 0;
+
+      const isVideo = (url) => /\.(mp4|webm|mov)(?:$|\?)/i.test(url);
+
+      const renderLightbox = () => {
+        const url = mediaItems[currentIndex];
+        const outgoingVideo = stage.querySelector('video');
+        if (outgoingVideo) outgoingVideo.pause();
+        stage.replaceChildren();
+
+        let media;
+        if (isVideo(url)) {
+          media = document.createElement('video');
+          media.src = url;
+          media.poster = poster;
+          media.controls = true;
+          media.playsInline = true;
+          media.preload = 'none';
+          media.muted = true;
+          media.autoplay = true;
+        } else {
+          media = document.createElement('img');
+          media.src = url;
+          media.alt = title.textContent;
+        }
+        stage.append(media);
+        counter.textContent = `${currentIndex + 1} / ${mediaItems.length}`;
+        thumbnails.querySelectorAll('button').forEach((button, index) => {
+          button.setAttribute('aria-pressed', String(index === currentIndex));
+        });
+        const activeThumbnail = thumbnails.children[currentIndex];
+        if (activeThumbnail) {
+          const left = activeThumbnail.offsetLeft - thumbnails.offsetLeft;
+          if (left < thumbnails.scrollLeft) thumbnails.scrollLeft = left;
+          else if (left + activeThumbnail.offsetWidth > thumbnails.scrollLeft + thumbnails.clientWidth) {
+            thumbnails.scrollLeft = left + activeThumbnail.offsetWidth - thumbnails.clientWidth;
+          }
+        }
+      };
+
+      const buildThumbnails = () => {
+        thumbnails.replaceChildren();
+        mediaItems.forEach((url, index) => {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'real-spaces-lightbox__thumbnail';
+          button.setAttribute('aria-label', `View ${isVideo(url) ? 'video' : 'image'} ${index + 1}`);
+          const thumbnailUrl = isVideo(url) ? poster : url;
+          if (thumbnailUrl) {
+            const thumbnail = document.createElement('img');
+            thumbnail.src = thumbnailUrl;
+            thumbnail.alt = '';
+            thumbnail.loading = 'lazy';
+            thumbnail.decoding = 'async';
+            button.append(thumbnail);
+          }
+          if (isVideo(url)) {
+            const videoLabel = document.createElement('span');
+            videoLabel.textContent = 'Video';
+            button.append(videoLabel);
+          }
+          button.addEventListener('click', () => {
+            currentIndex = index;
+            renderLightbox();
+          });
+          thumbnails.append(button);
+        });
+        previousButton.disabled = mediaItems.length < 2;
+        nextButton.disabled = mediaItems.length < 2;
+      };
+
+      const move = (direction) => {
+        currentIndex = (currentIndex + direction + mediaItems.length) % mediaItems.length;
+        renderLightbox();
+      };
+
+      const closeLightbox = () => {
+        const activeVideo = stage.querySelector('video');
+        if (activeVideo) activeVideo.pause();
+        lightbox.hidden = true;
+        document.body.classList.remove('real-spaces-lightbox-open');
+        if (returnFocus) returnFocus.focus();
+      };
+
+      root.querySelectorAll('[data-lightbox-trigger]').forEach((trigger) => {
+        trigger.addEventListener('click', () => {
+          mediaItems = trigger.dataset.gallery
+            .split(',')
+            .map((item) => item.trim())
+            .filter(Boolean);
+          if (!mediaItems.length) return;
+          currentIndex = 0;
+          poster = trigger.dataset.poster || '';
+          title.textContent = trigger.dataset.title || 'Project gallery';
+          projectLabel.textContent = trigger.dataset.featured === 'true' ? 'Featured project' : 'Client project';
+          projectAuthor.replaceChildren();
+          projectAuthor.hidden = !trigger.dataset.author;
+          if (trigger.dataset.author) {
+            projectAuthor.append('Crafted by ');
+            if (trigger.dataset.authorUrl) {
+              const authorLink = document.createElement('a');
+              authorLink.href = trigger.dataset.authorUrl;
+              authorLink.textContent = trigger.dataset.author;
+              projectAuthor.append(authorLink);
+            } else projectAuthor.append(trigger.dataset.author);
+          }
+          projectDescription.textContent = trigger.dataset.description ||
+            'Explore the images and videos documenting this WRYDECO piece, handcrafted to order.';
+          productLink.hidden = !trigger.dataset.productUrl;
+          if (trigger.dataset.productUrl) productLink.href = trigger.dataset.productUrl;
+          buildThumbnails();
+          returnFocus = trigger;
+          lightbox.hidden = false;
+          dialog.scrollTop = 0;
+          lightboxContent.scrollTop = 0;
+          thumbnails.scrollLeft = 0;
+          document.body.classList.add('real-spaces-lightbox-open');
+          renderLightbox();
+          closeButton.focus();
+        });
+      });
+
+      root
+        .querySelectorAll('[data-lightbox-close]')
+        .forEach((control) => control.addEventListener('click', closeLightbox));
+      previousButton.addEventListener('click', () => move(-1));
+      nextButton.addEventListener('click', () => move(1));
+
+      stage.addEventListener(
+        'touchstart',
+        (event) => {
+          touchStartX = event.changedTouches[0].clientX;
+        },
+        { passive: true }
+      );
+      stage.addEventListener(
+        'touchend',
+        (event) => {
+          const delta = event.changedTouches[0].clientX - touchStartX;
+          if (Math.abs(delta) > 48) move(delta > 0 ? -1 : 1);
+        },
+        { passive: true }
+      );
+
+      lightbox.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') closeLightbox();
+        if (event.key === 'ArrowLeft') move(-1);
+        if (event.key === 'ArrowRight') move(1);
+        if (event.key === 'Tab') {
+          const focusable = Array.from(lightbox.querySelectorAll('button:not([disabled]), a[href], video[controls]'))
+            .filter((element) => element.getClientRects().length > 0);
+          const first = focusable[0];
+          const last = focusable[focusable.length - 1];
+          if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+          } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+          }
+        }
+      });
+    });
+  })();
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "Real spaces gallery",
+  "settings": [],
+  "presets": [
+    {
+      "name": "Real spaces gallery"
+    }
+  ]
+}
+{% endschema %}

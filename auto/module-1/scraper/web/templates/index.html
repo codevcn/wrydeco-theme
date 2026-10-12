@@ -58,6 +58,10 @@
     <div class="connection"><span class="pulse"></span><span>Local · port 5000</span></div>
   </header>
 
+  <button id="run-batch-floating" class="button primary floating-run-batch" type="button" title="Chạy batch từ danh sách sản phẩm">
+    <span class="button-icon" aria-hidden="true">▶</span><span class="button-label">Chạy batch</span>
+  </button>
+
   <div id="agent-startup-toast" class="agent-startup-toast" role="status" aria-live="polite" aria-atomic="true">
     <span class="agent-startup-spinner" aria-hidden="true"></span>
     <div>
@@ -110,7 +114,7 @@
       <p class="help">Crawler và Shopify không phụ thuộc thời gian cold-start của Agent. Content queue chỉ được xử lý sau khi bootstrap, MCP check và conversation ID hợp lệ. Event Log hiển thị stream đã sanitize.</p>
     </section>
 
-    <section class="panel manifest-panel">
+    <section id="manifest-panel" class="panel manifest-panel">
       <div class="panel-heading">
         <div>
           <p class="eyebrow">01 · MANIFEST</p>
@@ -145,6 +149,7 @@
       <p id="run-hint">Một crawler và một Shopify worker; các run đang chờ content không khóa crawler.</p>
     </section>
 
+
     <section class="panel content-editor-panel" aria-labelledby="content-editor-title">
       <div class="panel-heading">
         <div><p class="eyebrow">CONTENT QUEUE EDITOR</p><h3 id="content-editor-title">Content draft</h3></div>
@@ -165,6 +170,13 @@
           <label class="field content-field"><span>Handle <small data-count-for="content-handle"></small></span><input id="content-handle" data-content-field="handle" spellcheck="false"></label>
           <label class="field content-field full"><span>SEO description <small data-count-for="content-seo-description"></small></span><textarea id="content-seo-description" data-content-field="seo_description" rows="4"></textarea></label>
           <label class="field content-field full"><span>Description HTML</span><textarea id="content-description-html" data-content-field="description_html" rows="12" spellcheck="false"></textarea></label>
+          <details id="aeo-editor-panel" class="content-field full" hidden>
+            <summary><strong>Product Overview &amp; FAQ · AEO</strong><span id="aeo-editor-status" class="status-pill neutral"></span></summary>
+            <p class="help">Draft JSON gồm overview, summary và 3–8 FAQ. Mỗi phần cần evidence_ids từ danh sách bằng chứng. Python tự tạo HTML lưu vào custom.aeo_html.</p>
+            <details><summary>Chỉnh sửa draft · JSON</summary><label class="field"><span>AEO draft · JSON</span><textarea id="content-aeo-json" rows="15" spellcheck="false"></textarea></label></details>
+            <details><summary>Bằng chứng được phép dùng</summary><pre id="aeo-evidence-json" class="json-preview"></pre></details>
+            <details open><summary>Xem trước HTML đã lưu trong draft</summary><iframe id="aeo-preview" title="Xem trước Product Overview và FAQ" sandbox="" referrerpolicy="no-referrer"></iframe></details>
+          </details>
         </div>
         <p id="content-editor-message" class="muted"></p>
         <div class="content-actions">
@@ -180,7 +192,7 @@
       </form>
     </section>
 
-    <section class="panel progress-panel">
+    <section id="progress-panel" class="panel progress-panel">
       <div class="panel-heading"><div><p class="eyebrow">LIVE RUN</p><h3>Tiến trình</h3></div><span id="job-id" class="mono muted">Chưa có run</span></div>
       <ol id="stepper" class="stepper">
         <li data-step="manifest"><span>1</span><div><strong>Manifest</strong><small>Snapshot</small></div></li>
@@ -204,8 +216,11 @@
   </main>
 
   <nav class="page-scroll-controls" aria-label="Cuộn trang nhanh">
-    <button id="page-view-log" class="page-scroll-button" type="button" title="Đi đến Tiến trình" aria-label="Đi đến section Tiến trình">
-      <span aria-hidden="true">≡</span><span>View Log</span>
+    <button id="page-view-links" class="page-scroll-button" type="button" title="Đi đến Danh sách sản phẩm" aria-label="Đi đến section Danh sách sản phẩm">
+      <span aria-hidden="true">↗</span><span>View Links</span>
+    </button>
+    <button id="page-view-progress" class="page-scroll-button" type="button" title="Đi đến Tiến trình" aria-label="Đi đến section Tiến trình">
+      <span aria-hidden="true">≡</span><span>View Progress</span>
     </button>
     <button id="page-scroll-top" class="page-scroll-button" type="button" title="Cuộn lên đầu trang" aria-label="Cuộn lên đầu trang">
       <span aria-hidden="true">↑</span><span>Top</span>
@@ -266,7 +281,7 @@
       <div class="prompts-body">
         <div class="prompts-intro">
           <div><strong>Prompt dùng lâu dài</strong><p>Thay đổi được lưu trực tiếp vào scraper và áp dụng khi server khởi động Antigravity conversation mới.</p></div>
-          <span class="status-pill neutral">2 FILES</span>
+          <span class="status-pill neutral">3 FILES</span>
         </div>
         <div class="prompts-grid">
           <label class="prompt-editor-card" for="agent-prompt-editor">
@@ -276,6 +291,10 @@
           <label class="prompt-editor-card" for="content-task-prompt-editor">
             <span class="prompt-editor-heading"><span><strong>CONTENT_TASK_PROMPT.md</strong><small>Lệnh cố định cho từng task trong content queue.</small></span><small id="content-task-prompt-count">0 ký tự</small></span>
             <textarea id="content-task-prompt-editor" spellcheck="false" aria-describedby="prompts-status"></textarea>
+          </label>
+          <label class="prompt-editor-card aeo-prompt-card" for="aeo-prompt-editor">
+            <span class="prompt-editor-heading"><span><strong>aeo/PROMPT.md</strong><small>Overview, summary và FAQ. Được chụp cố định khi tạo batch mới.</small></span><small id="aeo-prompt-count">0 ký tự</small></span>
+            <textarea id="aeo-prompt-editor" spellcheck="false" aria-describedby="prompts-status"></textarea>
           </label>
         </div>
       </div>

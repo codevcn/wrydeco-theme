@@ -12,6 +12,7 @@ from urllib.parse import urlsplit, urlunsplit
 from .config import Settings
 from .errors import BrowserAutomationError, NeedsAttention, PriceValidationError
 from .events import EventCallback, emit
+from .variant_options import clean_pricing_options
 from .pricing import (
     build_combinations,
     is_ignored_type,
@@ -514,10 +515,10 @@ class AmazonBrowser:
             combination["verified_total"] = expected
             emit(self.event_callback, "price_progress", asin=asin, stage="price_verification",
                  current=combination_index, total=len(combinations), price=str(expected))
-        return {
+        return clean_pricing_options({
             "mode": "dynamic", "base_price": base_price, "option_types": option_types,
             "variants": combinations, "verified_all": True,
-        }
+        })
 
     async def _customization_choices(self, group: Any) -> Any:
         """Return one locator per actual choice, avoiding nested swatch duplicates."""
@@ -597,13 +598,13 @@ class AmazonBrowser:
                 "amazon_asin": asin,
                 "dom_index": dom_index,
             })
-        return {
+        return clean_pricing_options({
             "mode": "dynamic", "source": "pdp_variation", "base_price": base_price,
             "option_types": [{"name": name, "options": [
                 {"value": item["value"], "amazon_asin": item["asin"]} for item in options
             ]}],
             "variants": variants, "verified_all": True,
-        }
+        })
 
     async def _wait_stable_pdp_price(self, page: Any, expected_asin: str) -> Decimal:
         selectors = [

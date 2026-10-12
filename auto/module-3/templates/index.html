@@ -94,9 +94,9 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
                     Nhập Token
                 </button>
-                <button onclick="window.location.reload()" class="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-4 py-2 rounded-lg transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-300">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                    Tải lại trang
+                <button type="button" onclick="openGoToProductPopup()" class="flex items-center gap-2 bg-orange-50 hover:bg-orange-100 text-orange-700 font-medium px-4 py-2 rounded-lg transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-300 border border-orange-200 cursor-pointer" title="Đi đến trang chi tiết sản phẩm bằng Handle hoặc ID">
+                    <svg class="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                    Đi đến sản phẩm
                 </button>
             </div>
         </div>
@@ -566,6 +566,67 @@
         </div>
     </div>
 
+    <!-- Modal Đi đến sản phẩm -->
+    <div id="goToProductModal" class="fixed inset-0 z-[100] flex items-center justify-center hidden">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeGoToProductPopup()"></div>
+        <div class="bg-white rounded-2xl shadow-2xl w-[90%] max-w-md z-10 relative overflow-hidden flex flex-col" onclick="event.stopPropagation()">
+            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-800">Đi đến sản phẩm</h3>
+                        <p class="text-xs text-gray-500">Nhập Handle hoặc ID của sản phẩm</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeGoToProductPopup()" class="text-gray-400 hover:text-gray-600 transition-colors p-1.5 rounded-lg hover:bg-gray-100 cursor-pointer" title="Đóng (Esc)">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            
+            <div class="p-6">
+                <label for="goToProductInput" class="block text-sm font-semibold text-gray-700 mb-2">
+                    Handle hoặc ID sản phẩm:
+                </label>
+                <div class="relative">
+                    <input type="text" 
+                           id="goToProductInput" 
+                           placeholder="Ví dụ: tree-bird-nest... hoặc 8443468972089" 
+                           autocomplete="off" 
+                           class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm outline-none transition-all font-mono shadow-xs pr-10">
+                    <button type="button" 
+                            id="goToProductClearBtn"
+                            onclick="clearGoToProductInput()" 
+                            class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 hidden cursor-pointer p-1" 
+                            title="Xóa">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+
+                <!-- Phân tích nhận diện tự động -->
+                <div id="goToProductDetection" class="mt-2.5 text-xs flex items-center min-h-[24px]">
+                    <span class="inline-flex items-center gap-1.5 text-gray-400">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <span>Tự động nhận diện Handle hoặc ID khi bạn nhập</span>
+                    </span>
+                </div>
+
+                <div id="goToProductAlertBox" class="hidden mt-3 text-sm rounded-xl p-3.5 border"></div>
+            </div>
+            
+            <div class="px-6 py-4 border-t border-gray-100 bg-gray-50/80 flex items-center justify-end gap-3 rounded-b-2xl">
+                <button type="button" onclick="closeGoToProductPopup()" class="px-5 py-2.5 rounded-xl font-medium text-gray-700 bg-gray-200 hover:bg-gray-300 transition-all shadow-xs cursor-pointer text-sm">
+                    Hủy
+                </button>
+                <button type="button" id="goToProductSubmitBtn" onclick="submitGoToProduct()" class="px-6 py-2.5 rounded-xl font-bold text-white bg-orange-500 hover:bg-orange-600 transition-all shadow-md hover:shadow-lg flex items-center gap-2 cursor-pointer text-sm shadow-orange-500/20">
+                    <span>OK</span>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         function showUpdateTokenPopup() {
             document.getElementById('updateTokenModal').classList.remove('hidden');
@@ -582,6 +643,181 @@
 
         function closeResetTokenPopup() {
             document.getElementById('resetTokenModal').classList.add('hidden');
+        }
+
+        // ==========================================
+        // POPUP ĐI ĐẾN SẢN PHẨM (GO TO PRODUCT)
+        // ==========================================
+        function openGoToProductPopup() {
+            const modal = document.getElementById('goToProductModal');
+            const input = document.getElementById('goToProductInput');
+            const alertBox = document.getElementById('goToProductAlertBox');
+            if (modal) {
+                modal.classList.remove('hidden');
+                if (alertBox) alertBox.classList.add('hidden');
+                if (input) {
+                    input.value = '';
+                    updateGoToProductDetection('');
+                    setTimeout(() => input.focus(), 80);
+                }
+            }
+        }
+
+        function closeGoToProductPopup() {
+            const modal = document.getElementById('goToProductModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function clearGoToProductInput() {
+            const input = document.getElementById('goToProductInput');
+            if (input) {
+                input.value = '';
+                input.focus();
+                updateGoToProductDetection('');
+            }
+        }
+
+        function analyzeProductInput(raw) {
+            if (!raw) return null;
+            let val = String(raw).trim();
+            if (!val) return null;
+
+            // Kiểm tra nếu là URL (link Shopify Admin hoặc link Storefront)
+            if (val.startsWith('http://') || val.startsWith('https://')) {
+                try {
+                    const u = new URL(val);
+                    const parts = u.pathname.replace(/\/+$/, '').split('/');
+                    const last = parts[parts.length - 1];
+                    if (u.pathname.includes('/products/')) {
+                        if (/^\d+$/.test(last)) {
+                            return { type: 'id', value: last, raw: val };
+                        } else if (last) {
+                            return { type: 'handle', value: decodeURIComponent(last), raw: val };
+                        }
+                    }
+                    if (last) val = decodeURIComponent(last);
+                } catch (e) {}
+            }
+
+            // GID Shopify: gid://shopify/Product/8443468972089
+            if (val.startsWith('gid://shopify/Product/')) {
+                return { type: 'id', value: val.replace('gid://shopify/Product/', '').trim(), raw };
+            }
+
+            // Chuỗi số nguyên -> Product ID
+            if (/^\d+$/.test(val)) {
+                return { type: 'id', value: val, raw };
+            }
+
+            // Dạng #8443468972089 -> Product ID
+            if (/^#\d+$/.test(val)) {
+                return { type: 'id', value: val.substring(1), raw };
+            }
+
+            // Còn lại là Handle
+            let handle = val.toLowerCase().replace(/^\/+|\/+$/g, '');
+            return { type: 'handle', value: handle, raw };
+        }
+
+        function updateGoToProductDetection(text) {
+            const container = document.getElementById('goToProductDetection');
+            const clearBtn = document.getElementById('goToProductClearBtn');
+            if (clearBtn) {
+                if (text && text.trim().length > 0) {
+                    clearBtn.classList.remove('hidden');
+                } else {
+                    clearBtn.classList.add('hidden');
+                }
+            }
+            if (!container) return;
+            const parsed = analyzeProductInput(text);
+            if (!parsed) {
+                container.innerHTML = `
+                    <span class="inline-flex items-center gap-1.5 text-gray-400">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <span>Tự động nhận diện Handle hoặc ID khi bạn nhập</span>
+                    </span>`;
+            } else if (parsed.type === 'id') {
+                container.innerHTML = `
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span>Nhận diện: <strong>Product ID</strong> (${parsed.value})</span>
+                    </span>`;
+            } else {
+                container.innerHTML = `
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-indigo-50 text-indigo-700 font-semibold border border-indigo-200">
+                        <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
+                        <span>Nhận diện: <strong>Product Handle</strong> (${parsed.value})</span>
+                    </span>`;
+            }
+        }
+
+        async function submitGoToProduct() {
+            const input = document.getElementById('goToProductInput');
+            const alertBox = document.getElementById('goToProductAlertBox');
+            const submitBtn = document.getElementById('goToProductSubmitBtn');
+            const rawVal = input ? input.value.trim() : '';
+
+            if (!rawVal) {
+                if (alertBox) {
+                    alertBox.className = 'mt-3 text-sm rounded-xl p-3.5 border bg-amber-50 border-amber-200 text-amber-800 font-medium';
+                    alertBox.innerHTML = 'Vui lòng nhập Handle hoặc ID của sản phẩm!';
+                    alertBox.classList.remove('hidden');
+                }
+                if (input) input.focus();
+                return;
+            }
+
+            const parsed = analyzeProductInput(rawVal);
+            if (!parsed || !parsed.value) {
+                if (alertBox) {
+                    alertBox.className = 'mt-3 text-sm rounded-xl p-3.5 border bg-red-50 border-red-200 text-red-700 font-medium';
+                    alertBox.innerHTML = 'Không thể xác định Handle hoặc ID từ nội dung đã nhập!';
+                    alertBox.classList.remove('hidden');
+                }
+                return;
+            }
+
+            if (alertBox) alertBox.classList.add('hidden');
+
+            // 1. Nếu là Handle: điều hướng ngay tới /products/{handle}
+            if (parsed.type === 'handle') {
+                window.location.href = `/products/${encodeURIComponent(parsed.value)}`;
+                return;
+            }
+
+            // 2. Nếu là ID: truy vấn handle qua API để điều hướng chính xác
+            if (parsed.type === 'id') {
+                const origHtml = submitBtn.innerHTML;
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = `
+                    <svg class="animate-spin w-4 h-4 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    <span>Đang tìm...</span>`;
+
+                try {
+                    const response = await fetch(`/api/products/${encodeURIComponent(parsed.value)}/details`);
+                    const data = await response.json();
+                    if (data.success && data.product && data.product.handle) {
+                        window.location.href = `/products/${encodeURIComponent(data.product.handle)}`;
+                    } else {
+                        if (alertBox) {
+                            alertBox.className = 'mt-3 text-sm rounded-xl p-3.5 border bg-red-50 border-red-200 text-red-700 font-medium';
+                            alertBox.innerHTML = `<strong>Không tìm thấy:</strong> ${data.error || 'Sản phẩm có ID này không tồn tại trên gian hàng!'}`;
+                            alertBox.classList.remove('hidden');
+                        }
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = origHtml;
+                    }
+                } catch (err) {
+                    if (alertBox) {
+                        alertBox.className = 'mt-3 text-sm rounded-xl p-3.5 border bg-red-50 border-red-200 text-red-700 font-medium';
+                        alertBox.innerHTML = `<strong>Lỗi kết nối:</strong> ${err.message}`;
+                        alertBox.classList.remove('hidden');
+                    }
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = origHtml;
+                }
+            }
         }
 
         async function submitResetToken() {
@@ -946,7 +1182,28 @@
             copySubmitBtn.addEventListener('click', performCopy);
         }
 
+        const goToInput = document.getElementById('goToProductInput');
+        if (goToInput) {
+            goToInput.addEventListener('input', function() {
+                updateGoToProductDetection(this.value);
+            });
+            goToInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    submitGoToProduct();
+                }
+            });
+        }
+
         document.addEventListener('keydown', (e) => {
+            const goToModal = document.getElementById('goToProductModal');
+            if (goToModal && !goToModal.classList.contains('hidden')) {
+                if (e.key === "Escape") {
+                    closeGoToProductPopup();
+                }
+                return;
+            }
+
             if (!copyModal.classList.contains('hidden')) {
                 if (['ArrowLeft', 'ArrowUp'].includes(e.key)) {
                     e.preventDefault();
