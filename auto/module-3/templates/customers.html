@@ -30,7 +30,7 @@
                 <!-- Logo & Store Link -->
                 <div class="flex-shrink-0 flex items-center gap-3">
                     <a target="_blank" rel="noopener noreferrer" href="/" class="flex items-center gap-2 text-indigo-600 font-bold text-xl hover:text-indigo-700 transition-colors">
-                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                        <img src="/static/favicon.svg" alt="Logo" class="w-8 h-8 object-contain rounded-lg" onerror="this.src='/static/favicon-96x96.png'">
                         <span>Shopify Admin Manager</span>
                     </a>
                     <a target="_blank" rel="noopener noreferrer" href="https://admin.shopify.com/store/wrydeco" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-black hover:bg-neutral-800 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors" title="Mở Shopify Admin Store" id="headerShopifyStoreLink">
@@ -43,7 +43,7 @@
                 <nav class="flex items-center gap-6">
                     <a target="_blank" rel="noopener noreferrer" href="/" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Sản phẩm</a>
                     <a target="_blank" rel="noopener noreferrer" href="/collections" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Collections</a>
-                    <a target="_blank" rel="noopener noreferrer" href="/metaobjects" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Meta Objects</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/metaobjects" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">MetaObjects</a>
                     <a target="_blank" rel="noopener noreferrer" href="/create" class="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">Tạo sản phẩm</a>
                     <a target="_blank" rel="noopener noreferrer" href="/edit-variants" class="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">Sửa hàng loạt</a>
                     <a target="_blank" rel="noopener noreferrer" href="/blogs" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path></svg>Blog</a>
@@ -264,16 +264,30 @@
                     </select>
                 </div>
 
-                <!-- Sort indicator -->
-                <div class="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-700 font-medium">
-                    <iconify-icon icon="mdi:sort-calendar-descending" class="text-indigo-600 text-sm"></iconify-icon>
-                    <span>Mới đăng ký nhất</span>
+                <!-- Sort select dropdown -->
+                <div class="flex items-center gap-1.5 text-xs text-gray-600 font-medium">
+                    <iconify-icon icon="mdi:sort-variant" class="text-indigo-600 text-sm flex-shrink-0"></iconify-icon>
+                    <span class="whitespace-nowrap">Sắp xếp:</span>
+                    <select id="sortSelect" onchange="handleSortChange(this.value)" class="rounded-lg border-gray-300 py-1.5 px-2.5 text-xs border bg-white focus:border-indigo-500 focus:ring-indigo-500 font-medium text-gray-700 cursor-pointer shadow-2xs">
+                        <option value="created_desc" selected>Ngày đăng ký (Mới nhất ↓)</option>
+                        <option value="created_asc">Ngày đăng ký (Cũ nhất ↑)</option>
+                        <option value="total_spent_desc">Tổng chi tiêu (Cao nhất ↓)</option>
+                        <option value="total_spent_asc">Tổng chi tiêu (Thấp nhất ↑)</option>
+                        <option value="name_asc">Tên khách hàng (A ➔ Z)</option>
+                        <option value="name_desc">Tên khách hàng (Z ➔ A)</option>
+                    </select>
                 </div>
 
                 <!-- Total Count Badge -->
                 <div id="customerCountBadge" class="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg text-xs text-indigo-700 font-bold">
                     <iconify-icon icon="mdi:account" class="text-indigo-600 text-sm"></iconify-icon>
                     <span id="customerCountText">0 khách hàng</span>
+                </div>
+
+                <!-- Order Legend Indicator -->
+                <div class="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-800 font-medium" title="Hàng nền xanh lá nhạt: Khách hàng đã phát sinh đơn hàng">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>
+                    <span>Đã đặt đơn</span>
                 </div>
 
                 <!-- Store Source Badge in Toolbar -->
@@ -310,12 +324,33 @@
                     <thead>
                         <tr class="bg-gray-50/80 border-b border-gray-200 text-gray-600 uppercase text-[11px] font-bold tracking-wider select-none">
                             <th scope="col" class="py-3.5 px-4 w-14 text-center">STT</th>
-                            <th scope="col" class="py-3.5 px-4">Khách hàng</th>
+                            <th scope="col" class="py-3.5 px-4 cursor-pointer hover:text-indigo-600 hover:bg-gray-100/60 transition-colors" onclick="toggleSortField('name')" title="Bấm để sắp xếp theo tên khách hàng (A-Z / Z-A)">
+                                <div class="flex items-center gap-1.5">
+                                    <span>Khách hàng</span>
+                                    <span id="sortIconName" class="inline-flex items-center text-gray-400">
+                                        <iconify-icon icon="mdi:unfold-more-horizontal" class="text-xs"></iconify-icon>
+                                    </span>
+                                </div>
+                            </th>
                             <th scope="col" class="py-3.5 px-4">Liên hệ (Email & SĐT)</th>
                             <th scope="col" class="py-3.5 px-4">Địa chỉ chính</th>
                             <th scope="col" class="py-3.5 px-4 text-center">Đơn hàng</th>
-                            <th scope="col" class="py-3.5 px-4 text-right">Tổng chi tiêu</th>
-                            <th scope="col" class="py-3.5 px-4">Ngày đăng ký</th>
+                            <th scope="col" class="py-3.5 px-4 text-right cursor-pointer hover:text-indigo-600 hover:bg-gray-100/60 transition-colors" onclick="toggleSortField('total_spent')" title="Bấm để sắp xếp theo tổng chi tiêu (Cao-Thấp / Thấp-Cao)">
+                                <div class="flex items-center justify-end gap-1.5">
+                                    <span>Tổng chi tiêu</span>
+                                    <span id="sortIconSpent" class="inline-flex items-center text-gray-400">
+                                        <iconify-icon icon="mdi:unfold-more-horizontal" class="text-xs"></iconify-icon>
+                                    </span>
+                                </div>
+                            </th>
+                            <th scope="col" class="py-3.5 px-4 cursor-pointer hover:text-indigo-600 hover:bg-gray-100/60 transition-colors" onclick="toggleSortField('created')" title="Bấm để sắp xếp theo ngày đăng ký (Mới nhất / Cũ nhất)">
+                                <div class="flex items-center gap-1.5">
+                                    <span>Ngày đăng ký</span>
+                                    <span id="sortIconCreated" class="inline-flex items-center text-indigo-600 font-bold">
+                                        <iconify-icon icon="mdi:arrow-down" class="text-xs"></iconify-icon>
+                                    </span>
+                                </div>
+                            </th>
                             <th scope="col" class="py-3.5 px-4 text-center w-20">Chi tiết</th>
                         </tr>
                     </thead>
@@ -582,6 +617,7 @@
             pageInfo: {},
             pageSize: 50,
             searchQuery: '',
+            sortBy: 'created_desc',
             proxyEnabled: {{ 'true' if proxy_enabled else 'false' }},
             defaultFullDomain: '{{ default_full_domain }}',
             customFullDomain: '{{ custom_full_domain }}',
@@ -602,6 +638,13 @@
                 toggle.checked = state.proxyEnabled;
                 updateProxyToggleUI(state.proxyEnabled, state.activeFullDomain);
             }
+
+            // Khởi tạo sort select & icons
+            const sortSelect = document.getElementById('sortSelect');
+            if (sortSelect) {
+                sortSelect.value = state.sortBy;
+            }
+            updateHeaderSortIcons();
 
             // Tải dữ liệu ban đầu
             loadCustomersData();
@@ -852,7 +895,7 @@
             if (refreshIcon) refreshIcon.classList.add('animate-spin');
             errorAlert.classList.add('hidden');
 
-            let url = `/api/customers?first=${state.pageSize}&sort_key=CREATED_AT&reverse=true`;
+            let url = `/api/customers?first=${state.pageSize}&sort_by=${encodeURIComponent(state.sortBy)}`;
             url += `&use_custom_store=${state.proxyEnabled}`;
 
             if (state.searchQuery) {
@@ -938,7 +981,17 @@
             customers.forEach((cust, index) => {
                 const stt = index + 1;
                 const tr = document.createElement('tr');
-                tr.className = 'hover:bg-indigo-50/40 cursor-pointer transition-colors border-b border-gray-100 group';
+
+                // Kiểm tra khách hàng đã đặt đơn
+                const numOrders = parseInt(cust.numberOfOrders || 0, 10);
+                const hasOrders = numOrders > 0;
+
+                // Khách đã đặt đơn: nền xanh lá nhạt dịu mắt (bg-emerald-50/70), hover xanh lá rõ hơn
+                if (hasOrders) {
+                    tr.className = 'bg-emerald-50/70 hover:bg-emerald-100/70 cursor-pointer transition-colors border-b border-emerald-100/80 group';
+                } else {
+                    tr.className = 'hover:bg-indigo-50/40 cursor-pointer transition-colors border-b border-gray-100 group';
+                }
                 tr.onclick = () => openCustomerModal(cust);
 
                 // Tên hiển thị & initials
@@ -971,7 +1024,7 @@
                 }
 
                 tr.innerHTML = `
-                    <td class="py-3.5 px-4 text-center font-mono font-semibold text-gray-500 text-xs">
+                    <td class="py-3.5 px-4 text-center font-mono font-semibold ${hasOrders ? 'text-emerald-800' : 'text-gray-500'} text-xs">
                         ${stt}
                     </td>
                     <td class="py-3.5 px-4">
@@ -980,7 +1033,7 @@
                                 ${initials}
                             </div>
                             <div class="min-w-0">
-                                <div class="font-bold text-gray-900 group-hover:text-indigo-600 transition-colors truncate max-w-[200px]">
+                                <div class="font-bold text-gray-900 ${hasOrders ? 'group-hover:text-emerald-800' : 'group-hover:text-indigo-600'} transition-colors truncate max-w-[200px]">
                                     ${escapeHtml(fullName)}
                                 </div>
                                 <div class="flex items-center gap-1.5 mt-0.5">
@@ -1000,7 +1053,7 @@
                                     type="button"
                                     data-email="${escapeHtml(cust.email)}"
                                     onclick="copyCustomerEmail(event, this)"
-                                    class="p-1 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-all cursor-pointer flex-shrink-0 inline-flex items-center justify-center ml-0.5"
+                                    class="p-1 text-gray-400 ${hasOrders ? 'hover:text-emerald-700 hover:bg-emerald-100/60' : 'hover:text-indigo-600 hover:bg-indigo-50'} rounded-md transition-all cursor-pointer flex-shrink-0 inline-flex items-center justify-center ml-0.5"
                                     title="Sao chép email"
                                 >
                                     <iconify-icon icon="mdi:content-copy" class="text-lg"></iconify-icon>
@@ -1024,11 +1077,12 @@
                         </div>
                     </td>
                     <td class="py-3.5 px-4 text-center">
-                        <span class="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs font-bold ${cust.numberOfOrders > 0 ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'bg-gray-100 text-gray-500'}">
-                            ${cust.numberOfOrders || 0}
+                        <span class="inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${hasOrders ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs' : 'bg-gray-100 text-gray-500'}">
+                            ${hasOrders ? '<iconify-icon icon="mdi:cart-check" class="text-xs text-emerald-700"></iconify-icon>' : ''}
+                            <span>${numOrders}</span>
                         </span>
                     </td>
-                    <td class="py-3.5 px-4 text-right font-mono font-bold text-gray-900">
+                    <td class="py-3.5 px-4 text-right font-mono font-bold ${hasOrders ? 'text-emerald-700' : 'text-gray-900'}">
                         ${amt}
                     </td>
                     <td class="py-3.5 px-4 text-gray-500 text-xs">
@@ -1038,7 +1092,7 @@
                         </div>
                     </td>
                     <td class="py-3.5 px-4 text-center">
-                        <button type="button" class="p-1.5 text-gray-400 group-hover:text-indigo-600 group-hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer" title="Xem chi tiết khách hàng">
+                        <button type="button" class="p-1.5 text-gray-400 ${hasOrders ? 'group-hover:text-emerald-700 group-hover:bg-emerald-100/60' : 'group-hover:text-indigo-600 group-hover:bg-indigo-50'} rounded-lg transition-colors cursor-pointer" title="Xem chi tiết khách hàng">
                             <iconify-icon icon="mdi:eye-outline" class="text-lg"></iconify-icon>
                         </button>
                     </td>
@@ -1203,6 +1257,111 @@
             }
         });
 
+        // Sắp xếp (Sorting Handlers & Helpers)
+        function getSortLabel(sortBy) {
+            switch (sortBy) {
+                case 'created_desc': return 'ngày đăng ký mới nhất ↓';
+                case 'created_asc': return 'ngày đăng ký cũ nhất ↑';
+                case 'total_spent_desc': return 'tổng chi tiêu cao nhất ↓';
+                case 'total_spent_asc': return 'tổng chi tiêu thấp nhất ↑';
+                case 'name_asc': return 'tên khách hàng A ➔ Z';
+                case 'name_desc': return 'tên khách hàng Z ➔ A';
+                default: return 'mới nhất đến cũ nhất';
+            }
+        }
+
+        function handleSortChange(val) {
+            state.sortBy = val;
+            state.startCursor = null;
+            state.endCursor = null;
+            state.cursorHistory = [];
+            updateHeaderSortIcons();
+            const sel = document.getElementById('sortSelect');
+            if (sel && sel.value !== val) {
+                sel.value = val;
+            }
+            if (state.customers && state.customers.length > 0) {
+                applyLocalSort();
+                renderTable(state.customers);
+            }
+            loadCustomersData();
+        }
+
+        function toggleSortField(field) {
+            if (field === 'name') {
+                state.sortBy = (state.sortBy === 'name_asc') ? 'name_desc' : 'name_asc';
+            } else if (field === 'total_spent') {
+                state.sortBy = (state.sortBy === 'total_spent_desc') ? 'total_spent_asc' : 'total_spent_desc';
+            } else if (field === 'created') {
+                state.sortBy = (state.sortBy === 'created_desc') ? 'created_asc' : 'created_desc';
+            }
+            handleSortChange(state.sortBy);
+        }
+
+        function updateHeaderSortIcons() {
+            const iconName = document.getElementById('sortIconName');
+            const iconSpent = document.getElementById('sortIconSpent');
+            const iconCreated = document.getElementById('sortIconCreated');
+
+            if (iconName) {
+                iconName.className = 'inline-flex items-center text-gray-400';
+                iconName.innerHTML = '<iconify-icon icon="mdi:unfold-more-horizontal" class="text-xs"></iconify-icon>';
+            }
+            if (iconSpent) {
+                iconSpent.className = 'inline-flex items-center text-gray-400';
+                iconSpent.innerHTML = '<iconify-icon icon="mdi:unfold-more-horizontal" class="text-xs"></iconify-icon>';
+            }
+            if (iconCreated) {
+                iconCreated.className = 'inline-flex items-center text-gray-400';
+                iconCreated.innerHTML = '<iconify-icon icon="mdi:unfold-more-horizontal" class="text-xs"></iconify-icon>';
+            }
+
+            if (state.sortBy === 'name_asc' && iconName) {
+                iconName.className = 'inline-flex items-center text-indigo-600 font-bold';
+                iconName.innerHTML = '<iconify-icon icon="mdi:arrow-up" class="text-xs"></iconify-icon>';
+            } else if (state.sortBy === 'name_desc' && iconName) {
+                iconName.className = 'inline-flex items-center text-indigo-600 font-bold';
+                iconName.innerHTML = '<iconify-icon icon="mdi:arrow-down" class="text-xs"></iconify-icon>';
+            } else if (state.sortBy === 'total_spent_desc' && iconSpent) {
+                iconSpent.className = 'inline-flex items-center text-indigo-600 font-bold';
+                iconSpent.innerHTML = '<iconify-icon icon="mdi:arrow-down" class="text-xs"></iconify-icon>';
+            } else if (state.sortBy === 'total_spent_asc' && iconSpent) {
+                iconSpent.className = 'inline-flex items-center text-indigo-600 font-bold';
+                iconSpent.innerHTML = '<iconify-icon icon="mdi:arrow-up" class="text-xs"></iconify-icon>';
+            } else if (state.sortBy === 'created_desc' && iconCreated) {
+                iconCreated.className = 'inline-flex items-center text-indigo-600 font-bold';
+                iconCreated.innerHTML = '<iconify-icon icon="mdi:arrow-down" class="text-xs"></iconify-icon>';
+            } else if (state.sortBy === 'created_asc' && iconCreated) {
+                iconCreated.className = 'inline-flex items-center text-indigo-600 font-bold';
+                iconCreated.innerHTML = '<iconify-icon icon="mdi:arrow-up" class="text-xs"></iconify-icon>';
+            }
+        }
+
+        function applyLocalSort() {
+            if (!state.customers) return;
+            if (state.sortBy === 'total_spent_desc') {
+                state.customers.sort((a, b) => (parseFloat(b.amountSpent?.amount || 0) - parseFloat(a.amountSpent?.amount || 0)));
+            } else if (state.sortBy === 'total_spent_asc') {
+                state.customers.sort((a, b) => (parseFloat(a.amountSpent?.amount || 0) - parseFloat(b.amountSpent?.amount || 0)));
+            } else if (state.sortBy === 'name_asc') {
+                state.customers.sort((a, b) => {
+                    const na = ([a.firstName, a.lastName].filter(Boolean).join(' ') || a.displayName || a.email || '').toLowerCase();
+                    const nb = ([b.firstName, b.lastName].filter(Boolean).join(' ') || b.displayName || b.email || '').toLowerCase();
+                    return na.localeCompare(nb);
+                });
+            } else if (state.sortBy === 'name_desc') {
+                state.customers.sort((a, b) => {
+                    const na = ([a.firstName, a.lastName].filter(Boolean).join(' ') || a.displayName || a.email || '').toLowerCase();
+                    const nb = ([b.firstName, b.lastName].filter(Boolean).join(' ') || b.displayName || b.email || '').toLowerCase();
+                    return nb.localeCompare(na);
+                });
+            } else if (state.sortBy === 'created_asc') {
+                state.customers.sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
+            } else if (state.sortBy === 'created_desc') {
+                state.customers.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+            }
+        }
+
         // Pagination Controls
         function updatePaginationControls() {
             const btnPrev = document.getElementById('btnPrevPage');
@@ -1212,7 +1371,7 @@
             btnPrev.disabled = !state.pageInfo.hasPreviousPage;
             btnNext.disabled = !state.pageInfo.hasNextPage;
 
-            info.textContent = `Đang hiển thị ${state.customers.length} khách hàng (sắp xếp mới nhất đến cũ nhất)`;
+            info.textContent = `Đang hiển thị ${state.customers.length} khách hàng (${getSortLabel(state.sortBy)})`;
         }
 
         function goToNextPage() {

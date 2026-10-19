@@ -37,7 +37,9 @@ python -m scraper worker
 
 ## Antigravity runtime
 
-The repository contains a workspace-local MCP definition and a restricted `wrydeco-content` Agent. `python -m scraper serve` launches a control `agy` process in stream-json mode, sends a minimal bootstrap prompt that calls `queue_status`, and keeps that process/conversation until the server stops. The control conversation only handles bootstrap, readiness, and health checks; it never receives product data. The API exposes `process_ready` after the CLI has supplied a valid conversation ID and MCP tool bridge, while `ready` becomes true only after the bootstrap result and marker are verified.
+The repository contains a workspace-local MCP definition, a restricted `wrydeco-content` Agent, and an Antigravity model configuration file (`scraper/antigravity_config.json`, defaulting to `"Gemini 3.8 Flash (High)"`). Every Antigravity invocation across the tool—the long-lived control conversation, isolated per-product content conversations, and the TUI cleanup terminal—passes `--model <configured_model>` from `scraper/antigravity_config.json`. You can also view and update the model directly from the **Antigravity Runtime** card on the Dashboard UI (`GET/PUT /api/agent/config`), which atomically writes `scraper/antigravity_config.json` and restarts the control conversation when idle.
+
+`python -m scraper serve` launches a control `agy` process in stream-json mode, sends a minimal bootstrap prompt that calls `queue_status`, and keeps that process/conversation until the server stops. The control conversation only handles bootstrap, readiness, and health checks; it never receives product data. The API exposes `process_ready` after the CLI has supplied a valid conversation ID and MCP tool bridge, while `ready` becomes true only after the bootstrap result and marker are verified.
 
 For every queued product, the server launches a separate Antigravity process/conversation restricted by `WRYDECO_EXPECTED_TASK_ID`. Retries for that product stay inside the same isolated conversation, and the process exits immediately after finalization or terminal failure. This prevents facts and copy from an earlier product leaking into later content. Finished content conversations are recorded as `pending_cleanup` in **Quản lý conversations**.
 
@@ -76,6 +78,12 @@ The Event Log contains crawler, sanitized Antigravity/MCP lifecycle, and Shopify
 Pricing behavior remains fail-closed: `Decimal`, signed additional prices, complete combination/footer verification within `$0.01`, Wood Finish consistency checks, and the default 100-combination cap.
 
 ## Product AEO
+
+Existing products missing AEO can now be processed from **Bổ sung AEO cho sản phẩm trong store**.
+Enter a successful-write target; the tool scans newest-created products first, reuses the AEO module,
+performs a separate full review turn, and writes only empty `custom.aeo_html` fields.
+Durable Pause/Resume, per-product evidence and full draft previews are available.
+See `docs/aeo-backfill.md` for the contract, recovery and write policy.
 
 New Dashboard and CLI batches generate AEO in the same isolated product conversation as SEO.
 Existing-ASIN preflight still skips products already on Shopify; earlier unversioned runs keep their original contract.

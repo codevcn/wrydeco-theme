@@ -1,5 +1,5 @@
 const $ = (selector) => document.querySelector(selector);
-const state = { csrf: "", manifest: { products: [] }, runs: [], currentRun: null, currentTask: null, refreshTimer: null, agent: null, agentReady: false, agentSessions: [], documents: [], currentDocument: null, prompts: null, productTypes: [], productTypeTarget: null, eventLines: [], pendingEvents: [], eventFlushTimer: null, eventCursor: 0, eventSource: null };
+const state = { csrf: "", manifest: { products: [] }, runs: [], currentRun: null, currentTask: null, refreshTimer: null, agent: null, agentReady: false, antigravityConfig: { model: "Gemini 3.8 Flash (High)", available_models: [], source: "antigravity_config.json" }, agentSessions: [], documents: [], currentDocument: null, prompts: null, productTypes: [], productTypeTarget: null, eventLines: [], pendingEvents: [], eventFlushTimer: null, eventCursor: 0, eventSource: null };
 const INITIAL_EVENT_LOG_LIMIT = 250;
 const MAX_EVENT_LOG_LINES = 500;
 
@@ -150,7 +150,8 @@ function renderProductTypeOptions(selectedValue = "") {
   root.innerHTML = state.productTypes.map((value) => `<button class="product-type-option${value === selectedValue ? " selected" : ""}" type="button" role="option" aria-selected="${value === selectedValue}" data-product-type="${escapeHtml(value)}">${escapeHtml(value)}</button>`).join("");
   root.querySelectorAll("[data-product-type]").forEach((button) => button.addEventListener("click", () => {
     $("#product-type-custom").value = button.dataset.productType;
-    $("#product-type-status").textContent = `Đã chọn ${button.dataset.productType}. Nhấn Áp dụng để cập nhật sản phẩm.`;
+    const count = Math.max(1, parseInt($("#product-type-apply-count")?.value, 10) || 1);
+    $("#product-type-status").textContent = `Đã chọn ${button.dataset.productType}. Nhấn Áp dụng để cập nhật cho ${count} row.`;
     renderProductTypeOptions(button.dataset.productType);
   }));
 }
@@ -160,6 +161,8 @@ async function openProductTypePicker(target) {
   $("#product-type-modal").hidden = false;
   document.body.classList.add("product-type-open");
   $("#product-type-custom").value = target.value;
+  const countInput = $("#product-type-apply-count");
+  if (countInput) countInput.value = "1";
   $("#product-type-status").textContent = "Danh sách được đọc từ scraper/product_types.json.";
   renderProductTypeOptions(target.value);
   $("#product-type-custom").focus();
@@ -251,7 +254,7 @@ function renderDocsList() {
   const root = $("#docs-list");
   $("#docs-count").textContent = `${state.documents.length} file`;
   if (!state.documents.length) {
-    root.innerHTML = '<p class="docs-empty">Không tìm thấy file .md hoặc .txt trong scraper/docs.</p>';
+    root.innerHTML = '<p class="docs-empty">Không tìm thấy file .md, .txt hoặc .html trong scraper/docs.</p>';
     return;
   }
   root.innerHTML = state.documents.map((document) => `
@@ -264,6 +267,7 @@ function renderDocsList() {
 
 async function loadDocument(path) {
   const content = $("#docs-content");
+  const openNewtabBtn = $("#docs-open-newtab");
   content.innerHTML = '<p class="docs-placeholder">Đang tải tài liệu…</p>';
   try {
     const document = await api(`/api/docs/content?path=${encodeURIComponent(path)}`);
@@ -271,6 +275,14 @@ async function loadDocument(path) {
     $("#docs-current-file").textContent = document.path;
     content.dataset.format = document.format;
     content.innerHTML = document.rendered_html;
+    if (openNewtabBtn) {
+      if (document.format === "html") {
+        openNewtabBtn.hidden = false;
+        openNewtabBtn.href = `/api/docs/raw?path=${encodeURIComponent(document.path)}`;
+      } else {
+        openNewtabBtn.hidden = true;
+      }
+    }
     content.querySelectorAll("a[href]").forEach((link) => {
       if (/^https?:\/\//i.test(link.getAttribute("href") || "")) {
         link.target = "_blank";
@@ -282,6 +294,7 @@ async function loadDocument(path) {
     renderDocsList();
   } catch (error) {
     content.removeAttribute("data-format");
+    if (openNewtabBtn) openNewtabBtn.hidden = true;
     content.innerHTML = `<p class="docs-placeholder error">Không thể tải tài liệu: ${escapeHtml(error.message)}</p>`;
     $("#docs-scroll-bottom").disabled = true;
   }
@@ -300,7 +313,7 @@ async function openDocs() {
   else {
     state.currentDocument = null;
     $("#docs-current-file").textContent = "Chưa có tài liệu";
-    $("#docs-content").innerHTML = '<p class="docs-placeholder">Không tìm thấy file .md hoặc .txt trong scraper/docs.</p>';
+    $("#docs-content").innerHTML = '<p class="docs-placeholder">Không tìm thấy file .md, .txt hoặc .html trong scraper/docs.</p>';
     $("#docs-scroll-bottom").disabled = true;
   }
 }
@@ -434,7 +447,19 @@ function manifestRows() {
       return item.amazon_url || item.shopify_product_id;
     });
 }
+
+function updateRowIndices() {
+  const rows = document.querySelectorAll("#products-body .product-row");
+  rows.forEach((row, index) => {
+    const badge = row.querySelector(".row-index");
+    if (badge) {
+      badge.textContent = String(index + 1);
+    }
+  });
+}
+
 function updatePreview() {
+  updateRowIndices();
   state.manifest = collectManifest();
   $("#manifest-preview").textContent = JSON.stringify(state.manifest, null, 2);
   $("#hero-product-count").textContent = state.manifest.products.length;
@@ -503,12 +528,58 @@ function updateAgentStartupToast(agent) {
     : (agent?.message || "Server đang tạo conversation và kiểm tra kết nối MCP trong nền. Crawler vẫn có thể chạy.");
 }
 
+function renderAntigravityModelConfig(config) {
+  if (config) state.antigravityConfig = config;
+  const currentModel = state.antigravityConfig?.model || state.agent?.model || "Gemini 3.8 Flash (High)";
+  const available = state.antigravityConfig?.available_models?.length
+    ? state.antigravityConfig.available_models
+    : [currentModel];
+  const options = available.includes(currentModel) ? available : [currentModel, ...available];
+  const select = $("#agent-model-select");
+  if (select) {
+    select.innerHTML = options.map((model) => `<option value="${escapeHtml(model)}"${model === currentModel ? " selected" : ""}>${escapeHtml(model)}</option>`).join("");
+    select.value = currentModel;
+  }
+  const input = $("#agent-model-input");
+  if (input && document.activeElement !== input) {
+    input.value = currentModel;
+  }
+  const sourceNode = $("#agent-model-source");
+  if (sourceNode && state.antigravityConfig?.source) {
+    sourceNode.textContent = `scraper/${state.antigravityConfig.source}`;
+  }
+  const runtimeModel = $("#agent-model");
+  if (runtimeModel) {
+    const displayedModel = state.agent?.model || currentModel;
+    runtimeModel.textContent = displayedModel;
+    runtimeModel.title = displayedModel;
+  }
+}
+
+async function saveAgentModel() {
+  const input = $("#agent-model-input");
+  const select = $("#agent-model-select");
+  const model = (input?.value || select?.value || "").trim();
+  if (!model) throw new Error("Vui lòng nhập hoặc chọn model Antigravity.");
+  const result = await api("/api/agent/config", {
+    method: "PUT",
+    body: JSON.stringify({ model, restart: true }),
+  });
+  renderAntigravityModelConfig(result.config);
+  if (result.agent) updateAgent(result.agent);
+  notify(result.restarted
+    ? `Đã lưu model "${result.config.model}" và khởi động lại Antigravity.`
+    : `Đã lưu model "${result.config.model}" vào ${result.config.source}.`);
+}
+
 function updateAgent(agent) {
   state.agent = agent || {}; state.agentReady = Boolean(agent?.ready);
   const status = agent?.status || "stopped";
+  const model = agent?.model || state.antigravityConfig?.model || "Gemini 3.8 Flash (High)";
   $("#agent-status").textContent = status.toUpperCase(); $("#agent-status").className = `status-pill ${tone(status)}`;
   $("#agent-status-tooltip").textContent = agentStatusHelp[status] || "Trạng thái runtime Antigravity hiện tại.";
   $("#agent-message").textContent = agent?.message || "Không có trạng thái Antigravity.";
+  if ($("#agent-model")) { $("#agent-model").textContent = model; $("#agent-model").title = model; }
   $("#agent-conversation").textContent = agent?.conversation_id ? String(agent.conversation_id).slice(0, 12) : "—";
   $("#agent-pid").textContent = agent?.pid || "—"; $("#agent-turns").textContent = agent?.num_turns || 0;
   $("#agent-current-task").textContent = agent?.current_asin || (agent?.current_product_id ? String(agent.current_product_id).slice(0, 10) : "—");
@@ -737,6 +808,7 @@ async function bootstrap() {
   try {
     const data = await api("/api/bootstrap"); state.csrf = data.csrf_token; state.manifest = data.manifest; state.runs = data.runs; state.agentSessions = data.agent_sessions || [];
     state.productTypes = data.product_types || [];
+    renderAntigravityModelConfig(data.antigravity_config);
     (data.manifest.products || []).forEach(addRow); if (!data.manifest.products?.length) addRow();
     $("#headless").checked = data.options.headless; $("#dry-run").checked = data.options.dry_run;
     $("#max-combinations").value = data.options.max_combinations; $("#postal-code").value = data.options.amazon_postal_code;
@@ -753,6 +825,13 @@ function updatePageScrollControls() {
 }
 
 $("#add-product").addEventListener("click", () => addRow());
+$("#clear-all-products").addEventListener("click", () => {
+  const rows = document.querySelectorAll("#products-body .product-row");
+  if (!rows.length) return;
+  rows.forEach((row) => row.remove());
+  updatePreview();
+  notify("Đã xóa tất cả row trong danh sách sản phẩm.");
+});
 $("#save-manifest").addEventListener("click", (event) => action(event.currentTarget, async () => { await api("/api/manifest", { method: "PUT", body: JSON.stringify(collectManifest()) }); notify("Đã lưu products.json atomically."); }));
 $("#run-batch").addEventListener("click", (event) => action(event.currentTarget, async () => {
   const manifest = collectManifest();
@@ -783,6 +862,16 @@ $("#check-agent").addEventListener("click", (event) => action(event.currentTarge
   updateAgent(result.agent);
   notify(`Antigravity đang hoạt động. Thời gian phản hồi lệch ${Math.round(result.drift_seconds)} giây.`);
 }));
+$("#agent-model-select")?.addEventListener("change", (event) => {
+  if ($("#agent-model-input")) $("#agent-model-input").value = event.target.value;
+});
+$("#agent-model-input")?.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    $("#save-agent-model")?.click();
+  }
+});
+$("#save-agent-model")?.addEventListener("click", (event) => action(event.currentTarget, saveAgentModel));
 $("#open-agent-sessions").addEventListener("click", (event) => action(event.currentTarget, openAgentSessions));
 $("#close-agent-sessions").addEventListener("click", closeAgentSessions);
 $("#close-agent-sessions-footer").addEventListener("click", closeAgentSessions);
@@ -811,15 +900,53 @@ $("#page-scroll-bottom").addEventListener("click", () => window.scrollTo(0, docu
 $("#close-product-type").addEventListener("click", closeProductTypePicker);
 $("#product-type-modal").addEventListener("click", (event) => { if (event.target === event.currentTarget) closeProductTypePicker(); });
 $("#product-type-custom").addEventListener("input", () => renderProductTypeOptions($("#product-type-custom").value.trim()));
+$("#product-type-apply-count").addEventListener("input", () => {
+  const value = $("#product-type-custom").value.trim();
+  const count = Math.max(1, parseInt($("#product-type-apply-count").value, 10) || 1);
+  if (value) {
+    $("#product-type-status").textContent = `Product type "${value}" sẽ được áp dụng cho ${count} row bắt đầu từ row này.`;
+  }
+});
+$("#product-type-custom").addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    $("#apply-product-type").click();
+  }
+});
+$("#product-type-apply-count").addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    $("#apply-product-type").click();
+  }
+});
 $("#apply-product-type").addEventListener("click", () => {
   const value = $("#product-type-custom").value.trim();
   if (!value) {
     $("#product-type-status").textContent = "Hãy chọn hoặc nhập một product type.";
     return;
   }
+  const countRaw = $("#product-type-apply-count").value;
+  const count = Math.max(1, parseInt(countRaw, 10) || 1);
+
   if (state.productTypeTarget?.isConnected) {
-    state.productTypeTarget.value = value;
-    state.productTypeTarget.dispatchEvent(new Event("input", { bubbles: true }));
+    const startRow = state.productTypeTarget.closest(".product-row");
+    const allRows = Array.from(document.querySelectorAll("#products-body .product-row"));
+    const startIndex = allRows.indexOf(startRow);
+
+    if (startIndex !== -1) {
+      const targetRows = allRows.slice(startIndex, startIndex + count);
+      targetRows.forEach((r) => {
+        const input = r.querySelector('[data-field="product_type"]');
+        if (input) {
+          input.value = value;
+          input.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+      });
+      notify(`Đã áp dụng product type "${value}" cho ${targetRows.length} row.`);
+    } else {
+      state.productTypeTarget.value = value;
+      state.productTypeTarget.dispatchEvent(new Event("input", { bubbles: true }));
+    }
   }
   closeProductTypePicker();
 });

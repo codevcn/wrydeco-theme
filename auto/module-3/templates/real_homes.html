@@ -101,7 +101,7 @@
                 <nav class="flex items-center gap-6" style="font-family: 'Inter', sans-serif;">
                     <a target="_blank" rel="noopener noreferrer" href="/" class="header-menu-link text-sm font-medium text-gray-600 hover:text-amber-700 transition-colors" style="font-family: 'Inter', sans-serif;">Sản phẩm</a>
                     <a target="_blank" rel="noopener noreferrer" href="/collections" class="header-menu-link text-sm font-medium text-gray-600 hover:text-amber-700 transition-colors" style="font-family: 'Inter', sans-serif;">Collections</a>
-                    <a target="_blank" rel="noopener noreferrer" href="/metaobjects" class="header-menu-link text-sm font-medium text-gray-600 hover:text-amber-700 transition-colors" style="font-family: 'Inter', sans-serif;">Meta Objects</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/metaobjects" class="header-menu-link text-sm font-medium text-gray-600 hover:text-amber-700 transition-colors" style="font-family: 'Inter', sans-serif;">MetaObjects</a>
                     <a target="_blank" rel="noopener noreferrer" href="/create" class="header-menu-link text-sm font-bold text-red-600 hover:text-red-700 transition-colors" style="font-family: 'Inter', sans-serif;">Tạo sản phẩm</a>
                     <a target="_blank" rel="noopener noreferrer" href="/edit-variants" class="header-menu-link text-sm font-bold text-red-600 hover:text-red-700 transition-colors" style="font-family: 'Inter', sans-serif;">Sửa hàng loạt</a>
                     <a target="_blank" rel="noopener noreferrer" href="/blogs" class="header-menu-link text-sm font-medium text-gray-600 hover:text-amber-700 transition-colors flex items-center gap-1" style="font-family: 'Inter', sans-serif;"><iconify-icon icon="mdi:post-outline" class="text-lg"></iconify-icon>Blog</a>
@@ -370,7 +370,7 @@
             <!-- Modal Header (Neo ở đỉnh) -->
             <div class="px-6 py-4 sm:py-5 border-b border-gray-200 bg-gray-50 flex items-center justify-between shrink-0">
                 <div>
-                    <h3 id="projectModalTitle" class="text-lg font-bold text-gray-900">Thêm Dự Án Real Homes Mới</h3>
+                    <h3 id="projectModalTitle" class="text-lg font-bold text-gray-900">Thêm Dự Án Mới</h3>
                     <p class="text-xs text-gray-500 mt-0.5">Điền thông tin tác phẩm trưng bày để xuất bản trên storefront.</p>
                 </div>
                 <button type="button" onclick="closeProjectModal()" class="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-200 rounded-xl transition-colors cursor-pointer" title="Đóng popup">
@@ -592,7 +592,7 @@
                             <label class="block text-xs font-bold uppercase tracking-wider text-gray-700">
                                 Tải Thêm Ảnh / Video Cho Dự Án
                             </label>
-                            <span class="text-[11px] text-gray-500">Hỗ trợ JPG, PNG, WEBP, MP4</span>
+                            <span class="text-[11px] text-gray-500">Hỗ trợ JPG, PNG, WEBP, MP4, MOV (Chọn nhiều file cùng lúc)</span>
                         </div>
                         <div id="projectMediaDropzone" 
                              ondragover="handleProjectDragOver(event)" 
@@ -600,14 +600,14 @@
                              ondrop="handleProjectDrop(event)"
                              onclick="triggerProjectFileInput()"
                              class="border-2 border-dashed border-gray-300 hover:border-amber-600 rounded-2xl p-6 text-center cursor-pointer transition-all bg-gray-50 hover:bg-amber-50/50 flex flex-col items-center justify-center gap-2 group">
-                            <input type="file" id="projectMediaFileInput" class="hidden" accept="image/*,video/mp4" onchange="handleProjectFileSelected(this.files)">
+                            <input type="file" id="projectMediaFileInput" class="hidden" accept="image/*,video/*,.mp4,.mov,.webm" multiple onchange="handleProjectFileSelected(this.files)">
                             <div class="w-12 h-12 rounded-2xl bg-white shadow-xs border border-gray-200 text-amber-700 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
                                 <iconify-icon icon="mdi:cloud-upload-outline"></iconify-icon>
                             </div>
                             <div class="text-xs text-gray-600">
-                                <span class="font-bold text-amber-700">Nhấn để chọn file</span> hoặc kéo thả ảnh/video vào đây
+                                <span class="font-bold text-amber-700">Nhấn để chọn file</span> hoặc kéo thả nhiều ảnh/video vào đây
                             </div>
-                            <div class="text-[10px] text-gray-400">File sẽ được tải lên Shopify CDN và tự động thêm vào dự án</div>
+                            <div class="text-[10px] text-gray-400">Hỗ trợ chọn nhiều file cùng lúc (Ảnh & Video) • Tải lên Shopify CDN & tự động thêm vào dự án</div>
                         </div>
 
                         <!-- Upload Progress Bar -->
@@ -1589,7 +1589,7 @@
                 return;
             }
 
-            document.getElementById('projectModalTitle').textContent = 'Thêm Dự Án Real Homes Mới';
+            document.getElementById('projectModalTitle').textContent = 'Thêm Dự Án Mới';
             document.getElementById('btnSaveProjectText').textContent = 'Tạo Dự Án';
             document.getElementById('editEntryId').value = '';
             document.getElementById('projectForm').reset();
@@ -1635,6 +1635,7 @@
         function closeProjectModal() {
             document.getElementById('projectModal').classList.add('hidden');
             document.getElementById('productSearchResultsDropdown').classList.add('hidden');
+            document.body.classList.remove('overflow-hidden');
         }
 
         // =====================================================================
@@ -1666,7 +1667,6 @@
             }
 
             modal.classList.remove('hidden');
-            document.body.classList.add('overflow-hidden');
         }
 
         function closeLightboxImage() {
@@ -1680,10 +1680,7 @@
                 vid.src = '';
                 vid.classList.add('hidden');
             }
-            const projectModal = document.getElementById('projectModal');
-            if (!projectModal || projectModal.classList.contains('hidden')) {
-                document.body.classList.remove('overflow-hidden');
-            }
+            document.body.classList.remove('overflow-hidden');
         }
 
         document.addEventListener('keydown', function(e) {
@@ -1705,7 +1702,7 @@
                 const isVid = u.toLowerCase().includes('.mp4') || u.toLowerCase().includes('.webm') || u.toLowerCase().includes('.mov');
                 const isFirst = idx === 0;
                 const div = document.createElement('div');
-                div.className = `relative w-16 h-16 rounded-xl bg-neutral-900 border ${isFirst ? 'border-amber-600 ring-2 ring-amber-400' : 'border-gray-200'} overflow-hidden group flex-shrink-0 cursor-pointer shadow-2xs hover:shadow-md transition-all`;
+                div.className = `relative w-20 h-20 rounded-xl bg-neutral-900 border ${isFirst ? 'border-amber-600 ring-2 ring-amber-400' : 'border-gray-200'} overflow-hidden group flex-shrink-0 cursor-pointer shadow-2xs hover:shadow-md transition-all`;
                 div.title = "Nhấn để xem ảnh phóng to (95vh)";
                 div.onclick = (e) => {
                     if (e.target.closest('button')) return;
@@ -2261,10 +2258,9 @@
 
         async function handleProjectFileSelected(files) {
             if (!files || files.length === 0) return;
-            const file = files[0];
 
             if (!isProxyStable && currentStore === 'custom') {
-                showToast('Proxy đang mất kết nối! Không thể tải file lên.', 'error');
+                showToast('Chốt chặn an toàn: Proxy đang mất kết nối! Không thể tải file lên.', 'error');
                 return;
             }
 
@@ -2274,64 +2270,116 @@
             const pPercent = document.getElementById('projectUploadPercent');
 
             pWrapper.classList.remove('hidden');
-            pFileName.textContent = file.name;
-            pBar.style.width = '30%';
-            pPercent.textContent = '30% (Staged Upload...)';
 
             const editEntryId = document.getElementById('editEntryId').value || '';
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('store', currentStore);
-            if (editEntryId) {
-                formData.append('entry_id', editEntryId);
-            }
+            const textarea = document.getElementById('formGalleryMedia');
 
-            try {
-                pBar.style.width = '65%';
-                pPercent.textContent = '65% (Tạo Shopify File & Cập nhật Metaobject...)';
+            const totalFiles = files.length;
+            let successCount = 0;
+            let errorCount = 0;
 
-                const res = await fetch('/api/real-homes/media/upload', {
-                    method: 'POST',
-                    body: formData
-                });
-                const data = await res.json();
+            for (let i = 0; i < totalFiles; i++) {
+                const file = files[i];
+                const fileSizeMB = (file.size / (1024 * 1024)).toFixed(1);
+                const fileIndexLabel = `[${i + 1}/${totalFiles}]`;
+                
+                // Hiển thị tên file và tiến trình bắt đầu của file hiện tại
+                pFileName.textContent = `${fileIndexLabel} Đang tải: ${file.name} (${fileSizeMB} MB)`;
+                const baseProgress = Math.round((i / totalFiles) * 100);
+                pBar.style.width = `${baseProgress}%`;
+                pPercent.textContent = `${baseProgress}%`;
 
-                if (!data.success) {
-                    throw new Error(data.message || 'Lỗi tải file');
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('store', currentStore);
+                if (editEntryId) {
+                    formData.append('entry_id', editEntryId);
                 }
 
-                pBar.style.width = '100%';
-                pPercent.textContent = '100% (Hoàn tất!)';
+                try {
+                    // Update thanh tiến trình khi đang xử lý
+                    const uploadProgress = Math.round(((i + 0.5) / totalFiles) * 100);
+                    pBar.style.width = `${uploadProgress}%`;
+                    pPercent.textContent = `${uploadProgress}% (Đang lưu Shopify CDN & Metaobject...)`;
 
-                const uploadedUrl = data.url;
-                const textarea = document.getElementById('formGalleryMedia');
-                const cur = textarea.value.trim();
+                    const res = await fetch('/api/real-homes/media/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
 
-                if (data.entry && data.entry.gallery_media) {
-                    textarea.value = data.entry.gallery_media;
-                    // Cập nhật lại trong allProjects
-                    const p = allProjects.find(item => item.id === editEntryId);
-                    if (p) {
-                        p.gallery_media = data.entry.gallery_media;
-                        p.gallery_list = data.entry.gallery_media.split(',').map(s => s.trim()).filter(Boolean);
+                    // Xử lý an toàn lỗi HTTP trả về (như 413 Too Large, 502, 504) tránh SyntaxError Unexpected token '<'
+                    if (!res.ok) {
+                        let errorMsg = `Lỗi HTTP ${res.status}`;
+                        try {
+                            const errJson = await res.json();
+                            errorMsg = errJson.message || errorMsg;
+                        } catch {
+                            const errText = await res.text();
+                            if (res.status === 413) {
+                                errorMsg = `File "${file.name}" quá lớn (${fileSizeMB} MB), vượt quá giới hạn tải lên của máy chủ!`;
+                            } else {
+                                errorMsg = `Lỗi máy chủ (${res.status}): ${errText.slice(0, 100)}`;
+                            }
+                        }
+                        throw new Error(errorMsg);
                     }
-                } else {
-                    textarea.value = cur ? `${cur},${uploadedUrl}` : uploadedUrl;
+
+                    const data = await res.json();
+                    if (!data.success) {
+                        throw new Error(data.message || `Lỗi tải file ${file.name}`);
+                    }
+
+                    successCount++;
+                    const uploadedUrl = data.url;
+
+                    if (data.entry && data.entry.gallery_media) {
+                        textarea.value = data.entry.gallery_media;
+                        // Cập nhật lại trong allProjects
+                        const p = allProjects.find(item => item.id === editEntryId);
+                        if (p) {
+                            p.gallery_media = data.entry.gallery_media;
+                            p.gallery_list = data.entry.gallery_media.split(',').map(s => s.trim()).filter(Boolean);
+                        }
+                    } else if (uploadedUrl) {
+                        const curList = textarea.value.split(',').map(s => s.trim()).filter(Boolean);
+                        if (!curList.includes(uploadedUrl)) {
+                            curList.push(uploadedUrl);
+                            textarea.value = curList.join(',');
+                        }
+                    }
+
+                    // Cập nhật giao diện thumbnail và media grid ngay sau mỗi file tải xong
+                    renderGalleryThumbnails(textarea.value);
+                    renderProjectMediaGrid();
+
+                } catch (err) {
+                    errorCount++;
+                    console.error(`Lỗi tải file ${file.name}:`, err);
+                    showToast(`Lỗi file "${file.name}": ${err.message}`, 'error');
                 }
-
-                renderGalleryThumbnails(textarea.value);
-                renderProjectMediaGrid();
-                renderProjects();
-
-                showToast('Đã tải ảnh/video lên Shopify CDN và cập nhật dự án thành công!', 'success');
-            } catch (err) {
-                showToast(err.message || 'Lỗi khi upload file', 'error');
-            } finally {
-                setTimeout(() => {
-                    pWrapper.classList.add('hidden');
-                    pBar.style.width = '0%';
-                }, 1500);
             }
+
+            // Hoàn tất toàn bộ danh sách files
+            pBar.style.width = '100%';
+            if (errorCount === 0) {
+                pPercent.textContent = `100% (Hoàn tất ${successCount}/${totalFiles} file!)`;
+                showToast(`Đã tải lên thành công ${successCount} file media vào dự án!`, 'success');
+            } else {
+                pPercent.textContent = `Hoàn tất: ${successCount} thành công, ${errorCount} thất bại`;
+                showToast(`Hoàn tất tải lên: ${successCount} thành công, ${errorCount} thất bại.`, errorCount === totalFiles ? 'error' : 'warning');
+            }
+
+            renderProjects();
+
+            // Reset input file để user có thể tiếp tục chọn file mới hoặc chọn lại cùng file
+            const fileInput = document.getElementById('projectMediaFileInput');
+            if (fileInput) fileInput.value = '';
+
+            setTimeout(() => {
+                pWrapper.classList.add('hidden');
+                pBar.style.width = '0%';
+                pPercent.textContent = '0%';
+            }, 3000);
         }
 
         // =====================================================================

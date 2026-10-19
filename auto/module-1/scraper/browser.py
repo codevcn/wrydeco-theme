@@ -78,12 +78,27 @@ class AmazonBrowser:
         "a:has-text('Customize now')",
         "button:has-text('Customize now')",
     )
+    CONTINUE_SHOPPING_SELECTORS = (
+        "form[action*='validateCaptcha'] button[type='submit']",
+        "form[action*='validateCaptcha'] input[type='submit']",
+        "button[alt='Continue shopping']",
+        "button:has-text('Continue shopping')",
+        "input[value='Continue shopping']",
+        "a:has-text('Continue shopping')",
+    )
+    TITLE_SELECTORS = (
+        "#productTitle",
+        "#titleSection #title",
+        "h1#title span",
+        "h1 span",
+    )
 
     def __init__(self, settings: Settings, event_callback: EventCallback | None = None):
         self.settings = settings
         self.event_callback = event_callback
         self._playwright = None
         self.context = None
+        self._crawl_count = 0
 
     async def __aenter__(self) -> "AmazonBrowser":
         try:
@@ -117,21 +132,19 @@ class AmazonBrowser:
             raise RuntimeError("AmazonBrowser must be used as an async context manager.")
         page = await self.context.new_page()
         try:
+            if self._crawl_count > 0:
+                await page.wait_for_timeout(800)
+            self._crawl_count += 1
             print(f"[{evidence_dir.parent.name}] loading Amazon PDP")
             asin = evidence_dir.parent.name
             emit(self.event_callback, "crawl_stage", asin=asin, stage="pdp_loading")
-            await page.goto(url, wait_until="domcontentloaded", timeout=60_000)
-            await self._ensure_delivery_location(page)
+            title = await self._load_pdp(page, url, evidence_dir)
             await page.add_script_tag(path=str(Path(__file__).parent / "extension" / "shared.js"))
-            await self._check_challenge(page, evidence_dir)
-            title = await self._first_text(page, ["#productTitle", "h1 span"])
             base_text = await self._first_text(page, [
                 "#corePrice_feature_div .a-price .a-offscreen",
                 "#apex_desktop .a-price .a-offscreen",
                 "#priceblock_ourprice", "#priceblock_dealprice", "#price_inside_buybox",
             ])
-            if not title:
-                raise BrowserAutomationError("Amazon PDP is missing a visible product title.")
             base_price: Decimal | None = parse_base_price(base_text) if base_text else None
             if base_price is None and mode in {"auto", "dynamic"}:
                 try:
@@ -190,10 +203,121 @@ class AmazonBrowser:
         finally:
             await page.close()
 
+    async def _load_pdp(self, page: Any, url: str, evidence_dir: Path) -> str:
+        for attempt in range(1, 4):
+            await page.goto(url, wait_until="domcontentloaded", timeout=60_000)
+            await self._dismiss_continue_shopping(page, url)
+            await self._check_challenge(page, evidence_dir)
+            await self._ensure_delivery_location(page)
+            await self._dismiss_continue_shopping(page, url)
+            await self._check_challenge(page, evidence_dir)
+            title = await self._wait_for_pdp_title(page, timeout_ms=8_000)
+            if not title and await self._is_continue_shopping_gate(page) is not None:
+                await self._dismiss_continue_shopping(page, url)
+                await self._check_challenge(page, evidence_dir)
+                title = await self._wait_for_pdp_title(page, timeout_ms=8_000)
+            if title:
+                return title
+            if attempt < 3:
+                await page.wait_for_timeout(1_500 * attempt)
+        await self._check_challenge(page, evidence_dir)
+        raise BrowserAutomationError("Amazon PDP is missing a visible product title.")
+
+    async def _is_continue_shopping_gate(self, page: Any) -> Any | None:
+        if await self._first_text(page, list(self.TITLE_SELECTORS)):
+            return None
+        try:
+            captcha_inputs = page.locator(
+                "#captchacharacters, form[action*='validateCaptcha'] input[type='text'][name='field-keywords']"
+            )
+            for index in range(await captcha_inputs.count()):
+                if await captcha_inputs.nth(index).is_visible():
+                    return None
+        except Exception:
+            pass
+        for selector in self.CONTINUE_SHOPPING_SELECTORS:
+            matches = page.locator(selector)
+            try:
+                count = await matches.count()
+            except Exception:
+                continue
+            for index in range(count):
+                locator = matches.nth(index)
+                try:
+                    if await locator.is_visible():
+                        return locator
+                except Exception:
+                    continue
+        return None
+
+    async def _dismiss_continue_shopping(self, page: Any, target_url: str) -> bool:
+        dismissed = False
+        for _ in range(3):
+            button = await self._is_continue_shopping_gate(page)
+            if button is None:
+                break
+            dismissed = True
+            try:
+                async with page.expect_navigation(wait_until="domcontentloaded", timeout=30_000):
+                    await button.click(timeout=5_000)
+            except Exception:
+                try:
+                    await button.click(timeout=5_000)
+                    await page.wait_for_load_state("domcontentloaded", timeout=15_000)
+                except Exception:
+                    break
+            await page.wait_for_timeout(600)
+            if (
+                not await self._first_text(page, list(self.TITLE_SELECTORS))
+                and await self._is_continue_shopping_gate(page) is None
+            ):
+                await page.goto(target_url, wait_until="domcontentloaded", timeout=60_000)
+                await page.wait_for_timeout(400)
+        return dismissed
+
+    async def _wait_for_pdp_title(self, page: Any, timeout_ms: int = 8_000) -> str:
+        steps = max(1, timeout_ms // 250)
+        for step in range(steps):
+            title = await self._first_text(page, list(self.TITLE_SELECTORS))
+            if title:
+                return title
+            if await self._is_continue_shopping_gate(page) is not None:
+                return ""
+            if step + 1 < steps:
+                await page.wait_for_timeout(250)
+        return await self._first_text(page, list(self.TITLE_SELECTORS))
+
     async def _check_challenge(self, page: Any, evidence_dir: Path) -> None:
-        title = (await page.title()).casefold()
-        body = (await page.locator("body").inner_text(timeout=5_000)).casefold()
-        challenged = any(value in title or value in body[:5000] for value in (
+        if await self._first_text(page, list(self.TITLE_SELECTORS)):
+            return
+        title = ""
+        try:
+            title = (await page.title()).casefold()
+        except Exception:
+            pass
+        body = ""
+        try:
+            body = (await page.evaluate(
+                "() => (document.body ? (document.body.innerText || document.body.textContent || '') : '').slice(0, 5000)"
+            )).casefold()
+        except Exception:
+            try:
+                body = (await page.locator("body").inner_text(timeout=10_000)).casefold()[:5000]
+            except Exception:
+                pass
+        has_captcha_input = False
+        try:
+            captcha_inputs = page.locator(
+                "#captchacharacters, form[action*='validateCaptcha'] input[type='text'][name='field-keywords']"
+            )
+            for index in range(await captcha_inputs.count()):
+                if await captcha_inputs.nth(index).is_visible():
+                    has_captcha_input = True
+                    break
+        except Exception:
+            pass
+        has_unsolved_gate = await self._is_continue_shopping_gate(page) is not None
+        challenged = has_captcha_input or has_unsolved_gate or any(value in title or value in body for value in (
             "robot check", "enter the characters you see below", "validatecaptcha", "sorry, we just need to make sure",
         ))
         if challenged or "validatecaptcha" in page.url.casefold():
@@ -402,22 +526,35 @@ class AmazonBrowser:
         existing = await self._find_customization_frame(page)
         if existing:
             return existing
-        for selector in self.CUSTOMIZATION_TRIGGER_SELECTORS:
-            button = page.locator(selector).first
-            if await button.count():
-                try:
-                    if not await button.is_visible():
+        for attempt in range(2):
+            for selector in self.CUSTOMIZATION_TRIGGER_SELECTORS:
+                button = page.locator(selector).first
+                if await button.count():
+                    try:
+                        if not await button.is_visible():
+                            continue
+                        try:
+                            await button.evaluate("el => el.scrollIntoView({block: 'center', inline: 'nearest'})")
+                        except Exception:
+                            await button.scroll_into_view_if_needed(timeout=2_000)
+                        try:
+                            if attempt == 0:
+                                await button.click(timeout=3_000)
+                            else:
+                                await button.click(force=True, timeout=3_000)
+                        except Exception:
+                            try:
+                                await button.evaluate("el => el.click()")
+                            except Exception:
+                                continue
+                        break
+                    except Exception:
                         continue
-                    await button.scroll_into_view_if_needed(timeout=2_000)
-                    await button.click(timeout=3_000)
-                    break
-                except Exception:
-                    continue
-        for _ in range(60):
-            frame = await self._find_customization_frame(page)
-            if frame:
-                return frame
-            await page.wait_for_timeout(250)
+            for _ in range(30):
+                frame = await self._find_customization_frame(page)
+                if frame:
+                    return frame
+                await page.wait_for_timeout(250)
         raise BrowserAutomationError("Amazon customization form was not found.")
 
     async def _find_customization_frame(self, page: Any) -> Any | None:

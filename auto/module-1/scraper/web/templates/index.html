@@ -98,11 +98,45 @@
         </div>
       </div>
       <div class="agent-runtime-grid">
+        <div><span>Model</span><strong id="agent-model" title="Gemini 3.8 Flash (High)">Gemini 3.8 Flash (High)</strong></div>
         <div><span>Conversation</span><strong id="agent-conversation">—</strong></div>
         <div><span>PID</span><strong id="agent-pid">—</strong></div>
         <div><span>Turns</span><strong id="agent-turns">0</strong></div>
         <div><span>Current task</span><strong id="agent-current-task">—</strong></div>
         <div><span>Last activity</span><strong id="agent-last-activity">—</strong></div>
+      </div>
+      <div id="agent-model-config" class="agent-model-config">
+        <div class="agent-model-config-info">
+          <strong>Cấu hình Model Antigravity</strong>
+          <small class="muted">Lưu tại <code id="agent-model-source">scraper/antigravity_config.json</code> · Áp dụng cho toàn bộ Control &amp; Content Agent</small>
+        </div>
+        <div class="agent-model-config-controls">
+          <label class="field">
+            <span>Chọn nhanh model</span>
+            <select id="agent-model-select" aria-label="Chọn nhanh model Antigravity">
+              <option value="Gemini 3.8 Flash (High)" selected>Gemini 3.8 Flash (High)</option>
+              <option value="Gemini 3.8 Flash (Medium)">Gemini 3.8 Flash (Medium)</option>
+              <option value="Gemini 3.8 Flash (Low)">Gemini 3.8 Flash (Low)</option>
+              <option value="Gemini 4 Argon (High)">Gemini 4 Argon (High)</option>
+              <option value="Gemini 4 Argon (Medium)">Gemini 4 Argon (Medium)</option>
+              <option value="Gemini 4 Argon (Low)">Gemini 4 Argon (Low)</option>
+              <option value="Claude Sonnet 5.5 (High)">Claude Sonnet 5.5 (High)</option>
+              <option value="Claude Sonnet 5.5 (Medium)">Claude Sonnet 5.5 (Medium)</option>
+              <option value="Claude Sonnet 5.5 (Low)">Claude Sonnet 5.5 (Low)</option>
+              <option value="Claude Opus 5.5 (High)">Claude Opus 5.5 (High)</option>
+              <option value="Claude Opus 5.5 (Medium)">Claude Opus 5.5 (Medium)</option>
+              <option value="Claude Opus 5.5 (Low)">Claude Opus 5.5 (Low)</option>
+              <option value="GPT-OSS 120B (Medium)">GPT-OSS 120B (Medium)</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Model đang cấu hình</span>
+            <input id="agent-model-input" type="text" value="Gemini 3.8 Flash (High)" placeholder="Gemini 3.8 Flash (High)" autocomplete="off" spellcheck="false">
+          </label>
+          <button id="save-agent-model" class="button primary" type="button">
+            <span class="button-icon" aria-hidden="true">▣</span><span class="button-label">Lưu model</span>
+          </button>
+        </div>
       </div>
       <div class="queue-stats">
         <div><strong id="count-queued">0</strong><span>Queued</span></div>
@@ -114,6 +148,24 @@
       <p class="help">Crawler và Shopify không phụ thuộc thời gian cold-start của Agent. Content queue chỉ được xử lý sau khi bootstrap, MCP check và conversation ID hợp lệ. Event Log hiển thị stream đã sanitize.</p>
     </section>
 
+    <section id="store-aeo-panel" class="panel" aria-labelledby="store-aeo-heading">
+      <div class="panel-heading"><div><p class="eyebrow">SHOPIFY · AEO</p><h3 id="store-aeo-heading">Bổ sung AEO cho sản phẩm trong store</h3></div></div>
+      <p class="muted">Tìm sản phẩm thiếu AEO từ mới đến cũ theo ngày tạo. Mỗi bài được kiểm định và đọc lại trước khi ghi. Số lượng bên dưới là số sản phẩm cập nhật thành công.</p>
+      <form id="store-aeo-form" class="store-aeo-controls">
+        <label class="field"><span>Số sản phẩm cần bổ sung AEO</span><input id="store-aeo-quantity" type="number" min="1" max="1000" step="1" value="5" required></label>
+        <button id="store-aeo-start" class="button primary" type="submit">Tạo AEO từ store</button>
+        <button id="store-aeo-reload" class="button secondary" type="button">Tải lại tiến trình AEO</button>
+      </form>
+      <p id="store-aeo-status" role="status" aria-live="polite">Chưa có job AEO.</p>
+      <div id="store-aeo-runs"></div>
+      <details id="store-aeo-review" hidden>
+        <summary id="store-aeo-review-title">Đọc nội dung AEO và bằng chứng</summary>
+        <p id="store-aeo-review-status"></p>
+        <iframe id="store-aeo-preview" sandbox title="Xem trước nội dung AEO sản phẩm"></iframe>
+        <details><summary>Bằng chứng và draft có trích dẫn</summary><pre id="store-aeo-evidence"></pre><pre id="store-aeo-draft"></pre></details>
+      </details>
+    </section>
+
     <section id="manifest-panel" class="panel manifest-panel">
       <div class="panel-heading">
         <div>
@@ -123,9 +175,12 @@
             <span id="manifest-row-count" class="heading-badge" title="Số lượng row trong danh sách">0</span>
           </div>
         </div>
-        <button id="add-product" class="button secondary" type="button"><span class="button-icon">＋</span><span class="button-label">Thêm sản phẩm</span></button>
+        <div class="panel-heading-actions">
+          <button id="clear-all-products" class="button secondary danger" type="button"><span class="button-icon">✕</span><span class="button-label">Xóa tất cả row</span></button>
+          <button id="add-product" class="button secondary" type="button"><span class="button-icon">＋</span><span class="button-label">Thêm sản phẩm</span></button>
+        </div>
       </div>
-      <div class="table-wrap"><table><thead><tr><th>Amazon URL</th><th>Shopify product ID</th><th>Mode</th><th>Preset / overrides</th><th><span class="sr-only">Thao tác</span></th></tr></thead><tbody id="products-body"></tbody></table></div>
+      <div class="table-wrap"><table><thead><tr><th class="col-index-th">STT</th><th>Amazon URL</th><th>Shopify product ID</th><th>Mode</th><th>Preset / overrides</th><th><span class="sr-only">Thao tác</span></th></tr></thead><tbody id="products-body"></tbody></table></div>
       <details class="json-preview"><summary>Xem trước products.json</summary><pre id="manifest-preview"></pre></details>
     </section>
 
@@ -240,6 +295,7 @@
         <p class="muted">Chọn một giá trị có sẵn hoặc nhập product type tùy chỉnh.</p>
         <div id="product-type-options" class="product-type-options" role="listbox" aria-label="Product type có sẵn"></div>
         <label class="field product-type-custom"><span>Product type tùy chỉnh</span><input id="product-type-custom" type="text" autocomplete="off" placeholder="ví dụ: console-table"></label>
+        <label class="field product-type-apply-count"><span>Số lượng row muốn áp dụng</span><input id="product-type-apply-count" type="number" min="1" step="1" value="1" placeholder="1"></label>
       </div>
       <footer class="product-type-footer">
         <p id="product-type-status" class="muted" role="status"></p>
@@ -262,11 +318,16 @@
         <section class="docs-viewer" aria-labelledby="docs-current-file">
           <div class="docs-viewer-toolbar">
             <div><span class="docs-file-label">Đang xem</span><strong id="docs-current-file">Chưa chọn file</strong></div>
-            <button id="docs-scroll-bottom" class="button secondary" type="button" disabled>
-              <span class="button-icon" aria-hidden="true">↓</span><span class="button-label">Scroll to bottom</span>
-            </button>
+            <div class="docs-viewer-actions">
+              <a id="docs-open-newtab" class="button secondary" href="#" target="_blank" rel="noopener noreferrer" hidden>
+                <span class="button-icon" aria-hidden="true">↗</span><span class="button-label">Mở tab mới</span>
+              </a>
+              <button id="docs-scroll-bottom" class="button secondary" type="button" disabled>
+                <span class="button-icon" aria-hidden="true">↓</span><span class="button-label">Scroll to bottom</span>
+              </button>
+            </div>
           </div>
-          <article id="docs-content" class="docs-content" tabindex="0"><p class="docs-placeholder">Chọn một file .md hoặc .txt từ danh sách bên trái.</p></article>
+          <article id="docs-content" class="docs-content" tabindex="0"><p class="docs-placeholder">Chọn một file .md, .txt hoặc .html từ danh sách bên trái.</p></article>
         </section>
       </div>
     </div>
@@ -318,7 +379,7 @@
           <div class="cleanup-guide-icon" aria-hidden="true">i</div>
           <div>
             <strong>Antigravity yêu cầu xác nhận xóa trong TUI</strong>
-            <p>Chọn một conversation cũ, mở TUI, gõ <code>/resume</code>, tìm đúng ID rồi nhấn <kbd>Ctrl</kbd> + <kbd>Delete</kbd> và xác nhận. Chỉ nhấn <strong>Đã xóa trong Antigravity</strong> sau khi hoàn tất.</p>
+            <p>Bấm <strong>Copy ID</strong>, mở TUI rồi dán (<kbd>Ctrl</kbd> + <kbd>V</kbd>) vào ô tìm kiếm, nhấn phím <kbd>F4</kbd> để xóa và xác nhận. Chỉ nhấn <strong>Đã xóa trong Antigravity</strong> sau khi hoàn tất.</p>
           </div>
         </div>
         <div class="sessions-summary">
@@ -337,13 +398,15 @@
 
   <template id="product-row-template">
     <tr class="product-row">
-      <td><label class="mobile-label">Amazon URL</label><input data-field="amazon_url" type="url" placeholder="https://www.amazon.com/dp/ASIN"><div class="store-existence-status" data-role="store-existence" hidden></div></td>
-      <td><label class="mobile-label">Shopify product ID</label><input data-field="shopify_product_id" inputmode="numeric" placeholder="103…"></td>
-      <td><label class="mobile-label">Mode</label><select data-field="mode"><option value="auto">auto</option><option value="dynamic">dynamic</option><option value="preset">preset</option></select></td>
+      <td class="col-index"><label class="mobile-label">STT</label><span class="row-index">1</span></td>
+      <td class="col-amazon-url"><label class="mobile-label">Amazon URL</label><input data-field="amazon_url" type="url" placeholder="https://www.amazon.com/dp/ASIN"><div class="store-existence-status" data-role="store-existence" hidden></div></td>
+      <td class="col-shopify-id"><label class="mobile-label">Shopify product ID</label><input data-field="shopify_product_id" inputmode="numeric" placeholder="103…"></td>
+      <td class="col-mode"><label class="mobile-label">Mode</label><select data-field="mode"><option value="auto">auto</option><option value="dynamic">dynamic</option><option value="preset">preset</option></select></td>
       <td class="details-cell"><div class="preset-fields" hidden><input data-field="furniture_type" placeholder="furniture type"><input data-field="price_tier" placeholder="price tier"></div><div class="override-fields"><input data-field="product_type" class="product-type-picker" placeholder="Chọn product type" readonly aria-haspopup="dialog"><input data-field="tags" placeholder="tags, separated, by comma"><select data-field="status"><option value="ACTIVE">ACTIVE</option><option value="DRAFT">DRAFT</option><option value="UNLISTED">UNLISTED</option></select></div></td>
       <td class="row-actions"><button data-action="duplicate" class="icon-button" type="button" title="Duplicate">⧉</button><button data-action="remove" class="icon-button danger" type="button" title="Remove">×</button></td>
     </tr>
   </template>
   <script src="{{ url_for('static', filename='dashboard.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='aeo-backfill.js') }}" defer></script>
 </body>
 </html>

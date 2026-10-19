@@ -11,7 +11,10 @@ from scraper.antigravity import (
     AntigravityProtocolError,
     AntigravitySupervisor,
     _sanitize_text,
+    read_antigravity_config,
+    save_antigravity_config,
 )
+from scraper.config import DEFAULT_ANTIGRAVITY_MODEL
 from scraper.manifest import parse_manifest_payload
 from scraper.store import OrchestratorStore
 
@@ -66,13 +69,39 @@ for line in sys.stdin:
     wait_for(supervisor.is_ready)
     first = supervisor.state()
     assert first["process_ready"] is True
+    assert first["model"] == DEFAULT_ANTIGRAVITY_MODEL == "Gemini 3.8 Flash (High)"
     result = supervisor._run_turn("second", purpose="test", timeout=5)
     assert result["conversation_id"] == first["conversation_id"] == "conversation-one"
     assert supervisor.state()["pid"] == first["pid"]
     assert supervisor.state()["num_turns"] == 2
     assert len(commands) == 1
     assert "-p" not in commands[0]
+    assert "--model" in commands[0]
+    model_idx = commands[0].index("--model")
+    assert commands[0][model_idx + 1] == "Gemini 3.8 Flash (High)"
     supervisor.stop()
+
+
+def test_antigravity_config_file_read_save_and_custom_model_propagation(tmp_path):
+    root = make_root(tmp_path)
+    initial = read_antigravity_config(root)
+    assert initial["model"] == "Gemini 3.8 Flash (High)"
+    assert initial["default_model"] == "Gemini 3.8 Flash (High)"
+    assert "Gemini 3.8 Flash (High)" in initial["available_models"]
+
+    saved = save_antigravity_config(root, "Claude Sonnet 5.5 (High)")
+    assert saved["model"] == "Claude Sonnet 5.5 (High)"
+    disk_data = json.loads((root / "antigravity_config.json").read_text(encoding="utf-8"))
+    assert disk_data["model"] == "Claude Sonnet 5.5 (High)"
+
+    with pytest.raises(ValueError, match="cannot be empty"):
+        save_antigravity_config(root, "   ")
+
+    supervisor = AntigravitySupervisor(root, OrchestratorStore(root), threading.Event())
+    cmd = supervisor._command()
+    assert "--model" in cmd
+    assert cmd[cmd.index("--model") + 1] == "Claude Sonnet 5.5 (High)"
+    assert supervisor.state()["model"] == "Claude Sonnet 5.5 (High)"
 
 
 def test_health_check_uses_same_conversation_and_accepts_recent_agent_time(tmp_path):
@@ -159,6 +188,7 @@ def test_incremental_mcp_metadata_is_not_rejected_and_resource_discovery_is_safe
 
 def test_each_product_content_runtime_has_an_isolated_process_and_conversation(tmp_path):
     root = make_root(tmp_path)
+    save_antigravity_config(root, "Gemini 3.8 Flash (Medium)")
     fake = tmp_path / "fake_agy_content.py"
     fake.write_text(
         """
@@ -170,8 +200,10 @@ for line in sys.stdin:
 """,
         encoding="utf-8",
     )
+    commands = []
 
     def popen_factory(command, **kwargs):
+        commands.append(command)
         return subprocess.Popen([sys.executable, "-u", str(fake)], **kwargs)
 
     store = OrchestratorStore(root)
@@ -205,5 +237,10 @@ for line in sys.stdin:
 
     assert len({runtime["process"].pid for runtime in runtimes}) == 2
     assert len({runtime["conversation_id"] for runtime in runtimes}) == 2
+    assert len(commands) == 2
+    for cmd in commands:
+        assert "--model" in cmd
+        assert cmd[cmd.index("--model") + 1] == "Gemini 3.8 Flash (Medium)"
     sessions = [item for item in store.list_agent_sessions() if item["session_kind"] == "content"]
     assert {item["product_id"] for item in sessions} == {task["task_id"] for task in tasks}
+

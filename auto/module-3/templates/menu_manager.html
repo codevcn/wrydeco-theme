@@ -1,0 +1,1485 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Menu & URL Redirect | Shopify Wrydeco</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/static/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+    <link rel="shortcut icon" href="/static/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png" />
+    <link rel="manifest" href="/static/site.webmanifest" />
+    <!-- Google Fonts Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS v4 Browser CDN -->
+    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+    <!-- Iconify -->
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col antialiased">
+
+    <!-- Header Chuẩn Chung Toàn Hệ Thống -->
+    <header class="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo -->
+                <div class="flex-shrink-0 flex items-center gap-3">
+                    <a target="_blank" rel="noopener noreferrer" href="/" class="flex items-center gap-2.5 text-indigo-600 font-bold text-xl hover:text-indigo-700 transition-colors">
+                        <img src="/static/favicon.svg" alt="Logo" class="w-8 h-8 object-contain rounded-lg" onerror="this.src='/static/favicon-96x96.png'">
+                        <span>Shopify Admin Manager</span>
+                    </a>
+                    <a id="headerShopifyAdminLink" target="_blank" rel="noopener noreferrer" href="https://admin.shopify.com/store/wrydeco" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-black hover:bg-neutral-800 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors" title="Mở Shopify Admin Store">
+                        <span>Shopify Store</span>
+                        <svg class="w-3.5 h-3.5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                    </a>
+                </div>
+                <!-- Nav Links -->
+                <nav class="flex items-center gap-6">
+                    <a target="_blank" rel="noopener noreferrer" href="/" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Sản phẩm</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/collections" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Collections</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/metaobjects" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">MetaObjects</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/create" class="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">Tạo sản phẩm</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/edit-variants" class="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">Sửa hàng loạt</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/blogs" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path></svg>Blog</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/policies" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>Policy</a>
+                    <button id="drawer-toggle-btn" type="button" onclick="toggleDrawer()" class="p-1.5 text-indigo-600 hover:bg-indigo-50 border border-indigo-200 rounded-lg transition-colors flex items-center justify-center focus:outline-none" title="Menu tiện ích">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- TIÊU ĐỀ TRANG (PAGE TITLE) -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-200">
+            <div>
+                <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2.5">
+                    <iconify-icon icon="mdi:menu-open" class="text-indigo-600 text-3xl"></iconify-icon>
+                    <span>Quản lý Menu</span>
+                </h1>
+                <p class="text-xs text-slate-500 mt-1">Điều hướng gian hàng, rút gọn liên kết (URL Redirect) và quản lý liên kết Shopify store.</p>
+            </div>
+        </div>
+
+        <!-- THANH CÔNG CỤ: CHỌN STORE & CHỐT CHẶN PROXY GATEWAY -->
+        <section class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <!-- Cột trái: Bộ chuyển đổi Store Mặc định ⟷ Store Riêng -->
+                <div class="flex flex-wrap items-center gap-3">
+                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Đang thao tác trên:</span>
+                    
+                    <!-- Switch Toggle Store -->
+                    <div class="inline-flex p-1 bg-slate-100 rounded-xl border border-slate-200">
+                        <button type="button" id="btnStoreDefault" onclick="switchStoreMode('default')" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 text-slate-600 hover:text-slate-900 cursor-pointer">
+                            <iconify-icon icon="mdi:store-outline" id="iconStoreDefault" class="text-sm"></iconify-icon>
+                            <span>Store Mặc định</span>
+                        </button>
+                        <button type="button" id="btnStoreCustom" onclick="switchStoreMode('custom')" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-emerald-600 text-white shadow-xs hover:bg-emerald-700 cursor-pointer">
+                            <iconify-icon icon="mdi:store-cog-outline" id="iconStoreCustom" class="text-sm"></iconify-icon>
+                            <span>Store Riêng</span>
+                        </button>
+                    </div>
+
+                    <!-- Domain Badge -->
+                    <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 border border-slate-200 text-xs font-mono text-slate-700">
+                        <iconify-icon icon="mdi:web" class="text-slate-500"></iconify-icon>
+                        <span id="currentStoreDomainDisplay" class="font-bold">236qm8-w7.myshopify.com</span>
+                    </div>
+                </div>
+
+                <!-- Cột phải: Thông tin Proxy US & Nút Kiểm tra Proxy -->
+                <div class="flex flex-wrap items-center gap-3 self-end lg:self-center">
+                    <!-- Proxy Live Info (chỉ hiện hoặc nhấn mạnh khi ở Store Riêng) -->
+                    <div id="proxyInfoWrapper" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-50 border border-slate-200 text-slate-700">
+                        <span id="proxyFlag" class="text-base">🇺🇸</span>
+                        <span id="proxyIpDisplay" class="font-mono text-slate-800">185.124.63.174</span>
+                        <span class="text-slate-300">|</span>
+                        <span id="proxyLatencyBadge" class="text-[11px] font-semibold text-emerald-600">Ping: -- ms</span>
+                        <span id="proxyStabilityBadge" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-700 border border-emerald-200">
+                            <span id="proxyStabilityDot" class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span id="proxyStabilityText">Ổn định</span>
+                        </span>
+                    </div>
+
+                    <!-- Nút Kiểm Tra Độ Ổn Định Proxy -->
+                    <button type="button" id="btnCheckProxyHealth" onclick="triggerProxyCheck()" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 active:bg-indigo-200 text-indigo-700 text-xs font-bold rounded-xl border border-indigo-200 transition-all shadow-2xs cursor-pointer" title="Chủ động kiểm tra kết nối từ Server đến Proxy và Shopify">
+                        <iconify-icon icon="mdi:refresh" id="iconCheckProxy" class="text-base"></iconify-icon>
+                        <span>Kiểm tra Proxy</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- HỘP CẢNH BÁO ĐỎ ĐẬP VÀO MẮT (CHỐT CHẶN AN TOÀN KHI STORE RIÊNG MẤT PROXY) -->
+            <div id="proxySafetyAlertBox" class="hidden p-4 bg-rose-50 border-2 border-rose-300 rounded-xl text-rose-800 text-xs flex items-start gap-3 shadow-sm animate-pulse">
+                <div class="p-1.5 bg-rose-200 text-rose-700 rounded-lg text-lg flex-shrink-0">
+                    <iconify-icon icon="mdi:alert-octagon"></iconify-icon>
+                </div>
+                <div class="flex-1 space-y-1">
+                    <div class="font-bold text-rose-900 text-sm flex items-center gap-2">
+                        <span>CHỐT CHẶN AN TOÀN: PROXY GATEWAY MẤT KẾT NỐI HOẶC CHƯA BẬT!</span>
+                    </div>
+                    <p class="text-rose-700 leading-relaxed" id="proxySafetyAlertMessage">
+                        Khi sử dụng Store Riêng, mọi phiên giao tiếp giữa server và Shopify bắt buộc phải bọc qua Proxy US. Vì kết nối Proxy hiện không ổn định, server đã <strong>TỪ CHỐI TẤT CẢ YÊU CẦU</strong> để bảo vệ gian hàng của bạn. Vui lòng bấm "Kiểm tra Proxy" để thử lại hoặc truy cập <a href="/settings" target="_blank" class="underline font-bold text-rose-900 hover:text-black">Trang Cài Đặt</a> để kiểm tra cấu hình.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- THANH ĐIỀU HƯỚNG TAB (TAB NAVIGATION) -->
+        <div class="border-b border-slate-200">
+            <nav class="flex space-x-6" aria-label="Tabs">
+                <!-- Tab 1: URL Redirects (Active) -->
+                <button type="button" class="border-indigo-600 text-indigo-600 whitespace-nowrap py-3 px-1 border-b-2 font-bold text-sm flex items-center gap-2">
+                    <iconify-icon icon="mdi:link-variant-plus" class="text-lg"></iconify-icon>
+                    <span>Quản lý URL Redirect / Rút gọn link</span>
+                    <span id="tabRedirectCountBadge" class="ml-1.5 px-2 py-0.5 rounded-full text-sm font-medium bg-indigo-100 text-indigo-700">0</span>
+                </button>
+
+                <!-- Tab 2: Navigation Menus (Placeholder Coming Soon) -->
+                <button type="button" class="border-transparent text-slate-400 hover:text-slate-600 hover:border-slate-300 whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm flex items-center gap-2 cursor-not-allowed opacity-60" title="Tính năng đang được phát triển">
+                    <iconify-icon icon="mdi:menu" class="text-lg"></iconify-icon>
+                    <span>Menu Điều hướng Store</span>
+                    <span class="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-slate-200 text-slate-600">Sắp ra mắt</span>
+                </button>
+
+                <!-- Tab 3: Footer Links (Placeholder Coming Soon) -->
+                <button type="button" class="border-transparent text-slate-400 hover:text-slate-600 hover:border-slate-300 whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm flex items-center gap-2 cursor-not-allowed opacity-60" title="Tính năng đang được phát triển">
+                    <iconify-icon icon="mdi:page-layout-footer" class="text-lg"></iconify-icon>
+                    <span>Liên kết Chân trang & Chính sách</span>
+                    <span class="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-slate-200 text-slate-600">Sắp ra mắt</span>
+                </button>
+            </nav>
+        </div>
+
+        <!-- NỘI DUNG TAB 1: QUẢN LÝ URL REDIRECT / RÚT GỌN LINK -->
+        <div class="space-y-6">
+
+            <!-- SECTION THÔNG BÁO LỖI / THÀNH CÔNG NỔI BẬT ĐẬP VÀO MẮT USER -->
+            <div id="actionAlertSection" class="hidden transition-all duration-300">
+                <!-- Nội dung Alert sẽ được JS render động vào đây -->
+            </div>
+
+            <!-- SECTION 1: FORM TẠO LINK REDIRECT (RÚT GỌN LINK) -->
+            <section class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-5">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl text-xl flex items-center justify-center">
+                            <iconify-icon icon="mdi:link-plus"></iconify-icon>
+                        </div>
+                        <div>
+                            <h2 class="text-base font-bold text-slate-900">Tạo Liên Kết Rút Gọn Mới (URL Redirect)</h2>
+                            <p class="text-xs text-slate-500">Tạo bản ghi chuyển hướng trong Shopify Store với mã slug 8 ký tự an toàn không trùng lặp.</p>
+                        </div>
+                    </div>
+                    <span class="text-xs text-slate-400 font-mono hidden sm:inline-block">Shopify Admin GraphQL API</span>
+                </div>
+
+                <form id="createRedirectForm" onsubmit="handleCreateRedirect(event)" class="space-y-5">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+                        
+                        <!-- Ô 1: URL gốc đích đến (Destination URL / Target) -->
+                        <div class="space-y-1.5 flex flex-col">
+                            <div class="flex items-center justify-between h-7">
+                                <label for="destUrlInput" class="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                                    1. URL Gốc Đích Đến (Destination URL) <span class="text-rose-500">*</span>
+                                </label>
+                            </div>
+                            <div class="relative h-11 flex items-center">
+                                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                    <iconify-icon icon="mdi:target" class="text-base"></iconify-icon>
+                                </div>
+                                <input type="text" id="destUrlInput" required placeholder="/products/canvas-wall-art hoặc https://wrydeco.com/..." class="w-full h-full pl-10 pr-4 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition-all placeholder:text-slate-400 font-mono">
+                            </div>
+                            <div class="min-h-[28px] flex items-center">
+                                <p class="text-sm text-slate-500 leading-relaxed">
+                                    Nhập đường dẫn nội bộ (VD: <span class="font-mono text-slate-700">/products/live-edge-wood</span>) hoặc URL đầy đủ (<span class="font-mono text-slate-700">https://...</span>) mà bạn muốn chuyển hướng tới.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Ô 2: URL Rút Gọn (Displayed URL / Redirect Path) -->
+                        <div class="space-y-1.5 flex flex-col">
+                            <div class="flex items-center justify-between h-7">
+                                <label for="redirectPathInput" class="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                                    2. URL Rút Gọn (Redirect Path - 8 ký tự) <span class="text-rose-500">*</span>
+                                </label>
+                                <!-- Nút sinh slug 8 ký tự -->
+                                <button type="button" onclick="autoGenerateSlug()" id="btnAutoSlug" class="inline-flex items-center gap-1 text-base font-bold text-indigo-600 hover:text-indigo-800 transition-colors cursor-pointer" title="Tự động tạo mã ngẫu nhiên 8 ký tự sạch và kiểm tra trùng lặp trên store">
+                                    <iconify-icon icon="mdi:dice-5-outline" id="iconDice" class="text-md"></iconify-icon>
+                                    <span>Sinh slug 8 ký tự</span>
+                                </button>
+                            </div>
+
+                            <div class="flex rounded-xl shadow-2xs h-11 border border-slate-300 bg-white overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-transparent transition-all">
+                                <span class="inline-flex items-center px-3.5 bg-slate-100 border-r border-slate-300 text-slate-500 text-xs font-mono font-medium truncate max-w-[200px]" id="domainPrefixDisplay">
+                                    https://wrydeco.com/
+                                </span>
+                                <input type="text" id="redirectPathInput" required placeholder="Ví dụ: 7xKmP2wQ" class="flex-1 min-w-0 block w-full px-3.5 h-full text-sm border-0 focus:ring-0 focus:outline-none font-mono font-bold text-indigo-700 bg-transparent placeholder:text-slate-400">
+                            </div>
+
+                            <div class="min-h-[28px] flex items-center justify-between text-sm leading-relaxed">
+                                <span class="text-slate-500">Thuật toán loại bỏ ký tự dễ nhầm (<span class="font-mono">0, O, o, 1, I, l</span>).</span>
+                                <span id="slugLengthIndicator" class="font-mono font-semibold text-slate-400 flex-shrink-0 ml-2">0/8 ký tự</span>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Nút bấm Tạo Redirect -->
+                    <div class="flex items-center justify-end gap-3 pt-2">
+                        <button type="button" onclick="resetCreateForm()" class="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 text-sm font-bold transition-all cursor-pointer">
+                            Làm mới form
+                        </button>
+                        <button type="submit" id="btnSubmitRedirect" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-sm font-bold shadow-sm hover:shadow transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                            <iconify-icon icon="mdi:check-circle" id="iconSubmitRedirect" class="text-base"></iconify-icon>
+                            <span id="btnSubmitRedirectText">Tạo Redirect</span>
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- SECTION 2: DANH SÁCH URLS REDIRECT HIỆN CÓ TRÊN STORE -->
+            <section class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+                <!-- Header của danh sách -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                            <iconify-icon icon="mdi:format-list-bulleted" class="text-indigo-600"></iconify-icon>
+                            <span>Danh Sách URLs Redirect Đang Hoạt Động</span>
+                            <span id="redirectsBadgeCount" class="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 font-mono font-bold">0 bản ghi</span>
+                        </h3>
+                        <p class="text-xs text-slate-500 mt-0.5">Quản lý, sao chép hoặc xóa các liên kết rút gọn đã cấu hình trên gian hàng.</p>
+                    </div>
+
+                    <!-- Thanh tìm kiếm & Nút tải lại -->
+                    <div class="flex items-center gap-2.5">
+                        <div class="relative">
+                            <input type="text" id="searchInput" oninput="handleSearchInput(this.value)" placeholder="Tìm kiếm slug hoặc URL đích..." class="w-48 sm:w-64 pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all font-mono">
+                            <iconify-icon icon="mdi:magnify" class="absolute left-2.5 top-2 text-slate-400 text-sm"></iconify-icon>
+                        </div>
+                        <button type="button" onclick="loadRedirectsList(true)" id="btnReloadList" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 text-xs font-bold rounded-lg border border-slate-300 transition-all cursor-pointer shadow-2xs" title="Tải lại danh sách từ Shopify">
+                            <iconify-icon icon="mdi:refresh" id="iconReloadList" class="text-sm"></iconify-icon>
+                            <span class="hidden sm:inline">Tải lại</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Bảng hiển thị Redirects -->
+                <div class="overflow-x-auto rounded-xl border border-slate-200">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-50 text-slate-500 uppercase font-bold text-[11px] border-b border-slate-200 tracking-wider">
+                            <tr>
+                                <th scope="col" class="py-3 px-4 w-4/12">URL Rút Gọn (Path)</th>
+                                <th scope="col" class="py-3 px-1 w-6 text-center"></th>
+                                <th scope="col" class="py-3 px-4 w-4/12">URL Đích Đến (Target)</th>
+                                <th scope="col" class="py-3 px-3 w-2/12 text-center whitespace-nowrap">
+                                    <span class="inline-flex items-center gap-1 text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 font-semibold" title="Đã sắp xếp giảm dần (Mới nhất lên đầu)">
+                                        <span>Ngày tạo</span>
+                                        <iconify-icon icon="mdi:arrow-down" class="text-xs"></iconify-icon>
+                                    </span>
+                                </th>
+                                <th scope="col" class="py-3 px-4 w-1/12 text-center whitespace-nowrap">Thao Tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="redirectsTableBody" class="divide-y divide-slate-100 font-mono">
+                            <!-- JS sẽ render các hàng vào đây -->
+                            <tr>
+                                <td colspan="5" class="py-12 text-center text-slate-400">
+                                    <iconify-icon icon="mdi:loading" class="animate-spin text-2xl text-indigo-600 mb-2"></iconify-icon>
+                                    <p class="font-sans text-xs">Đang tải danh sách URL Redirects từ Shopify...</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Footer của bảng: Phân trang / Thông tin trạng thái -->
+                <div class="flex items-center justify-between text-xs text-slate-500 pt-2 font-sans">
+                    <span id="paginationInfoText">Hiển thị 0 bản ghi</span>
+                    <div class="flex items-center gap-2" id="paginationControls">
+                        <!-- Nút phân trang (nếu có cursor) -->
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- FOOTER CHUNG -->
+    <footer class="bg-white border-t border-slate-200 py-4 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
+            <div>Shopify Admin Manager • Module 3 (Quản lý Menu & Redirects)</div>
+            <div class="flex items-center gap-3">
+                <span class="inline-flex items-center gap-1 text-emerald-600 font-medium">
+                    <iconify-icon icon="mdi:shield-check"></iconify-icon>
+                    <span>Proxy Guard Protection</span>
+                </span>
+                <span>•</span>
+                <span class="font-mono">Wrydeco Store</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- MODAL CẢNH BÁO THAO TÁC TRÊN STORE MẶC ĐỊNH -->
+    <div id="defaultStoreWarningModal" onclick="closeDefaultStoreWarningModalOnBackdrop(event)" class="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 animate-scaleIn border border-amber-200" onclick="event.stopPropagation()">
+            <!-- Header Modal Cảnh Báo -->
+            <div class="flex items-start justify-between border-b border-amber-100 pb-3">
+                <div class="flex items-center gap-3">
+                    <div class="p-2.5 bg-amber-100 text-amber-600 rounded-xl text-2xl flex-shrink-0 flex items-center justify-center border border-amber-200">
+                        <iconify-icon icon="mdi:alert-circle-outline"></iconify-icon>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-base text-slate-900">Xác Nhận Thao Tác Store Mặc Định</h4>
+                        <p class="text-xs text-amber-700 font-medium">Bạn đang tạo URL Redirect trên Store Mặc định chứ không phải Store Riêng.</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeDefaultStoreWarningModal()" class="text-slate-400 hover:text-slate-700 transition-colors p-1 rounded-lg hover:bg-slate-100 cursor-pointer" title="Đóng popup">
+                    <iconify-icon icon="mdi:close" class="text-xl"></iconify-icon>
+                </button>
+            </div>
+
+            <!-- Body: Phân biệt 2 Tên Miền -->
+            <div class="space-y-3 text-xs">
+                <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 text-amber-900 leading-relaxed">
+                    <p class="font-semibold mb-1 flex items-center gap-1.5 text-amber-800">
+                        <iconify-icon icon="mdi:information-outline" class="text-base"></iconify-icon>
+                        <span>Lưu ý phân biệt tên miền giữa 2 Store:</span>
+                    </p>
+                    <div class="space-y-1.5 pl-1 font-mono text-[11px] pt-1">
+                        <div class="flex items-center justify-between p-2 bg-white rounded-lg border border-amber-200">
+                            <div>
+                                <span class="text-slate-500 font-sans block">Store bạn đang chọn:</span>
+                                <strong class="text-amber-800 text-xs">Store Mặc định</strong>
+                            </div>
+                            <span class="px-2 py-1 bg-amber-100 text-amber-800 rounded font-bold" id="warnModalDefaultDomain">wrydeco.myshopify.com</span>
+                        </div>
+                        <div class="flex items-center justify-between p-2 bg-slate-50 rounded-lg border border-slate-200">
+                            <div>
+                                <span class="text-slate-500 font-sans block">Store Riêng của bạn:</span>
+                                <strong class="text-slate-700 text-xs">Store Riêng</strong>
+                            </div>
+                            <span class="px-2 py-1 bg-slate-200 text-slate-700 rounded font-bold" id="warnModalCustomDomain">wrydeco.com (236qm8-w7.myshopify.com)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chi tiết Redirect sắp tạo -->
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 font-mono text-xs space-y-1.5">
+                    <div class="text-slate-400 font-sans font-semibold text-[11px] uppercase tracking-wider">Thông tin chuyển hướng sắp tạo:</div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-slate-400 font-sans">URL rút gọn:</span>
+                        <strong id="warnModalPath" class="text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">/abc</strong>
+                    </div>
+                    <div class="truncate">
+                        <span class="text-slate-400 font-sans">Đích đến:</span>
+                        <span id="warnModalTarget" class="text-slate-800 font-medium">/target</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Action Buttons -->
+            <div class="flex items-center justify-end gap-3 pt-2 border-t border-slate-100">
+                <button type="button" onclick="closeDefaultStoreWarningModal()" class="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer">
+                    Hủy bỏ
+                </button>
+                <button type="button" id="btnConfirmCreateDefault" onclick="confirmExecuteCreateRedirectOnDefault()" class="px-5 py-2.5 rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer">
+                    <iconify-icon icon="mdi:check" class="text-base"></iconify-icon>
+                    <span>Tiếp Tục Tạo Trên Store Mặc Định</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CHỈNH SỬA URL REDIRECT -->
+    <div id="editRedirectModal" onclick="closeEditModalOnBackdrop(event)" class="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 animate-scaleIn border border-slate-200" onclick="event.stopPropagation()">
+            <!-- Header Modal -->
+            <div class="flex items-start justify-between border-b border-slate-100 pb-3">
+                <div class="flex items-center gap-3">
+                    <div class="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl text-xl flex-shrink-0 border border-indigo-100">
+                        <iconify-icon icon="mdi:square-edit-outline"></iconify-icon>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-base text-slate-900">Chỉnh Sửa URL Redirect</h4>
+                        <p class="text-xs text-slate-500">Cập nhật đường dẫn rút gọn hoặc link đích đến trên Shopify.</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeEditModal()" class="text-slate-400 hover:text-slate-700 transition-colors p-1 rounded-lg hover:bg-slate-100 cursor-pointer" title="Đóng popup">
+                    <iconify-icon icon="mdi:close" class="text-xl"></iconify-icon>
+                </button>
+            </div>
+
+            <!-- Body Form Modal -->
+            <form id="editRedirectForm" onsubmit="handleExecuteUpdateRedirect(event)" class="space-y-4">
+                <input type="hidden" id="editRedirectId" value="">
+
+                <!-- Thông tin meta: Ngày tạo & Store -->
+                <div class="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-600 font-mono">
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-slate-400">Store:</span>
+                        <span id="editStoreBadge" class="font-bold text-indigo-700">Store Mặc định</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-slate-400">Ngày tạo:</span>
+                        <span id="editCreatedAtDisplay" class="font-medium text-slate-700">—</span>
+                    </div>
+                </div>
+
+                <!-- Trường 1: URL Rút Gọn (Redirect Path) -->
+                <div class="space-y-1.5">
+                    <div class="flex items-center justify-between">
+                        <label for="editRedirectPathInput" class="text-xs font-bold text-slate-700 flex items-center gap-1">
+                            <span>URL Rút Gọn (Redirect Path)</span>
+                            <span class="text-rose-500">*</span>
+                        </label>
+                        <span id="editSlugLengthIndicator" class="text-[11px] font-mono font-semibold text-slate-400">8 ký tự</span>
+                    </div>
+                    <div class="flex rounded-xl shadow-2xs border border-slate-300 focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-indigo-500 overflow-hidden bg-slate-50">
+                        <span class="inline-flex items-center px-3 text-xs text-slate-500 font-mono border-r border-slate-200 select-none bg-slate-100" id="editDomainPrefixDisplay">https://wrydeco.myshopify.com/</span>
+                        <input type="text" id="editRedirectPathInput" required class="flex-1 px-3 py-2 text-xs bg-white focus:outline-none font-mono text-indigo-700 font-bold" placeholder="vd: 7xKmP2wQ hoặc collections/moi">
+                    </div>
+                    <p class="text-[11px] text-slate-400">Đường dẫn rút gọn (slug) để khách hàng truy cập.</p>
+                </div>
+
+                <!-- Trường 2: URL Gốc Đích Đến (Target URL) -->
+                <div class="space-y-1.5">
+                    <label for="editDestUrlInput" class="text-xs font-bold text-slate-700 flex items-center gap-1">
+                        <span>URL Gốc Đích Đến (Destination URL)</span>
+                        <span class="text-rose-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <input type="text" id="editDestUrlInput" required class="w-full px-3 py-2 pl-8 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-slate-800" placeholder="/products/canvas-wall-art hoặc https://...">
+                        <iconify-icon icon="mdi:link-variant" class="absolute left-2.5 top-2.5 text-slate-400 text-sm"></iconify-icon>
+                    </div>
+                    <p class="text-[11px] text-slate-400">Đường dẫn nội bộ Shopify hoặc URL trang web đích đến cần chuyển hướng.</p>
+                </div>
+
+                <!-- Hộp thông báo lỗi nếu có trong modal -->
+                <div id="editModalAlertBox" class="hidden p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-sans"></div>
+
+                <!-- Footer Modal Action Buttons -->
+                <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="closeEditModal()" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer">
+                        Hủy bỏ
+                    </button>
+                    <button type="submit" id="btnSubmitEditRedirect" class="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer">
+                        <iconify-icon icon="mdi:check" id="iconSubmitEditRedirect"></iconify-icon>
+                        <span id="btnSubmitEditText">Lưu Thay Đổi</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL XÁC NHẬN XÓA REDIRECT -->
+    <div id="deleteConfirmModal" onclick="closeDeleteModalOnBackdrop(event)" class="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-scaleIn border border-slate-200" onclick="event.stopPropagation()">
+            <!-- Header Modal Xóa -->
+            <div class="flex items-start justify-between border-b border-slate-100 pb-3">
+                <div class="flex items-center gap-3 text-rose-600">
+                    <div class="p-2.5 bg-rose-100 text-rose-600 rounded-xl text-2xl flex-shrink-0 flex items-center justify-center border border-rose-200">
+                        <iconify-icon icon="mdi:delete-alert-outline"></iconify-icon>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-base text-slate-900">Xác Nhận Xóa URL Redirect</h4>
+                        <p class="text-xs text-slate-500">Hành động này sẽ xóa vĩnh viễn chuyển hướng trên Shopify.</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeDeleteModal()" class="text-slate-400 hover:text-slate-700 transition-colors p-1 rounded-lg hover:bg-slate-100 cursor-pointer" title="Đóng popup">
+                    <iconify-icon icon="mdi:close" class="text-xl"></iconify-icon>
+                </button>
+            </div>
+
+            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 font-mono text-xs space-y-1">
+                <div><span class="text-slate-400">Path:</span> <strong id="modalDeletePath" class="text-indigo-600">/abc</strong></div>
+                <div class="truncate"><span class="text-slate-400">Target:</span> <span id="modalDeleteTarget" class="text-slate-700">/target</span></div>
+            </div>
+
+            <div class="flex items-center justify-end gap-3 pt-2">
+                <button type="button" onclick="closeDeleteModal()" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer">
+                    Hủy bỏ
+                </button>
+                <button type="button" id="btnConfirmDelete" onclick="executeDeleteRedirect()" class="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer">
+                    <iconify-icon icon="mdi:trash-can-outline"></iconify-icon>
+                    <span>Xác nhận xóa</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FLOATING SCROLL CONTROLS (Scroll to Top & Scroll to Bottom) -->
+    <div class="fixed bottom-6 right-6 z-40 flex flex-col gap-2.5 select-none">
+        <!-- Nút Cuộn lên đầu trang -->
+        <button type="button" 
+                id="scrollToTopBtn"
+                onclick="scrollToTop()" 
+                class="w-11 h-11 rounded-full bg-white hover:bg-indigo-600 text-slate-700 hover:text-white shadow-lg border border-slate-200 hover:border-indigo-600 flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95 opacity-0 pointer-events-none cursor-pointer group" 
+                title="Cuộn lên đầu trang (Scroll to Top)">
+            <svg class="w-5 h-5 text-slate-600 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 15l7-7 7 7"></path>
+            </svg>
+        </button>
+
+        <!-- Nút Cuộn xuống cuối trang -->
+        <button type="button" 
+                id="scrollToBottomBtn"
+                onclick="scrollToBottom()" 
+                class="w-11 h-11 rounded-full bg-white hover:bg-indigo-600 text-slate-700 hover:text-white shadow-lg border border-slate-200 hover:border-indigo-600 flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95 opacity-0 pointer-events-none cursor-pointer group" 
+                title="Cuộn xuống cuối trang (Scroll to Bottom)">
+            <svg class="w-5 h-5 text-slate-600 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
+            </svg>
+        </button>
+    </div>
+
+    <!-- TOAST NOTIFICATION CONTAINER (Nằm phía trên floating scroll buttons) -->
+    <div id="toastContainer" class="fixed bottom-32 right-6 z-50 space-y-2 pointer-events-none"></div>
+
+    <!-- Include Menu Drawer -->
+    {% include 'drawer.html' %}
+
+    <!-- JAVASCRIPT LOGIC CLIENT -->
+    <script>
+        // State toàn cục của trang
+        const state = {
+            storeType: 'custom', // 'default' | 'custom' (mặc định chọn Store Riêng)
+            storeInfo: null,
+            redirects: [],
+            pendingDeleteId: null,
+            pendingDefaultCreate: null,
+            searchQuery: '',
+            isLoadingRedirects: false
+        };
+
+        // Khi tải trang xong
+        document.addEventListener('DOMContentLoaded', () => {
+            initPage();
+            setupSlugInputCounter();
+            setupEditSlugInputCounter();
+            window.addEventListener('scroll', toggleScrollButtons, { passive: true });
+            window.addEventListener('resize', toggleScrollButtons);
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    closeEditModal();
+                    closeDeleteModal();
+                    closeDefaultStoreWarningModal();
+                }
+            });
+            toggleScrollButtons();
+        });
+
+        // Khởi tạo trang
+        async function initPage() {
+            updateStoreModeUI(state.storeType);
+            await fetchStoreInfo();
+            await loadRedirectsList();
+        }
+
+        // Cập nhật giao diện nút Store Mode & nút Tạo Redirect
+        function updateStoreModeUI(mode) {
+            const btnDefault = document.getElementById('btnStoreDefault');
+            const btnCustom = document.getElementById('btnStoreCustom');
+            const btnSubmit = document.getElementById('btnSubmitRedirect');
+            const iconSubmit = document.getElementById('iconSubmitRedirect');
+
+            if (!btnDefault || !btnCustom || !btnSubmit) return;
+
+            if (mode === 'custom') {
+                // Khi user đang chọn Store Riêng:
+                // - Nút "Store Riêng" có nền màu xanh (emerald-600) và chữ màu trắng
+                btnCustom.className = "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-emerald-600 text-white shadow-xs hover:bg-emerald-700 cursor-pointer";
+                btnDefault.className = "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 text-slate-600 hover:text-slate-900 cursor-pointer";
+
+                // - Nút "Tạo Redirect" có nền màu xanh (emerald-600) và chữ màu trắng, icon check
+                btnSubmit.className = "inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-sm font-bold shadow-sm hover:shadow transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
+                if (iconSubmit) {
+                    iconSubmit.setAttribute('icon', 'mdi:check-circle');
+                }
+            } else {
+                // Khi user chọn Store Mặc định:
+                btnDefault.className = "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-white text-indigo-700 shadow-xs cursor-pointer";
+                btnCustom.className = "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 text-slate-600 hover:text-slate-900 cursor-pointer";
+
+                // Nút "Tạo Redirect": trở lại nền tím indigo mặc định, icon plus
+                btnSubmit.className = "inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-sm font-bold shadow-sm hover:shadow transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
+                if (iconSubmit) {
+                    iconSubmit.setAttribute('icon', 'mdi:plus-circle');
+                }
+            }
+        }
+
+        // Chuyển đổi giữa Store Mặc định và Store Riêng
+        async function switchStoreMode(mode) {
+            if (state.storeType === mode) return;
+            state.storeType = mode;
+
+            const btnDefault = document.getElementById('btnStoreDefault');
+            const btnCustom = document.getElementById('btnStoreCustom');
+            const iconDefault = document.getElementById('iconStoreDefault');
+            const iconCustom = document.getElementById('iconStoreCustom');
+            const domainDisplay = document.getElementById('currentStoreDomainDisplay');
+            const tableBody = document.getElementById('redirectsTableBody');
+
+            // 1. Cập nhật giao diện nút tab và nút submit ngay lập tức
+            updateStoreModeUI(mode);
+
+            // 2. Kích hoạt Indicator loading
+            btnDefault.disabled = true;
+            btnCustom.disabled = true;
+            const targetIcon = (mode === 'default') ? iconDefault : iconCustom;
+            if (targetIcon) {
+                targetIcon.setAttribute('icon', 'mdi:loading');
+                targetIcon.classList.add('animate-spin');
+            }
+
+            // Indicator trên domain badge
+            if (domainDisplay) {
+                domainDisplay.innerHTML = `<span class="inline-flex items-center gap-1 text-indigo-600 font-sans"><iconify-icon icon="mdi:loading" class="animate-spin text-xs"></iconify-icon> Đang kết nối...</span>`;
+            }
+
+            // Indicator trong bảng danh sách redirects
+            if (tableBody) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="py-12 text-center text-slate-400 font-sans">
+                            <div class="inline-flex items-center gap-2 text-indigo-600 font-semibold text-xs">
+                                <iconify-icon icon="mdi:loading" class="animate-spin text-lg"></iconify-icon>
+                                <span>Đang kết nối và tải dữ liệu từ Shopify...</span>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }
+
+            try {
+                // Tải lại thông tin store và danh sách redirects cho store tương ứng
+                await fetchStoreInfo();
+                await loadRedirectsList(false);
+
+                const currentDomain = state.storeInfo?.shop_domain || (mode === 'custom' ? '236qm8-w7.myshopify.com' : 'wrydeco.myshopify.com');
+                const storeLabel = mode === 'custom' ? `Store Riêng (${currentDomain})` : `Store Mặc định (${currentDomain})`;
+                showToast('success', `Đã chuyển sang ${storeLabel} thành công!`);
+            } catch (err) {
+                showToast('error', `Chuyển store thất bại: ${err.message}`);
+            } finally {
+                // 3. Khôi phục lại trạng thái ban đầu của nút bấm
+                btnDefault.disabled = false;
+                btnCustom.disabled = false;
+                if (targetIcon) {
+                    targetIcon.classList.remove('animate-spin');
+                }
+                if (iconDefault) iconDefault.setAttribute('icon', 'mdi:store-outline');
+                if (iconCustom) iconCustom.setAttribute('icon', 'mdi:store-cog-outline');
+                updateStoreModeUI(state.storeType);
+            }
+        }
+
+        // Lấy thông tin store và kiểm tra chốt chặn an toàn proxy
+        async function fetchStoreInfo() {
+            const safetyAlert = document.getElementById('proxySafetyAlertBox');
+            const safetyMsg = document.getElementById('proxySafetyAlertMessage');
+            const domainDisplay = document.getElementById('currentStoreDomainDisplay');
+            const domainPrefix = document.getElementById('domainPrefixDisplay');
+            const btnSubmit = document.getElementById('btnSubmitRedirect');
+            const proxyLatency = document.getElementById('proxyLatencyBadge');
+            const proxyIp = document.getElementById('proxyIpDisplay');
+
+            try {
+                const res = await fetch(`/api/menu-manager/store-info?store_type=${state.storeType}`);
+                const data = await res.json();
+
+                if (res.status === 503) {
+                    // CHỐT CHẶN AN TOÀN KÍCH HOẠT: PROXY KHÔNG ỔN ĐỊNH
+                    safetyAlert.classList.remove('hidden');
+                    safetyMsg.innerHTML = data.message || 'Kết nối Proxy không ổn định! Mọi thao tác trên Store Riêng bị khóa bảo vệ.';
+                    btnSubmit.disabled = true;
+                    showActionAlert('error', 'Chốt Chặn An Toàn', data.message);
+                    updateProxyStabilityBadge(false, 0);
+                    return;
+                }
+
+                if (!data.success) {
+                    safetyAlert.classList.remove('hidden');
+                    safetyMsg.innerText = data.message || 'Lỗi kết nối tới cấu hình store!';
+                    btnSubmit.disabled = true;
+                    return;
+                }
+
+                // Kết nối thành công
+                safetyAlert.classList.add('hidden');
+                btnSubmit.disabled = false;
+                state.storeInfo = data;
+
+                // Cập nhật UI Store domain: Store nào thì hiện đúng domain kỹ thuật của store đó
+                const currentDomain = data.shop_domain || (state.storeType === 'custom' ? '236qm8-w7.myshopify.com' : 'wrydeco.myshopify.com');
+                domainDisplay.innerText = currentDomain;
+                domainDisplay.title = `Store: ${data.shop_name || currentDomain} (${currentDomain})`;
+                domainPrefix.innerText = `https://${currentDomain}/`;
+
+                // Cập nhật link Shopify Admin trên header
+                const adminLink = document.getElementById('headerShopifyAdminLink');
+                if (adminLink && data.shop) {
+                    adminLink.href = `https://admin.shopify.com/store/${data.shop}`;
+                }
+
+                // Cập nhật thông tin proxy
+                const isProxyStable = Boolean(data.proxy_is_stable);
+                updateProxyStabilityBadge(isProxyStable, data.proxy_latency_ms);
+                if (data.proxy_ip) {
+                    proxyIp.innerText = data.proxy_ip;
+                }
+
+            } catch (err) {
+                console.error("Lỗi khi tải thông tin store:", err);
+            }
+        }
+
+        // Cập nhật badge hiển thị "Ổn định" (màu xanh) hoặc "Thiếu ổn định" (màu đỏ)
+        function updateProxyStabilityBadge(isStable, latencyMs) {
+            const badge = document.getElementById('proxyStabilityBadge');
+            const dot = document.getElementById('proxyStabilityDot');
+            const text = document.getElementById('proxyStabilityText');
+            const latencyEl = document.getElementById('proxyLatencyBadge');
+
+            if (!badge || !dot || !text || !latencyEl) return;
+
+            if (latencyMs !== undefined && latencyMs !== null && latencyMs > 0) {
+                latencyEl.innerText = `Ping: ${latencyMs}ms`;
+            }
+
+            if (isStable) {
+                badge.className = "inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-700 border border-emerald-200";
+                dot.className = "w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse";
+                text.innerText = "Ổn định";
+                latencyEl.className = "text-[11px] font-semibold text-emerald-600";
+            } else {
+                badge.className = "inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-rose-100 text-rose-700 border border-rose-200";
+                dot.className = "w-1.5 h-1.5 rounded-full bg-rose-500";
+                text.innerText = "Thiếu ổn định";
+                latencyEl.className = "text-[11px] font-semibold text-rose-600";
+            }
+        }
+
+        // Kiểm tra chủ động độ ổn định kết nối Proxy
+        async function triggerProxyCheck() {
+            const btn = document.getElementById('btnCheckProxyHealth');
+            const icon = document.getElementById('iconCheckProxy');
+
+            btn.disabled = true;
+            icon.classList.add('animate-spin');
+
+            try {
+                const res = await fetch('/api/menu-manager/proxy/check', { method: 'POST' });
+                const data = await res.json();
+
+                if (data.is_stable) {
+                    showToast('success', `Kết nối Proxy ổn định! Ping: ${data.last_latency_ms || 0}ms (US 🇺🇸)`);
+                    updateProxyStabilityBadge(true, data.last_latency_ms);
+                    // Ẩn cảnh báo đỏ nếu trước đó có
+                    document.getElementById('proxySafetyAlertBox').classList.add('hidden');
+                    document.getElementById('btnSubmitRedirect').disabled = false;
+                } else {
+                    showToast('error', `Proxy không ổn định: ${data.last_error || 'Mất kết nối'}`);
+                    updateProxyStabilityBadge(false, data.last_latency_ms);
+                    if (state.storeType === 'custom') {
+                        document.getElementById('proxySafetyAlertBox').classList.remove('hidden');
+                        document.getElementById('btnSubmitRedirect').disabled = true;
+                    }
+                }
+            } catch (err) {
+                showToast('error', `Lỗi kiểm tra proxy: ${err.message}`);
+                updateProxyStabilityBadge(false, 0);
+            } finally {
+                btn.disabled = false;
+                icon.classList.remove('animate-spin');
+            }
+        }
+
+        // Tải danh sách URL Redirects từ Shopify
+        async function loadRedirectsList(showToastNotification = false) {
+            if (state.isLoadingRedirects) return;
+            state.isLoadingRedirects = true;
+
+            const tableBody = document.getElementById('redirectsTableBody');
+            const iconReload = document.getElementById('iconReloadList');
+            const countBadge = document.getElementById('redirectsBadgeCount');
+            const tabBadge = document.getElementById('tabRedirectCountBadge');
+
+            iconReload.classList.add('animate-spin');
+
+            try {
+                const res = await fetch(`/api/menu-manager/redirects?store_type=${state.storeType}&limit=100`);
+                const data = await res.json();
+
+                if (!data.success) {
+                    if (data.error_type === 'proxy_safety') {
+                        document.getElementById('proxySafetyAlertBox').classList.remove('hidden');
+                        document.getElementById('btnSubmitRedirect').disabled = true;
+                    }
+                    tableBody.innerHTML = `
+                        <tr>
+                            <td colspan="5" class="py-8 text-center text-rose-500 font-sans">
+                                <iconify-icon icon="mdi:alert-circle-outline" class="text-2xl mb-1"></iconify-icon>
+                                <p class="font-bold">${data.message || 'Không thể tải danh sách redirects.'}</p>
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                state.redirects = data.redirects || [];
+                const total = state.redirects.length;
+                countBadge.innerText = `${total} bản ghi`;
+                tabBadge.innerText = total;
+
+                renderRedirectsTable();
+
+                if (showToastNotification) {
+                    showToast('success', `Đã làm mới danh sách (${total} bản ghi) từ store ${data.shop_domain}`);
+                }
+            } catch (err) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="py-8 text-center text-rose-500 font-sans">
+                            <p>Lỗi kết nối khi tải danh sách: ${err.message}</p>
+                        </td>
+                    </tr>
+                `;
+            } finally {
+                state.isLoadingRedirects = false;
+                iconReload.classList.remove('animate-spin');
+            }
+        }
+
+        // Render bảng dữ liệu danh sách Redirects
+        function renderRedirectsTable() {
+            const tableBody = document.getElementById('redirectsTableBody');
+            const paginationInfo = document.getElementById('paginationInfoText');
+            const domain = state.storeInfo?.shop_domain || (state.storeType === 'custom' ? '236qm8-w7.myshopify.com' : 'wrydeco.myshopify.com');
+
+            let filtered = state.redirects;
+            if (state.searchQuery) {
+                const q = state.searchQuery.toLowerCase();
+                filtered = state.redirects.filter(r => 
+                    r.path.toLowerCase().includes(q) || r.target.toLowerCase().includes(q)
+                );
+            }
+
+            // Sắp xếp giảm dần theo ngày tạo (DESC: Mới nhất lên đầu)
+            filtered.sort((a, b) => {
+                const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
+                const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
+                return tb - ta;
+            });
+
+            if (!filtered || filtered.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="py-12 text-center text-slate-400 font-sans">
+                            <iconify-icon icon="mdi:link-variant-off" class="text-3xl text-slate-300 mb-2"></iconify-icon>
+                            <p class="text-xs">Chưa có URL Redirect nào${state.searchQuery ? ' phù hợp với từ khóa tìm kiếm' : ''}.</p>
+                        </td>
+                    </tr>
+                `;
+                paginationInfo.innerText = `Hiển thị 0 / ${state.redirects.length} bản ghi`;
+                setTimeout(toggleScrollButtons, 50);
+                return;
+            }
+
+            paginationInfo.innerText = `Hiển thị ${filtered.length} / ${state.redirects.length} bản ghi`;
+
+            tableBody.innerHTML = filtered.map(r => {
+                const fullShortUrl = `https://${domain}${r.path}`;
+                const fullTargetUrl = r.target.startsWith('http') ? r.target : `https://${domain}${r.target}`;
+                const displayDate = r.created_at_formatted || (r.created_at ? r.created_at.replace('T', ' ').slice(0, 16) : '—');
+                return `
+                    <tr onclick="handleRowClick(event, '${r.id}')" class="hover:bg-indigo-100 transition-colors group cursor-pointer" title="Nhấn vào dòng để chỉnh sửa URL redirect này">
+                        <!-- Cột 1: Short URL Path -->
+                        <td class="py-3 px-4">
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-indigo-700 bg-indigo-50 px-2 py-1 rounded-md text-xs border border-indigo-100">${escapeHtml(r.path)}</span>
+                                <button type="button" onclick="event.stopPropagation(); copyToClipboard('${fullShortUrl}', 'Đã sao chép link rút gọn!')" class="p-1 text-slate-400 hover:text-indigo-600 rounded hover:bg-slate-200 transition-colors cursor-pointer" title="Sao chép toàn bộ Link Rút Gọn">
+                                    <iconify-icon icon="mdi:content-copy" class="text-xs"></iconify-icon>
+                                </button>
+                                <a target="_blank" rel="noopener noreferrer" href="${fullShortUrl}" onclick="event.stopPropagation()" class="p-1 text-slate-400 hover:text-indigo-600 rounded hover:bg-slate-200 transition-colors cursor-pointer" title="Thử nghiệm mở link rút gọn">
+                                    <iconify-icon icon="mdi:open-in-new" class="text-xs"></iconify-icon>
+                                </a>
+                            </div>
+                        </td>
+
+                        <!-- Cột 2: Mũi tên -->
+                        <td class="py-3 px-1 text-center text-slate-300 group-hover:text-indigo-400 transition-colors">
+                            <iconify-icon icon="mdi:arrow-right-thin" class="text-lg"></iconify-icon>
+                        </td>
+
+                        <!-- Cột 3: Target URL -->
+                        <td class="py-3 px-4">
+                            <div class="flex items-center gap-2 max-w-md">
+                                <span class="text-slate-700 truncate" title="${escapeHtml(r.target)}">${escapeHtml(r.target)}</span>
+                                <a target="_blank" rel="noopener noreferrer" href="${fullTargetUrl}" onclick="event.stopPropagation()" class="p-1 text-slate-400 hover:text-slate-700 rounded hover:bg-slate-200 transition-colors flex-shrink-0 cursor-pointer" title="Mở URL đích gốc">
+                                    <iconify-icon icon="mdi:launch" class="text-xs"></iconify-icon>
+                                </a>
+                            </div>
+                        </td>
+
+                        <!-- Cột 4: Ngày Tạo (DESC) -->
+                        <td class="py-3 px-3 text-center whitespace-nowrap">
+                            <span class="text-[11px] text-slate-600 font-sans font-medium bg-slate-50 px-2.5 py-1 rounded-md border border-slate-200 inline-block" title="Ngày tạo: ${escapeHtml(r.created_at || '')}">
+                                ${escapeHtml(displayDate)}
+                            </span>
+                        </td>
+
+                        <!-- Cột 5: Thao tác Xóa -->
+                        <td class="py-3 px-4 text-center">
+                            <button type="button" onclick="event.stopPropagation(); openDeleteModal('${r.id}', '${escapeHtml(r.path)}', '${escapeHtml(r.target)}')" class="inline-flex items-center justify-center p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer" title="Xóa URL redirect này">
+                                <iconify-icon icon="mdi:trash-can-outline" class="text-base"></iconify-icon>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            setTimeout(toggleScrollButtons, 50);
+        }
+
+        // Tự động sinh slug 8 ký tự từ server (đã kiểm tra chống trùng lặp)
+        async function autoGenerateSlug() {
+            const btn = document.getElementById('btnAutoSlug');
+            const icon = document.getElementById('iconDice');
+            const pathInput = document.getElementById('redirectPathInput');
+
+            btn.disabled = true;
+            icon.classList.add('animate-spin');
+
+            try {
+                const res = await fetch('/api/menu-manager/redirects/generate-slug', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ store_type: state.storeType })
+                });
+                const data = await res.json();
+
+                if (data.success && data.slug) {
+                    pathInput.value = data.slug;
+                    updateSlugCounter();
+                    showToast('success', `Đã sinh slug 8 ký tự duy nhất: ${data.slug}`);
+                } else {
+                    showToast('error', data.message || 'Không thể sinh slug!');
+                }
+            } catch (err) {
+                showToast('error', `Lỗi sinh slug: ${err.message}`);
+            } finally {
+                btn.disabled = false;
+                icon.classList.remove('animate-spin');
+            }
+        }
+
+        // Xử lý submit form tạo Redirect
+        async function handleCreateRedirect(e) {
+            e.preventDefault();
+            const destUrl = document.getElementById('destUrlInput').value.trim();
+            const redirectPath = document.getElementById('redirectPathInput').value.trim();
+
+            if (!destUrl || !redirectPath) {
+                showActionAlert('error', 'Thiếu thông tin', 'Vui lòng nhập đầy đủ URL gốc đích đến và URL rút gọn!');
+                return;
+            }
+
+            // Logic cảnh báo nếu user đang thao tác trên Store Mặc định
+            if (state.storeType === 'default') {
+                openDefaultStoreWarningModal(destUrl, redirectPath);
+                return;
+            }
+
+            // Nếu đang ở Store Riêng: tiến hành tạo luôn
+            await executeCreateRedirectPost(destUrl, redirectPath, 'custom');
+        }
+
+        // Mở popup modal cảnh báo khi tạo redirect trên Store Mặc định
+        function openDefaultStoreWarningModal(destUrl, redirectPath) {
+            state.pendingDefaultCreate = { destUrl, redirectPath };
+            
+            const cleanPath = redirectPath.startsWith('/') ? redirectPath : `/${redirectPath}`;
+            document.getElementById('warnModalPath').innerText = cleanPath;
+            document.getElementById('warnModalTarget').innerText = destUrl;
+            document.getElementById('warnModalTarget').title = destUrl;
+
+            // Hiển thị tên miền store mặc định và store riêng
+            const defaultDomain = 'wrydeco.myshopify.com';
+            const customDomain = 'wrydeco.com (236qm8-w7.myshopify.com)';
+            document.getElementById('warnModalDefaultDomain').innerText = defaultDomain;
+            document.getElementById('warnModalCustomDomain').innerText = customDomain;
+
+            document.getElementById('defaultStoreWarningModal').classList.remove('hidden');
+        }
+
+        // Đóng popup modal cảnh báo Store Mặc định
+        function closeDefaultStoreWarningModal() {
+            state.pendingDefaultCreate = null;
+            document.getElementById('defaultStoreWarningModal').classList.add('hidden');
+        }
+
+        // Đóng khi click vào backdrop của modal cảnh báo
+        function closeDefaultStoreWarningModalOnBackdrop(event) {
+            if (event.target === document.getElementById('defaultStoreWarningModal')) {
+                closeDefaultStoreWarningModal();
+            }
+        }
+
+        // Xác nhận tiến hành tạo redirect trên Store Mặc định từ popup
+        async function confirmExecuteCreateRedirectOnDefault() {
+            const pending = state.pendingDefaultCreate;
+            if (!pending) {
+                closeDefaultStoreWarningModal();
+                return;
+            }
+            const { destUrl, redirectPath } = pending;
+            closeDefaultStoreWarningModal();
+            await executeCreateRedirectPost(destUrl, redirectPath, 'default');
+        }
+
+        // Thực thi gửi request POST tạo Redirect lên server
+        async function executeCreateRedirectPost(destUrl, redirectPath, storeType) {
+            const btnSubmit = document.getElementById('btnSubmitRedirect');
+            const btnText = document.getElementById('btnSubmitRedirectText');
+            const iconSubmit = document.getElementById('iconSubmitRedirect');
+
+            btnSubmit.disabled = true;
+            btnText.innerText = "Đang tạo redirect...";
+            iconSubmit.classList.add('animate-spin');
+
+            try {
+                const res = await fetch('/api/menu-manager/redirects', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        dest_url: destUrl,
+                        redirect_path: redirectPath,
+                        store_type: storeType
+                    })
+                });
+
+                const data = await res.json();
+
+                if (data.success) {
+                    // Thành công: Render alert thành công nổi bật
+                    showActionAlert('success', 'Tạo Redirect Thành Công!', `
+                        <div class="space-y-2 mt-1">
+                            <p>${data.message}</p>
+                            <div class="flex flex-wrap items-center gap-2 pt-1 font-mono text-xs">
+                                <span class="text-slate-500">Link rút gọn:</span>
+                                <a target="_blank" href="${data.redirect.full_url}" class="font-bold text-indigo-700 underline">${data.redirect.full_url}</a>
+                                <button type="button" onclick="copyToClipboard('${data.redirect.full_url}', 'Đã copy!')" class="px-2 py-0.5 rounded bg-indigo-100 text-indigo-800 text-sm font-bold hover:bg-indigo-200">Copy</button>
+                            </div>
+                        </div>
+                    `);
+
+                    // Reset form và tải lại danh sách
+                    resetCreateForm();
+                    await loadRedirectsList(false);
+                } else {
+                    // Thất bại: Render alert đỏ rực đập vào mắt
+                    showActionAlert('error', 'Lỗi Tạo Redirect', data.message || 'Shopify từ chối tạo redirect này.');
+                }
+            } catch (err) {
+                showActionAlert('error', 'Lỗi Hệ Thống', `Không thể kết nối đến server: ${err.message}`);
+            } finally {
+                btnSubmit.disabled = false;
+                btnText.innerText = "Tạo Redirect";
+                iconSubmit.classList.remove('animate-spin');
+                updateStoreModeUI(state.storeType);
+            }
+        }
+
+        // =====================================================================
+        // MODAL CHỈNH SỬA URL REDIRECT
+        // =====================================================================
+        // Xử lý khi nhấn vào 1 dòng trong bảng
+        function handleRowClick(event, id) {
+            // Ngăn chặn mở popup khi click vào các nút hành động con (copy, link, xóa)
+            if (event.target.closest('button') || event.target.closest('a')) {
+                return;
+            }
+            openEditModal(id);
+        }
+
+        // Mở popup modal chỉnh sửa redirect
+        function openEditModal(id) {
+            const item = state.redirects.find(r => String(r.id) === String(id));
+            if (!item) {
+                showToast('error', 'Không tìm thấy dữ liệu redirect được chọn!');
+                return;
+            }
+
+            // Reset hộp cảnh báo lỗi trong modal
+            const alertBox = document.getElementById('editModalAlertBox');
+            alertBox.classList.add('hidden');
+            alertBox.innerText = '';
+
+            // Điền dữ liệu bản ghi vào form
+            document.getElementById('editRedirectId').value = item.id;
+            const cleanPath = (item.path || '').replace(/^\//, '');
+            document.getElementById('editRedirectPathInput').value = cleanPath;
+            document.getElementById('editDestUrlInput').value = item.target || '';
+
+            // Cập nhật Domain prefix display
+            const domain = state.storeInfo?.shop_domain || (state.storeType === 'custom' ? '236qm8-w7.myshopify.com' : 'wrydeco.myshopify.com');
+            const prefixEl = document.getElementById('editDomainPrefixDisplay');
+            if (prefixEl) {
+                prefixEl.innerText = `https://${domain}/`;
+            }
+
+            // Cập nhật thông tin Store & Ngày tạo
+            const storeBadge = document.getElementById('editStoreBadge');
+            if (storeBadge) {
+                storeBadge.innerText = state.storeType === 'custom' ? 'Store Riêng' : 'Store Mặc định';
+            }
+            const createdAtEl = document.getElementById('editCreatedAtDisplay');
+            if (createdAtEl) {
+                const displayDate = item.created_at_formatted || (item.created_at ? item.created_at.replace('T', ' ').slice(0, 16) : '—');
+                createdAtEl.innerText = displayDate;
+            }
+
+            // Cập nhật bộ đếm ký tự slug
+            updateEditSlugCounter();
+
+            // Hiển thị modal
+            document.getElementById('editRedirectModal').classList.remove('hidden');
+        }
+
+        // Đóng popup modal chỉnh sửa
+        function closeEditModal() {
+            document.getElementById('editRedirectModal').classList.add('hidden');
+            document.getElementById('editRedirectId').value = '';
+            const alertBox = document.getElementById('editModalAlertBox');
+            alertBox.classList.add('hidden');
+            alertBox.innerText = '';
+        }
+
+        // Đóng modal khi nhấn vào backdrop (vùng nền bên ngoài)
+        function closeEditModalOnBackdrop(event) {
+            if (event.target === document.getElementById('editRedirectModal')) {
+                closeEditModal();
+            }
+        }
+
+        // Đăng ký lắng nghe sự kiện gõ slug trong edit modal
+        function setupEditSlugInputCounter() {
+            const input = document.getElementById('editRedirectPathInput');
+            if (input) {
+                input.addEventListener('input', updateEditSlugCounter);
+            }
+        }
+
+        // Cập nhật số ký tự slug trong edit modal
+        function updateEditSlugCounter() {
+            const input = document.getElementById('editRedirectPathInput');
+            const indicator = document.getElementById('editSlugLengthIndicator');
+            if (!input || !indicator) return;
+
+            const len = input.value.trim().replace(/^\//, '').length;
+            indicator.innerText = `${len} ký tự`;
+            if (len === 8) {
+                indicator.className = "text-[11px] font-mono font-bold text-emerald-600";
+            } else if (len > 0) {
+                indicator.className = "text-[11px] font-mono font-semibold text-slate-500";
+            } else {
+                indicator.className = "text-[11px] font-mono font-semibold text-slate-400";
+            }
+        }
+
+        // Xử lý gửi cập nhật URL Redirect
+        async function handleExecuteUpdateRedirect(e) {
+            e.preventDefault();
+            const id = document.getElementById('editRedirectId').value;
+            const rawPath = document.getElementById('editRedirectPathInput').value.trim();
+            const destUrl = document.getElementById('editDestUrlInput').value.trim();
+            const alertBox = document.getElementById('editModalAlertBox');
+            const btnSubmit = document.getElementById('btnSubmitEditRedirect');
+            const btnText = document.getElementById('btnSubmitEditText');
+            const iconSubmit = document.getElementById('iconSubmitEditRedirect');
+
+            if (!id || !rawPath || !destUrl) {
+                alertBox.innerText = 'Vui lòng điền đầy đủ cả URL Rút Gọn và URL Gốc Đích Đến.';
+                alertBox.classList.remove('hidden');
+                return;
+            }
+
+            const redirectPath = rawPath.startsWith('/') ? rawPath : `/${rawPath}`;
+
+            alertBox.classList.add('hidden');
+            alertBox.innerText = '';
+            btnSubmit.disabled = true;
+            btnText.innerText = 'Đang lưu...';
+            iconSubmit.setAttribute('icon', 'mdi:loading');
+            iconSubmit.classList.add('animate-spin');
+
+            try {
+                const res = await fetch(`/api/menu-manager/redirects/${encodeURIComponent(id)}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        dest_url: destUrl,
+                        redirect_path: redirectPath,
+                        store_type: state.storeType
+                    })
+                });
+
+                const data = await res.json();
+
+                if (data.success) {
+                    closeEditModal();
+                    showToast('success', data.message || 'Đã cập nhật URL redirect thành công!');
+                    await loadRedirectsList(false);
+                } else {
+                    alertBox.innerText = data.message || 'Shopify từ chối cập nhật redirect này.';
+                    alertBox.classList.remove('hidden');
+                }
+            } catch (err) {
+                alertBox.innerText = `Lỗi hệ thống: ${err.message}`;
+                alertBox.classList.remove('hidden');
+            } finally {
+                btnSubmit.disabled = false;
+                btnText.innerText = 'Lưu Thay Đổi';
+                iconSubmit.setAttribute('icon', 'mdi:check');
+                iconSubmit.classList.remove('animate-spin');
+            }
+        }
+
+        // Mở Modal xác nhận xóa
+        function openDeleteModal(id, path, target) {
+            state.pendingDeleteId = id;
+            document.getElementById('modalDeletePath').innerText = path;
+            document.getElementById('modalDeleteTarget').innerText = target;
+            document.getElementById('deleteConfirmModal').classList.remove('hidden');
+        }
+
+        // Đóng Modal xác nhận xóa
+        function closeDeleteModal() {
+            state.pendingDeleteId = null;
+            document.getElementById('deleteConfirmModal').classList.add('hidden');
+        }
+
+        // Đóng modal xóa khi nhấn vào backdrop (vùng nền bên ngoài)
+        function closeDeleteModalOnBackdrop(event) {
+            if (event.target === document.getElementById('deleteConfirmModal')) {
+                closeDeleteModal();
+            }
+        }
+
+        // Thực thi lệnh xóa Redirect
+        async function executeDeleteRedirect() {
+            if (!state.pendingDeleteId) return;
+            const btn = document.getElementById('btnConfirmDelete');
+            btn.disabled = true;
+
+            try {
+                const res = await fetch(`/api/menu-manager/redirects/${encodeURIComponent(state.pendingDeleteId)}?store_type=${state.storeType}`, {
+                    method: 'DELETE'
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    showToast('success', 'Đã xóa bản ghi redirect thành công!');
+                    closeDeleteModal();
+                    await loadRedirectsList(false);
+                } else {
+                    showToast('error', data.message || 'Không thể xóa bản ghi.');
+                }
+            } catch (err) {
+                showToast('error', `Lỗi xóa: ${err.message}`);
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        // Tìm kiếm nhanh trong bảng
+        function handleSearchInput(val) {
+            state.searchQuery = (val || '').trim();
+            renderRedirectsTable();
+        }
+
+        // Reset form tạo
+        function resetCreateForm() {
+            document.getElementById('createRedirectForm').reset();
+            updateSlugCounter();
+        }
+
+        // Đếm ký tự cho ô slug
+        function setupSlugInputCounter() {
+            const input = document.getElementById('redirectPathInput');
+            input.addEventListener('input', updateSlugCounter);
+        }
+
+        function updateSlugCounter() {
+            const input = document.getElementById('redirectPathInput');
+            const indicator = document.getElementById('slugLengthIndicator');
+            const len = input.value.trim().replace(/^\//, '').length;
+            indicator.innerText = `${len}/8 ký tự`;
+            if (len === 8) {
+                indicator.className = "font-mono font-bold text-emerald-600";
+            } else if (len > 8) {
+                indicator.className = "font-mono font-bold text-amber-600";
+            } else {
+                indicator.className = "font-mono font-semibold text-slate-400";
+            }
+        }
+
+        // Hiển thị Section Alert thông báo lớn
+        function showActionAlert(type, title, messageHtml) {
+            const container = document.getElementById('actionAlertSection');
+            const isSuccess = type === 'success';
+
+            const bgClass = isSuccess ? 'bg-emerald-50 border-emerald-300 text-emerald-900' : 'bg-rose-50 border-rose-300 text-rose-900';
+            const iconName = isSuccess ? 'mdi:check-circle-outline' : 'mdi:alert-octagon-outline';
+            const iconColor = isSuccess ? 'text-emerald-600 bg-emerald-100' : 'text-rose-600 bg-rose-100';
+
+            container.innerHTML = `
+                <div class="p-4.5 rounded-2xl border-2 ${bgClass} shadow-sm flex items-start gap-3.5 animate-fadeIn">
+                    <div class="p-2 rounded-xl text-2xl flex-shrink-0 ${iconColor}">
+                        <iconify-icon icon="${iconName}"></iconify-icon>
+                    </div>
+                    <div class="flex-1 space-y-1">
+                        <div class="flex items-center justify-between">
+                            <h4 class="font-bold text-sm tracking-wide">${title}</h4>
+                            <button type="button" onclick="document.getElementById('actionAlertSection').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 text-base leading-none">
+                                <iconify-icon icon="mdi:close"></iconify-icon>
+                            </button>
+                        </div>
+                        <div class="text-xs leading-relaxed">${messageHtml}</div>
+                    </div>
+                </div>
+            `;
+            container.classList.remove('hidden');
+
+            // Tự scroll nhẹ đến alert để đập vào mắt user
+            container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        // Sao chép text vào Clipboard
+        function copyToClipboard(text, successMsg) {
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('success', successMsg || 'Đã sao chép vào bộ nhớ đệm!');
+            }).catch(err => {
+                showToast('error', 'Không thể sao chép: ' + err.message);
+            });
+        }
+
+        // Toast Notification nhỏ ở góc màn hình
+        function showToast(type, msg) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const isSuccess = type === 'success';
+
+            toast.className = `pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg border text-xs font-semibold transition-all transform duration-300 opacity-0 translate-y-2 ${
+                isSuccess ? 'bg-slate-900 text-white border-slate-800' : 'bg-rose-900 text-white border-rose-800'
+            }`;
+
+            const icon = isSuccess ? 'mdi:check-circle' : 'mdi:alert-circle';
+            const iconColor = isSuccess ? 'text-emerald-400' : 'text-rose-400';
+
+            toast.innerHTML = `
+                <iconify-icon icon="${icon}" class="${iconColor} text-lg flex-shrink-0"></iconify-icon>
+                <span>${escapeHtml(msg)}</span>
+            `;
+
+            container.appendChild(toast);
+
+            // Animate in
+            requestAnimationFrame(() => {
+                toast.classList.remove('opacity-0', 'translate-y-2');
+                toast.classList.add('opacity-100', 'translate-y-0');
+            });
+
+            // Tự hủy sau 3.5s
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        // Escape HTML chống XSS
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // =====================================================================
+        // FLOATING SCROLL CONTROLS (SCROLL TO TOP & SCROLL TO BOTTOM)
+        // =====================================================================
+        function scrollToTop() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'instant'
+            });
+        }
+
+        function scrollToBottom() {
+            window.scrollTo({
+                top: Math.max(document.documentElement.scrollHeight, document.body.scrollHeight),
+                behavior: 'instant'
+            });
+        }
+
+        function toggleScrollButtons() {
+            const scrollToTopBtn = document.getElementById('scrollToTopBtn');
+            const scrollToBottomBtn = document.getElementById('scrollToBottomBtn');
+            if (!scrollToTopBtn || !scrollToBottomBtn) return;
+
+            const scrollY = window.scrollY || document.documentElement.scrollTop;
+            const windowHeight = window.innerHeight;
+            const docHeight = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
+
+            // Nút Scroll To Top: Hiện khi cuộn xuống quá 150px
+            if (scrollY > 150) {
+                scrollToTopBtn.classList.remove('opacity-0', 'pointer-events-none');
+            } else {
+                scrollToTopBtn.classList.add('opacity-0', 'pointer-events-none');
+            }
+
+            // Nút Scroll To Bottom: Hiện khi chưa đến sát cuối trang (cách đáy > 150px)
+            if (scrollY + windowHeight < docHeight - 150) {
+                scrollToBottomBtn.classList.remove('opacity-0', 'pointer-events-none');
+            } else {
+                scrollToBottomBtn.classList.add('opacity-0', 'pointer-events-none');
+            }
+        }
+    </script>
+</body>
+</html>

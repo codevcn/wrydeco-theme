@@ -670,6 +670,16 @@ class OrchestratorStore:
         try:
             with self.transaction(immediate=True) as connection:
                 for item in manifest.products:
+                    if connection.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='aeo_backfill_tasks'").fetchone():
+                        active_aeo = connection.execute(
+                            "SELECT t.data,r.data FROM aeo_backfill_tasks t "
+                            "JOIN aeo_backfill_runs r ON r.id=t.run_id WHERE t.product_id=?",
+                            (f"gid://shopify/Product/{item.shopify_product_id}",),
+                        ).fetchall()
+                        if any(_loads(row[0], {}).get("status") in {"authoring", "reviewing", "ready"}
+                               and _loads(row[1], {}).get("status") not in {"completed", "exhausted"}
+                               for row in active_aeo):
+                            raise QueueConflict(f"{item.shopify_product_id} is currently owned by a store AEO job.")
                     conflict = connection.execute(
                         """
                         SELECT p.asin, p.shopify_product_id, p.run_id, p.status

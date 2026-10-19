@@ -16,6 +16,7 @@ from flask import Flask, Response, jsonify, render_template, request, stream_wit
 from markdown_it import MarkdownIt
 from werkzeug.serving import make_server
 
+from .antigravity import read_antigravity_config, save_antigravity_config
 from .config import PACKAGE_ROOT
 from .errors import ContentValidationError, ManifestError, ShopifyError
 from .io_utils import atomic_write_json, atomic_write_text, load_json
@@ -25,9 +26,10 @@ from .server_control import register_server_process, unregister_server_process
 from .shopify import ShopifyClient, ShopifyConfig
 from .store import ClaimError, OrchestratorStore, QueueConflict
 from .aeo.lifecycle import prompt_text
+from .aeo.backfill import BackfillService
 
 
-DOC_EXTENSIONS = {".md", ".txt"}
+DOC_EXTENSIONS = {".md", ".txt", ".html", ".htm"}
 PROMPT_FILES = {
     "agent_prompt": "AGENT_PROMPT.md",
     "content_task_prompt": "CONTENT_TASK_PROMPT.md",
@@ -76,13 +78,17 @@ def _open_antigravity_cleanup_terminal(
     def quote(value: str) -> str:
         return "'" + value.replace("'", "''") + "'"
 
+    model = read_antigravity_config(project_root / "scraper")["model"]
     command = (
+        f"$host.UI.RawUI.WindowTitle = 'Xoa conversation: {conversation_id}'; "
         f"Set-Location -LiteralPath {quote(str(project_root.resolve()))}; "
         "Write-Host ''; "
-        "Write-Host 'Conversation can xoa:' -ForegroundColor Yellow; "
-        f"Write-Host {quote(conversation_id)} -ForegroundColor Cyan; "
-        "Write-Host 'Trong Antigravity: go /resume, tim dung ID, nhan Ctrl+Delete va xac nhan.'; "
-        f"& {quote(str(resolved))}"
+        "Write-Host '===================================================' -ForegroundColor Yellow; "
+        f"Write-Host 'CONVERSATION CAN XOA: {conversation_id}' -ForegroundColor Cyan; "
+        "Write-Host 'Huong dan: Dan ID (Ctrl+V) vao o search, nhan F4 de xoa.' -ForegroundColor Gray; "
+        "Write-Host '===================================================' -ForegroundColor Yellow; "
+        "Write-Host ''; "
+        f"& {quote(str(resolved))} --model {quote(model)}"
     )
     process = subprocess.Popen(
         ["powershell.exe", "-NoLogo", "-NoExit", "-Command", command],
@@ -94,7 +100,7 @@ def _open_antigravity_cleanup_terminal(
 
 def _resolve_doc_path(docs_root: Path, raw_path: str) -> Path:
     if not raw_path or Path(raw_path).suffix.lower() not in DOC_EXTENSIONS:
-        raise ValueError("Only .md and .txt documentation files are supported.")
+        raise ValueError("Only .md, .txt, and .html documentation files are supported.")
     root = docs_root.resolve()
     candidate = (root / raw_path).resolve()
     try:
@@ -129,9 +135,19 @@ def _list_docs(docs_root: Path) -> list[dict[str, Any]]:
 
 
 def _render_doc_content(extension: str, content: str) -> tuple[str, str]:
-    """Render local docs without allowing source HTML to execute in the dashboard."""
-    if extension.lower() == ".md":
+    """Render local docs safely in the dashboard."""
+    ext = extension.lower()
+    if ext == ".md":
         return "markdown", DOC_MARKDOWN.render(content)
+    if ext in {".html", ".htm"}:
+        escaped_doc = escape(content, quote=True)
+        return "html", (
+            '<div class="docs-html-wrapper">'
+            f'<iframe class="docs-html-frame" srcdoc="{escaped_doc}" '
+            'sandbox="allow-scripts allow-same-origin allow-popups" '
+            'title="HTML Document Viewer" referrerpolicy="no-referrer"></iframe>'
+            '</div>'
+        )
     return "text", f'<pre class="docs-plain-text">{escape(content)}</pre>'
 
 
@@ -246,6 +262,8 @@ def create_app(
     app.extensions["orchestrator_store"] = orchestration
     app.extensions["run_coordinator"] = runner
     app.extensions["antigravity_supervisor"] = agent_runtime
+    aeo_backfill = BackfillService(orchestration, shopify_client_factory)
+    app.extensions["aeo_backfill"] = aeo_backfill
     if start_workers:
         runner.start()
 
@@ -333,6 +351,18 @@ def create_app(
     @app.get("/api/bootstrap")
     def bootstrap():
         manifest = load_json(manifest_path) if manifest_path.is_file() else {"products": []}
+        antigravity_config = read_antigravity_config(package_root)
+        agent_state = (
+            dict(agent_runtime.state())
+            if agent_runtime is not None
+            else {
+                "status": "disabled",
+                "ready": True,
+                "model": antigravity_config["model"],
+                "message": "Agent gate disabled for this app instance.",
+            }
+        )
+        agent_state.setdefault("model", antigravity_config["model"])
         return jsonify(
             csrf_token=csrf_token,
             manifest=manifest,
@@ -340,17 +370,117 @@ def create_app(
             runs=orchestration.list_runs(),
             queue=orchestration.queue_status(),
             product_types=_read_product_types(package_root),
+            antigravity_config=antigravity_config,
             agent_sessions=orchestration.list_agent_sessions(),
-            agent=(agent_runtime.state() if agent_runtime is not None else {
-                "status": "disabled", "ready": True, "message": "Agent gate disabled for this app instance."
-            }),
+            agent=agent_state,
         )
+
+    @app.get("/api/aeo-backfill")
+    def list_aeo_backfill():
+        runs = aeo_backfill.db.list_runs()
+        for run in runs:
+            for key in ("contract", "page", "cursor", "next_cursor"):
+                run.pop(key, None)
+        return jsonify(runs=runs)
+
+    @app.post("/api/aeo-backfill")
+    def create_aeo_backfill():
+        body = request.get_json(silent=False) or {}
+        run = aeo_backfill.db.create(body.get("quantity"))
+        return jsonify(id=run["id"], status=run["status"]), 201
+
+    @app.post("/api/aeo-backfill/<run_id>/pause")
+    def pause_aeo_backfill(run_id):
+        run = aeo_backfill.db.run(run_id)
+        if run["status"] not in {"running", "queued"}:
+            raise QueueConflict("Job AEO hiện không chạy.")
+        aeo_backfill.db.update_run(run_id, status="paused")
+        return jsonify(paused=True)
+
+    @app.post("/api/aeo-backfill/<run_id>/resume")
+    def resume_aeo_backfill(run_id):
+        run = aeo_backfill.resume(run_id)
+        return jsonify(id=run["id"], status=run["status"])
+
+    @app.get("/api/aeo-backfill/tasks/<task_id>")
+    def read_aeo_backfill_task(task_id):
+        task = aeo_backfill.db.task(task_id)
+        path = aeo_backfill.db.workspace(task_id) / "shopify_before.json"
+        context = aeo_backfill.db.context(task_id) if path.is_file() else {"aeo": {"input": {}}}
+        html = ""
+        if task.get("draft"):
+            from .aeo.core import normalize_draft, render_html
+            try:
+                html = render_html(normalize_draft(task["draft"]["aeo"]))
+            except ContentValidationError:
+                pass
+        return jsonify(title=task["title"], status=task["status"], error=task.get("error"),
+                       reviewed=task.get("reviewed", False), draft=task.get("draft"),
+                       evidence=context["aeo"]["input"], html=html)
+
+    @app.post("/api/aeo-backfill/tasks/<task_id>/retry")
+    def retry_aeo_backfill_task(task_id):
+        run = aeo_backfill.retry_task(task_id)
+        return jsonify(id=run["id"], status=run["status"])
 
     @app.get("/api/agent")
     def agent_status():
+        antigravity_config = read_antigravity_config(package_root)
         if agent_runtime is None:
-            return jsonify(status="disabled", ready=True, message="Agent gate disabled for this app instance.")
-        return jsonify(agent_runtime.state())
+            return jsonify(
+                status="disabled",
+                ready=True,
+                model=antigravity_config["model"],
+                message="Agent gate disabled for this app instance.",
+            )
+        state = dict(agent_runtime.state())
+        state.setdefault("model", antigravity_config["model"])
+        return jsonify(state)
+
+    @app.get("/api/agent/config")
+    def get_agent_config():
+        return jsonify(**read_antigravity_config(package_root))
+
+    @app.put("/api/agent/config")
+    def update_agent_config():
+        body = request.get_json(silent=False)
+        saved = save_antigravity_config(package_root, body)
+        restarted = False
+        if agent_runtime is not None:
+            setter = getattr(agent_runtime, "set_model", None)
+            if callable(setter):
+                setter(saved["model"])
+            if isinstance(body, dict) and body.get("restart") is True:
+                current_state = agent_runtime.state()
+                if current_state.get("status") in {"ready", "failed", "interrupted"}:
+                    agent_runtime.restart()
+                    restarted = True
+        agent_state = (
+            dict(agent_runtime.state())
+            if agent_runtime is not None
+            else {
+                "status": "disabled",
+                "ready": True,
+                "model": saved["model"],
+                "message": "Agent gate disabled for this app instance.",
+            }
+        )
+        agent_state.setdefault("model", saved["model"])
+        return jsonify(
+            saved=True,
+            restarted=restarted,
+            config=saved,
+            model=saved["model"],
+            default_model=saved["default_model"],
+            available_models=saved["available_models"],
+            source=saved["source"],
+            agent=agent_state,
+            message=(
+                f"Đã lưu model {saved['model']} vào {saved['source']} và khởi động lại Agent."
+                if restarted
+                else f"Đã lưu model {saved['model']} vào {saved['source']}."
+            ),
+        )
 
     @app.get("/api/agent/sessions")
     def list_agent_sessions():
@@ -404,6 +534,13 @@ def create_app(
             format=render_format,
             rendered_html=rendered_html,
         )
+
+    @app.get("/api/docs/raw")
+    def read_doc_raw():
+        relative_path = str(request.args.get("path", "")).strip()
+        document = _resolve_doc_path(docs_root, relative_path)
+        mimetype = "text/html; charset=utf-8" if document.suffix.lower() in {".html", ".htm"} else "text/plain; charset=utf-8"
+        return Response(document.read_bytes(), mimetype=mimetype)
 
     @app.get("/api/prompts")
     def read_prompts():
@@ -596,6 +733,8 @@ def serve(host: str = "127.0.0.1", port: int = 5000) -> None:
     registration = register_server_process(PACKAGE_ROOT, host, port)
     dashboard_url = _dashboard_url(host, port)
     try:
+        app.extensions["aeo_backfill"].recover()
+        app.extensions["aeo_backfill"].start()
         coordinator.start()
         agent.start()
         browser_timer = threading.Timer(0.2, _open_dashboard, args=(dashboard_url,))
@@ -613,5 +752,6 @@ def serve(host: str = "127.0.0.1", port: int = 5000) -> None:
         readiness_gate.clear()
         http_server.server_close()
         coordinator.stop()
+        app.extensions["aeo_backfill"].stop()
         agent.stop()
         unregister_server_process(registration)

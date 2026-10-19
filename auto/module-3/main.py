@@ -1,4 +1,5 @@
 import os
+import asyncio
 import re
 import time
 import uuid
@@ -6,7 +7,8 @@ import csv
 import io
 import json
 import base64
-from datetime import datetime
+import secrets
+from datetime import datetime, timezone, timedelta
 from fastapi import FastAPI, Request, Form, File, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse, Response
 from urllib.parse import urlparse
@@ -767,6 +769,10 @@ def get_products(first=50, after=None, before=None, last=None, filter_query=None
             category {
               name
             }
+            seo {
+              title
+              description
+            }
             priceRangeV2 {
               minVariantPrice {
                 amount
@@ -783,6 +789,9 @@ def get_products(first=50, after=None, before=None, last=None, filter_query=None
               }
             }
             amazon_link: metafield(namespace: "custom", key: "amazon_link") {
+              value
+            }
+            aeo_html: metafield(namespace: "custom", key: "aeo_html") {
               value
             }
             media(first: 50) {
@@ -829,6 +838,173 @@ def get_products(first=50, after=None, before=None, last=None, filter_query=None
         print("GraphQL Errors:", data["errors"])
         return {"products": {"edges": [], "pageInfo": {}}, "productsCount": {"count": 0}}
     return data["data"]
+
+def get_products_sorted_by_price(first=50, after=None, before=None, filter_query=None, sort_by="price_asc", price_from=None, price_to=None):
+    """
+    Shopify GraphQL Admin API không hỗ trợ ProductSortKeys là PRICE (chỉ có CREATED_AT, TITLE, v.v.).
+    Hàm này lấy tất cả các sản phẩm phù hợp filter_query, sắp xếp theo giá minVariantPrice trong Python,
+    sau đó phân trang offset-based cursor đảm bảo không bao giờ bị rỗng.
+    """
+    query = """
+    query getProductsAll($first: Int, $after: String, $query: String) {
+      products(first: $first, after: $after, query: $query) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        edges {
+          node {
+            id
+            handle
+            title
+            descriptionHtml
+            createdAt
+            productType
+            totalInventory
+            tracksInventory
+            category {
+              name
+            }
+            seo {
+              title
+              description
+            }
+            priceRangeV2 {
+              minVariantPrice {
+                amount
+              }
+            }
+            options {
+              name
+            }
+            collections(first: 20) {
+              edges {
+                node {
+                  title
+                }
+              }
+            }
+            amazon_link: metafield(namespace: "custom", key: "amazon_link") {
+              value
+            }
+            aeo_html: metafield(namespace: "custom", key: "aeo_html") {
+              value
+            }
+            media(first: 50) {
+              edges {
+                node {
+                  ... on MediaImage {
+                    id
+                    image {
+                      url
+                    }
+                  }
+                  ... on Video {
+                    id
+                    preview {
+                      image {
+                        url
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    """
+    all_edges = []
+    has_next = True
+    cursor = None
+    while has_next:
+        variables = {"first": 250, "after": cursor}
+        if filter_query:
+            variables["query"] = filter_query
+        try:
+            res = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=HEADERS, timeout=30)
+            res.raise_for_status()
+            data = res.json()
+            if "errors" in data or "data" not in data:
+                print("GraphQL Errors in get_products_sorted_by_price:", data.get("errors"))
+                break
+            products_data = data["data"]["products"]
+            for edge in products_data.get("edges", []):
+                all_edges.append(edge)
+            page_info = products_data.get("pageInfo", {})
+            has_next = page_info.get("hasNextPage", False)
+            cursor = page_info.get("endCursor")
+        except Exception as e:
+            print("Error fetching products in get_products_sorted_by_price:", e)
+            break
+
+    # Sắp xếp theo giá (minVariantPrice)
+    def get_sort_key(edge):
+        price_data = edge["node"].get("priceRangeV2")
+        if price_data and price_data.get("minVariantPrice"):
+            try:
+                return float(price_data["minVariantPrice"].get("amount", 0))
+            except (ValueError, TypeError):
+                return 0.0
+        return 0.0
+
+    # Lọc triệt để theo minVariantPrice trong Python
+    if price_from is not None:
+        all_edges = [e for e in all_edges if get_sort_key(e) >= price_from]
+    if price_to is not None:
+        all_edges = [e for e in all_edges if get_sort_key(e) <= price_to]
+
+    if sort_by == "price_desc":
+        all_edges.sort(key=get_sort_key, reverse=True)
+    elif sort_by == "price_asc":
+        all_edges.sort(key=get_sort_key, reverse=False)
+    elif sort_by == "created_asc":
+        all_edges.sort(key=lambda e: e["node"].get("createdAt", ""), reverse=False)
+    else:
+        all_edges.sort(key=lambda e: e["node"].get("createdAt", ""), reverse=True)
+
+    total_len = len(all_edges)
+    
+    # Phân trang offset-based
+    start_idx = 0
+    if after is not None:
+        try:
+            start_idx = int(after) + 1
+        except ValueError:
+            start_idx = 0
+    elif before is not None:
+        try:
+            end_val = int(before)
+            start_idx = max(0, end_val - first)
+        except ValueError:
+            start_idx = 0
+
+    if start_idx < 0:
+        start_idx = 0
+    end_idx = min(start_idx + first, total_len)
+    paged_edges = all_edges[start_idx:end_idx]
+
+    has_previous_page = start_idx > 0
+    has_next_page = end_idx < total_len
+    start_cursor = str(start_idx) if paged_edges else "0"
+    end_cursor = str(max(0, end_idx - 1)) if paged_edges else "0"
+
+    return {
+        "products": {
+            "edges": paged_edges,
+            "pageInfo": {
+                "hasNextPage": has_next_page,
+                "hasPreviousPage": has_previous_page,
+                "startCursor": start_cursor,
+                "endCursor": end_cursor
+            }
+        },
+        "productsCount": {
+            "count": total_len
+        }
+    }
+
 def get_products_by_metafield_amazon_link(keyword, sort_by="created_desc"):
     return get_products_by_metafield_amazon_link_list(keyword, sort_by=sort_by)
 
@@ -2112,6 +2288,245 @@ def get_products_by_duplicate_title(sort_by="created_desc"):
         "productsCount": {"count": len(duplicate_edges)}
     }
 
+def fetch_all_products_for_duplicates():
+    query = """
+    query getProducts($after: String) {
+      products(first: 50, after: $after) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        edges {
+          node {
+            id
+            handle
+            title
+            descriptionHtml
+            createdAt
+            productType
+            category {
+              name
+            }
+            seo {
+              title
+              description
+            }
+            priceRangeV2 {
+              minVariantPrice {
+                amount
+              }
+            }
+            options {
+              name
+            }
+            collections(first: 20) {
+              edges {
+                node {
+                  title
+                }
+              }
+            }
+            amazon_link: metafield(namespace: "custom", key: "amazon_link") {
+              value
+            }
+            aeo_html: metafield(namespace: "custom", key: "aeo_html") {
+              value
+            }
+            media(first: 50) {
+              edges {
+                node {
+                  ... on MediaImage {
+                    id
+                    image {
+                      url
+                    }
+                  }
+                  ... on Video {
+                    id
+                    preview {
+                      image {
+                        url
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    """
+    all_edges = []
+    has_next = True
+    cursor = None
+    proxies = get_shopify_request_proxies()
+    
+    while has_next:
+        variables = {}
+        if cursor:
+            variables["after"] = cursor
+            
+        res = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=HEADERS, proxies=proxies)
+        res.raise_for_status()
+        data = res.json()
+        if "errors" in data:
+            print("GraphQL Errors:", data["errors"])
+            break
+            
+        products_data = data["data"]["products"]
+        all_edges.extend(products_data["edges"])
+                
+        page_info = products_data.get("pageInfo", {})
+        has_next = page_info.get("hasNextPage", False)
+        cursor = page_info.get("endCursor")
+        
+    return all_edges
+
+def sort_duplicate_edges(edges, sort_by):
+    def get_sort_key(edge):
+        if sort_by in ["price_asc", "price_desc"]:
+            price_data = edge["node"].get("priceRangeV2")
+            if price_data and price_data.get("minVariantPrice"):
+                return float(price_data["minVariantPrice"].get("amount", 0))
+            return 0.0
+        return edge["node"].get("createdAt", "")
+        
+    reverse_sort = sort_by in ["created_desc", "price_desc"]
+    edges.sort(key=get_sort_key, reverse=reverse_sort)
+    return edges
+
+def get_products_by_duplicate_seo_title(sort_by="created_desc"):
+    all_edges = fetch_all_products_for_duplicates()
+    seo_title_counts = {}
+    for edge in all_edges:
+        seo_obj = edge["node"].get("seo") or {}
+        raw_seo_title = seo_obj.get("title")
+        if raw_seo_title:
+            norm_seo_title = raw_seo_title.strip().lower()
+            if norm_seo_title:
+                seo_title_counts[norm_seo_title] = seo_title_counts.get(norm_seo_title, 0) + 1
+                
+    duplicate_edges = []
+    for edge in all_edges:
+        seo_obj = edge["node"].get("seo") or {}
+        raw_seo_title = seo_obj.get("title")
+        if raw_seo_title:
+            norm_seo_title = raw_seo_title.strip().lower()
+            if norm_seo_title and seo_title_counts.get(norm_seo_title, 0) > 1:
+                duplicate_edges.append(edge)
+
+    sorted_edges = sort_duplicate_edges(duplicate_edges, sort_by)
+        
+    return {
+        "products": {
+            "edges": sorted_edges,
+            "pageInfo": {"hasNextPage": False, "hasPreviousPage": False}
+        },
+        "productsCount": {"count": len(sorted_edges)}
+    }
+
+def get_products_by_duplicate_seo_description(sort_by="created_desc"):
+    all_edges = fetch_all_products_for_duplicates()
+    seo_desc_counts = {}
+    for edge in all_edges:
+        seo_obj = edge["node"].get("seo") or {}
+        raw_seo_desc = seo_obj.get("description")
+        if raw_seo_desc:
+            norm_seo_desc = raw_seo_desc.strip().lower()
+            if norm_seo_desc:
+                seo_desc_counts[norm_seo_desc] = seo_desc_counts.get(norm_seo_desc, 0) + 1
+                
+    duplicate_edges = []
+    for edge in all_edges:
+        seo_obj = edge["node"].get("seo") or {}
+        raw_seo_desc = seo_obj.get("description")
+        if raw_seo_desc:
+            norm_seo_desc = raw_seo_desc.strip().lower()
+            if norm_seo_desc and seo_desc_counts.get(norm_seo_desc, 0) > 1:
+                duplicate_edges.append(edge)
+
+    sorted_edges = sort_duplicate_edges(duplicate_edges, sort_by)
+        
+    return {
+        "products": {
+            "edges": sorted_edges,
+            "pageInfo": {"hasNextPage": False, "hasPreviousPage": False}
+        },
+        "productsCount": {"count": len(sorted_edges)}
+    }
+
+def get_products_by_duplicate_info(sort_by="created_desc"):
+    all_edges = fetch_all_products_for_duplicates()
+    info_counts = {}
+    for edge in all_edges:
+        node = edge["node"]
+        raw_title = node.get("title")
+        seo_obj = node.get("seo") or {}
+        raw_seo_title = seo_obj.get("title")
+        raw_seo_desc = seo_obj.get("description")
+        
+        if raw_title and raw_seo_title and raw_seo_desc:
+            norm_title = raw_title.strip().lower()
+            norm_seo_title = raw_seo_title.strip().lower()
+            norm_seo_desc = raw_seo_desc.strip().lower()
+            if norm_title and norm_seo_title and norm_seo_desc:
+                key = (norm_title, norm_seo_title, norm_seo_desc)
+                info_counts[key] = info_counts.get(key, 0) + 1
+                
+    duplicate_edges = []
+    for edge in all_edges:
+        node = edge["node"]
+        raw_title = node.get("title")
+        seo_obj = node.get("seo") or {}
+        raw_seo_title = seo_obj.get("title")
+        raw_seo_desc = seo_obj.get("description")
+        
+        if raw_title and raw_seo_title and raw_seo_desc:
+            norm_title = raw_title.strip().lower()
+            norm_seo_title = raw_seo_title.strip().lower()
+            norm_seo_desc = raw_seo_desc.strip().lower()
+            if norm_title and norm_seo_title and norm_seo_desc:
+                key = (norm_title, norm_seo_title, norm_seo_desc)
+                if info_counts.get(key, 0) > 1:
+                    duplicate_edges.append(edge)
+
+    sorted_edges = sort_duplicate_edges(duplicate_edges, sort_by)
+        
+    return {
+        "products": {
+            "edges": sorted_edges,
+            "pageInfo": {"hasNextPage": False, "hasPreviousPage": False}
+        },
+        "productsCount": {"count": len(sorted_edges)}
+    }
+
+def get_products_by_missing_aeo(sort_by="created_desc"):
+    all_edges = fetch_all_products_for_duplicates()
+    missing_edges = []
+    for edge in all_edges:
+        node = edge.get("node", {})
+        aeo_field = node.get("aeo_html")
+        is_missing = False
+        if not aeo_field:
+            is_missing = True
+        else:
+            val = aeo_field.get("value")
+            if val is None or not str(val).strip():
+                is_missing = True
+                
+        if is_missing:
+            missing_edges.append(edge)
+
+    sorted_edges = sort_duplicate_edges(missing_edges, sort_by)
+    return {
+        "products": {
+            "edges": sorted_edges,
+            "pageInfo": {"hasNextPage": False, "hasPreviousPage": False}
+        },
+        "productsCount": {"count": len(sorted_edges)}
+    }
+
 @app.post("/update-token")
 async def update_token(request: Request, access_token: str = Form(...)):
     global SHOPIFY_ADMIN_TOKEN, HEADERS
@@ -2244,22 +2659,46 @@ async def api_delete_notebook(note_id: str):
 
 
 @app.get("/", response_class=HTMLResponse)
-async def read_root(request: Request, after: str = None, before: str = None, filter_type: str = "handle_list", filter_value: str = None, sort_by: str = "created_desc", special_filter: str = ""):
+async def read_root(
+    request: Request, 
+    after: str = None, 
+    before: str = None, 
+    filter_type: str = "handle_list", 
+    filter_value: str = None, 
+    sort_by: str = "created_desc", 
+    special_filter: str = "",
+    price_from: str = None,
+    price_to: str = None
+):
     try:
         filter_query = None
         data = None
         
-        reverse = True
-        sort_key_graphql = "CREATED_AT"
-        if sort_by == "price_asc":
-            sort_key_graphql = "PRICE"
-            reverse = False
-        elif sort_by == "price_desc":
-            sort_key_graphql = "PRICE"
-            reverse = True
-        elif sort_by == "created_asc":
-            sort_key_graphql = "CREATED_AT"
-            reverse = False
+        # Xử lý khoảng giá price_from và price_to
+        price_from_str = str(price_from).strip() if price_from is not None else ""
+        price_to_str = str(price_to).strip() if price_to is not None else ""
+
+        price_from_val = None
+        if price_from_str:
+            try:
+                price_from_val = float(price_from_str)
+            except ValueError:
+                pass
+
+        price_to_val = None
+        if price_to_str:
+            try:
+                price_to_val = float(price_to_str)
+            except ValueError:
+                pass
+
+        price_query_part = None
+        if price_from_val is not None and price_to_val is not None:
+            price_query_part = f"price:>={price_from_val} AND price:<={price_to_val}"
+        elif price_from_val is not None:
+            price_query_part = f"price:>={price_from_val}"
+        elif price_to_val is not None:
+            price_query_part = f"price:<={price_to_val}"
             
         if special_filter and special_filter in ["out_of_stock", "in_stock", "not_tracked"]:
             data = get_products_by_special_filter(special_filter, sort_by=sort_by)
@@ -2271,6 +2710,14 @@ async def read_root(request: Request, after: str = None, before: str = None, fil
             data = get_products_by_duplicate_asin(sort_by=sort_by)
         elif special_filter and special_filter == "duplicate_title":
             data = get_products_by_duplicate_title(sort_by=sort_by)
+        elif special_filter and special_filter == "duplicate_seo_title":
+            data = get_products_by_duplicate_seo_title(sort_by=sort_by)
+        elif special_filter and special_filter == "duplicate_seo_description":
+            data = get_products_by_duplicate_seo_description(sort_by=sort_by)
+        elif special_filter and special_filter == "duplicate_info":
+            data = get_products_by_duplicate_info(sort_by=sort_by)
+        elif special_filter and special_filter == "missing_aeo":
+            data = get_products_by_missing_aeo(sort_by=sort_by)
         elif filter_value and filter_type in ["metafield_amazon_link", "metafield_amazon_link_list"]:
             data = get_products_by_metafield_amazon_link_list(filter_value, sort_by=sort_by)
         elif filter_value and filter_type == "metafield_rich_description":
@@ -2311,8 +2758,49 @@ async def read_root(request: Request, after: str = None, before: str = None, fil
                         filter_query = " ".join([f"-handle:{h}" for h in handles])
                 elif filter_type == "product_type":
                     filter_query = f"product_type:'{filter_value}'"
-                    
-            data = get_products(first=50, after=after, before=before, filter_query=filter_query, sort_key=sort_key_graphql, reverse=reverse)
+
+            # Gộp điều kiện khoảng giá vào filter_query
+            if price_query_part:
+                if filter_query:
+                    filter_query = f"({filter_query}) AND {price_query_part}"
+                else:
+                    filter_query = price_query_part
+
+            # Kiểm tra sort_by hoặc có lọc khoảng giá: nếu sort theo giá HOẶC có lọc khoảng giá (price_from/price_to):
+            # Dùng get_products_sorted_by_price để lọc triệt để theo minVariantPrice trong Python và phân trang chuẩn xác
+            if sort_by in ["price_asc", "price_desc"] or price_from_val is not None or price_to_val is not None:
+                data = get_products_sorted_by_price(
+                    first=50, 
+                    after=after, 
+                    before=before, 
+                    filter_query=filter_query, 
+                    sort_by=sort_by,
+                    price_from=price_from_val,
+                    price_to=price_to_val
+                )
+            else:
+                reverse = (sort_by == "created_desc")
+                sort_key_graphql = "CREATED_AT"
+                data = get_products(first=50, after=after, before=before, filter_query=filter_query, sort_key=sort_key_graphql, reverse=reverse)
+
+        # Lọc thêm khoảng giá triệt để theo minVariantPrice cho tất cả các trường hợp
+        if (price_from_val is not None or price_to_val is not None):
+            filtered_edges = []
+            for edge in data.get("products", {}).get("edges", []):
+                p_amount = 0.0
+                p_data = edge["node"].get("priceRangeV2")
+                if p_data and p_data.get("minVariantPrice"):
+                    try:
+                        p_amount = float(p_data["minVariantPrice"].get("amount", 0))
+                    except (ValueError, TypeError):
+                        p_amount = 0.0
+                if price_from_val is not None and p_amount < price_from_val:
+                    continue
+                if price_to_val is not None and p_amount > price_to_val:
+                    continue
+                filtered_edges.append(edge)
+            data["products"]["edges"] = filtered_edges
+            data["productsCount"]["count"] = len(filtered_edges)
             
         products_data = data.get("products", {})
         total_count = data.get("productsCount", {}).get("count", 0)
@@ -2360,6 +2848,14 @@ async def read_root(request: Request, after: str = None, before: str = None, fil
                     print(f"Error parsing date {created_at_raw}: {e}")
                 
             category_name = node.get("category", {}).get("name", "") if node.get("category") else ""
+            seo_data = node.get("seo") or {}
+            seo_title = seo_data.get("title") or ""
+            seo_description = seo_data.get("description") or ""
+
+            aeo_node = node.get("aeo_html")
+            aeo_html_val = aeo_node.get("value") if aeo_node else None
+            has_aeo = bool(aeo_html_val and str(aeo_html_val).strip())
+
             products.append({
                 "id": node["id"].split("/")[-1],
                 "handle": node["handle"],
@@ -2373,7 +2869,11 @@ async def read_root(request: Request, after: str = None, before: str = None, fil
                 "collections": collections,
                 "media": media_urls,
                 "asin": asin,
-                "amazon_link": amazon_link
+                "amazon_link": amazon_link,
+                "seoTitle": seo_title,
+                "seoDescription": seo_description,
+                "has_aeo": has_aeo,
+                "aeo_html": aeo_html_val
             })
             
         page_info = products_data.get("pageInfo", {})
@@ -2387,6 +2887,8 @@ async def read_root(request: Request, after: str = None, before: str = None, fil
             "filter_value": filter_value or "",
             "sort_by": sort_by,
             "special_filter": special_filter,
+            "price_from": price_from_str,
+            "price_to": price_to_str,
             "error": None
         })
     except Exception as e:
@@ -2399,6 +2901,8 @@ async def read_root(request: Request, after: str = None, before: str = None, fil
             "filter_value": filter_value or "",
             "sort_by": sort_by,
             "special_filter": special_filter,
+            "price_from": price_from_str if 'price_from_str' in locals() else "",
+            "price_to": price_to_str if 'price_to_str' in locals() else "",
             "error": str(e)
         })
 
@@ -5114,6 +5618,15 @@ def generate_password_hint(pwd: str) -> str:
         return f"{pwd_clean[0]}*{pwd_clean[1]}"
     return f"{pwd_clean[0]}{'*' * (len(pwd_clean) - 2)}{pwd_clean[-1]}"
 
+def is_auth_guard_enabled() -> bool:
+    cfg = get_config()
+    return bool(cfg.get("AUTH_REQUIRED", True))
+
+def set_auth_guard_enabled(enabled: bool):
+    cfg = get_config()
+    cfg["AUTH_REQUIRED"] = bool(enabled)
+    save_config(cfg)
+
 # =====================================================================
 # JWT AUTHENTICATION FOR SETTINGS
 # =====================================================================
@@ -5175,6 +5688,153 @@ def is_settings_authenticated(request: Request) -> bool:
     return payload is not None and payload.get("sub") == "admin"
 
 
+# =====================================================================
+# GLOBAL AUTHENTICATION GUARD MIDDLEWARE & LOGIN ROUTES
+# =====================================================================
+PUBLIC_PATHS = {
+    "/login",
+    "/api/login",
+    "/logout",
+    "/api/logout",
+    "/settings/logout",
+    "/api/settings/logout",
+    "/favicon.ico",
+    "/favicon.png",
+    "/site.webmanifest",
+    "/robots.txt",
+}
+
+PUBLIC_PREFIXES = (
+    "/static/",
+    "/assets/",
+    "/backups/",
+)
+
+STATIC_EXTENSIONS = (
+    ".css", ".js", ".png", ".jpg", ".jpeg", ".gif", 
+    ".svg", ".ico", ".woff", ".woff2", ".ttf", ".map"
+)
+
+@app.middleware("http")
+async def global_auth_guard_middleware(request: Request, call_next):
+    path = request.url.path
+
+    # 1. Bỏ qua các đường dẫn công khai (Public assets / login / logout)
+    if (
+        path in PUBLIC_PATHS
+        or any(path.startswith(prefix) for prefix in PUBLIC_PREFIXES)
+        or any(path.lower().endswith(ext) for ext in STATIC_EXTENSIONS)
+    ):
+        return await call_next(request)
+
+    # 1.5. Nếu tính năng bảo vệ trang bằng mật khẩu bị TẮT -> Cho phép truy cập tự do toàn bộ website
+    if not is_auth_guard_enabled():
+        return await call_next(request)
+
+    # 2. Kiểm tra trạng thái xác thực admin
+    if not is_settings_authenticated(request):
+        accept_header = request.headers.get("accept", "")
+        is_ajax_or_api = (
+            path.startswith("/api/")
+            or "application/json" in accept_header
+            or request.headers.get("x-requested-with") == "XMLHttpRequest"
+        )
+        
+        if is_ajax_or_api:
+            return JSONResponse(
+                status_code=401,
+                content={
+                    "success": False,
+                    "message": "Phiên làm việc đã hết hạn hoặc chưa đăng nhập. Vui lòng đăng nhập lại!",
+                    "require_login": True,
+                    "redirect": f"/login?next={path}"
+                }
+            )
+
+        # Trình duyệt web truy cập trang HTML -> redirect về /login kèm query next
+        query = request.url.query
+        next_target = f"{path}?{query}" if query else path
+        if next_target.startswith("/login"):
+            next_target = "/"
+        import urllib.parse
+        encoded_next = urllib.parse.quote(next_target)
+        return RedirectResponse(url=f"/login?next={encoded_next}", status_code=303)
+
+    return await call_next(request)
+
+
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request, next: str = "/"):
+    # Nếu bảo vệ trang bị tắt hoặc đã đăng nhập thành công trước đó thì chuyển tiếp luôn tới next hoặc /
+    if not is_auth_guard_enabled() or is_settings_authenticated(request):
+        safe_next = next if (next and next.startswith("/") and not next.startswith("//")) else "/"
+        return RedirectResponse(url=safe_next, status_code=303)
+    
+    return templates.TemplateResponse(
+        request=request,
+        name="login.html",
+        context={"request": request, "next": next}
+    )
+
+
+@app.post("/api/login")
+async def global_login(request: Request):
+    try:
+        data = await request.json()
+    except Exception:
+        data = {}
+    
+    username = str(data.get("username", "")).strip()
+    password = str(data.get("password", "")).strip()
+    next_url = str(data.get("next", "/")).strip()
+    if not next_url or not next_url.startswith("/") or next_url.startswith("//"):
+        next_url = "/"
+
+    # Kiểm tra Username (admin)
+    if username.lower() != "admin":
+        return JSONResponse({
+            "success": False, 
+            "message": "Tên đăng nhập không chính xác! (Mặc định: admin)"
+        }, status_code=401)
+
+    # Kiểm tra Password theo hàm get_admin_password()
+    admin_pwd = get_admin_password()
+    if password != admin_pwd:
+        return JSONResponse({
+            "success": False, 
+            "message": "Mật khẩu không chính xác! Vui lòng kiểm tra lại."
+        }, status_code=401)
+
+    # Cấp token JWT (thời hạn 7 ngày = 604800s)
+    token = create_jwt_token({"sub": "admin", "username": "admin"}, expires_in_seconds=604800)
+    
+    response = JSONResponse({
+        "success": True, 
+        "message": "Đăng nhập thành công!",
+        "token": token,
+        "redirect": next_url
+    })
+    
+    response.set_cookie(
+        key=JWT_SETTINGS_COOKIE,
+        value=token,
+        max_age=604800,
+        httponly=True,
+        samesite="lax",
+        path="/"
+    )
+    return response
+
+
+@app.get("/logout")
+@app.post("/api/logout")
+async def global_logout():
+    response = RedirectResponse(url="/login", status_code=303)
+    response.delete_cookie(key=JWT_SETTINGS_COOKIE, path="/")
+    return response
+
+
+
 def get_articles_count(search_query=None):
     count = 0
     has_next = True
@@ -5204,6 +5864,10 @@ def get_articles_count(search_query=None):
             
         try:
             res = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=HEADERS)
+            if res.status_code == 401:
+                ok, msg, new_tok = request_default_store_access_token()
+                if ok and new_tok:
+                    res = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=HEADERS)
             res.raise_for_status()
             data = res.json()
             if "errors" in data:
@@ -5279,6 +5943,10 @@ def get_articles(sort_key="ID", reverse=True, first=50, after=None, before=None,
 
     try:
         res = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=HEADERS)
+        if res.status_code == 401:
+            ok, msg, new_tok = request_default_store_access_token()
+            if ok and new_tok:
+                res = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=HEADERS)
         res.raise_for_status()
         data = res.json()
         if "errors" in data:
@@ -5401,7 +6069,8 @@ async def blogs_page(request: Request, sort: str = "created_desc", search: str =
 
 @app.get("/settings", response_class=HTMLResponse)
 async def settings_page(request: Request):
-    if not is_settings_authenticated(request):
+    auth_enabled = is_auth_guard_enabled()
+    if auth_enabled and not is_settings_authenticated(request):
         admin_pwd = get_admin_password()
         hint = generate_password_hint(admin_pwd)
         return templates.TemplateResponse(
@@ -5412,8 +6081,28 @@ async def settings_page(request: Request):
     return templates.TemplateResponse(
         request=request, 
         name="settings.html", 
-        context={"request": request, "is_authenticated": True}
+        context={
+            "request": request, 
+            "is_authenticated": True,
+            "auth_required": auth_enabled
+        }
     )
+
+@app.post("/api/settings/auth-guard")
+async def api_toggle_auth_guard(request: Request):
+    try:
+        data = await request.json()
+        enabled = bool(data.get("auth_required", True))
+        set_auth_guard_enabled(enabled)
+        status_text = "bật" if enabled else "tắt"
+        return JSONResponse({
+            "success": True, 
+            "auth_required": enabled, 
+            "message": f"Đã {status_text} tính năng bảo vệ trang bằng mật khẩu thành công!"
+        })
+    except Exception as e:
+        return JSONResponse({"success": False, "message": str(e)}, status_code=500)
+
 
 @app.post("/api/settings/login")
 async def settings_login(request: Request):
@@ -5823,6 +6512,10 @@ def get_article_detail(article_id):
     
     try:
         res = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=HEADERS)
+        if res.status_code == 401:
+            ok, msg, new_tok = request_default_store_access_token()
+            if ok and new_tok:
+                res = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=HEADERS)
         res.raise_for_status()
         data = res.json()
         if "errors" in data:
@@ -6046,6 +6739,396 @@ async def delete_blog_post(article_id: str, request: Request):
     except Exception as e:
         print("Delete error:", e)
         return JSONResponse({"success": False, "message": str(e)})
+
+
+
+# =====================================================================
+# BLOGS - BULK SYNC TO CUSTOM STORE VIA PROXY GATEWAY US
+# =====================================================================
+
+def get_custom_store_client_with_proxy() -> dict:
+    """
+    Khởi tạo client kết nối tới Store Riêng với chốt chặn an toàn bắt buộc:
+    1. Kiểm tra proxy_url từ proxy_config.json
+    2. Kiểm tra độ ổn định kết nối Proxy US (test_proxy_connectivity)
+    3. Đọc thông tin xác thực từ logo_updater_config.json
+    4. Tự động renew token qua proxy (force_proxy=True) nếu hết hạn
+    5. Gán proxies={"http": proxy_url, "https": proxy_url} bắt buộc
+    """
+    p_cfg = load_proxy_config()
+    proxy_url = (p_cfg.get("proxy_url") or os.getenv("PROXY_URL") or "").strip()
+    if not proxy_url:
+        raise ProxySafetyException(
+            "CHỐT CHẶN AN TOÀN TUYỆT ĐỐI: Chưa cấu hình URL Proxy Gateway! "
+            "Mọi request tới Store Riêng bắt buộc phải đi qua Proxy để bảo vệ gian hàng."
+        )
+
+    proxies = {"http": proxy_url, "https": proxy_url}
+
+    is_ok, latency, err = test_proxy_connectivity(proxy_url=proxy_url, timeout=8)
+    if not is_ok:
+        raise ProxySafetyException(
+            f"CHỐT CHẶN AN TOÀN: Proxy Gateway US đang không ổn định hoặc mất kết nối ({err}). "
+            f"Toàn bộ kết nối tới Store Riêng bị chặn để bảo vệ gian hàng."
+        )
+
+    custom_cfg = load_logo_updater_config()
+    raw_shop = (custom_cfg.get("shop_domain") or "").strip()
+    shop = clean_shopify_domain(raw_shop)
+    if not shop:
+        raise ProxySafetyException(
+            "CHỐT CHẶN AN TOÀN: Chưa cấu hình Shop Domain cho Store Riêng trong logo_updater_config.json."
+        )
+
+    client_id = (custom_cfg.get("client_id") or "").strip()
+    client_secret = (custom_cfg.get("client_secret") or "").strip()
+    custom_token = (custom_cfg.get("access_token") or "").strip()
+    expires_at = custom_cfg.get("token_expires_at")
+
+    is_expired = False
+    if expires_at:
+        try:
+            if datetime.now().timestamp() >= (float(expires_at) - 60):
+                is_expired = True
+        except Exception:
+            pass
+
+    if (not custom_token or is_expired) and client_id and client_secret:
+        ok, msg, new_tok = request_custom_app_access_token(shop, client_id, client_secret, force_proxy=True)
+        if ok and new_tok:
+            custom_token = new_tok
+        else:
+            raise ProxySafetyException(
+                f"CHỐT CHẶN AN TOÀN: Không thể cấp Access Token cho Store Riêng qua Proxy: {msg}"
+            )
+
+    if not custom_token:
+        raise ProxySafetyException(
+            "CHỐT CHẶN AN TOÀN: Store Riêng chưa có Access Token hợp lệ. Vui lòng cấu hình Client ID & Secret."
+        )
+
+    headers = {
+        "X-Shopify-Access-Token": custom_token,
+        "Content-Type": "application/json"
+    }
+    graphql_url = f"https://{shop}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/graphql.json"
+    shop_name = custom_cfg.get("shop_name") or f"{shop}.myshopify.com"
+
+    return {
+        "shop": shop,
+        "headers": headers,
+        "proxies": proxies,
+        "store_name": shop_name,
+        "graphql_url": graphql_url,
+        "store_type": "custom"
+    }
+
+
+def execute_custom_store_graphql(client_info: dict, query: str, variables: dict = None) -> dict:
+    """
+    Thực thi truy vấn Shopify GraphQL tới Store Riêng BẮT BUỘC QUA PROXY GATEWAY US.
+    Tự động refresh token nếu gặp 401.
+    """
+    proxies = client_info.get("proxies")
+    if not proxies or not proxies.get("https"):
+        raise ProxySafetyException(
+            "CHỐT CHẶN AN TOÀN TUYỆT ĐỐI: Phát hiện request GraphQL tới Store Riêng không có Proxy! "
+            "Hệ thống đã chặn request ngay tại cổng ra để bảo vệ an toàn cho Store Riêng."
+        )
+
+    payload = {"query": query}
+    if variables:
+        payload["variables"] = variables
+
+    resp = requests.post(
+        client_info["graphql_url"],
+        json=payload,
+        headers=client_info["headers"],
+        proxies=client_info["proxies"],
+        timeout=30
+    )
+
+    if resp.status_code == 401:
+        cfg = load_logo_updater_config()
+        ok, msg, new_tok = request_custom_app_access_token(
+            cfg.get("shop_domain", ""),
+            cfg.get("client_id", ""),
+            cfg.get("client_secret", ""),
+            force_proxy=True
+        )
+        if ok and new_tok:
+            client_info["headers"]["X-Shopify-Access-Token"] = new_tok
+            resp = requests.post(
+                client_info["graphql_url"],
+                json=payload,
+                headers=client_info["headers"],
+                proxies=client_info["proxies"],
+                timeout=30
+            )
+
+    resp.raise_for_status()
+    data = resp.json()
+    if "errors" in data and not data.get("data"):
+        err_msg = "; ".join([e.get("message", "Lỗi GraphQL") for e in data["errors"]])
+        raise Exception(f"GraphQL Error: {err_msg}")
+    return data
+
+
+def sync_article_to_custom_store(article_id: str, client_info: dict) -> dict:
+    """
+    Đồng bộ 1 bài viết từ Store Mặc Định sang Store Riêng qua Proxy:
+    - Nếu đã có bài viết trên Store Riêng (theo handle) -> Ghi đè (Update).
+    - Nếu chưa có bài viết trên Store Riêng -> Tạo mới (Create).
+    - Tự động tìm hoặc tạo mới danh mục Blog container trên Store Riêng.
+    - Đồng bộ SEO Title, SEO Description, Tags, Author, và Ảnh bìa.
+    """
+    clean_id = str(article_id).split("/")[-1]
+    src_article = get_article_detail(clean_id)
+    if not src_article:
+        raise Exception(f"Không tìm thấy bài viết nguồn ID {clean_id} trên Store Mặc Định.")
+
+    title = src_article.get("title") or ""
+    handle = src_article.get("handle") or ""
+    summary = src_article.get("summary") or ""
+    body = src_article.get("body") or ""
+    is_published = bool(src_article.get("isPublished", True))
+    tags = src_article.get("tags") or []
+    author_name = (src_article.get("author") or {}).get("name") or "Wrydeco Admin"
+    source_blog_title = (src_article.get("blog") or {}).get("title") or "News"
+    img_url = (src_article.get("image") or {}).get("url") if src_article.get("image") else None
+
+    seo_title = (src_article.get("seo_title") or {}).get("value")
+    seo_desc = (src_article.get("seo_desc") or {}).get("value")
+
+    # 1. Đảm bảo Blog container tồn tại trên Store Riêng qua Proxy
+    blog_query = """
+    query getCustomStoreBlogs {
+      blogs(first: 50) {
+        edges {
+          node {
+            id
+            title
+            handle
+          }
+        }
+      }
+    }
+    """
+    blog_res = execute_custom_store_graphql(client_info, blog_query)
+    custom_blogs = [e["node"] for e in blog_res.get("data", {}).get("blogs", {}).get("edges", [])]
+
+    target_blog_id = None
+    for b in custom_blogs:
+        if (b.get("title") or "").strip().lower() == source_blog_title.strip().lower():
+            target_blog_id = b["id"]
+            break
+
+    if not target_blog_id:
+        create_blog_mutation = """
+        mutation blogCreate($blog: BlogCreateInput!) {
+          blogCreate(blog: $blog) {
+            blog {
+              id
+              title
+            }
+            userErrors {
+              field
+              message
+            }
+          }
+        }
+        """
+        cb_res = execute_custom_store_graphql(client_info, create_blog_mutation, {"blog": {"title": source_blog_title}})
+        cb_errors = cb_res.get("data", {}).get("blogCreate", {}).get("userErrors", [])
+        if cb_errors:
+            raise Exception(f"Lỗi tạo Blog container '{source_blog_title}' trên Store Riêng: {cb_errors[0]['message']}")
+        target_blog_id = cb_res.get("data", {}).get("blogCreate", {}).get("blog", {}).get("id")
+
+    # 2. Kiểm tra xem bài viết đã tồn tại trên Store Riêng hay chưa (bằng handle)
+    find_art_query = """
+    query findArticleByHandle($query: String!) {
+      articles(first: 1, query: $query) {
+        edges {
+          node {
+            id
+            handle
+            title
+          }
+        }
+      }
+    }
+    """
+    find_res = execute_custom_store_graphql(client_info, find_art_query, {"query": f"handle:{handle}"})
+    art_edges = find_res.get("data", {}).get("articles", {}).get("edges", [])
+    existing_article_id = art_edges[0]["node"]["id"] if art_edges else None
+
+    # 3. Chuẩn bị Article Input
+    article_input = {
+        "title": title,
+        "handle": handle,
+        "summary": summary,
+        "body": body,
+        "isPublished": is_published,
+        "tags": tags,
+        "author": {"name": author_name},
+        "blogId": target_blog_id
+    }
+    metafields = []
+    if seo_title:
+        metafields.append({"namespace": "global", "key": "title_tag", "value": str(seo_title), "type": "string"})
+    if seo_desc:
+        metafields.append({"namespace": "global", "key": "description_tag", "value": str(seo_desc), "type": "string"})
+    if metafields:
+        article_input["metafields"] = metafields
+
+    # 4. Thực thi Ghi đè hoặc Tạo mới
+    action = ""
+    target_article_id = ""
+
+    if existing_article_id:
+        update_mutation = """
+        mutation articleUpdate($id: ID!, $article: ArticleUpdateInput!) {
+          articleUpdate(id: $id, article: $article) {
+            article {
+              id
+              handle
+            }
+            userErrors {
+              field
+              message
+            }
+          }
+        }
+        """
+        up_res = execute_custom_store_graphql(client_info, update_mutation, {"id": existing_article_id, "article": article_input})
+        up_errors = up_res.get("data", {}).get("articleUpdate", {}).get("userErrors", [])
+        if up_errors:
+            raise Exception(f"Lỗi ghi đè bài viết trên Store Riêng: {up_errors[0]['message']}")
+        target_article_id = existing_article_id
+        action = "updated"
+    else:
+        create_mutation = """
+        mutation articleCreate($article: ArticleCreateInput!) {
+          articleCreate(article: $article) {
+            article {
+              id
+              handle
+            }
+            userErrors {
+              field
+              message
+            }
+          }
+        }
+        """
+        cr_res = execute_custom_store_graphql(client_info, create_mutation, {"article": article_input})
+        cr_errors = cr_res.get("data", {}).get("articleCreate", {}).get("userErrors", [])
+        if cr_errors:
+            raise Exception(f"Lỗi tạo mới bài viết trên Store Riêng: {cr_errors[0]['message']}")
+        target_article_id = cr_res.get("data", {}).get("articleCreate", {}).get("article", {}).get("id")
+        action = "created"
+
+    # 5. Đồng bộ ảnh bìa (Cover Image) qua REST API qua Proxy US
+    if img_url and target_article_id:
+        try:
+            num_id = target_article_id.split("/")[-1]
+            rest_url = f"https://{client_info['shop']}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/articles/{num_id}.json"
+            payload = {"article": {"id": num_id, "image": {"src": img_url}}}
+            r_resp = requests.put(
+                rest_url, 
+                json=payload, 
+                headers=client_info["headers"], 
+                proxies=client_info["proxies"], 
+                timeout=30
+            )
+            if r_resp.status_code not in [200, 201]:
+                import base64
+                img_resp = requests.get(img_url, timeout=20)
+                if img_resp.status_code == 200:
+                    b64_str = base64.b64encode(img_resp.content).decode("utf-8")
+                    requests.put(
+                        rest_url, 
+                        json={"article": {"id": num_id, "image": {"attachment": b64_str}}}, 
+                        headers=client_info["headers"], 
+                        proxies=client_info["proxies"], 
+                        timeout=30
+                    )
+        except Exception as img_err:
+            print(f"Warning: Lỗi đồng bộ ảnh bìa cho bài viết '{handle}': {img_err}")
+
+    return {
+        "success": True,
+        "article_id": clean_id,
+        "target_id": target_article_id.split("/")[-1],
+        "title": title,
+        "handle": handle,
+        "action": action,
+        "blog_title": source_blog_title
+    }
+
+
+@app.post("/api/blogs/bulk-sync-custom-store")
+async def api_bulk_sync_custom_store(request: Request):
+    """
+    Endpoint Xử lý hàng loạt: Đồng bộ các bài viết được chọn từ Store Mặc Định sang Store Riêng.
+    BẮT BUỘC toàn bộ phiên giao tiếp với Store Riêng phải đi qua Proxy Gateway US.
+    """
+    try:
+        data = await request.json()
+        article_ids = data.get("article_ids") or []
+        if not article_ids:
+            return JSONResponse({"success": False, "message": "Vui lòng chọn ít nhất một bài viết để đồng bộ."})
+
+        # 1. Khởi tạo Client Store Riêng qua Proxy (chốt chặn an toàn ném ProxySafetyException nếu proxy lỗi)
+        custom_client = get_custom_store_client_with_proxy()
+
+        results = []
+        created_count = 0
+        updated_count = 0
+        error_count = 0
+
+        for art_id in article_ids:
+            clean_id = str(art_id).split("/")[-1]
+            try:
+                res = sync_article_to_custom_store(clean_id, custom_client)
+                results.append(res)
+                if res.get("success"):
+                    if res.get("action") == "created":
+                        created_count += 1
+                    else:
+                        updated_count += 1
+                else:
+                    error_count += 1
+            except Exception as e:
+                error_count += 1
+                results.append({
+                    "success": False,
+                    "article_id": clean_id,
+                    "error": str(e)
+                })
+
+        return JSONResponse({
+            "success": True,
+            "total": len(article_ids),
+            "created_count": created_count,
+            "updated_count": updated_count,
+            "error_count": error_count,
+            "store_name": custom_client.get("store_name"),
+            "shop": custom_client.get("shop"),
+            "results": results
+        })
+
+    except ProxySafetyException as pe:
+        return JSONResponse({
+            "success": False,
+            "message": str(pe),
+            "is_proxy_error": True
+        }, status_code=503)
+    except Exception as e:
+        return JSONResponse({
+            "success": False,
+            "message": f"Lỗi hệ thống khi đồng bộ: {str(e)}"
+        }, status_code=500)
 
 
 
@@ -9140,6 +10223,41 @@ def _query_shopify_customers(shop: str, token: str, proxies: dict | None, variab
         return False, None, str(exc), False, 0
 
 
+def _apply_customer_sort(nodes: list, sort_by: str | None) -> list:
+    if not nodes or not sort_by:
+        return nodes
+    s = sort_by.strip().lower()
+    if s in ("total_spent_desc", "spent_desc"):
+        def _get_spent(c):
+            try:
+                return float(c.get("amountSpent", {}).get("amount", 0) or 0)
+            except (ValueError, TypeError):
+                return 0.0
+        return sorted(nodes, key=_get_spent, reverse=True)
+    elif s in ("total_spent_asc", "spent_asc"):
+        def _get_spent(c):
+            try:
+                return float(c.get("amountSpent", {}).get("amount", 0) or 0)
+            except (ValueError, TypeError):
+                return 0.0
+        return sorted(nodes, key=_get_spent, reverse=False)
+    elif s in ("name_asc", "alphabet_asc"):
+        def _get_name(c):
+            fn = " ".join(filter(None, [c.get("firstName"), c.get("lastName")])).strip()
+            return (fn or c.get("displayName") or c.get("email") or "").lower()
+        return sorted(nodes, key=_get_name, reverse=False)
+    elif s in ("name_desc", "alphabet_desc"):
+        def _get_name(c):
+            fn = " ".join(filter(None, [c.get("firstName"), c.get("lastName")])).strip()
+            return (fn or c.get("displayName") or c.get("email") or "").lower()
+        return sorted(nodes, key=_get_name, reverse=True)
+    elif s in ("created_asc", "created_at_asc"):
+        return sorted(nodes, key=lambda c: c.get("createdAt") or "", reverse=False)
+    elif s in ("created_desc", "created_at_desc"):
+        return sorted(nodes, key=lambda c: c.get("createdAt") or "", reverse=True)
+    return nodes
+
+
 def get_customers_with_proxy(
     use_custom_store: bool = False,
     first: int = 50,
@@ -9147,6 +10265,7 @@ def get_customers_with_proxy(
     after: str = None,
     before: str = None,
     query: str = None,
+    sort_by: str = None,
     sort_key: str = "CREATED_AT",
     reverse: bool = True
 ) -> dict:
@@ -9167,13 +10286,36 @@ def get_customers_with_proxy(
     proxy_cfg = load_proxy_config()
     proxy_ip = proxy_cfg.get("proxy_ip") or "185.124.63.174"
 
+    s_by = (sort_by or "").lower().strip()
+    if s_by in ("created_asc", "created_at_asc"):
+        sort_key = "CREATED_AT"
+        reverse = False
+    elif s_by in ("created_desc", "created_at_desc"):
+        sort_key = "CREATED_AT"
+        reverse = True
+    elif s_by in ("name_asc", "alphabet_asc"):
+        sort_key = "NAME"
+        reverse = False
+    elif s_by in ("name_desc", "alphabet_desc"):
+        sort_key = "NAME"
+        reverse = True
+    elif s_by in ("total_spent_desc", "spent_desc"):
+        sort_key = "CREATED_AT"
+        reverse = True
+    elif s_by in ("total_spent_asc", "spent_asc"):
+        sort_key = "CREATED_AT"
+        reverse = True
+
+    is_custom_sort = s_by in ("total_spent_desc", "spent_desc", "total_spent_asc", "spent_asc", "name_asc", "name_desc", "created_asc", "created_desc")
+
     def _fetch_default_store(fallback_reason: str = None) -> dict:
         """Helper gọi lấy khách hàng từ Store Mặc định (kết nối trực tiếp)."""
         nonlocal default_token
+        query_first = 250 if (is_custom_sort and not after and not before) else first
         variables = {
             "sortKey": sort_key,
             "reverse": reverse,
-            "first": first
+            "first": query_first
         }
         # Nếu đang fallback, bỏ qua after/before của Store Riêng để tránh lỗi cursor mismatch
         if not fallback_reason:
@@ -9218,6 +10360,11 @@ def get_customers_with_proxy(
         cust_data = data.get("data", {}).get("customers", {})
         nodes = cust_data.get("nodes", [])
         page_info = cust_data.get("pageInfo", {})
+
+        if is_custom_sort:
+            nodes = _apply_customer_sort(nodes, s_by)
+            if first and first < len(nodes) and not after and not before:
+                nodes = nodes[:first]
 
         res = {
             "success": True,
@@ -9292,10 +10439,11 @@ def get_customers_with_proxy(
             )
 
     # Chuẩn bị variables query Store Riêng
+    query_first = 250 if (is_custom_sort and not after and not before) else first
     variables = {
         "sortKey": sort_key,
         "reverse": reverse,
-        "first": first
+        "first": query_first
     }
     if after:
         variables["after"] = after
@@ -9345,6 +10493,11 @@ def get_customers_with_proxy(
     cust_data = data.get("data", {}).get("customers", {})
     nodes = cust_data.get("nodes", [])
     page_info = cust_data.get("pageInfo", {})
+
+    if is_custom_sort:
+        nodes = _apply_customer_sort(nodes, s_by)
+        if first and first < len(nodes) and not after and not before:
+            nodes = nodes[:first]
 
     return {
         "success": True,
@@ -9416,6 +10569,7 @@ async def api_get_customers(request: Request):
     after_val = params.get("after")
     before_val = params.get("before")
     query_val = params.get("query")
+    sort_by_val = params.get("sort_by")
     sort_key_val = params.get("sort_key", "CREATED_AT")
     reverse_val = params.get("reverse", "true").lower() in ("true", "1", "yes")
 
@@ -9426,6 +10580,7 @@ async def api_get_customers(request: Request):
         after=after_val,
         before=before_val,
         query=query_val,
+        sort_by=sort_by_val,
         sort_key=sort_key_val,
         reverse=reverse_val
     )
@@ -9556,6 +10711,34 @@ def parse_vps_uptime_seconds(seconds_float):
     except Exception:
         return "--"
 
+def parse_systemd_running_services(raw_services_text: str) -> list:
+    services = []
+    core_names = {
+        "shopify-admin-app.service",
+        "nginx.service",
+        "ssh.service",
+        "docker.service",
+        "wrydeco-temp-server.service"
+    }
+    for line in raw_services_text.splitlines():
+        line = line.strip()
+        if not line or not (".service" in line or "@" in line):
+            continue
+        parts = line.split(None, 4)
+        if len(parts) >= 4 and parts[1] == "loaded" and parts[2] == "active":
+            name = parts[0]
+            sub = parts[3]
+            desc = parts[4] if len(parts) > 4 else ""
+            is_core = name in core_names or any(name.startswith(c) for c in ["shopify", "nginx", "ssh"])
+            services.append({
+                "name": name,
+                "sub": sub,
+                "description": desc,
+                "is_core": is_core,
+                "is_running": (sub == "running")
+            })
+    return services
+
 def parse_vps_raw_metrics(raw_text):
     data = {
         "timestamp": datetime.now().strftime("%H:%M:%S %d/%m/%Y"),
@@ -9593,7 +10776,9 @@ def parse_vps_raw_metrics(raw_text):
             {"name": "shopify-admin-app.service", "label": "Shopify Admin FastAPI", "description": "Quản trị Shopify Admin App (Port 8085)", "status": "unknown", "is_healthy": False},
             {"name": "nginx", "label": "Nginx Reverse Proxy", "description": "Web Server & SSL Gateway (Port 80/443)", "status": "unknown", "is_healthy": False},
             {"name": "ssh", "label": "OpenSSH Server", "description": "Cổng truy cập quản trị từ xa (Port 22)", "status": "unknown", "is_healthy": False}
-        ]
+        ],
+        "running_services": [],
+        "running_services_count": 0
     }
 
     # 1. Parse Meminfo
@@ -9698,6 +10883,13 @@ def parse_vps_raw_metrics(raw_text):
             if l.startswith("PRETTY_NAME="):
                 data["system"]["os"] = l.split("=", 1)[1].strip('"\' \r\n')
 
+    # 8. Parse All Running Services
+    all_svc_match = re.search(r"===ALL_SERVICES===[\r\n]+(.*?)(?====|\Z)", raw_text, re.DOTALL)
+    if all_svc_match:
+        parsed_svcs = parse_systemd_running_services(all_svc_match.group(1))
+        data["running_services"] = parsed_svcs
+        data["running_services_count"] = len(parsed_svcs)
+
     return data
 
 def get_vps_health_data(force_refresh: bool = False) -> dict:
@@ -9774,6 +10966,8 @@ def get_vps_health_data(force_refresh: bool = False) -> dict:
                 "is_healthy": False
             }
         ],
+        "running_services": [],
+        "running_services_count": 0,
         "network": {
             "public_domain": "wrydeco.shopify.vnote.site",
             "public_ipv4": "20.222.21.81",
@@ -9905,6 +11099,21 @@ def get_vps_health_data(force_refresh: bool = False) -> dict:
                 svc["status"] = "unknown"
                 svc["is_healthy"] = False
 
+        # 7. All running systemd services
+        try:
+            res_all = subprocess.run(
+                ["systemctl", "list-units", "--type=service", "--state=running", "--no-pager", "--no-legend"],
+                capture_output=True,
+                text=True,
+                timeout=2.0
+            )
+            if res_all.returncode == 0 and res_all.stdout:
+                parsed_svcs = parse_systemd_running_services(res_all.stdout)
+                data["running_services"] = parsed_svcs
+                data["running_services_count"] = len(parsed_svcs)
+        except Exception as e_svcs:
+            data["warnings"].append(f"Lỗi đọc danh sách running services: {e_svcs}")
+
     # B. CHẠY LOCAL DEVELOPMENT (WINDOWS) -> QUERY VPS TỪ XA QUA SSH READ-ONLY
     else:
         try:
@@ -9942,6 +11151,8 @@ def get_vps_health_data(force_refresh: bool = False) -> dict:
             echo '===OS==='
             uname -srm
             cat /etc/os-release | grep -E '^PRETTY_NAME='
+            echo '===ALL_SERVICES==='
+            systemctl list-units --type=service --state=running --no-pager --no-legend
             """
             _, stdout, stderr = ssh.exec_command(cmd, timeout=5)
             raw_text = stdout.read().decode("utf-8", errors="replace")
@@ -10330,6 +11541,36 @@ def cascade_remove_media_from_real_in_spaces(deleted_urls: list[str], client_inf
     return {"affected_count": affected_count, "details": details}
 
 
+def select_public_shopify_video_source(video_node: dict) -> dict:
+    """Select a browser-playable CDN rendition, never a staged/original URL."""
+    candidates = []
+    for source in video_node.get("sources") or []:
+        parsed = urlparse(source.get("url") or "")
+        if parsed.scheme != "https" or parsed.hostname != "cdn.shopify.com":
+            continue
+        if not parsed.path.lower().endswith(".mp4"):
+            continue
+        candidates.append(source)
+    if not candidates:
+        return {}
+    hd_sources = [source for source in candidates if (source.get("height") or 0) >= 720]
+    if hd_sources:
+        return min(hd_sources, key=lambda source: source.get("height") or 0)
+    return max(candidates, key=lambda source: source.get("height") or 0)
+
+
+def get_public_shopify_file_urls(file_node: dict, is_video: bool) -> tuple[str, str]:
+    if is_video:
+        if file_node.get("fileStatus") != "READY":
+            return "", ""
+        source = select_public_shopify_video_source(file_node)
+        preview = ((file_node.get("preview") or {}).get("image") or {}).get("url") or ""
+        return source.get("url") or "", preview
+    image_url = (file_node.get("image") or {}).get("url") or ""
+    url = image_url or file_node.get("url") or ""
+    return url, url
+
+
 def upload_media_file_to_shopify(client_info: dict, filename: str, content_bytes: bytes, mime_type: str, alt_text: str = "") -> dict:
     """
     Quy trình Staged Upload tải file hình ảnh/video lên Shopify Files CDN:
@@ -10395,7 +11636,7 @@ def upload_media_file_to_shopify(client_info: dict, filename: str, content_bytes
         data=form_data,
         files=files,
         proxies=client_info["proxies"],
-        timeout=60
+        timeout=300
     )
     if upload_resp.status_code >= 400:
         raise RuntimeError(f"Lỗi tải file lên Shopify Staged Storage (HTTP {upload_resp.status_code}): {upload_resp.text[:300]}")
@@ -10420,6 +11661,8 @@ def upload_media_file_to_shopify(client_info: dict, filename: str, content_bytes
               url
               format
               mimeType
+              width
+              height
             }
             preview {
               image {
@@ -10459,20 +11702,7 @@ def upload_media_file_to_shopify(client_info: dict, filename: str, content_bytes
     file_node = created_files[0]
     file_id = file_node["id"]
 
-    final_url = ""
-    preview_url = ""
-    if file_node.get("image") and file_node["image"].get("url"):
-        final_url = file_node["image"]["url"]
-        preview_url = final_url
-    elif file_node.get("sources"):
-        srcs = file_node.get("sources", [])
-        if srcs and srcs[0].get("url"):
-            final_url = srcs[0]["url"]
-        if file_node.get("preview", {}).get("image", {}).get("url"):
-            preview_url = file_node["preview"]["image"]["url"]
-    elif file_node.get("url"):
-        final_url = file_node["url"]
-        preview_url = final_url
+    final_url, preview_url = get_public_shopify_file_urls(file_node, is_video)
 
     if not final_url:
         poll_query = """
@@ -10488,6 +11718,10 @@ def upload_media_file_to_shopify(client_info: dict, filename: str, content_bytes
               fileStatus
               sources {
                 url
+                format
+                mimeType
+                width
+                height
               }
               preview {
                 image {
@@ -10502,36 +11736,32 @@ def upload_media_file_to_shopify(client_info: dict, filename: str, content_bytes
           }
         }
         """
-        for _ in range(5):
-            time.sleep(1.0)
-            try:
-                poll_res = execute_real_homes_graphql(client_info, poll_query, {"id": file_id})
-                p_node = poll_res.get("data", {}).get("node", {})
-                if p_node.get("image", {}).get("url"):
-                    final_url = p_node["image"]["url"]
-                    preview_url = final_url
-                    break
-                elif p_node.get("sources"):
-                    srcs = p_node.get("sources", [])
-                    if srcs and srcs[0].get("url"):
-                        final_url = srcs[0]["url"]
-                    if p_node.get("preview", {}).get("image", {}).get("url"):
-                        preview_url = p_node["preview"]["image"]["url"]
-                    break
-                elif p_node.get("url"):
-                    final_url = p_node["url"]
-                    preview_url = final_url
-                    break
-            except Exception:
-                pass
+        for _ in range(60 if is_video else 15):
+            if file_node.get("fileStatus") == "FAILED":
+                raise RuntimeError(f"Shopify không xử lý được file {file_id}.")
+            time.sleep(2.0)
+            poll_res = execute_real_homes_graphql(client_info, poll_query, {"id": file_id})
+            if poll_res.get("errors"):
+                raise RuntimeError(f"Không thể kiểm tra trạng thái file: {poll_res['errors']}")
+            file_node = poll_res.get("data", {}).get("node") or {}
+            final_url, preview_url = get_public_shopify_file_urls(file_node, is_video)
+            if final_url:
+                break
+
+    if not final_url:
+        raise RuntimeError(
+            f"File {file_id} đã được tải lên nhưng chưa có URL CDN phát công khai "
+            f"(trạng thái: {file_node.get('fileStatus', 'UNKNOWN')}). "
+            "Hãy chờ Shopify xử lý xong rồi chọn lại file trong Media Files."
+        )
 
     return {
         "id": file_id,
-        "url": final_url or target.get("resourceUrl", ""),
-        "preview_url": preview_url or final_url or target.get("resourceUrl", ""),
+        "url": final_url,
+        "preview_url": preview_url,
         "filename": filename,
         "is_video": is_video,
-        "file_status": file_node.get("fileStatus", "READY")
+        "file_status": file_node.get("fileStatus", "UNKNOWN")
     }
 
 
@@ -11521,11 +12751,10 @@ async def api_real_homes_get_media(store: str = "default", first: int = 50, afte
                 height = node["image"].get("height")
             elif node.get("sources"):
                 media_type = "VIDEO"
-                srcs = node.get("sources", [])
-                if srcs:
-                    primary_url = srcs[0].get("url") or ""
-                    width = srcs[0].get("width")
-                    height = srcs[0].get("height")
+                source = select_public_shopify_video_source(node)
+                primary_url, preview_url = get_public_shopify_file_urls(node, True)
+                width = source.get("width")
+                height = source.get("height")
                 if node.get("preview", {}).get("image"):
                     preview_url = node["preview"]["image"].get("url") or ""
                 if not preview_url:
@@ -11596,7 +12825,8 @@ async def api_real_homes_upload_media(
         clean_name = re.sub(r'[^a-zA-Z0-9._-]', '_', filename)
         mime_type = file.content_type or "image/jpeg"
 
-        result = upload_media_file_to_shopify(
+        result = await asyncio.to_thread(
+            upload_media_file_to_shopify,
             client_info=client_info,
             filename=clean_name,
             content_bytes=content_bytes,
@@ -11876,4 +13106,693 @@ async def api_real_homes_delete_media(request: Request):
         "updated_gallery_media": updated_gallery_media,
         "cascade_sync": cascade_result
     })
+
+
+# =====================================================================
+# MENU MANAGER & URL REDIRECTS MODULE
+# =====================================================================
+
+REDIRECT_SLUG_CHARSET = "23456789abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
+SHOPIFY_RESERVED_PATHS = {
+    "cart", "checkout", "collections", "products", "pages", "blogs", 
+    "account", "search", "policies", "all", "password", "tools", 
+    "apps", "admin", "recommendations", "services", "contact"
+}
+
+def get_menu_manager_credentials(store_type: str = "default") -> dict:
+    """
+    Xác định credentials và proxy cho Menu Manager:
+    - store_type == 'default': Dùng .env, kết nối trực tiếp VPS (proxies = None).
+    - store_type == 'custom': Dùng logo_updater_config.json, BẮT BUỘC BỌC PROXY US (185.124.63.174).
+      Nếu proxy tắt hoặc mất kết nối -> Quăng ProxySafetyException để từ chối mọi thao tác.
+    """
+    st = str(store_type or "default").strip().lower()
+    
+    if st == "custom":
+        logo_cfg = load_logo_updater_config()
+        if not logo_cfg.get("is_custom") or not logo_cfg.get("shop_domain"):
+            raise ValueError("Chưa cấu hình Store Riêng tại trang Cài đặt! Vui lòng vào Cài đặt để thêm thông tin Store Riêng (Shop Domain, Client ID, Client Secret).")
+        
+        proxy_cfg = load_proxy_config()
+        if not proxy_cfg.get("enabled"):
+            raise ProxySafetyException("CHỐT CHẶN AN TOÀN: Khi chuyển qua Store Riêng, BẮT BUỘC phải BẬT Proxy Gateway! Vui lòng bật Proxy tại trang Cài đặt hoặc qua công tắc điều khiển.")
+            
+        proxy_url = proxy_cfg.get("proxy_url")
+        if not proxy_url:
+            raise ProxySafetyException("Chưa cấu hình URL Proxy Gateway tại Settings!")
+            
+        # Kiểm tra liveness và độ ổn định proxy
+        now = datetime.now()
+        is_ok, latency, err = test_proxy_connectivity(proxy_url, timeout=8)
+        if not is_ok:
+            mark_proxy_unstable(err or "Timeout", latency)
+            raise ProxySafetyException(f"CHỐT CHẶN AN TOÀN: Kết nối Proxy không ổn định ({err or 'Mất kết nối'})! Đã từ chối mọi yêu cầu từ server đến Shopify để bảo vệ gian hàng.")
+        
+        # Cập nhật proxy status ok
+        proxy_cfg["is_stable"] = True
+        proxy_cfg["last_status"] = "stable"
+        proxy_cfg["last_latency_ms"] = latency
+        proxy_cfg["last_checked_at"] = now.isoformat()
+        proxy_cfg["last_error"] = None
+        save_proxy_config(proxy_cfg)
+
+        creds = get_logo_updater_credentials(auto_refresh=True)
+        token = creds.get("token")
+        if not token:
+            raise ValueError("Không thể lấy Access Token cho Store Riêng qua Proxy! Vui lòng kiểm tra lại Client ID & Client Secret tại Settings.")
+            
+        shop = creds.get("shop")
+        shop_domain = f"{shop}.myshopify.com" if not shop.endswith(".myshopify.com") else shop
+        # Tên miền thương hiệu wrydeco.com chỉ dùng riêng cho link chia sẻ / thông báo tạo redirect thành công của store riêng
+        brand_domain = (logo_cfg.get("custom_domain") or "").strip() or "wrydeco.com"
+        proxies = {
+            "http": proxy_url,
+            "https": proxy_url
+        }
+        return {
+            "shop": shop,
+            "shop_domain": shop_domain,
+            "display_domain": shop_domain,
+            "brand_domain": brand_domain,
+            "shop_name": logo_cfg.get("shop_name") or shop.title(),
+            "token": token,
+            "headers": {
+                "X-Shopify-Access-Token": token,
+                "Content-Type": "application/json"
+            },
+            "graphql_url": f"https://{shop}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/graphql.json",
+            "rest_url": f"https://{shop}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}",
+            "proxies": proxies,
+            "is_custom": True,
+            "store_type": "custom"
+        }
+    else:
+        # Store Mặc định từ .env
+        default_shop = clean_shopify_domain(SHOPIFY_SHOP)
+        if not default_shop:
+            raise ValueError("Chưa cấu hình SHOPIFY_SHOP của Store Mặc định trong .env!")
+        shop_domain = f"{default_shop}.myshopify.com"
+        token = SHOPIFY_ADMIN_TOKEN
+        return {
+            "shop": default_shop,
+            "shop_domain": shop_domain,
+            "display_domain": shop_domain,
+            "brand_domain": shop_domain,
+            "shop_name": default_shop.title(),
+            "token": token,
+            "headers": {
+                "X-Shopify-Access-Token": token,
+                "Content-Type": "application/json"
+            },
+            "graphql_url": f"https://{default_shop}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/graphql.json",
+            "rest_url": f"https://{default_shop}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}",
+            "proxies": None,
+            "is_custom": False,
+            "store_type": "default"
+        }
+
+def check_path_conflict_on_shopify(path: str, creds: dict) -> tuple[bool, str]:
+    """
+    Cơ chế chống trùng lặp an toàn kép:
+    1. Kiểm tra Reserved Paths trong RAM.
+    2. Gộp 1 câu truy vấn GraphQL duy nhất đến Shopify để kiểm tra:
+       - URL Redirects (cả chuỗi gốc và chuỗi lowercase)
+       - Handles: Product, Collection, Page (cả chuỗi gốc và chuỗi lowercase)
+    Trả về: (is_conflict: bool, reason: str)
+    """
+    raw = str(path or "").strip()
+    if not raw:
+        return True, "Đường dẫn rút gọn (slug) không được để trống!"
+        
+    clean_path = "/" + raw.lstrip("/")
+    slug = clean_path.lstrip("/")
+    slug_lower = slug.lower()
+    
+    # 1. Kiểm tra Reserved paths
+    if slug_lower in SHOPIFY_RESERVED_PATHS:
+        return True, f"'{clean_path}' là đường dẫn hệ thống mặc định của Shopify! Không được sử dụng làm link rút gọn."
+    
+    # Nếu path có tiền tố /products/, /collections/, /pages/ thì lấy handle phần sau
+    handle_to_check = slug
+    if "/" in slug:
+        handle_to_check = slug.split("/")[-1]
+    handle_lower = handle_to_check.lower()
+    
+    # 2. Truy vấn GraphQL kép
+    query_conflict = """
+    query checkPathConflict(
+      $exactQuery: String!, 
+      $lowerQuery: String!, 
+      $exactHandle: String!, 
+      $lowerHandle: String!
+    ) {
+      redirectExact: urlRedirects(first: 5, query: $exactQuery) {
+        nodes { id path target }
+      }
+      redirectLower: urlRedirects(first: 5, query: $lowerQuery) {
+        nodes { id path target }
+      }
+      productExact: productByHandle(handle: $exactHandle) { id title handle }
+      productLower: productByHandle(handle: $lowerHandle) { id title handle }
+      collectionExact: collectionByHandle(handle: $exactHandle) { id title handle }
+      collectionLower: collectionByHandle(handle: $lowerHandle) { id title handle }
+      pageExact: pageByHandle(handle: $exactHandle) { id title handle }
+      pageLower: pageByHandle(handle: $lowerHandle) { id title handle }
+    }
+    """
+    
+    variables = {
+        "exactQuery": f"path:{clean_path}",
+        "lowerQuery": f"path:{clean_path.lower()}",
+        "exactHandle": handle_to_check,
+        "lowerHandle": handle_lower
+    }
+    
+    try:
+        resp = requests.post(
+            creds["graphql_url"],
+            json={"query": query_conflict, "variables": variables},
+            headers=creds["headers"],
+            proxies=creds.get("proxies"),
+            timeout=15
+        )
+        if not resp.ok:
+            return False, "Không thể xác minh đường dẫn với Shopify, vui lòng thử lại."
+            
+        data = resp.json().get("data", {})
+        
+        # Kiểm tra redirects
+        exact_nodes = data.get("redirectExact", {}).get("nodes", [])
+        lower_nodes = data.get("redirectLower", {}).get("nodes", [])
+        all_redir_nodes = exact_nodes + lower_nodes
+        
+        for n in all_redir_nodes:
+            n_path = (n.get("path") or "").strip()
+            if n_path == clean_path or n_path.lower() == clean_path.lower():
+                return True, f"URL redirect '{clean_path}' đã tồn tại trên store (đang trỏ tới '{n.get('target')}')!"
+                
+        # Kiểm tra product
+        prod = data.get("productExact") or data.get("productLower")
+        if prod and prod.get("id"):
+            return True, f"Đường dẫn '{clean_path}' trùng với sản phẩm: '{prod.get('title')}'!"
+            
+        # Kiểm tra collection
+        col = data.get("collectionExact") or data.get("collectionLower")
+        if col and col.get("id"):
+            return True, f"Đường dẫn '{clean_path}' trùng với bộ sưu tập: '{col.get('title')}'!"
+            
+        # Kiểm tra page
+        page = data.get("pageExact") or data.get("pageLower")
+        if page and page.get("id"):
+            return True, f"Đường dẫn '{clean_path}' trùng với trang nội dung: '{page.get('title')}'!"
+            
+        return False, "Đường dẫn hợp lệ và chưa tồn tại trên Store!"
+    except Exception as e:
+        print(f"[check_path_conflict_on_shopify] Error: {e}")
+        return False, f"Lỗi kiểm tra trùng lặp: {str(e)}"
+
+def generate_unique_redirect_slug(creds: dict, length: int = 8, max_attempts: int = 5) -> tuple[str, str]:
+    """
+    Sinh ngẫu nhiên slug 8 ký tự an toàn không nhầm lẫn và kiểm tra chống trùng lặp trên Shopify.
+    Trả về (slug, full_path)
+    """
+    for attempt in range(max_attempts):
+        slug = "".join(secrets.choice(REDIRECT_SLUG_CHARSET) for _ in range(length))
+        path = f"/{slug}"
+        is_conflict, reason = check_path_conflict_on_shopify(path, creds)
+        if not is_conflict:
+            return slug, path
+            
+    # Fallback hiếm hoi nếu thử 5 lần vẫn trùng
+    fallback_slug = f"{uuid.uuid4().hex[:6]}{secrets.choice(REDIRECT_SLUG_CHARSET)}{secrets.choice(REDIRECT_SLUG_CHARSET)}"
+    return fallback_slug, f"/{fallback_slug}"
+
+# =====================================================================
+# MENU MANAGER API ROUTES
+# =====================================================================
+
+@app.get("/menu-manager", response_class=HTMLResponse)
+async def menu_manager_page(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="menu_manager.html",
+        context={"request": request}
+    )
+
+@app.get("/api/menu-manager/store-info")
+async def api_menu_manager_store_info(store_type: str = "default"):
+    try:
+        creds = get_menu_manager_credentials(store_type)
+        proxy_cfg = load_proxy_config()
+        return JSONResponse({
+            "success": True,
+            "store_type": store_type,
+            "is_custom": creds["is_custom"],
+            "shop": creds["shop"],
+            "shop_domain": creds["shop_domain"],
+            "display_domain": creds.get("display_domain") or creds["shop_domain"],
+            "brand_domain": creds.get("brand_domain") or creds["shop_domain"],
+            "shop_name": creds["shop_name"],
+            "proxy_enabled": bool(proxy_cfg.get("enabled", False)),
+            "proxy_is_stable": bool(proxy_cfg.get("is_stable", False)),
+            "proxy_status": proxy_cfg.get("last_status", "unknown"),
+            "proxy_latency_ms": proxy_cfg.get("last_latency_ms", 0),
+            "proxy_geo": proxy_cfg.get("geo"),
+            "proxy_ip": proxy_cfg.get("proxy_ip", "185.124.63.174")
+        })
+    except ProxySafetyException as pse:
+        proxy_cfg = load_proxy_config()
+        return JSONResponse({
+            "success": False,
+            "error_type": "proxy_safety",
+            "message": str(pse),
+            "store_type": store_type,
+            "proxy_enabled": bool(proxy_cfg.get("enabled", False)),
+            "proxy_is_stable": False,
+            "proxy_status": "unstable",
+            "proxy_error": proxy_cfg.get("last_error")
+        }, status_code=503)
+    except Exception as e:
+        return JSONResponse({
+            "success": False,
+            "error_type": "general",
+            "message": str(e)
+        }, status_code=400)
+
+@app.get("/api/menu-manager/redirects")
+async def api_menu_manager_get_redirects(
+    store_type: str = "default",
+    limit: int = 50,
+    after: str = None,
+    search: str = None
+):
+    try:
+        creds = get_menu_manager_credentials(store_type)
+        
+        gql_query = """
+        query getUrlRedirects($first: Int!, $after: String, $query: String) {
+          urlRedirects(first: $first, after: $after, query: $query, sortKey: ID, reverse: true) {
+            pageInfo {
+              hasNextPage
+              hasPreviousPage
+              endCursor
+              startCursor
+            }
+            nodes {
+              id
+              path
+              target
+              createdAt
+            }
+          }
+        }
+        """
+        
+        search_filter = None
+        if search and search.strip():
+            # Shopify Admin GraphQL hỗ trợ query theo path hoặc target
+            search_clean = search.strip()
+            search_filter = search_clean
+            
+        variables = {
+            "first": min(limit, 100),
+            "after": after,
+            "query": search_filter
+        }
+        
+        resp = requests.post(
+            creds["graphql_url"],
+            json={"query": gql_query, "variables": variables},
+            headers=creds["headers"],
+            proxies=creds.get("proxies"),
+            timeout=20
+        )
+        resp.raise_for_status()
+        resp_data = resp.json()
+        
+        if "errors" in resp_data:
+            err_msg = resp_data["errors"][0].get("message", "Lỗi GraphQL từ Shopify")
+            return JSONResponse({"success": False, "message": f"Shopify GraphQL Error: {err_msg}"}, status_code=400)
+            
+        data = resp_data.get("data", {}).get("urlRedirects", {})
+        nodes = data.get("nodes", [])
+        page_info = data.get("pageInfo", {})
+        
+        redirects = []
+        vn_tz = timezone(timedelta(hours=7))
+        for n in nodes:
+            raw_id = n.get("id", "")
+            id_num = raw_id.split("/")[-1] if "/" in raw_id else raw_id
+            raw_created = n.get("createdAt") or ""
+            formatted_created = ""
+            if raw_created:
+                try:
+                    dt = datetime.fromisoformat(raw_created.replace("Z", "+00:00"))
+                    dt_vn = dt.astimezone(vn_tz)
+                    formatted_created = dt_vn.strftime("%d/%m/%Y %H:%M")
+                except Exception:
+                    formatted_created = raw_created
+            redirects.append({
+                "id": raw_id,
+                "id_num": id_num,
+                "path": n.get("path", ""),
+                "target": n.get("target", ""),
+                "created_at": raw_created,
+                "created_at_formatted": formatted_created
+            })
+            
+        # Sắp xếp bảo đảm DESC theo ngày tạo (Mới nhất lên đầu)
+        redirects.sort(key=lambda r: r.get("created_at") or "", reverse=True)
+            
+        return JSONResponse({
+            "success": True,
+            "store_type": store_type,
+            "shop_domain": creds["shop_domain"],
+            "display_domain": creds.get("display_domain") or creds["shop_domain"],
+            "redirects": redirects,
+            "page_info": page_info,
+            "total_count": len(redirects)
+        })
+    except ProxySafetyException as pse:
+        return JSONResponse({"success": False, "error_type": "proxy_safety", "message": str(pse)}, status_code=503)
+    except Exception as e:
+        return JSONResponse({"success": False, "message": f"Lỗi tải danh sách redirects: {str(e)}"}, status_code=500)
+
+@app.post("/api/menu-manager/redirects/generate-slug")
+async def api_menu_manager_generate_slug(request: Request):
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+        
+    store_type = body.get("store_type", "default")
+    try:
+        creds = get_menu_manager_credentials(store_type)
+        share_domain = creds.get("brand_domain") or creds["shop_domain"]
+        slug, path = generate_unique_redirect_slug(creds, length=8)
+        return JSONResponse({
+            "success": True,
+            "slug": slug,
+            "path": path,
+            "full_url": f"https://{share_domain}{path}"
+        })
+    except ProxySafetyException as pse:
+        return JSONResponse({"success": False, "error_type": "proxy_safety", "message": str(pse)}, status_code=503)
+    except Exception as e:
+        return JSONResponse({"success": False, "message": f"Lỗi sinh slug: {str(e)}"}, status_code=400)
+
+@app.post("/api/menu-manager/redirects/validate-slug")
+async def api_menu_manager_validate_slug(request: Request):
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"success": False, "message": "Dữ liệu JSON không hợp lệ"}, status_code=400)
+        
+    path = body.get("path", "").strip()
+    store_type = body.get("store_type", "default")
+    
+    if not path:
+        return JSONResponse({"success": False, "message": "Vui lòng nhập đường dẫn rút gọn cần kiểm tra"}, status_code=400)
+        
+    try:
+        creds = get_menu_manager_credentials(store_type)
+        is_conflict, reason = check_path_conflict_on_shopify(path, creds)
+        return JSONResponse({
+            "success": True,
+            "is_conflict": is_conflict,
+            "message": reason
+        })
+    except ProxySafetyException as pse:
+        return JSONResponse({"success": False, "error_type": "proxy_safety", "message": str(pse)}, status_code=503)
+    except Exception as e:
+        return JSONResponse({"success": False, "message": f"Lỗi kiểm tra slug: {str(e)}"}, status_code=400)
+
+@app.post("/api/menu-manager/redirects")
+async def api_menu_manager_create_redirect(request: Request):
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"success": False, "message": "Dữ liệu JSON không hợp lệ"}, status_code=400)
+        
+    dest_url = str(body.get("dest_url", "")).strip()
+    redirect_path = str(body.get("redirect_path", "")).strip()
+    store_type = body.get("store_type", "default")
+    
+    if not dest_url:
+        return JSONResponse({"success": False, "message": "Vui lòng nhập URL gốc đích đến (Destination URL)!"}, status_code=400)
+        
+    if not redirect_path:
+        return JSONResponse({"success": False, "message": "Vui lòng nhập hoặc sinh URL rút gọn (Redirect Path)!"}, status_code=400)
+        
+    # Chuẩn hóa path
+    clean_path = "/" + redirect_path.lstrip("/")
+    
+    # Chuẩn hóa target: chấp nhận relative path hoặc full URL
+    clean_target = dest_url
+    if not clean_target.startswith("http://") and not clean_target.startswith("https://") and not clean_target.startswith("/"):
+        clean_target = "/" + clean_target
+        
+    try:
+        creds = get_menu_manager_credentials(store_type)
+        
+        # 1. Kiểm tra an toàn kép chống trùng lặp
+        is_conflict, reason = check_path_conflict_on_shopify(clean_path, creds)
+        if is_conflict:
+            return JSONResponse({"success": False, "message": f"Không thể tạo redirect: {reason}"}, status_code=400)
+            
+        # 2. Tạo mutation urlRedirectCreate
+        mutation_create = """
+        mutation createRedirect($urlRedirect: UrlRedirectInput!) {
+          urlRedirectCreate(urlRedirect: $urlRedirect) {
+            urlRedirect {
+              id
+              path
+              target
+            }
+            userErrors {
+              field
+              message
+            }
+          }
+        }
+        """
+        
+        variables = {
+            "urlRedirect": {
+                "path": clean_path,
+                "target": clean_target
+            }
+        }
+        
+        resp = requests.post(
+            creds["graphql_url"],
+            json={"query": mutation_create, "variables": variables},
+            headers=creds["headers"],
+            proxies=creds.get("proxies"),
+            timeout=20
+        )
+        resp.raise_for_status()
+        resp_data = resp.json()
+        
+        if "errors" in resp_data:
+            err_msg = resp_data["errors"][0].get("message", "Lỗi GraphQL từ Shopify")
+            return JSONResponse({"success": False, "message": f"Shopify GraphQL Error: {err_msg}"}, status_code=400)
+            
+        payload = resp_data.get("data", {}).get("urlRedirectCreate", {})
+        user_errors = payload.get("userErrors", [])
+        if user_errors:
+            err_details = "; ".join([e.get("message", "") for e in user_errors])
+            return JSONResponse({"success": False, "message": f"Shopify từ chối tạo redirect: {err_details}"}, status_code=400)
+            
+        created_node = payload.get("urlRedirect")
+        if not created_node:
+            return JSONResponse({"success": False, "message": "Không nhận được phản hồi từ Shopify sau khi tạo redirect."}, status_code=500)
+            
+        raw_id = created_node.get("id", "")
+        id_num = raw_id.split("/")[-1] if "/" in raw_id else raw_id
+        share_domain = creds.get("brand_domain") or creds["shop_domain"]
+        
+        return JSONResponse({
+            "success": True,
+            "message": f"Tạo URL Redirect '{clean_path}' trỏ tới '{clean_target}' thành công trên store {creds['shop_name']}!",
+            "redirect": {
+                "id": raw_id,
+                "id_num": id_num,
+                "path": created_node.get("path"),
+                "target": created_node.get("target"),
+                "shop_domain": creds["shop_domain"],
+                "full_url": f"https://{share_domain}{created_node.get('path')}"
+            }
+        })
+    except ProxySafetyException as pse:
+        return JSONResponse({"success": False, "error_type": "proxy_safety", "message": str(pse)}, status_code=503)
+    except Exception as e:
+        return JSONResponse({"success": False, "message": f"Lỗi tạo redirect: {str(e)}"}, status_code=500)
+
+@app.put("/api/menu-manager/redirects/{redirect_id:path}")
+async def api_menu_manager_update_redirect(redirect_id: str, request: Request):
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+        
+    store_type = body.get("store_type", "default")
+    dest_url = str(body.get("dest_url") or "").strip()
+    redirect_path = str(body.get("redirect_path") or "").strip()
+    
+    if not redirect_id:
+        return JSONResponse({"success": False, "message": "Thiếu ID bản ghi redirect cần cập nhật!"}, status_code=400)
+    if not dest_url:
+        return JSONResponse({"success": False, "message": "Vui lòng nhập URL gốc đích đến (Destination URL)!"}, status_code=400)
+    if not redirect_path:
+        return JSONResponse({"success": False, "message": "Vui lòng nhập URL rút gọn (Redirect Path)!"}, status_code=400)
+        
+    clean_path = "/" + redirect_path.lstrip("/")
+    clean_target = dest_url
+    if not clean_target.startswith("http://") and not clean_target.startswith("https://") and not clean_target.startswith("/"):
+        clean_target = "/" + clean_target
+        
+    gid = redirect_id if redirect_id.startswith("gid://") else f"gid://shopify/UrlRedirect/{redirect_id}"
+    
+    try:
+        creds = get_menu_manager_credentials(store_type)
+        
+        mutation_update = """
+        mutation updateRedirect($id: ID!, $urlRedirect: UrlRedirectInput!) {
+          urlRedirectUpdate(id: $id, urlRedirect: $urlRedirect) {
+            urlRedirect {
+              id
+              path
+              target
+              createdAt
+            }
+            userErrors {
+              field
+              message
+            }
+          }
+        }
+        """
+        
+        variables = {
+            "id": gid,
+            "urlRedirect": {
+                "path": clean_path,
+                "target": clean_target
+            }
+        }
+        
+        resp = requests.post(
+            creds["graphql_url"],
+            json={"query": mutation_update, "variables": variables},
+            headers=creds["headers"],
+            proxies=creds.get("proxies"),
+            timeout=20
+        )
+        resp.raise_for_status()
+        resp_data = resp.json()
+        
+        if "errors" in resp_data:
+            err_msg = resp_data["errors"][0].get("message", "Lỗi GraphQL từ Shopify")
+            return JSONResponse({"success": False, "message": f"Shopify GraphQL Error: {err_msg}"}, status_code=400)
+            
+        payload = resp_data.get("data", {}).get("urlRedirectUpdate", {})
+        user_errors = payload.get("userErrors", [])
+        if user_errors:
+            err_details = "; ".join([e.get("message", "") for e in user_errors])
+            return JSONResponse({"success": False, "message": f"Shopify từ chối cập nhật redirect: {err_details}"}, status_code=400)
+            
+        updated_node = payload.get("urlRedirect")
+        if not updated_node:
+            return JSONResponse({"success": False, "message": "Không nhận được phản hồi từ Shopify sau khi cập nhật."}, status_code=500)
+            
+        raw_id = updated_node.get("id", "")
+        id_num = raw_id.split("/")[-1] if "/" in raw_id else raw_id
+        share_domain = creds.get("brand_domain") or creds["shop_domain"]
+        raw_created = updated_node.get("createdAt") or ""
+        formatted_created = ""
+        if raw_created:
+            try:
+                dt = datetime.fromisoformat(raw_created.replace("Z", "+00:00"))
+                vn_tz = timezone(timedelta(hours=7))
+                formatted_created = dt.astimezone(vn_tz).strftime("%d/%m/%Y %H:%M")
+            except Exception:
+                formatted_created = raw_created
+                
+        return JSONResponse({
+            "success": True,
+            "message": f"Đã cập nhật URL Redirect '{clean_path}' thành công trên Shopify!",
+            "redirect": {
+                "id": raw_id,
+                "id_num": id_num,
+                "path": updated_node.get("path"),
+                "target": updated_node.get("target"),
+                "created_at": raw_created,
+                "created_at_formatted": formatted_created,
+                "shop_domain": creds["shop_domain"],
+                "full_url": f"https://{share_domain}{updated_node.get('path')}"
+            }
+        })
+    except ProxySafetyException as pse:
+        return JSONResponse({"success": False, "error_type": "proxy_safety", "message": str(pse)}, status_code=503)
+    except Exception as e:
+        return JSONResponse({"success": False, "message": f"Lỗi cập nhật redirect: {str(e)}"}, status_code=500)
+
+@app.delete("/api/menu-manager/redirects/{redirect_id:path}")
+async def api_menu_manager_delete_redirect(redirect_id: str, store_type: str = "default"):
+    if not redirect_id:
+        return JSONResponse({"success": False, "message": "Thiếu ID bản ghi redirect cần xóa!"}, status_code=400)
+        
+    gid = redirect_id if redirect_id.startswith("gid://") else f"gid://shopify/UrlRedirect/{redirect_id}"
+    
+    try:
+        creds = get_menu_manager_credentials(store_type)
+        
+        mutation_del = """
+        mutation deleteRedirect($id: ID!) {
+          urlRedirectDelete(id: $id) {
+            deletedUrlRedirectId
+            userErrors {
+              field
+              message
+            }
+          }
+        }
+        """
+        
+        resp = requests.post(
+            creds["graphql_url"],
+            json={"query": mutation_del, "variables": {"id": gid}},
+            headers=creds["headers"],
+            proxies=creds.get("proxies"),
+            timeout=20
+        )
+        resp.raise_for_status()
+        resp_data = resp.json()
+        
+        if "errors" in resp_data:
+            err_msg = resp_data["errors"][0].get("message", "Lỗi GraphQL từ Shopify")
+            return JSONResponse({"success": False, "message": f"Shopify GraphQL Error: {err_msg}"}, status_code=400)
+            
+        payload = resp_data.get("data", {}).get("urlRedirectDelete", {})
+        user_errors = payload.get("userErrors", [])
+        if user_errors:
+            err_details = "; ".join([e.get("message", "") for e in user_errors])
+            return JSONResponse({"success": False, "message": f"Shopify từ chối xóa redirect: {err_details}"}, status_code=400)
+            
+        return JSONResponse({
+            "success": True,
+            "message": "Đã xóa bản ghi URL Redirect thành công khỏi Shopify store!",
+            "deleted_id": payload.get("deletedUrlRedirectId", gid)
+        })
+    except ProxySafetyException as pse:
+        return JSONResponse({"success": False, "error_type": "proxy_safety", "message": str(pse)}, status_code=503)
+    except Exception as e:
+        return JSONResponse({"success": False, "message": f"Lỗi xóa redirect: {str(e)}"}, status_code=500)
+
+@app.post("/api/menu-manager/proxy/check")
+async def api_menu_manager_check_proxy():
+    """Nút kiểm tra độ ổn định kết nối server -> proxy -> shopify cho trang Quản lý Menu"""
+    return await check_proxy()
+
 

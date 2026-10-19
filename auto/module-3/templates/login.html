@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/static/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+    <link rel="shortcut icon" href="/static/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png" />
+    <link rel="manifest" href="/static/site.webmanifest" />
+    <title>Đăng nhập Hệ thống - Shopify Admin Manager</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-6px); }
+            40%, 80% { transform: translateX(6px); }
+        }
+        .shake { animation: shake 0.4s ease-in-out; }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-50 via-gray-100 to-indigo-50/50 text-gray-900 min-h-screen flex flex-col justify-between selection:bg-indigo-500 selection:text-white relative">
+    <!-- Subtle Background pastel glow decoration -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div class="absolute -top-40 -left-40 w-96 h-96 bg-indigo-200/40 rounded-full blur-3xl"></div>
+        <div class="absolute top-1/2 -right-40 w-96 h-96 bg-purple-200/35 rounded-full blur-3xl"></div>
+        <div class="absolute -bottom-40 left-1/3 w-96 h-96 bg-blue-200/30 rounded-full blur-3xl"></div>
+    </div>
+
+    <!-- Top mini bar -->
+    <header class="w-full px-6 py-4 flex items-center justify-between relative z-10">
+        <div class="flex items-center gap-2.5 text-gray-900 font-extrabold text-base tracking-tight">
+            <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-sm shadow-indigo-200">
+                <iconify-icon icon="mdi:shopping-outline" class="text-lg"></iconify-icon>
+            </div>
+            <span>Shopify Admin Manager</span>
+        </div>
+        <div class="flex items-center gap-2 text-xs font-semibold text-gray-600 bg-white/90 backdrop-blur-xs border border-gray-200/80 px-3 py-1.5 rounded-full shadow-xs">
+            <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>WRYDECO System</span>
+        </div>
+    </header>
+
+    <!-- Main Card Container -->
+    <main class="w-full max-w-md mx-auto px-4 py-8 relative z-10 flex-1 flex items-center">
+        <div id="login-card" class="w-full bg-white text-gray-900 rounded-3xl shadow-[0_15px_45px_-10px_rgba(0,0,0,0.08),0_2px_10px_-2px_rgba(0,0,0,0.04)] border border-gray-200/90 p-7 sm:p-9 relative overflow-hidden">
+            <!-- Decorative accent top line -->
+            <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
+
+            <!-- Header Icon & Title -->
+            <div class="flex flex-col items-center text-center mb-6">
+                <div class="w-16 h-16 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 mb-4 shadow-xs">
+                    <iconify-icon icon="mdi:shield-key-outline" class="text-3xl"></iconify-icon>
+                </div>
+                <h1 class="text-2xl font-extrabold text-gray-900 tracking-tight">Đăng nhập Quản trị</h1>
+                <p class="text-xs text-gray-500 mt-2 max-w-xs leading-relaxed">
+                    Hệ thống quản lý sản phẩm, blog và khách hàng Shopify. Vui lòng đăng nhập để tiếp tục.
+                </p>
+            </div>
+
+            <!-- Error message banner -->
+            <div id="error-banner" class="hidden mb-5 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-start gap-2.5">
+                <iconify-icon icon="mdi:alert-circle-outline" class="text-lg flex-shrink-0 mt-0.5 text-rose-600"></iconify-icon>
+                <span id="error-text" class="font-medium">Tên đăng nhập hoặc mật khẩu không chính xác.</span>
+            </div>
+
+            <!-- Success redirect banner -->
+            <div id="success-banner" class="hidden mb-5 p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-700 flex items-center gap-2">
+                <iconify-icon icon="mdi:check-circle-outline" class="text-lg flex-shrink-0 text-emerald-600"></iconify-icon>
+                <span class="font-medium">Đăng nhập thành công! Đang chuyển hướng...</span>
+            </div>
+
+            <!-- Form -->
+            <form id="global-login-form" onsubmit="handleGlobalLogin(event)" class="space-y-4">
+                <!-- Username Field -->
+                <div>
+                    <label for="username" class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+                        Tên đăng nhập
+                    </label>
+                    <div class="relative rounded-xl shadow-xs">
+                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                            <iconify-icon icon="mdi:account-outline" class="text-lg"></iconify-icon>
+                        </div>
+                        <input
+                            type="text"
+                            id="username"
+                            name="username"
+                            value="admin"
+                            required
+                            placeholder="admin"
+                            class="w-full rounded-xl border border-gray-300 bg-white py-3 pl-10 pr-4 text-sm font-medium text-gray-800 focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 transition-all focus:outline-none"
+                            autocomplete="username"
+                        >
+                    </div>
+                </div>
+
+                <!-- Password Field -->
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label for="password" class="block text-xs font-bold text-gray-700 uppercase tracking-wider">
+                            Mật khẩu
+                        </label>
+                        <span class="text-[11px] text-gray-400">Mật khẩu Admin</span>
+                    </div>
+
+                    <div class="relative rounded-xl shadow-xs">
+                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                            <iconify-icon icon="mdi:lock-outline" class="text-lg"></iconify-icon>
+                        </div>
+                        <input
+                            type="password"
+                            id="password"
+                            name="password"
+                            required
+                            autofocus
+                            placeholder="Nhập mật khẩu..."
+                            class="w-full rounded-xl border border-gray-300 bg-white py-3 pl-10 pr-12 text-sm font-mono tracking-wider text-gray-800 focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 transition-all focus:outline-none"
+                            autocomplete="current-password"
+                        >
+
+                        <!-- Toggle Password Visibility -->
+                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                            <button
+                                type="button"
+                                id="btn-toggle-pwd"
+                                onclick="togglePasswordVisibility()"
+                                class="p-1 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-gray-100 transition-colors cursor-pointer flex items-center justify-center"
+                                title="Ẩn / Hiện mật khẩu"
+                                aria-label="Toggle password visibility"
+                            >
+                                <iconify-icon id="icon-eye-show" icon="mdi:eye-outline" class="text-xl"></iconify-icon>
+                                <iconify-icon id="icon-eye-hide" icon="mdi:eye-off-outline" class="text-xl hidden"></iconify-icon>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Remember / Hint info -->
+                <div class="pt-1 flex items-center justify-between text-xs text-gray-500">
+                    <span class="flex items-center gap-1.5">
+                        <iconify-icon icon="mdi:check-decagram" class="text-emerald-600 text-sm"></iconify-icon>
+                        <span>Phiên đăng nhập lưu 7 ngày</span>
+                    </span>
+                    <span class="text-[11px] text-indigo-600 font-semibold">Bảo vệ toàn diện</span>
+                </div>
+
+                <!-- Submit Button -->
+                <button
+                    type="submit"
+                    id="btn-login-submit"
+                    class="w-full mt-2 bg-gradient-to-r from-indigo-600 via-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-3.5 px-4 rounded-xl shadow-md shadow-indigo-200 transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99] focus:outline-none focus:ring-4 focus:ring-indigo-200"
+                >
+                    <iconify-icon id="btn-submit-icon" icon="mdi:login" class="text-lg"></iconify-icon>
+                    <span id="btn-submit-text">Đăng nhập vào Hệ thống</span>
+                </button>
+            </form>
+
+            <!-- Extra Footer Note -->
+            <div class="mt-6 pt-5 border-t border-gray-100 text-center">
+                <p class="text-[11px] text-gray-400">
+                    Đăng nhập thành công sẽ tự động mở khóa toàn bộ công cụ và trang Cài đặt (Settings).
+                </p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Bottom Copyright -->
+    <footer class="w-full text-center py-4 text-xs text-gray-500 relative z-10">
+        © Shopify Admin Manager • WRYDECO Module
+    </footer>
+
+    <script>
+        function togglePasswordVisibility() {
+            const input = document.getElementById('password');
+            const iconShow = document.getElementById('icon-eye-show');
+            const iconHide = document.getElementById('icon-eye-hide');
+
+            if (input.type === 'password') {
+                input.type = 'text';
+                iconShow.classList.add('hidden');
+                iconHide.classList.remove('hidden');
+            } else {
+                input.type = 'password';
+                iconShow.classList.remove('hidden');
+                iconHide.classList.add('hidden');
+            }
+            input.focus();
+        }
+
+        async function handleGlobalLogin(event) {
+            event.preventDefault();
+            const usernameInput = document.getElementById('username');
+            const passwordInput = document.getElementById('password');
+            const submitBtn = document.getElementById('btn-login-submit');
+            const submitText = document.getElementById('btn-submit-text');
+            const submitIcon = document.getElementById('btn-submit-icon');
+            const errorBanner = document.getElementById('error-banner');
+            const errorText = document.getElementById('error-text');
+            const successBanner = document.getElementById('success-banner');
+            const card = document.getElementById('login-card');
+
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value.trim();
+
+            if (!username) {
+                usernameInput.focus();
+                return;
+            }
+            if (!password) {
+                passwordInput.focus();
+                return;
+            }
+
+            // Reset banners
+            errorBanner.classList.add('hidden');
+            successBanner.classList.add('hidden');
+
+            // Button loading state
+            submitBtn.disabled = true;
+            submitBtn.classList.add('opacity-80', 'cursor-not-allowed');
+            submitText.textContent = 'Đang xác thực...';
+            submitIcon.setAttribute('icon', 'mdi:loading');
+            submitIcon.classList.add('animate-spin');
+
+            // Lấy tham số next nếu có
+            const urlParams = new URLSearchParams(window.location.search);
+            const nextUrl = urlParams.get('next') || '/';
+
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password,
+                        next: nextUrl
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    successBanner.classList.remove('hidden');
+                    submitBtn.classList.remove('from-indigo-600', 'to-purple-600');
+                    submitBtn.classList.add('bg-emerald-600');
+                    submitText.textContent = 'Thành công!';
+                    submitIcon.setAttribute('icon', 'mdi:check-bold');
+                    submitIcon.classList.remove('animate-spin');
+
+                    // Chuyển hướng
+                    setTimeout(() => {
+                        window.location.href = data.redirect || nextUrl || '/';
+                    }, 500);
+                } else {
+                    // Hiển thị lỗi
+                    errorText.textContent = data.message || 'Tên đăng nhập hoặc mật khẩu không chính xác!';
+                    errorBanner.classList.remove('hidden');
+
+                    // Hiệu ứng rung form
+                    card.classList.remove('shake');
+                    void card.offsetWidth; // trigger reflow
+                    card.classList.add('shake');
+
+                    // Khôi phục nút submit
+                    submitBtn.disabled = false;
+                    submitBtn.classList.remove('opacity-80', 'cursor-not-allowed');
+                    submitText.textContent = 'Đăng nhập vào Hệ thống';
+                    submitIcon.setAttribute('icon', 'mdi:login');
+                    submitIcon.classList.remove('animate-spin');
+
+                    passwordInput.value = '';
+                    passwordInput.focus();
+                }
+            } catch (err) {
+                console.error(err);
+                errorText.textContent = 'Lỗi kết nối tới máy chủ. Vui lòng thử lại sau!';
+                errorBanner.classList.remove('hidden');
+
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('opacity-80', 'cursor-not-allowed');
+                submitText.textContent = 'Đăng nhập vào Hệ thống';
+                submitIcon.setAttribute('icon', 'mdi:login');
+                submitIcon.classList.remove('animate-spin');
+            }
+        }
+    </script>
+</body>
+</html>

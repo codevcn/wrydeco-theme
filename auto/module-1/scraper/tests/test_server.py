@@ -124,6 +124,15 @@ def test_dashboard_has_agent_startup_toast_and_event_log_scroll_control():
     css = (Path(__file__).parents[1] / "web" / "static" / "dashboard.css").read_text(encoding="utf-8")
     assert ".brand-mark" in css
     assert ".brand-mark svg" in css
+    assert ".agent-model-config" in css
+    assert 'id="agent-model"' in html
+    assert 'id="agent-model-config"' in html
+    assert 'id="agent-model-select"' in html
+    assert 'id="agent-model-input"' in html
+    assert 'id="save-agent-model"' in html
+    assert "Gemini 3.8 Flash (High)" in html
+    assert "saveAgentModel" in js
+    assert "renderAntigravityModelConfig" in js
 
 
 def test_dashboard_favicon_and_web_assets(tmp_path):
@@ -293,13 +302,14 @@ def test_docs_api_lists_only_markdown_and_text_and_blocks_traversal(tmp_path):
     (docs / "guide.md").write_text("# Guide\n\nHello", encoding="utf-8")
     (docs / "notes.TXT").write_text("Plain notes", encoding="utf-8")
     (docs / "nested" / "more.md").write_text("More docs", encoding="utf-8")
+    (docs / "flow.html").write_text("<div class=\"diagram\">Flow</div>", encoding="utf-8")
     (docs / "ignored.json").write_text("{}", encoding="utf-8")
     (root / "outside.md").write_text("secret", encoding="utf-8")
     client = create_app(root, store=OrchestratorStore(root)).test_client()
 
     listing = client.get("/api/docs")
     assert listing.status_code == 200
-    assert [item["path"] for item in listing.get_json()["documents"]] == ["guide.md", "nested/more.md", "notes.TXT"]
+    assert [item["path"] for item in listing.get_json()["documents"]] == ["flow.html", "guide.md", "nested/more.md", "notes.TXT"]
     content = client.get("/api/docs/content", query_string={"path": "guide.md"})
     assert content.status_code == 200
     assert content.get_json()["content"] == "# Guide\n\nHello"
@@ -308,6 +318,19 @@ def test_docs_api_lists_only_markdown_and_text_and_blocks_traversal(tmp_path):
     plain = client.get("/api/docs/content", query_string={"path": "notes.TXT"}).get_json()
     assert plain["format"] == "text"
     assert plain["rendered_html"] == '<pre class="docs-plain-text">Plain notes</pre>'
+    html_doc = client.get("/api/docs/content", query_string={"path": "flow.html"}).get_json()
+    assert html_doc["format"] == "html"
+    assert '<iframe class="docs-html-frame"' in html_doc["rendered_html"]
+    assert 'srcdoc="' in html_doc["rendered_html"]
+    assert '&lt;div class=&quot;diagram&quot;&gt;Flow&lt;/div&gt;' in html_doc["rendered_html"]
+
+    raw = client.get("/api/docs/raw", query_string={"path": "flow.html"})
+    assert raw.status_code == 200
+    assert raw.mimetype == "text/html"
+    assert '<div class="diagram">Flow</div>' in raw.get_data(as_text=True)
+
+    assert client.get("/api/docs/raw", query_string={"path": "ignored.json"}).status_code == 400
+    assert client.get("/api/docs/raw", query_string={"path": "../outside.md"}).status_code == 400
     assert client.get("/api/docs/content", query_string={"path": "ignored.json"}).status_code == 400
     assert client.get("/api/docs/content", query_string={"path": "../outside.md"}).status_code == 400
 
@@ -590,3 +613,41 @@ def test_removed_sku_actions_cannot_trigger_shopify_mutations(tmp_path, endpoint
     csrf = client.get("/api/bootstrap").get_json()["csrf_token"]
     response = client.post(f"/api/shopify/{endpoint}", json={"manifest": MANIFEST}, headers=headers(csrf))
     assert response.status_code == 404
+
+
+def test_antigravity_model_config_api_persists_to_file_and_updates_runtime(tmp_path):
+    root = package_root(tmp_path)
+    runtime = FakeAgentRuntime(ready=True)
+    app = create_app(root, store=OrchestratorStore(root), agent_runtime=runtime)
+    client = app.test_client()
+
+    bootstrap = client.get("/api/bootstrap").get_json()
+    csrf = bootstrap["csrf_token"]
+    assert bootstrap["antigravity_config"]["model"] == "Gemini 3.8 Flash (High)"
+    assert bootstrap["antigravity_config"]["default_model"] == "Gemini 3.8 Flash (High)"
+    assert bootstrap["agent"]["model"] == "Gemini 3.8 Flash (High)"
+
+    config_resp = client.get("/api/agent/config")
+    assert config_resp.status_code == 200
+    assert config_resp.get_json()["model"] == "Gemini 3.8 Flash (High)"
+
+    updated = client.put(
+        "/api/agent/config",
+        json={"model": "Claude Sonnet 5.5 (High)", "restart": True},
+        headers=headers(csrf),
+    )
+    assert updated.status_code == 200
+    payload = updated.get_json()
+    assert payload["config"]["model"] == "Claude Sonnet 5.5 (High)"
+    assert payload["restarted"] is True
+    assert runtime.restarts == 1
+    assert json.loads((root / "antigravity_config.json").read_text(encoding="utf-8"))["model"] == "Claude Sonnet 5.5 (High)"
+
+    invalid = client.put(
+        "/api/agent/config",
+        json={"model": "   "},
+        headers=headers(csrf),
+    )
+    assert invalid.status_code == 400
+    assert json.loads((root / "antigravity_config.json").read_text(encoding="utf-8"))["model"] == "Claude Sonnet 5.5 (High)"
+

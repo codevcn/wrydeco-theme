@@ -1,0 +1,259 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "StoreEditorialProfile",
+  "description": "Curated and verified Store Editorial Profile used by the pre-publish Fact Auditor, Image Service, Publisher, and Settings UI.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "store_id",
+    "brand_name",
+    "storefront_url",
+    "shopify_domain",
+    "zbigtee_project_id",
+    "profile_status",
+    "ready_for_publishing",
+    "verified_destination_blog",
+    "brand_positioning",
+    "policies",
+    "do_not_claim",
+    "unknowns_requiring_shopify_verification",
+    "product_and_media_gate",
+    "verified_internal_links",
+    "audit_metadata"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "store_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "brand_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "storefront_url": {
+      "type": "string",
+      "minLength": 1
+    },
+    "shopify_domain": {
+      "type": "string",
+      "minLength": 1
+    },
+    "zbigtee_project_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "profile_status": {
+      "type": "string",
+      "enum": [
+        "active_verified",
+        "research_seed_not_active_settings",
+        "draft"
+      ]
+    },
+    "ready_for_publishing": {
+      "type": "boolean"
+    },
+    "verified_destination_blog": {
+      "type": "object",
+      "required": [
+        "blog_id",
+        "blog_handle",
+        "blog_title",
+        "default_author",
+        "verified_via_shopify_api_at"
+      ],
+      "properties": {
+        "blog_id": { "type": "string", "minLength": 1 },
+        "blog_handle": { "type": "string", "minLength": 1 },
+        "blog_title": { "type": "string", "minLength": 1 },
+        "default_author": { "type": "string", "minLength": 1 },
+        "verified_via_shopify_api_at": { "type": "string", "minLength": 1 },
+        "available_blogs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "handle", "title"],
+            "properties": {
+              "id": { "type": "string" },
+              "handle": { "type": "string" },
+              "title": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "brand_positioning": {
+      "type": "object",
+      "required": [
+        "summary",
+        "target_audience",
+        "editorial_voice",
+        "evidence"
+      ],
+      "properties": {
+        "summary": { "type": "string", "minLength": 1 },
+        "target_audience": { "type": "string", "minLength": 1 },
+        "editorial_voice": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "evidence": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/evidenceItem" }
+        }
+      }
+    },
+    "policies": {
+      "type": "object",
+      "required": [
+        "shipping",
+        "returns_refunds",
+        "cancellation",
+        "warranty_support",
+        "personalization_customization",
+        "materials_care"
+      ],
+      "properties": {
+        "shipping": { "$ref": "#/$defs/policySection" },
+        "returns_refunds": { "$ref": "#/$defs/policySection" },
+        "cancellation": { "$ref": "#/$defs/policySection" },
+        "warranty_support": { "$ref": "#/$defs/policySection" },
+        "personalization_customization": { "$ref": "#/$defs/policySection" },
+        "materials_care": { "$ref": "#/$defs/policySection" }
+      }
+    },
+    "do_not_claim": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "unknowns_requiring_shopify_verification": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "product_and_media_gate": {
+      "type": "object",
+      "required": [
+        "require_shopify_api_verification",
+        "require_online_store_publication",
+        "require_proxy_for_all_shopify_requests",
+        "min_body_images",
+        "max_body_images",
+        "forbid_svg_fallbacks",
+        "forbid_unverified_gallery_alt_mapping"
+      ],
+      "properties": {
+        "require_shopify_api_verification": { "type": "boolean" },
+        "require_online_store_publication": { "type": "boolean" },
+        "require_proxy_for_all_shopify_requests": { "type": "boolean" },
+        "min_body_images": { "type": "integer", "minimum": 4, "maximum": 7 },
+        "max_body_images": { "type": "integer", "minimum": 4, "maximum": 7 },
+        "forbid_svg_fallbacks": { "type": "boolean" },
+        "forbid_unverified_gallery_alt_mapping": { "type": "boolean" }
+      }
+    },
+    "verified_internal_links": {
+      "type": "object",
+      "required": [
+        "collections",
+        "policies_and_pages",
+        "blogs"
+      ],
+      "properties": {
+        "collections": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/linkItem" }
+        },
+        "policies_and_pages": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/linkItem" }
+        },
+        "blogs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/linkItem" }
+        }
+      }
+    },
+    "audit_metadata": {
+      "type": "object",
+      "required": [
+        "seeded_from",
+        "last_verified_at",
+        "verified_by"
+      ],
+      "properties": {
+        "seeded_from": { "type": "string", "minLength": 1 },
+        "last_verified_at": { "type": "string", "minLength": 1 },
+        "verified_by": { "type": "string", "minLength": 1 },
+        "notes": { "type": "string" }
+      }
+    }
+  },
+  "$defs": {
+    "evidenceItem": {
+      "type": "object",
+      "required": [
+        "source_id",
+        "source_url",
+        "fetched_at",
+        "exact_quote"
+      ],
+      "properties": {
+        "source_id": { "type": "string" },
+        "source_url": { "type": "string" },
+        "fetched_at": { "type": "string" },
+        "exact_quote": { "type": "string" }
+      }
+    },
+    "policySection": {
+      "type": "object",
+      "required": [
+        "summary",
+        "conflict_status",
+        "allowed_claims",
+        "forbidden_claims",
+        "evidence"
+      ],
+      "properties": {
+        "summary": { "type": "string", "minLength": 1 },
+        "conflict_status": {
+          "type": "string",
+          "enum": ["none", "conflict_blocked", "needs_review"]
+        },
+        "conflict_notes": { "type": "string" },
+        "allowed_claims": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "forbidden_claims": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "evidence": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/evidenceItem" }
+        }
+      }
+    },
+    "linkItem": {
+      "type": "object",
+      "required": [
+        "url",
+        "http_status",
+        "verified_at"
+      ],
+      "properties": {
+        "url": { "type": "string", "minLength": 1 },
+        "handle": { "type": "string" },
+        "title": { "type": "string" },
+        "http_status": { "type": "integer" },
+        "verified_at": { "type": "string" }
+      }
+    }
+  }
+}

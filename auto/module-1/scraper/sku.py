@@ -32,9 +32,13 @@ def clean_option(value: str, rules: dict[str, Any] | None = None) -> str:
     # strand "Most" from the longer phrase "Most Popular Size".
     if patterns:
         text = re.sub("|".join(patterns), "", text, flags=re.I)
-    text = re.sub(r"\(\s*\)|\[\s*\]", "", text)
-    text = re.sub(r"\s+", " ", text)
-    return text.strip(" -|,;:()[]")
+    text = re.sub(r"\([\s\-|,;:]*\)|\[[\s\-|,;:]*\]", "", text)
+    text = re.sub(r"\s+", " ", text).strip(" -|,;:")
+    if text.count("(") != text.count(")"):
+        text = text.strip("()").strip(" -|,;:")
+    if text.count("[") != text.count("]"):
+        text = text.strip("[]").strip(" -|,;:")
+    return text
 
 
 def _words(value: str) -> list[str]:

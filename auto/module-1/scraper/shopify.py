@@ -116,6 +116,18 @@ class ShopifyClient:
         """)}
         return product
 
+    def aeo_catalog_page(self, *, after: str | None, cutoff: str) -> dict[str, Any]:
+        """A stable creation-time scan; missing metafields are filtered locally."""
+        query = """query AeoCatalog($after: String, $query: String!) {
+          products(first: 50, after: $after, sortKey: CREATED_AT, reverse: true, query: $query) {
+            nodes { id title handle createdAt
+              aeo: metafield(namespace: "custom", key: "aeo_html") { type value }
+            }
+            pageInfo { hasNextPage endCursor }
+          }
+        }"""
+        return self.graphql(query, {"after": after, "query": f"created_at:<='{cutoff}'"})["products"]
+
     def product_metafield_definitions(self) -> dict[tuple[str, str], str]:
         query = """query ProductMetafieldDefinitions {
           metafieldDefinitions(first: 250, ownerType: PRODUCT) {

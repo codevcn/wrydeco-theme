@@ -52,6 +52,7 @@ def test_marketing_cleanup_has_word_boundaries_and_keeps_source():
     assert result["variants"][0]["components"][0]["cleaned"] == '65"W'
     assert clean_option('47"W (Most Popular Size)') == '47"W'
     assert clean_option('Walnut (Highly Recommended Finish)') == 'Walnut'
+    assert clean_option('Yes, It will be a bit LARGER (no more than 5")') == 'Yes, It will be a bit LARGER (no more than 5")'
 
 
 def test_size_with_mixed_units_is_not_silently_converted():

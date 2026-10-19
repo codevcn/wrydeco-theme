@@ -48,6 +48,9 @@ def _invoke(function: Any, *args: Any, **kwargs: Any) -> Any:
 
 
 def create_mcp_server(package_root: Path = PACKAGE_ROOT, store: OrchestratorStore | None = None) -> MCPServer:
+    if os.environ.get("WRYDECO_AEO_BACKFILL") == "1":
+        from .aeo.backfill_mcp import create_server
+        return create_server(package_root, store)
     package_root = package_root.resolve()
     orchestration = store or OrchestratorStore(package_root)
     orchestration.recover(runtime_workers=False)

@@ -25,7 +25,7 @@
                 <!-- Logo -->
                 <div class="flex-shrink-0 flex items-center gap-3">
                     <a target="_blank" rel="noopener noreferrer" href="/" class="flex items-center gap-2 text-indigo-600 font-bold text-xl hover:text-indigo-700 transition-colors">
-                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                        <img src="/static/favicon.svg" alt="Logo" class="w-8 h-8 object-contain rounded-lg" onerror="this.src='/static/favicon-96x96.png'">
                         <span>Shopify Admin Manager</span>
                     </a>
                     <a target="_blank" rel="noopener noreferrer" href="https://admin.shopify.com/store/wrydeco" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-black hover:bg-neutral-800 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors" title="Mở Shopify Admin Store">
@@ -37,7 +37,7 @@
                 <nav class="flex items-center gap-6">
                     <a target="_blank" rel="noopener noreferrer" href="/" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Sản phẩm</a>
                     <a target="_blank" rel="noopener noreferrer" href="/collections" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Collections</a>
-                    <a target="_blank" rel="noopener noreferrer" href="/metaobjects" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Meta Objects</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/metaobjects" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">MetaObjects</a>
                     <a target="_blank" rel="noopener noreferrer" href="/create" class="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">Tạo sản phẩm</a>
                     <a target="_blank" rel="noopener noreferrer" href="/edit-variants" class="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">Sửa hàng loạt</a>
                     <a target="_blank" rel="noopener noreferrer" href="/blogs" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path></svg>Blog</a>
@@ -74,6 +74,48 @@
                     <span>Kiểm tra sức khỏe VPS</span>
                 </a>
             </div>
+        </div>
+
+        <!-- Section Bảo vệ truy cập website bằng mật khẩu -->
+        <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07)] border border-gray-100 mb-8">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-gray-100 gap-2 mb-4">
+                <div class="flex items-center gap-2">
+                    <iconify-icon icon="mdi:shield-key-outline" class="text-indigo-600 text-2xl"></iconify-icon>
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-800">Bảo vệ truy cập website (Authentication Guard)</h2>
+                        <p class="text-xs text-gray-500">Quản lý cơ chế yêu cầu đăng nhập mật khẩu admin trước khi truy cập hệ thống</p>
+                    </div>
+                </div>
+                <div id="auth-guard-badge" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold {% if auth_required %}bg-emerald-50 text-emerald-700 border border-emerald-200{% else %}bg-amber-50 text-amber-700 border border-amber-200{% endif %}">
+                    <span class="w-2 h-2 rounded-full {% if auth_required %}bg-emerald-500 animate-pulse{% else %}bg-amber-500{% endif %}"></span>
+                    <span id="auth-guard-badge-text">{% if auth_required %}Đang Bật (Bắt buộc đăng nhập){% else %}Đang Tắt (Truy cập tự do){% endif %}</span>
+                </div>
+            </div>
+
+            <div class="p-4 rounded-xl border {% if auth_required %}bg-indigo-50/50 border-indigo-100{% else %}bg-gray-50 border-gray-200{% endif %} flex flex-col md:flex-row md:items-center justify-between gap-4" id="auth-guard-container">
+                <div class="space-y-1">
+                    <div class="font-semibold text-sm text-gray-800 flex items-center gap-2">
+                        <span>Chế độ xác thực mật khẩu bảo vệ</span>
+                        <span class="text-[11px] px-2 py-0.5 rounded font-mono font-medium {% if auth_required %}bg-indigo-100 text-indigo-700{% else %}bg-gray-200 text-gray-700{% endif %}" id="auth-guard-subbadge">
+                            {% if auth_required %}AUTH GUARD: ON{% else %}AUTH GUARD: OFF{% endif %}
+                        </span>
+                    </div>
+                    <p class="text-xs text-gray-500 leading-relaxed max-w-2xl">
+                        <strong>Khi Bật:</strong> Bắt buộc đăng nhập mật khẩu admin (username: <code class="bg-white px-1.5 py-0.5 rounded border border-gray-200 text-indigo-600 font-mono">admin</code>) để xem và sử dụng mọi trang trong ứng dụng (Trang chủ, Quản lý Blog, Policies, Cài đặt).<br>
+                        <strong>Khi Tắt:</strong> Bất kỳ ai truy cập website đều có thể xem và thao tác trực tiếp mà không cần đăng nhập.
+                    </p>
+                </div>
+
+                <div class="flex items-center gap-3 shrink-0">
+                    <span class="text-xs font-semibold text-gray-600" id="auth-guard-label">{% if auth_required %}Bật bảo vệ{% else %}Tắt bảo vệ{% endif %}</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="auth-guard-checkbox" class="sr-only peer" {% if auth_required %}checked{% endif %} onchange="handleAuthGuardToggle(this.checked)">
+                        <div class="w-14 h-7 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-indigo-600"></div>
+                    </label>
+                </div>
+            </div>
+
+            <div id="auth-guard-feedback" class="text-xs font-medium pt-2 transition-all"></div>
         </div>
 
         <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07)] border border-gray-100">
@@ -304,6 +346,54 @@
     </main>
 
     <script>
+        async function handleAuthGuardToggle(isChecked) {
+            const checkbox = document.getElementById('auth-guard-checkbox');
+            const badge = document.getElementById('auth-guard-badge');
+            const subbadge = document.getElementById('auth-guard-subbadge');
+            const label = document.getElementById('auth-guard-label');
+            const container = document.getElementById('auth-guard-container');
+            const feedback = document.getElementById('auth-guard-feedback');
+
+            checkbox.disabled = true;
+            feedback.innerHTML = '<span class="text-indigo-600 flex items-center gap-1.5"><iconify-icon icon="mdi:loading" class="animate-spin"></iconify-icon> Đang cập nhật trạng thái bảo vệ...</span>';
+
+            try {
+                const res = await fetch('/api/settings/auth-guard', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ auth_required: isChecked })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    if (data.auth_required) {
+                        badge.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200';
+                        badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span><span id="auth-guard-badge-text">Đang Bật (Bắt buộc đăng nhập)</span>';
+                        subbadge.className = 'text-[11px] px-2 py-0.5 rounded font-mono font-medium bg-indigo-100 text-indigo-700';
+                        subbadge.textContent = 'AUTH GUARD: ON';
+                        label.textContent = 'Bật bảo vệ';
+                        container.className = 'p-4 rounded-xl border bg-indigo-50/50 border-indigo-100 flex flex-col md:flex-row md:items-center justify-between gap-4';
+                        feedback.innerHTML = '<span class="text-emerald-600 font-semibold">✓ Đã bật bảo vệ bằng mật khẩu! Mọi lượt truy cập website sẽ bắt buộc phải đăng nhập.</span>';
+                    } else {
+                        badge.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200';
+                        badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-500"></span><span id="auth-guard-badge-text">Đang Tắt (Truy cập tự do)</span>';
+                        subbadge.className = 'text-[11px] px-2 py-0.5 rounded font-mono font-medium bg-gray-200 text-gray-700';
+                        subbadge.textContent = 'AUTH GUARD: OFF';
+                        label.textContent = 'Tắt bảo vệ';
+                        container.className = 'p-4 rounded-xl border bg-gray-50 border-gray-200 flex flex-col md:flex-row md:items-center justify-between gap-4';
+                        feedback.innerHTML = '<span class="text-amber-600 font-semibold">✓ Đã tắt bảo vệ bằng mật khẩu! Người dùng có thể truy cập website tự do mà không cần đăng nhập.</span>';
+                    }
+                } else {
+                    checkbox.checked = !isChecked;
+                    feedback.innerHTML = `<span class="text-rose-600 font-semibold">✕ Lỗi: ${data.message || 'Không thể cập nhật cấu hình'}</span>`;
+                }
+            } catch (err) {
+                checkbox.checked = !isChecked;
+                feedback.innerHTML = `<span class="text-rose-600">✕ Lỗi kết nối: ${err.message}</span>`;
+            } finally {
+                checkbox.disabled = false;
+            }
+        }
+
         document.getElementById('settings-form').addEventListener('submit', async function(e) {
             e.preventDefault();
             

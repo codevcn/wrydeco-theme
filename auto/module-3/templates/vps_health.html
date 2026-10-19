@@ -374,6 +374,94 @@
             </div>
         </div>
 
+        <!-- Section: Tất Cả Dịch Vụ Đang Chạy Trên VPS -->
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-6 mb-8">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5 pb-4 border-b border-gray-100">
+                <div>
+                    <div class="flex items-center gap-3">
+                        <h3 class="text-base sm:text-lg font-bold text-gray-900 flex items-center gap-2">
+                            <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+                            </svg>
+                            <span>Tất Cả Dịch Vụ Đang Chạy Trên VPS</span>
+                        </h3>
+                        <span id="badge-running-count" class="inline-flex items-center px-2.5 py-0.5 gap-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 pulse-active mr-1.5"></span>
+                            <span id="txt-running-count">{{ data.running_services_count|default(data.running_services|length) }}</span>
+                            <span> dịch vụ đang chạy</span>
+                        </span>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">
+                        Danh sách toàn diện các tiến trình và background service do Systemd quản lý ở trạng thái <code class="font-mono text-emerald-600 bg-emerald-50 px-1 py-0.5 rounded font-semibold">active (running)</code>.
+                    </p>
+                </div>
+                
+                <!-- Search box -->
+                <div class="flex items-center gap-2">
+                    <div class="relative w-full sm:w-72">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </div>
+                        <input type="text" id="input-search-services" oninput="filterServicesTable(this.value)" placeholder="Lọc theo tên hoặc mô tả dịch vụ..." class="w-full pl-9 pr-3 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-500 transition-all">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table of Services -->
+            <div class="overflow-x-auto rounded-xl border border-gray-100 max-h-[520px] overflow-y-auto shadow-2xs">
+                <table class="min-w-full divide-y divide-gray-200 text-left text-xs">
+                    <thead class="bg-gray-50/95 sticky top-0 z-10 font-bold text-gray-600 uppercase tracking-wider backdrop-blur-xs">
+                        <tr>
+                            <th scope="col" class="py-3 px-4">Tên Dịch Vụ (Service Unit)</th>
+                            <th scope="col" class="py-3 px-4">Trạng Thái</th>
+                            <th scope="col" class="py-3 px-4">Phân Loại</th>
+                            <th scope="col" class="py-3 px-4">Mô Tả Chức Năng</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-running-services" class="divide-y divide-gray-100 bg-white">
+                        {% for s in data.running_services %}
+                        <tr class="hover:bg-gray-50/80 transition-colors service-row" data-name="{{ s.name|lower }}" data-desc="{{ s.description|lower }}">
+                            <td class="py-3 px-4 font-mono font-semibold text-gray-900 whitespace-nowrap">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full bg-emerald-500 pulse-active flex-shrink-0"></span>
+                                    <span>{{ s.name }}</span>
+                                </div>
+                            </td>
+                            <td class="py-3 px-4 whitespace-nowrap">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    {{ s.sub }}
+                                </span>
+                            </td>
+                            <td class="py-3 px-4 whitespace-nowrap">
+                                {% if s.is_core %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                    Dịch Vụ Cốt Lõi
+                                </span>
+                                {% else %}
+                                <span class="text-gray-400 text-[11px]">Hệ thống</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-4 text-gray-600 max-w-md truncate" title="{{ s.description }}">
+                                {{ s.description or '--' }}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr id="row-no-services">
+                            <td colspan="4" class="py-8 text-center text-gray-400">
+                                Đang tải danh sách dịch vụ hoặc chưa có dữ liệu...
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div id="msg-filter-empty" class="hidden py-8 text-center text-xs text-gray-400">
+                Không tìm thấy dịch vụ nào khớp với từ khóa tìm kiếm.
+            </div>
+        </div>
+
         <!-- Security & Performance Notice -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-gray-500 mb-8">
             <div class="p-4 rounded-xl bg-gray-100/80 border border-gray-200 flex items-start gap-3">
@@ -554,6 +642,98 @@
                 setTxt('dt-env-ipv6', d.network.public_ipv6);
                 setTxt('dt-env-proxy', d.network.proxy_status);
             }
+
+            // All Running Services
+            if (d.running_services) {
+                setTxt('txt-running-count', d.running_services_count || d.running_services.length);
+                renderRunningServicesTable(d.running_services);
+            }
+        }
+
+        function renderRunningServicesTable(services) {
+            const tbody = document.getElementById('tbody-running-services');
+            if (!tbody) return;
+
+            if (!services || services.length === 0) {
+                tbody.innerHTML = `
+                    <tr id="row-no-services">
+                        <td colspan="4" class="py-8 text-center text-gray-400">
+                            Không có dịch vụ nào đang chạy.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = services.map(s => `
+                <tr class="hover:bg-gray-50/80 transition-colors service-row" data-name="${(s.name || '').toLowerCase()}" data-desc="${(s.description || '').toLowerCase()}">
+                    <td class="py-3 px-4 font-mono font-semibold text-gray-900 whitespace-nowrap">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 pulse-active flex-shrink-0"></span>
+                            <span>${escapeHtml(s.name)}</span>
+                        </div>
+                    </td>
+                    <td class="py-3 px-4 whitespace-nowrap">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            ${escapeHtml(s.sub || 'running')}
+                        </span>
+                    </td>
+                    <td class="py-3 px-4 whitespace-nowrap">
+                        ${s.is_core ? `
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                Dịch Vụ Cốt Lõi
+                            </span>
+                        ` : `
+                            <span class="text-gray-400 text-[11px]">Hệ thống</span>
+                        `}
+                    </td>
+                    <td class="py-3 px-4 text-gray-600 max-w-md truncate" title="${escapeHtml(s.description || '')}">
+                        ${escapeHtml(s.description || '--')}
+                    </td>
+                </tr>
+            `).join('');
+
+            // Tái áp dụng bộ lọc tìm kiếm hiện tại nếu đang có giá trị
+            const searchInput = document.getElementById('input-search-services');
+            if (searchInput && searchInput.value) {
+                filterServicesTable(searchInput.value);
+            }
+        }
+
+        function filterServicesTable(keyword) {
+            const q = (keyword || '').trim().toLowerCase();
+            const rows = document.querySelectorAll('#tbody-running-services .service-row');
+            let matchCount = 0;
+
+            rows.forEach(row => {
+                const name = row.getAttribute('data-name') || '';
+                const desc = row.getAttribute('data-desc') || '';
+                if (!q || name.includes(q) || desc.includes(q)) {
+                    row.style.display = '';
+                    matchCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            const emptyMsg = document.getElementById('msg-filter-empty');
+            if (emptyMsg) {
+                if (matchCount === 0 && rows.length > 0) {
+                    emptyMsg.classList.remove('hidden');
+                } else {
+                    emptyMsg.classList.add('hidden');
+                }
+            }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
         }
 
         function setTxt(id, val) {

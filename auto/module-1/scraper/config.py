@@ -7,9 +7,27 @@ from pathlib import Path
 
 PACKAGE_ROOT = Path(__file__).resolve().parent
 DEFAULT_ENV_PATH = PACKAGE_ROOT / ".env"
+ANTIGRAVITY_CONFIG_FILE = "antigravity_config.json"
+DEFAULT_ANTIGRAVITY_MODEL = "Gemini 3.8 Flash (High)"
+DEFAULT_AVAILABLE_MODELS = (
+    "Gemini 3.8 Flash (High)",
+    "Gemini 3.8 Flash (Medium)",
+    "Gemini 3.8 Flash (Low)",
+    "Gemini 4 Argon (High)",
+    "Gemini 4 Argon (Medium)",
+    "Gemini 4 Argon (Low)",
+    "Claude Sonnet 5.5 (High)",
+    "Claude Sonnet 5.5 (Medium)",
+    "Claude Sonnet 5.5 (Low)",
+    "Claude Opus 5.5 (High)",
+    "Claude Opus 5.5 (Medium)",
+    "Claude Opus 5.5 (Low)",
+    "GPT-OSS 120B (Medium)",
+)
 
 IGNORE_TYPES = (
     "Customization Confirmation",
+    "One Shelf Confirmation",
     "Note to seller (Optional)",
     "Other requirements",
     "Review Photo Before Final Finish",

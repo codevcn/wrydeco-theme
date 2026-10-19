@@ -13,11 +13,18 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
-from .io_utils import load_env, load_json
+from .config import (
+    ANTIGRAVITY_CONFIG_FILE,
+    DEFAULT_ANTIGRAVITY_MODEL,
+    DEFAULT_AVAILABLE_MODELS,
+    PACKAGE_ROOT,
+)
+from .io_utils import atomic_write_json, load_env, load_json
 from .store import OrchestratorStore, utc_now
 
 
 READY_MARKER = "WRYDECO_AGENT_READY"
+CONTENT_RUNTIME_LOCK = threading.Lock()
 ALLOWED_MCP_TOOLS = {
     "queue_status",
     "claim_next_content_task",
@@ -54,6 +61,102 @@ class AntigravityProcessError(AntigravityError):
 
 class AntigravityProtocolError(AntigravityError):
     pass
+
+
+def validate_antigravity_model(value: Any) -> str:
+    if not isinstance(value, str):
+        raise ValueError("Antigravity model must be a string.")
+    cleaned = value.strip()
+    if not cleaned:
+        raise ValueError("Antigravity model cannot be empty.")
+    if len(cleaned) > 120:
+        raise ValueError("Antigravity model exceeds the 120-character limit.")
+    if any(ord(ch) < 32 for ch in cleaned):
+        raise ValueError("Antigravity model contains invalid control characters.")
+    if cleaned.startswith("-"):
+        raise ValueError("Antigravity model cannot start with '-'.")
+    return cleaned
+
+
+def read_antigravity_config(package_root: Path = PACKAGE_ROOT) -> dict[str, Any]:
+    config_path = package_root / ANTIGRAVITY_CONFIG_FILE
+    raw_model: Any = None
+    raw_available: Any = None
+    if config_path.is_file():
+        try:
+            payload = load_json(config_path)
+        except Exception:
+            payload = {}
+        if isinstance(payload, dict):
+            raw_model = payload.get("model")
+            raw_available = payload.get("available_models")
+    if not isinstance(raw_model, str) or not raw_model.strip():
+        env_model = load_env(package_root / ".env").get("ANTIGRAVITY_MODEL", "").strip()
+        raw_model = env_model or DEFAULT_ANTIGRAVITY_MODEL
+    try:
+        model = validate_antigravity_model(raw_model)
+    except ValueError:
+        model = DEFAULT_ANTIGRAVITY_MODEL
+    available_models: list[str] = []
+    seen: set[str] = set()
+    candidates = raw_available if isinstance(raw_available, list) and raw_available else list(DEFAULT_AVAILABLE_MODELS)
+    for candidate in [model, *candidates, *DEFAULT_AVAILABLE_MODELS]:
+        if not isinstance(candidate, str):
+            continue
+        text = candidate.strip()
+        if not text or text in seen:
+            continue
+        try:
+            validated = validate_antigravity_model(text)
+        except ValueError:
+            continue
+        seen.add(validated)
+        available_models.append(validated)
+    return {
+        "model": model,
+        "default_model": DEFAULT_ANTIGRAVITY_MODEL,
+        "available_models": available_models,
+        "source": ANTIGRAVITY_CONFIG_FILE,
+    }
+
+
+def save_antigravity_config(package_root: Path, payload: Any) -> dict[str, Any]:
+    if isinstance(payload, str):
+        source: dict[str, Any] = {"model": payload}
+    elif isinstance(payload, dict):
+        source = payload.get("config") if isinstance(payload.get("config"), dict) else payload
+    else:
+        raise ValueError("Request must contain an Antigravity model configuration object.")
+    if not isinstance(source, dict):
+        raise ValueError("config must be an object.")
+    model = validate_antigravity_model(source.get("model"))
+    current = read_antigravity_config(package_root)
+    raw_available = source.get("available_models")
+    candidates = raw_available if isinstance(raw_available, list) and raw_available else current["available_models"]
+    available_models: list[str] = []
+    seen: set[str] = set()
+    for candidate in [model, *candidates, *DEFAULT_AVAILABLE_MODELS]:
+        if not isinstance(candidate, str):
+            continue
+        text = candidate.strip()
+        if not text or text in seen:
+            continue
+        validated = validate_antigravity_model(text)
+        seen.add(validated)
+        available_models.append(validated)
+    atomic_write_json(
+        package_root / ANTIGRAVITY_CONFIG_FILE,
+        {
+            "model": model,
+            "available_models": available_models,
+        },
+    )
+    return {
+        "model": model,
+        "default_model": DEFAULT_ANTIGRAVITY_MODEL,
+        "available_models": available_models,
+        "source": ANTIGRAVITY_CONFIG_FILE,
+    }
 
 
 def _positive_int(value: str | None, default: int) -> int:
@@ -163,6 +266,7 @@ class AntigravitySupervisor:
         self.popen_factory = popen_factory
         env = load_env(self.package_root / ".env")
         self.executable = env.get("ANTIGRAVITY_EXECUTABLE", "agy").strip() or "agy"
+        self.model = read_antigravity_config(self.package_root)["model"]
         self.init_timeout = _positive_int(env.get("ANTIGRAVITY_INIT_TIMEOUT_SECONDS"), 300)
         self.turn_timeout = _positive_int(env.get("ANTIGRAVITY_TURN_TIMEOUT_SECONDS"), 3600)
         self.max_attempts = _positive_int(env.get("ANTIGRAVITY_MAX_CONTENT_ATTEMPTS"), 3)
@@ -182,6 +286,7 @@ class AntigravitySupervisor:
         self._state: dict[str, Any] = {
             "status": "stopped",
             "message": "Antigravity has not started.",
+            "model": self.model,
             "conversation_id": None,
             "pid": None,
             "num_turns": 0,
@@ -194,14 +299,38 @@ class AntigravitySupervisor:
             "last_error": None,
         }
 
+    def configured_model(self) -> str:
+        model = read_antigravity_config(self.package_root)["model"]
+        with self._lock:
+            self.model = model
+            self._state["model"] = model
+        return model
+
+    def set_model(self, model: str) -> dict[str, Any]:
+        validated = validate_antigravity_model(model)
+        with self._lock:
+            self.model = validated
+            self._state["model"] = validated
+        self.store.event(
+            "agent_model_updated",
+            source="antigravity",
+            session_id=self._session_id,
+            conversation_id=self._state.get("conversation_id"),
+            model=validated,
+            message=f"Configured Antigravity model: {validated}.",
+        )
+        return self.state()
+
     def is_ready(self) -> bool:
         with self._lock:
             return bool(self.readiness_gate.is_set() and self._state["status"] in ACTIVE_AGENT_STATES)
 
     def state(self) -> dict[str, Any]:
+        model = self.configured_model()
         with self._lock:
             state = dict(self._state)
             process = self._process
+            state["model"] = model
             state["process_alive"] = bool(process and process.poll() is None)
             state["process_ready"] = bool(state.get("process_ready") and state["process_alive"])
             state["ready"] = self.is_ready()
@@ -294,11 +423,13 @@ class AntigravitySupervisor:
 
     def _command(self) -> list[str]:
         executable = shutil.which(self.executable) or self.executable
+        model = self.configured_model()
         return [
             executable,
             "--input-format", "stream-json",
             "--output-format", "stream-json",
             "--agent", "wrydeco-content",
+            "--model", model,
             "--sandbox",
             "--dangerously-skip-permissions",
             "--print-timeout", "0",
@@ -326,6 +457,7 @@ class AntigravitySupervisor:
         self.store.event(
             "agent_status", source="antigravity", status=status, message=message,
             session_id=session_id, conversation_id=self._state.get("conversation_id"),
+            model=self._state.get("model"),
         )
 
     def _reader(self, name: str, stream: Any) -> None:
@@ -340,6 +472,7 @@ class AntigravitySupervisor:
         worker_id = f"server-agent:{session_id}"
         self._session_id = session_id
         self._worker_id = worker_id
+        model = self.configured_model()
         self.store.create_agent_session(session_id)
         child_env = os.environ.copy()
         child_env["WRYDECO_AGENT_SESSION_ID"] = worker_id
@@ -365,12 +498,12 @@ class AntigravitySupervisor:
         with self._lock:
             self._state.update({
                 "status": "starting", "message": "Antigravity process started.",
-                "conversation_id": None, "pid": process.pid, "num_turns": 0,
+                "model": model, "conversation_id": None, "pid": process.pid, "num_turns": 0,
                 "current_task_id": None, "current_asin": None, "started_at": started,
                 "ready_at": None, "process_ready": False,
                 "last_activity_at": started, "last_error": None,
             })
-        self._set_status("initializing", "Running Antigravity bootstrap prompt.", pid=process.pid)
+        self._set_status("initializing", "Running Antigravity bootstrap prompt.", pid=process.pid, model=model)
 
     def _send_prompt(self, prompt: str) -> None:
         process = self._process
@@ -614,6 +747,7 @@ class AntigravitySupervisor:
         product_id = str(task["task_id"])
         session_id = uuid.uuid4().hex
         worker_id = f"server-content:{session_id}"
+        model = self.configured_model()
         self.store.create_agent_session(
             session_id,
             session_kind="content",
@@ -623,6 +757,8 @@ class AntigravitySupervisor:
         child_env = os.environ.copy()
         child_env["WRYDECO_AGENT_SESSION_ID"] = worker_id
         child_env["WRYDECO_EXPECTED_TASK_ID"] = product_id
+        if task.get("kind") == "store_aeo":
+            child_env["WRYDECO_AEO_BACKFILL"] = "1"
         flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
         try:
             process = self.popen_factory(
@@ -657,13 +793,13 @@ class AntigravitySupervisor:
         self.store.event(
             "content_agent_started", source="antigravity", session_id=session_id,
             run_id=product["run_id"], product_id=product_id, asin=product["asin"],
-            pid=process.pid, parent_session_id=self._session_id,
+            pid=process.pid, parent_session_id=self._session_id, model=model,
             message="Started an isolated Antigravity conversation for this product.",
         )
         return {
             "process": process, "messages": messages, "session_id": session_id,
             "worker_id": worker_id, "initialized": False, "num_turns": 0,
-            "conversation_id": None,
+            "conversation_id": None, "model": model,
         }
 
     def _log_content_event(
@@ -786,6 +922,8 @@ class AntigravitySupervisor:
         heartbeat = time.monotonic() + 15
         try:
             while True:
+                if self._shutdown.is_set() or self._session_stop.is_set():
+                    raise AntigravityProcessError("Content Agent is stopping.")
                 if process.poll() is not None:
                     raise AntigravityProcessError(f"Content Agent exited with code {process.returncode}.")
                 now = time.monotonic()
@@ -946,7 +1084,8 @@ class AntigravitySupervisor:
                 )
                 continue
             try:
-                self._process_isolated_task(task)
+                with CONTENT_RUNTIME_LOCK:
+                    self._process_isolated_task(task)
             except Exception as exc:
                 product_id = str(task["task_id"])
                 if not self._content_succeeded(product_id):
