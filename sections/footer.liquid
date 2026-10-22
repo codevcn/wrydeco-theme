@@ -219,6 +219,18 @@
       <div class="footer-custom__follow-on-shop">
         {{ shop | login_button: action: 'follow' }}
       </div>
+      {%- if section.settings.show_payment -%}
+        {%- assign wrydeco_payment_types = 'visa,master,american_express,discover,diners_club,elo,jcb,unionpay,shopify_pay,paypal,google_pay,venmo' | split: ',' -%}
+        <div class="footer-custom__payments" aria-label="Accepted payment methods">
+          {%- for type in wrydeco_payment_types -%}
+            {%- if shop.enabled_payment_types contains type -%}
+              <span class="footer-custom__payment-icon">
+                {{ type | payment_type_svg_tag }}
+              </span>
+            {%- endif -%}
+          {%- endfor -%}
+        </div>
+      {%- endif -%}
     </section>
   </div>
 
@@ -227,6 +239,7 @@
       {%- if section.settings.show_social -%}
         <nav class="footer-custom__social-wrap" aria-label="Social links">
           <span class="footer-custom__social-label">Follow WRYDECO</span>
+          <div class="footer-custom__platforms">
           <div class="footer-custom__social">
             <a href="https://www.tiktok.com/@wrydeco" aria-label="TikTok" target="_blank" rel="noopener noreferrer">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="M12.525.02c1.31-.02 2.61-.01 3.91-.02c.08 1.53.63 3.09 1.75 4.17c1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97c-.57-.26-1.1-.59-1.62-.93c-.01 2.92.01 5.84-.02 8.75c-.08 1.4-.54 2.79-1.35 3.94c-1.31 1.92-3.58 3.17-5.91 3.21c-1.43.08-2.86-.31-4.08-1.03c-2.02-1.19-3.44-3.37-3.65-5.71c-.02-.5-.03-1-.01-1.49c.18-1.9 1.12-3.72 2.58-4.96c1.66-1.44 3.98-2.13 6.15-1.72c.02 1.48-.04 2.96-.04 4.44c-.99-.32-2.15-.23-3.02.37c-.63.41-1.11 1.04-1.36 1.75c-.21.51-.15 1.07-.14 1.61c.24 1.64 1.82 3.02 3.5 2.87c1.12-.01 2.19-.66 2.77-1.61c.19-.33.4-.67.41-1.06c.1-1.79.06-3.57.07-5.36c.01-4.03-.01-8.05.02-12.07"/></svg>
@@ -252,6 +265,7 @@
             <a
               href="https://www.amazon.com/stores/page/4C9B7557-3277-471F-AEAB-03C34C4284F7"
               aria-label="Amazon"
+              data-marketplace-direct
               target="_blank"
               rel="noopener noreferrer"
               data-scheduled-reveal="{{ amazon_reveal_time }}"
@@ -263,23 +277,13 @@
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="M.045 18.02q.107-.174.348-.022q5.455 3.165 11.87 3.166q4.278-.001 8.447-1.595l.315-.14c.138-.06.234-.1.293-.13c.226-.088.39-.046.525.13c.12.174.09.336-.12.48c-.256.19-.6.41-1.006.654q-1.867 1.113-4.185 1.726a17.6 17.6 0 0 1-10.951-.577a17.9 17.9 0 0 1-5.43-3.35q-.15-.113-.151-.22c0-.047.021-.09.051-.13zm6.565-6.218q0-1.507.743-2.577c.495-.71 1.17-1.25 2.04-1.615c.796-.335 1.756-.575 2.912-.72c.39-.046 1.033-.103 1.92-.174v-.37c0-.93-.105-1.558-.3-1.875c-.302-.43-.78-.65-1.44-.65h-.182c-.48.046-.896.196-1.246.46c-.35.27-.575.63-.675 1.096c-.06.3-.206.465-.435.51l-2.52-.315c-.248-.06-.372-.18-.372-.39c0-.046.007-.09.022-.15q.372-1.935 1.82-2.88c.976-.616 2.1-.975 3.39-1.05h.54c1.65 0 2.957.434 3.888 1.29c.135.15.27.3.405.48c.12.165.224.314.283.45c.075.134.15.33.195.57c.06.254.105.42.135.51c.03.104.062.3.076.615c.01.313.02.493.02.553v5.28c0 .376.06.72.165 1.036q.157.471.315.674l.51.674q.136.204.136.36q0 .181-.18.314c-1.2 1.05-1.86 1.62-1.963 1.71q-.247.203-.63.045a6 6 0 0 1-.526-.496l-.31-.347a9 9 0 0 1-.317-.42l-.3-.435c-.81.886-1.603 1.44-2.4 1.665c-.494.15-1.093.227-1.83.227c-1.11 0-2.04-.343-2.76-1.034c-.72-.69-1.08-1.665-1.08-2.94l-.05-.076zm3.753-.438q-.001.848.425 1.364c.285.34.675.512 1.155.512c.045 0 .106-.007.195-.02c.09-.016.134-.023.166-.023c.614-.16 1.08-.553 1.424-1.178c.165-.28.285-.58.36-.91c.09-.32.12-.59.135-.8c.015-.195.015-.54.015-1.005v-.54c-.84 0-1.484.06-1.92.18c-1.275.36-1.92 1.17-1.92 2.43l-.035-.02zm9.162 7.027c.03-.06.075-.11.132-.17q.544-.365 1.05-.5a8 8 0 0 1 1.612-.24c.14-.012.28 0 .41.03c.65.06 1.05.168 1.172.33c.063.09.099.228.099.39v.15c0 .51-.149 1.11-.424 1.8q-.418 1.034-1.156 1.68q-.11.09-.197.09c-.03 0-.06 0-.09-.012c-.09-.044-.107-.12-.064-.24c.54-1.26.806-2.143.806-2.64c0-.15-.03-.27-.087-.344c-.145-.166-.55-.257-1.224-.257q-.364 0-.87.046c-.363.045-.7.09-1 .135q-.134 0-.18-.044c-.03-.03-.036-.047-.02-.077c0-.017.006-.03.02-.063v-.06z"/></svg>
             </a>
           </div>
+          {% render 'marketplace-links', placement: 'footer' %}
+          </div>
         </nav>
       {%- endif -%}
 
       <p class="footer-custom__copyright">&copy; {{ 'now' | date: '%Y' }} WRYDECO. All rights reserved.</p>
 
-      {%- if section.settings.show_payment -%}
-        {%- assign wrydeco_payment_types = 'visa,master,american_express,discover,diners_club,elo,jcb,unionpay,shopify_pay,paypal,google_pay,venmo' | split: ',' -%}
-        <div class="footer-custom__payments" aria-label="Accepted payment methods">
-          {%- for type in wrydeco_payment_types -%}
-            {%- if shop.enabled_payment_types contains type -%}
-              <span class="footer-custom__payment-icon">
-                {{ type | payment_type_svg_tag }}
-              </span>
-            {%- endif -%}
-          {%- endfor -%}
-        </div>
-      {%- endif -%}
     </div>
   </div>
 </footer>
@@ -333,7 +337,7 @@
   .footer-custom__inner {
     width: min(100%, 1680px);
     margin-inline: auto;
-    padding-inline: clamp(40px, 5.2vw, 104px);
+    padding-inline: calc(clamp(40px, 5.2vw, 104px) + 10px);
   }
 
   .footer-custom__main {
@@ -690,7 +694,7 @@
 
   .footer-custom__bottom-inner {
     display: grid;
-    grid-template-columns: auto auto minmax(320px, 1fr);
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     gap: var(--sp-8);
     min-height: 108px;
@@ -702,6 +706,14 @@
     display: flex;
     align-items: center;
     gap: 22px;
+  }
+
+  .footer-custom__platforms {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    min-width: 0;
   }
 
   .footer-custom__social-label {
@@ -749,7 +761,7 @@
     color: color-mix(in srgb, var(--footer-gold) 82%, var(--footer-muted));
     font-size: clamp(13px, 0.78vw, 16px);
     line-height: 1.4;
-    text-align: center;
+    text-align: right;
     white-space: nowrap;
   }
 
@@ -804,7 +816,7 @@
     }
   }
 
-  @media (max-width: 88rem) {
+  @media (max-width: 64rem) {
     .footer-custom__main {
       grid-template-columns: minmax(280px, 0.95fr) minmax(0, 1.75fr);
       gap: clamp(36px, 4vw, 64px);
@@ -855,7 +867,7 @@
 
   @media (max-width: 64rem) {
     .footer-custom__inner {
-      padding-inline: var(--layout-padding-tablet);
+      padding-inline: calc(var(--layout-padding-tablet) + 10px);
     }
 
     .footer-custom__main {
@@ -1058,7 +1070,7 @@
 
   @media (max-width: 48rem) {
     .footer-custom__inner {
-      padding-inline: var(--layout-padding-mobile);
+      padding-inline: calc(var(--layout-padding-mobile) + 10px);
     }
 
     .footer-custom__main {
@@ -1287,168 +1299,102 @@
     }
   }
 
-    @media (min-width: 64.01rem) and (max-width: 88rem) {
-      .footer-custom {
-        display: grid;
-        grid-template-columns:
-          minmax(var(--layout-padding-tablet), 1fr)
-          minmax(23.625rem, 28.125rem)
-          clamp(5rem, 13vw, 9.875rem)
-          minmax(27rem, 30rem)
-          minmax(var(--layout-padding-tablet), 1fr);
-        column-gap: 0;
-      }
+  @media (min-width: 64.01rem) and (max-width: 95rem) {
+    .footer-custom__inner {
+      padding-inline: 34px;
+    }
 
-      .footer-custom__main,
-      .footer-custom__bottom {
-        display: contents;
-        border-top: 0;
-      }
+    .footer-custom__main {
+      grid-template-columns: minmax(220px, 0.95fr) minmax(360px, 1.7fr) minmax(240px, 1fr);
+      gap: 20px;
+    }
 
-      .footer-custom__brand-panel {
-        grid-column: 2 / 5;
-        grid-row: 1;
-        padding-top: var(--sp-7);
-      }
+    .footer-custom__nav {
+      gap: 16px;
+    }
 
-      .footer-custom__nav {
-        grid-column: 2 / 5;
-        grid-row: 2;
-        padding-top: var(--sp-6);
-        padding-bottom: var(--sp-7);
-        border-bottom: 1px solid var(--footer-line);
-      }
+    .footer-custom__newsletter {
+      padding-left: 20px;
+    }
 
-      .footer-custom__newsletter {
-        grid-column: 2 / 3;
-        grid-row: 3;
-        padding-top: 5.375rem;
-        padding-bottom: 5.125rem;
-        align-self: start;
-        border-top: 0;
-        text-align: left;
-      }
+    .footer-custom__newsletter-title {
+      font-size: 30px;
+    }
 
-      .footer-custom__newsletter-title {
-        margin-bottom: 3.75rem;
-        font-size: clamp(2.625rem, 3.5vw, 2.75rem);
-        line-height: 1;
-      }
+    .footer-custom__input {
+      padding-inline: 12px;
+    }
 
-      .footer-custom__newsletter-title::after {
-        margin-top: 1.5rem;
-      }
+    .footer-custom__submit {
+      min-width: 90px;
+    }
 
-      .footer-custom__newsletter-title,
-      .footer-custom__newsletter-title::after {
-        margin-inline: 0;
-        text-align: left;
-      }
+    .footer-custom__bottom-inner {
+      gap: 20px;
+    }
 
-      .footer-custom__newsletter-copy {
-        max-width: 24rem;
-        margin-bottom: 1.875rem;
-        margin-inline: 0;
-        text-align: left;
-      }
+    .footer-custom__social-wrap {
+      flex-wrap: wrap;
+      justify-content: flex-start;
+      gap: 16px;
+    }
 
-      .footer-custom__form,
-      .footer-custom__localization {
-        width: 100%;
-        max-width: 28.125rem;
-        margin-inline: 0;
-      }
+    .footer-custom__social {
+      gap: 8px;
+    }
 
-      .footer-custom__input-group {
-        width: 100%;
-        min-height: 4.625rem;
-      }
+    .footer-custom__platforms {
+      justify-content: flex-start;
+    }
 
-      .footer-custom__input {
-        min-height: 4.625rem;
-        padding-inline: 1.625rem;
-        font-size: var(--font-size-body-md);
-      }
+    .footer-custom__copyright {
+      white-space: normal;
+      max-width: 220px;
+    }
+  }
 
-      .footer-custom__submit {
-        min-width: 9.25rem;
-        min-height: 4.625rem;
-        font-size: var(--font-size-body-md);
-      }
+  @media (min-width: 64.01rem) and (max-width: 75rem) {
+    .footer-custom__input-group {
+      grid-template-columns: minmax(0, 1fr);
+    }
 
-      .footer-custom__localization {
-        margin-bottom: 0;
-      }
+    .footer-custom__submit {
+      width: 100%;
+      min-height: 44px;
+    }
+  }
+    .footer-custom__newsletter > .footer-custom__payments {
+      width: 100%;
+      max-width: 420px;
+      justify-content: flex-start;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 24px 0 0;
+    }
 
-      .footer-custom__localization .loc-picker__trigger {
-        width: 100%;
-        min-height: 3.875rem;
-        padding-inline: 1.5rem;
-      }
-
-      .footer-custom__bottom-inner {
-        grid-column: 4 / 5;
-        grid-row: 3;
-        display: flex;
-        flex-direction: column;
-        align-items: flex-start;
-        width: 100%;
-        padding-inline: 0;
-        padding-top: 5.375rem;
-        padding-bottom: 5.125rem;
-        min-height: auto;
-      }
-
+    @media (max-width: 1024px) {
       .footer-custom__social-wrap {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 1.75rem;
-        margin-bottom: 5.125rem;
+        flex-wrap: wrap;
+        justify-content: center;
       }
-
-      .footer-custom__social-label {
-        font-family: var(--font-roboto);
-        font-size: 1.25rem;
-        font-weight: var(--font-weight-bold);
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-        margin: 0;
+      .footer-custom__platforms {
+        justify-content: center;
       }
-
-      .footer-custom__social {
-        display: flex;
-        flex-wrap: nowrap;
-        gap: 0.875rem;
-      }
-
-      .footer-custom__social a {
-        width: 3.125rem;
-        height: 3.125rem;
-      }
-
-      .footer-custom__social svg {
-        width: 1.375rem;
-        height: 1.375rem;
-      }
-
       .footer-custom__copyright {
-        margin: 0 0 3.125rem;
-        text-align: left;
-      }
-
-      .footer-custom__payments {
-        display: flex;
-        flex-wrap: nowrap;
-        gap: 0.75rem;
-        justify-content: flex-start;
-        margin: 0;
-      }
-
-      .footer-custom__payment-icon svg {
-        width: 2.75rem;
+        text-align: center;
       }
     }
+
+    @media (max-width: 1024px) {
+      .footer-custom__newsletter > .footer-custom__payments {
+        justify-content: center;
+        margin-inline: auto;
+      }
+      .footer-custom__platforms {
+        width: 100%;
+      }
+    }
+
   {% endstylesheet %}
 
 
@@ -1582,12 +1528,38 @@
       });
     }
 
+    var initializedMarketplaceLinks = new WeakSet();
+
+    function initMarketplaceLinks() {
+      var destinations = new Set([
+        'https://www.amazon.com/stores/page/4C9B7557-3277-471F-AEAB-03C34C4284F7',
+        'https://etsy.com/shop/BeaconfieldGroup'
+      ]);
+
+      document.querySelectorAll('.footer-custom a[data-marketplace-direct]').forEach(function (link) {
+        if (initializedMarketplaceLinks.has(link)) return;
+        if (!destinations.has(link.href)) return;
+
+        link.addEventListener('click', function (event) {
+          if (event.defaultPrevented) return;
+          if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+          if (!destinations.has(link.href)) return;
+
+          event.preventDefault();
+          window.open(link.href, '_blank', 'noopener,noreferrer');
+        });
+        initializedMarketplaceLinks.add(link);
+      });
+    }
+
+    initMarketplaceLinks();
     initScheduledSocialLinks();
     document.querySelectorAll('.footer-custom__form').forEach(initNewsletterForm);
     document.addEventListener('shopify:section:load', function () {
       checkCustomerPosted();
       document.querySelectorAll('.footer-custom__form').forEach(initNewsletterForm);
       initScheduledSocialLinks();
+      initMarketplaceLinks();
     });
   })();
 {% endjavascript %}

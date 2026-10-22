@@ -52,6 +52,10 @@ try:
     # Upload main.py
     upload_file("main.py", f"{app_dir}/main.py")
     
+    # Upload proxy_manager.py
+    if os.path.exists("proxy_manager.py"):
+        upload_file("proxy_manager.py", f"{app_dir}/proxy_manager.py")
+    
     # Upload requirements.txt
     if os.path.exists("requirements.txt"):
         upload_file("requirements.txt", f"{app_dir}/requirements.txt")
@@ -60,12 +64,9 @@ try:
     if os.path.exists(".env"):
         upload_file(".env", f"{app_dir}/.env")
     
-    # Upload proxy_config.json if not present on remote
+    # Upload proxy_config.json
     if os.path.exists("proxy_config.json"):
-        try:
-            sftp.stat(f"{app_dir}/proxy_config.json")
-        except (FileNotFoundError, IOError):
-            upload_file("proxy_config.json", f"{app_dir}/proxy_config.json")
+        upload_file("proxy_config.json", f"{app_dir}/proxy_config.json")
 
     # Upload logo_updater_config.json
     if os.path.exists("logo_updater_config.json"):

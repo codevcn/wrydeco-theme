@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/static/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+    <link rel="shortcut icon" href="/static/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png" />
+    <link rel="manifest" href="/static/site.webmanifest" />
+    <title>Quản lý tags sản phẩm - Shopify Admin Manager</title>
+    <!-- Font Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS v4 CDN -->
+    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+    <!-- Iconify -->
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 min-h-screen relative">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 shadow-xs sticky top-0 z-40">
+        <div class="mx-auto px-4 sm:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo -->
+                <div class="flex-shrink-0 flex items-center gap-3">
+                    <a target="_blank" rel="noopener noreferrer" href="/" class="flex items-center gap-2 text-indigo-600 font-bold text-xl hover:text-indigo-700 transition-colors">
+                        <img src="/static/favicon.svg" alt="Logo" class="w-8 h-8 object-contain rounded-lg" onerror="this.src='/static/favicon-96x96.png'">
+                        <span>Shopify Admin Manager</span>
+                    </a>
+                    <a target="_blank" rel="noopener noreferrer" href="https://admin.shopify.com/store/{{ active_shop or 'wrydeco' }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-black hover:bg-neutral-800 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors" title="Mở Shopify Admin Store">
+                        <span>Shopify Store</span>
+                        <svg class="w-3.5 h-3.5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                    </a>
+                </div>
+                <!-- Nav Links -->
+                <nav class="flex items-center gap-6">
+                    <a target="_blank" rel="noopener noreferrer" href="/" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Sản phẩm</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/collections" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Collections</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/metaobjects" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">MetaObjects</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/create" class="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">Tạo sản phẩm</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/edit-variants" class="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">Sửa hàng loạt</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/blogs" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path></svg>Blog</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/policies" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>Policy</a>
+                    <button id="drawer-toggle-btn" type="button" onclick="toggleDrawer()" class="p-1.5 text-gray-600 hover:text-indigo-600 hover:bg-gray-100 rounded-lg transition-colors flex items-center justify-center focus:outline-none cursor-pointer" title="Menu tiện ích">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    {% include 'drawer.html' %}
+
+    <main class="p-4 sm:p-8">
+        <div class="max-w-[96rem] mx-auto">
+            <!-- Header title & actions -->
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+                <div class="flex items-center gap-3">
+                    <div class="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl">
+                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-3 flex-wrap">
+                            <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 tracking-tight">Quản lý tags sản phẩm</h1>
+                            <span id="displayCountBadge" class="bg-indigo-100 text-indigo-700 text-xs sm:text-sm font-bold px-3 py-1 rounded-full shadow-2xs" title="Tổng số tags sản phẩm">
+                                {{ total_count }} tags
+                            </span>
+                            <span class="bg-gray-100 text-gray-700 text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-2xs" title="Tổng số sản phẩm đã quét">
+                                {{ total_products }} sản phẩm
+                            </span>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">Danh sách đầy đủ tất cả các tags sản phẩm hiện có trên store, kèm số lượng sản phẩm đang gắn tag và liên kết truy cập nhanh.</p>
+                    </div>
+                </div>
+
+                <!-- Nút Switch Store Mặc định ⟷ Store Riêng (qua Proxy) & Actions -->
+                <div class="flex items-center gap-3 flex-wrap self-start lg:self-auto">
+                    <!-- Store Switcher Box -->
+                    <div class="inline-flex items-center gap-3 bg-white px-3.5 py-2 rounded-2xl border border-gray-200 shadow-2xs">
+                        <div class="flex items-center gap-1.5 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                            <iconify-icon icon="{% if store_type == 'custom' %}mdi:store-cog{% else %}mdi:store{% endif %}" class="text-base {% if store_type == 'custom' %}text-indigo-600{% else %}text-gray-500{% endif %}"></iconify-icon>
+                            <span class="hidden sm:inline">Cửa hàng:</span>
+                        </div>
+
+                        <!-- Switch Toggle -->
+                        <label class="relative inline-flex items-center cursor-pointer select-none" title="Bấm để chuyển đổi giữa Store Mặc định và Store Riêng">
+                            <input type="checkbox" id="storeSwitchToggle" class="sr-only peer" {% if store_type == 'custom' %}checked{% endif %} onchange="handleStoreSwitch(this.checked)">
+                            <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                            <span id="storeSwitchLabel" class="ml-2.5 text-xs font-bold {% if store_type == 'custom' %}text-indigo-600{% else %}text-gray-700{% endif %}">
+                                {% if store_type == 'custom' %}
+                                    Store Riêng <span class="font-mono text-[11px] font-semibold text-indigo-500">({{ active_shop_domain or active_shop }})</span>
+                                {% else %}
+                                    Store Mặc định <span class="font-mono text-[11px] font-semibold text-gray-500">({{ active_shop_domain or active_shop }})</span>
+                                {% endif %}
+                            </span>
+                        </label>
+
+                        <!-- Proxy Badge -->
+                        {% if store_type == 'custom' %}
+                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200" title="Bắt buộc kết nối qua Proxy US">
+                            <span>🇺🇸</span>
+                            <span>Proxy US</span>
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-600 border border-gray-200" title="Kết nối trực tiếp Store Mặc định">
+                            <iconify-icon icon="mdi:lightning-bolt" class="text-amber-500 text-xs"></iconify-icon>
+                            <span>Direct VPS</span>
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Action buttons -->
+                    <button type="button" onclick="openCopyModal()" class="flex items-center gap-1.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 font-medium px-3.5 py-2 rounded-xl text-sm transition-colors shadow-2xs focus:outline-none cursor-pointer" title="Sao chép toàn bộ danh sách tags">
+                        <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                        <span>Copy tất cả tags</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Error Banner -->
+            {% if error %}
+            <div class="mb-6 bg-rose-50 border border-rose-200 rounded-xl p-4 flex items-start gap-3">
+                <div class="p-1.5 bg-rose-100 text-rose-600 rounded-lg shrink-0 mt-0.5">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                </div>
+                <div class="flex-1">
+                    <h4 class="text-sm font-bold text-rose-900">Không thể tải dữ liệu Tags từ {% if store_type == 'custom' %}Store Riêng{% else %}Store Mặc định{% endif %}</h4>
+                    <p class="text-xs text-rose-700 mt-1 leading-relaxed">{{ error }}</p>
+                    {% if store_type == 'custom' %}
+                    <div class="mt-3 flex items-center gap-3">
+                        <button type="button" onclick="handleStoreSwitch(false)" class="text-xs font-bold text-rose-800 bg-white border border-rose-300 hover:bg-rose-100/60 px-3 py-1.5 rounded-lg transition-colors shadow-2xs cursor-pointer">
+                            Chuyển về Store Mặc định
+                        </button>
+                        <a href="/settings" target="_blank" class="text-xs font-semibold text-rose-700 underline hover:text-rose-900">
+                            Cài đặt Store Riêng & Proxy
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Toolbar / Search box (Debounce 0.3s) -->
+            <div class="bg-white p-4 rounded-xl shadow-[0_2px_10px_-4px_rgba(0,0,0,0.06)] border border-gray-100 mb-4 flex flex-col md:flex-row gap-4 items-center justify-between">
+                <!-- Search input with icon & clear button -->
+                <div class="relative w-full md:max-w-md">
+                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </div>
+                    <input type="text" id="tagSearchInput" placeholder="Tìm kiếm tag (debounce 0.3s)..." class="bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-9 pr-8 p-2.5 outline-none transition-colors hover:border-gray-300">
+                    <button type="button" id="clearSearchBtn" onclick="clearSearch()" class="hidden absolute inset-y-0 right-0 pr-2.5 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none cursor-pointer" title="Xóa tìm kiếm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+
+                <!-- Info counters & filter pills -->
+                <div class="flex items-center gap-3 text-xs text-gray-500 w-full md:w-auto justify-between md:justify-end flex-wrap">
+                    <div class="flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200">
+                        <span>Hiển thị:</span>
+                        <strong id="visibleCount" class="text-indigo-600 font-bold">{{ total_count }}</strong>
+                        <span>/</span>
+                        <span class="font-semibold text-gray-700">{{ total_count }} tags</span>
+                    </div>
+
+                    <!-- Quick filters -->
+                    <div class="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5 text-xs">
+                        <button type="button" onclick="setQuickFilter('all')" id="filterBtn-all" class="px-2.5 py-1 rounded-md font-semibold transition-all bg-white text-indigo-600 shadow-2xs cursor-pointer">
+                            Tất cả
+                        </button>
+                        <button type="button" onclick="setQuickFilter('has_products')" id="filterBtn-has_products" class="px-2.5 py-1 rounded-md font-semibold transition-all text-gray-600 hover:text-gray-900 cursor-pointer">
+                            Có sản phẩm (&gt;0)
+                        </button>
+                        <button type="button" onclick="setQuickFilter('no_products')" id="filterBtn-no_products" class="px-2.5 py-1 rounded-md font-semibold transition-all text-gray-600 hover:text-gray-900 cursor-pointer">
+                            0 sản phẩm
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table Card -->
+            <div class="bg-white rounded-xl shadow-[0_2px_10px_-4px_rgba(0,0,0,0.06)] border border-gray-100 overflow-hidden">
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table class="w-full text-left border-collapse text-sm" id="tagsTable">
+                        <thead>
+                            <tr class="bg-gray-50/80 border-b border-gray-200 text-xs font-semibold text-gray-600 uppercase tracking-wider select-none">
+                                <th class="py-3.5 px-4 w-16 text-center">#</th>
+                                <th class="py-3.5 px-6 cursor-pointer hover:bg-gray-100/70 transition-colors" onclick="toggleSort('name')" title="Bấm để đổi sắp xếp theo tên tag">
+                                    <div class="flex items-center gap-2">
+                                        <span>Tên Tag</span>
+                                        <span id="sortIcon-name" class="text-indigo-600 inline-flex items-center">
+                                            <!-- Mặc định Sort ABC (ASC) -->
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"></path></svg>
+                                        </span>
+                                    </div>
+                                </th>
+                                <th class="py-3.5 px-6 w-52 cursor-pointer hover:bg-gray-100/70 transition-colors" onclick="toggleSort('count')" title="Bấm để đổi sắp xếp theo số lượng sản phẩm">
+                                    <div class="flex items-center gap-2">
+                                        <span>Số lượng sản phẩm</span>
+                                        <span id="sortIcon-count" class="text-gray-400 inline-flex items-center">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path></svg>
+                                        </span>
+                                    </div>
+                                </th>
+                                <th class="py-3.5 px-6 w-60 text-center">Shopify Admin</th>
+                                <th class="py-3.5 px-6 w-60 text-center">Thao tác &amp; Liên kết</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tagsTableBody" class="divide-y divide-gray-100">
+                            <!-- Dữ liệu render bằng JavaScript động dựa vào state mảng tagsData -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Empty State khi không tìm thấy kết quả -->
+                <div id="emptySearchState" class="hidden py-16 px-4 text-center">
+                    <div class="w-16 h-16 bg-gray-100 text-gray-400 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-base font-bold text-gray-800">Không tìm thấy tag phù hợp</h3>
+                    <p class="text-xs text-gray-500 mt-1 max-w-sm mx-auto">Không có tag nào khớp với từ khóa tìm kiếm của bạn. Hãy thử nhập từ khóa khác hoặc xóa bộ lọc.</p>
+                    <button type="button" onclick="clearSearch()" class="mt-4 inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors cursor-pointer">
+                        Xóa tìm kiếm
+                    </button>
+                </div>
+            </div>
+
+            <!-- Footer ghi chú -->
+            <div class="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-gray-500">
+                <div class="flex items-center gap-2">
+                    <span class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
+                    <span>Đang kết nối: <strong class="text-gray-700">{% if store_type == 'custom' %}Store Riêng (qua Proxy US){% else %}Store Mặc định (Direct VPS){% endif %}</strong></span>
+                </div>
+                <div class="text-gray-400">
+                    Mẹo: Bấm nút sao chép ở từng tag hoặc dùng nút "Copy tất cả tags" để lấy dữ liệu nhanh.
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal Copy Tất Cả Tags -->
+    <div id="copyTagsModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-black/40 backdrop-blur-xs transition-opacity" onclick="closeCopyModal()"></div>
+
+        <!-- Modal Box -->
+        <div class="relative bg-white rounded-2xl shadow-2xl border border-gray-100 max-w-md w-full p-6 z-10 overflow-hidden transform transition-all">
+            <!-- Header -->
+            <div class="flex items-center justify-between pb-4 border-b border-gray-100">
+                <div class="flex items-center gap-2.5">
+                    <div class="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-gray-900">Sao chép tất cả tags</h3>
+                        <p class="text-xs text-gray-500 mt-0.5">Chọn định dạng phân tách bạn muốn sao chép (<span id="modalTagsCount" class="font-semibold text-indigo-600">{{ total_count }}</span> tags)</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeCopyModal()" class="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer" title="Đóng">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <!-- 2 Lựa chọn Copy -->
+            <div class="py-5 space-y-3">
+                <!-- Nút 1: Copy cách nhau bởi dấu phẩy -->
+                <button type="button" onclick="copyTagsByFormat('comma')" class="w-full flex items-center justify-between p-3.5 rounded-xl border-2 border-gray-200 hover:border-indigo-500 hover:bg-indigo-50/40 text-left transition-all group cursor-pointer">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2.5 rounded-lg bg-indigo-100 text-indigo-700 group-hover:bg-indigo-600 group-hover:text-white transition-colors shrink-0">
+                            <!-- Icon dấu phẩy / comma list -->
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-3-3m0 0a2 2 0 102.828-2.828L9 17v3z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="text-sm font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">
+                                Copy cách nhau bởi dấu phẩy
+                            </div>
+                            <div class="text-xs text-gray-500 mt-0.5 font-mono">
+                                tag1, tag2, tag3, ...
+                            </div>
+                        </div>
+                    </div>
+                    <svg class="w-5 h-5 text-gray-400 group-hover:text-indigo-600 transition-colors shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                </button>
+
+                <!-- Nút 2: Copy cách nhau bởi xuống dòng -->
+                <button type="button" onclick="copyTagsByFormat('newline')" class="w-full flex items-center justify-between p-3.5 rounded-xl border-2 border-gray-200 hover:border-emerald-500 hover:bg-emerald-50/40 text-left transition-all group cursor-pointer">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2.5 rounded-lg bg-emerald-100 text-emerald-700 group-hover:bg-emerald-600 group-hover:text-white transition-colors shrink-0">
+                            <!-- Icon xuống dòng / Enter return -->
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a4 4 0 014 4v6m0 0l-3-3m3 3l3-3M3 6h18"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="text-sm font-bold text-gray-900 group-hover:text-emerald-700 transition-colors">
+                                Copy cách nhau bởi xuống dòng
+                            </div>
+                            <div class="text-xs text-gray-500 mt-0.5 font-mono leading-tight">
+                                tag1 &crarr;<br>tag2 &crarr;
+                            </div>
+                        </div>
+                    </div>
+                    <svg class="w-5 h-5 text-gray-400 group-hover:text-emerald-600 transition-colors shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Footer modal -->
+            <div class="pt-3 border-t border-gray-100 flex items-center justify-end">
+                <button type="button" onclick="closeCopyModal()" class="px-4 py-2 text-xs font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer">
+                    Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toastNotification" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+        <div class="bg-gray-900 text-white text-xs font-medium px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2.5">
+            <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            <span id="toastMessage">Đã sao chép tag vào clipboard!</span>
+        </div>
+    </div>
+
+    <!-- Dữ liệu Tags ban đầu từ server -->
+    <script>
+        // Dữ liệu tags từ Jinja2
+        const rawTagsData = {{ tags | tojson | safe }};
+        let tagsData = Array.isArray(rawTagsData) ? [...rawTagsData] : [];
+        
+        // Quản lý trạng thái
+        let searchQuery = "";
+        let quickFilter = "all"; // 'all' | 'has_products' | 'no_products'
+        let sortKey = "name";    // 'name' | 'count'
+        let sortDir = "asc";     // 'asc' | 'desc' (Mặc định: Sort ABC tăng dần theo tên tag)
+        let searchDebounceTimer = null;
+
+        // Xử lý chuyển đổi store
+        function handleStoreSwitch(isChecked) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('store_type', isChecked ? 'custom' : 'default');
+            window.location.href = url.toString();
+        }
+
+        // Lắng nghe ô tìm kiếm với DEBOUNCE 0.3s (300ms)
+        const searchInput = document.getElementById('tagSearchInput');
+        const clearBtn = document.getElementById('clearSearchBtn');
+
+        searchInput.addEventListener('input', function(e) {
+            const val = e.target.value;
+            if (val.trim()) {
+                clearBtn.classList.remove('hidden');
+            } else {
+                clearBtn.classList.add('hidden');
+            }
+
+            clearTimeout(searchDebounceTimer);
+            searchDebounceTimer = setTimeout(() => {
+                searchQuery = val.trim().toLowerCase();
+                renderTable();
+            }, 300); // 0.3s debounce đúng yêu cầu
+        });
+
+        function clearSearch() {
+            searchInput.value = "";
+            clearBtn.classList.add('hidden');
+            searchQuery = "";
+            renderTable();
+            searchInput.focus();
+        }
+
+        // Lọc nhanh
+        function setQuickFilter(mode) {
+            quickFilter = mode;
+            ['all', 'has_products', 'no_products'].forEach(m => {
+                const btn = document.getElementById(`filterBtn-${m}`);
+                if (btn) {
+                    if (m === mode) {
+                        btn.className = "px-2.5 py-1 rounded-md font-semibold transition-all bg-white text-indigo-600 shadow-2xs cursor-pointer";
+                    } else {
+                        btn.className = "px-2.5 py-1 rounded-md font-semibold transition-all text-gray-600 hover:text-gray-900 cursor-pointer";
+                    }
+                }
+            });
+            renderTable();
+        }
+
+        // Đổi sắp xếp
+        function toggleSort(key) {
+            if (sortKey === key) {
+                sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortKey = key;
+                sortDir = key === 'count' ? 'desc' : 'asc'; // count mặc định desc, name mặc định asc
+            }
+            updateSortIcons();
+            renderTable();
+        }
+
+        function updateSortIcons() {
+            const iconName = document.getElementById('sortIcon-name');
+            const iconCount = document.getElementById('sortIcon-count');
+
+            if (sortKey === 'name') {
+                iconName.className = "text-indigo-600 inline-flex items-center";
+                iconName.innerHTML = sortDir === 'asc' 
+                    ? '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"></path></svg>'
+                    : '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h9m5-4v12m0 0l-4-4m4 4l4-4"></path></svg>';
+                
+                iconCount.className = "text-gray-400 inline-flex items-center";
+                iconCount.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path></svg>';
+            } else if (sortKey === 'count') {
+                iconCount.className = "text-indigo-600 inline-flex items-center";
+                iconCount.innerHTML = sortDir === 'asc'
+                    ? '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"></path></svg>'
+                    : '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h9m5-4v12m0 0l-4-4m4 4l4-4"></path></svg>';
+
+                iconName.className = "text-gray-400 inline-flex items-center";
+                iconName.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path></svg>';
+            }
+        }
+
+        // Render bảng dữ liệu
+        function renderTable() {
+            const tbody = document.getElementById('tagsTableBody');
+            const emptyState = document.getElementById('emptySearchState');
+            const visibleCountEl = document.getElementById('visibleCount');
+
+            // 1. Filter
+            let filtered = tagsData.filter(item => {
+                const name = (item.name || "").toLowerCase();
+                // Filter theo từ khóa
+                if (searchQuery && !name.includes(searchQuery)) {
+                    return false;
+                }
+                // Filter theo số lượng SP
+                if (quickFilter === 'has_products' && item.count <= 0) {
+                    return false;
+                }
+                if (quickFilter === 'no_products' && item.count > 0) {
+                    return false;
+                }
+                return true;
+            });
+
+            // 2. Sort
+            filtered.sort((a, b) => {
+                if (sortKey === 'name') {
+                    const res = a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+                    return sortDir === 'asc' ? res : -res;
+                } else if (sortKey === 'count') {
+                    const diff = (a.count || 0) - (b.count || 0);
+                    return sortDir === 'asc' ? diff : -diff;
+                }
+                return 0;
+            });
+
+            // Cập nhật số lượng
+            visibleCountEl.textContent = filtered.length;
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = "";
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+
+            // Render rows
+            let html = "";
+            filtered.forEach((item, idx) => {
+                const isEven = idx % 2 === 1;
+                const rowBg = isEven ? 'bg-gray-50/40' : 'bg-white';
+                
+                // Badge số lượng sản phẩm
+                let countBadge = "";
+                if (item.count > 0) {
+                    countBadge = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                        <span class="w-1.5 h-1.5 rounded-full bg-indigo-600"></span>
+                        <span>${item.count} SP</span>
+                    </span>`;
+                } else {
+                    countBadge = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-500">
+                        <span>0 SP</span>
+                    </span>`;
+                }
+
+                html += `
+                <tr class="${rowBg} hover:bg-indigo-50/30 transition-colors group">
+                    <td class="py-3 px-4 text-center font-mono text-xs text-gray-400 font-semibold">${idx + 1}</td>
+                    <td class="py-3 px-6">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="font-mono text-sm font-semibold text-gray-800 bg-gray-100 group-hover:bg-indigo-100/60 group-hover:text-indigo-900 px-2.5 py-1 rounded-md transition-colors select-all border border-gray-200">
+                                ${escapeHtml(item.name)}
+                            </span>
+                            <button type="button" onclick="copyTag('${escapeHtml(item.name)}')" class="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-indigo-600 hover:bg-white rounded transition-all cursor-pointer shadow-2xs border border-transparent hover:border-gray-200" title="Sao chép tag này">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                            </button>
+                        </div>
+                    </td>
+                    <td class="py-3 px-6">
+                        ${countBadge}
+                    </td>
+                    <td class="py-3 px-6 text-center">
+                        <a href="${item.admin_url}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-xs font-medium text-gray-700 bg-white hover:bg-gray-100 border border-gray-300 hover:border-gray-400 px-3 py-1.5 rounded-lg transition-colors shadow-2xs" title="Lọc sản phẩm có tag này trong Shopify Admin">
+                            <span>Lọc trong Admin</span>
+                            <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                        </a>
+                    </td>
+                    <td class="py-3 px-6 text-center">
+                        <div class="inline-flex items-center gap-2">
+                            <button type="button" onclick="copyTag('${escapeHtml(item.name)}')" class="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer" title="Sao chép tên tag">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                <span>Copy</span>
+                            </button>
+                            <a href="${item.storefront_url}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-xs font-semibold text-gray-600 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 px-2.5 py-1.5 rounded-lg transition-colors" title="Xem trên website khách hàng">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                                <span>Storefront</span>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+        }
+
+        // Hàm copy văn bản an toàn kèm fallback
+        function copyTextToClipboard(text, successMsg) {
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showToast(successMsg);
+                }).catch(err => {
+                    fallbackCopy(text, successMsg);
+                });
+            } else {
+                fallbackCopy(text, successMsg);
+            }
+        }
+
+        function fallbackCopy(text, successMsg) {
+            try {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.position = 'fixed';
+                ta.style.top = '-9999px';
+                ta.style.left = '-9999px';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.focus();
+                ta.select();
+                const ok = document.execCommand('copy');
+                document.body.removeChild(ta);
+                if (ok) {
+                    showToast(successMsg);
+                } else {
+                    showToast("Không thể sao chép vào clipboard!");
+                }
+            } catch (err) {
+                console.error("Fallback copy error:", err);
+                showToast("Không thể sao chép vào clipboard!");
+            }
+        }
+
+        // Sao chép tag đơn
+        function copyTag(tag) {
+            copyTextToClipboard(tag, `Đã chép tag: "${tag}"`);
+        }
+
+        // Modal Sao chép tất cả tags
+        function openCopyModal() {
+            const modal = document.getElementById('copyTagsModal');
+            const countEl = document.getElementById('modalTagsCount');
+            if (countEl) {
+                countEl.textContent = tagsData ? tagsData.length : 0;
+            }
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+        }
+
+        function closeCopyModal() {
+            const modal = document.getElementById('copyTagsModal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+        }
+
+        function copyTagsByFormat(format) {
+            if (!tagsData || tagsData.length === 0) {
+                showToast("Không có tag nào để sao chép!");
+                closeCopyModal();
+                return;
+            }
+
+            const tagNames = tagsData.map(t => t.name).filter(Boolean);
+            let resultText = "";
+            let formatDesc = "";
+
+            if (format === 'comma') {
+                resultText = tagNames.join(", ");
+                formatDesc = "cách nhau bởi dấu phẩy";
+            } else {
+                resultText = tagNames.join("\n");
+                formatDesc = "cách nhau bởi xuống dòng";
+            }
+
+            copyTextToClipboard(resultText, `Đã sao chép ${tagNames.length} tags (${formatDesc})!`);
+            closeCopyModal();
+        }
+
+        // Lắng nghe phím ESC để đóng Modal
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeCopyModal();
+            }
+        });
+
+        // Hiển thị Toast
+        let toastTimeout = null;
+        function showToast(msg) {
+            const toast = document.getElementById('toastNotification');
+            const msgEl = document.getElementById('toastMessage');
+            msgEl.textContent = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 2500);
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return String(text)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // Khởi chạy ban đầu
+        document.addEventListener('DOMContentLoaded', () => {
+            renderTable();
+        });
+    </script>
+</body>
+</html>

@@ -154,7 +154,7 @@ All styling variables, tokens, and utility classes must align with `assets/base.
 
 ---
 
-## 5. Mandatory Coding Rules (14 Core Rules)
+## 5. Mandatory Coding Rules (15 Core Rules)
 
 Every developer and AI agent must strictly follow the rules in [CODING_RULES.md](file:///d:/D-Jobs/ae-B6/Shopify/stores/main/wrydeco/wrydeco-app/CODING_RULES.md):
 
@@ -172,6 +172,7 @@ Every developer and AI agent must strictly follow the rules in [CODING_RULES.md]
 12. **Tiered Spending Discount System:** The store features 10 tiered codes (`WRY100` to `WRY1000`). Evaluation and checkout injection are strictly managed by `assets/wry-discount-auto-apply-v2.js` and `window.WrydecoCustomerDiscountEligible`. Do not write competing discount scripts.
 13. **Theme Build & Release Cleanup:** Before running `compress-store-src.cmd` to create a production theme zip, always execute `scripts/lead-capture-test/remove-test-src.cmd` to purge local test/debug elements.
 14. **Variant SKU Architecture & Zero-Collision Rule:** All newly added or modified product variants must strictly adhere to the store's SKU taxonomy (`AMZ-{ASIN}-{COLOR}-{SIZE}-{INDEX:02d}` or `WRY-{HANDLE}-{COLOR}-{SIZE}-{INDEX:02d}`). Never assign duplicate, blank, or unstructured random SKUs.
+15. **Homepage Hero Banner Layout & Responsive Preservation:** The hero banner (`sections/hero-banner.liquid`) uses a deliberate document-flow scaling technique (`.hero-new__background` in normal flow with `position: relative; z-index: 0;`). Developers and AI agents must NEVER force `.hero-new__background` to `position: absolute; inset: 0;` or lock the section into a rigid viewport frame. Only modify image display/crossfade logic while strictly preserving layout containers and responsive media queries.
 
 
 ---

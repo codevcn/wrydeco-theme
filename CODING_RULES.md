@@ -88,3 +88,24 @@ The technical implementation must align with the brand's luxury positioning.
 - **Clean Release Rule:** Before packing or archiving the theme for production upload via `compress-store-src.cmd`, all local development and test hooks (such as lead-capture popup debug toggles) MUST be thoroughly purged.
 - **Execution Script:** Always ensure the test code removal script (`scripts/lead-capture-test/remove-test-src.cmd`) is invoked prior to generating uploadable zip archives to ensure debug elements never leak into production.
 
+## 14. Variant SKU Architecture & Zero-Collision Rule
+
+- **Taxonomy Standard:** All newly added or modified product variants must strictly adhere to the store's standardized SKU schema:
+  - **Amazon-Linked Products:** `AMZ-{ASIN}-{COLOR/FINISH}-{SIZE}-{INDEX:02d}` (e.g. `AMZ-B0H6BXFX52-WARM-W65H65D7-01`)
+  - **Studio & Non-Amazon Products:** `WRY-{HANDLE_CODE}-{COLOR/FINISH}-{SIZE}-{INDEX:02d}` (e.g. `WRY-ORGFLU-NAT-16X12-01`)
+- **Collision Prevention:** Variant SKUs must remain 100% unique across the entire catalog with zero collisions. Never assign duplicate, blank, or arbitrary unstructured random SKUs.
+- **Length Constraint:** SKU lengths must strictly remain between 18 and 40 characters for seamless warehouse scanning and Amazon Seller Central compliance.
+
+## 15. Homepage Hero Banner Layout & Responsive Preservation
+
+- **Core Architecture:** The homepage hero banner (`sections/hero-banner.liquid`) utilizes a deliberate document-flow and responsive scaling technique specifically calibrated to adapt smoothly across all screen sizes and mobile aspect ratios.
+- **Normal Flow Rule:** The base/primary image element (`.hero-new__background` containing `.hero-new__picture` and `.hero-new__image`) MUST remain in normal document flow (`position: relative; z-index: 0;`), allowing the image and its media queries to naturally drive section height and responsive scaling.
+- **No Viewport Locking:** Developers and AI agents must NEVER force `.hero-new__background` or all image layers to `position: absolute; inset: 0;` or lock the section into a rigid viewport-only frame.
+- **Layering & Contrast Hierarchy:** Always preserve the original z-index stacking order:
+  - `.hero-new__background`: `z-index: 0`
+  - `.hero-new__shade`: `z-index: 1`
+  - `.hero-new__shade-front`: `z-index: 2`
+  - `.hero-new__inner`: `z-index: 10`
+- **Scope of Modification:** When updating the hero banner (e.g. swapping images, adjusting animation timing, or managing crossfade opacity transitions), you are ONLY permitted to change image display/presentation logic. The underlying layout mechanics, container positioning, and responsive media queries must remain strictly unchanged.
+
+

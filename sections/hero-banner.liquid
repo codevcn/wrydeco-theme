@@ -2,40 +2,41 @@
   assign hero_image_alt = section.settings.hero_image_alt | default: 'Handcrafted solid wood furniture in a refined interior'
   assign primary_link = routes.all_products_collection_url
   assign secondary_link = pages.customization.url | default: '/pages/customization'
-  assign desktop_hero_url = 'hero-section-ver-new.png' | file_url
-  assign mobile_hero_url = 'hero-section-ver-new-mobile.png' | file_url
+  assign hero_images = 'hero-section-ver-1.jpg,hero-section-ver-2.jpg,hero-section-ver-3.jpg' | split: ','
 -%}
 
-<div class="hero-new" id="homepage-hero-new">
+<div class="hero-new" id="homepage-hero-new" data-hero-slider data-interval="4000">
   <div class="hero-new__background" aria-hidden="true">
-    <picture class="hero-new__picture">
-      <source
-        media="(max-width: 640px)"
-        srcset="
-          {{ mobile_hero_url | append: '&width=480' }} 480w,
-          {{ mobile_hero_url | append: '&width=720' }} 720w,
-          {{ mobile_hero_url | append: '&width=960' }} 960w
-        "
-        sizes="100vw"
+    {%- for image_name in hero_images -%}
+      {%- assign image_url = image_name | file_url -%}
+      <picture
+        class="hero-new__picture hero-new__player-item{% if forloop.first %} is-active{% endif %}"
+        data-hero-slide
+        data-slide-index="{{ forloop.index0 }}"
       >
-      <img
-        class="hero-new__image"
-        src="{{ desktop_hero_url | append: '&width=1920' }}"
-        srcset="
-          {{ desktop_hero_url | append: '&width=960' }} 960w,
-          {{ desktop_hero_url | append: '&width=1440' }} 1440w,
-          {{ desktop_hero_url | append: '&width=1920' }} 1920w,
-          {{ desktop_hero_url | append: '&width=2560' }} 2560w,
-          {{ desktop_hero_url | append: '&width=2880' }} 2880w
-        "
-        sizes="100vw"
-        alt="{{ hero_image_alt | escape }}"
-        width="2880"
-        height="1620"
-        loading="eager"
-        fetchpriority="high"
-      >
-    </picture>
+        <img
+          class="hero-new__image"
+          src="{{ image_url | append: '&width=1920' }}"
+          srcset="
+            {{ image_url | append: '&width=960' }} 960w,
+            {{ image_url | append: '&width=1440' }} 1440w,
+            {{ image_url | append: '&width=1920' }} 1920w,
+            {{ image_url | append: '&width=2560' }} 2560w,
+            {{ image_url | append: '&width=2880' }} 2880w
+          "
+          sizes="100vw"
+          alt="{{ hero_image_alt | escape }} - {{ forloop.index }}"
+          width="2880"
+          height="1620"
+          {% if forloop.first %}
+            loading="eager"
+            fetchpriority="high"
+          {% else %}
+            loading="lazy"
+          {% endif %}
+        >
+      </picture>
+    {%- endfor -%}
   </div>
 
   <div class="hero-new__shade" aria-hidden="true"></div>
@@ -159,6 +160,32 @@
     min-height: 100svh;
     object-fit: cover;
     object-position: center center;
+  }
+
+  .hero-new__player-item {
+    transition: opacity 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: opacity;
+  }
+
+  .hero-new__player-item:not(:first-child) {
+    position: absolute;
+    inset: 0;
+  }
+
+  .hero-new__player-item:not(.is-active) {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .hero-new__player-item.is-active {
+    opacity: 1;
+    z-index: 1;
+  }
+
+  .hero-new__player-item.is-prev {
+    opacity: 1;
+    z-index: 0;
+    transition: none;
   }
 
   .hero-new__inner {
@@ -383,8 +410,96 @@
       opacity: 1;
       transform: none;
     }
+
+    .hero-new__player-item {
+      transition: none !important;
+    }
   }
 {% endstylesheet %}
+
+{% javascript %}
+  (function () {
+    function initHeroSlider() {
+      var hero = document.getElementById('homepage-hero-new');
+      if (!hero) return;
+
+      var slides = Array.prototype.slice.call(hero.querySelectorAll('[data-hero-slide]'));
+      if (slides.length <= 1) return;
+
+      if (hero.dataset.sliderInitialized === 'true') return;
+      hero.dataset.sliderInitialized = 'true';
+
+      var currentIndex = 0;
+      var intervalTime = parseInt(hero.dataset.interval, 10) || 4000;
+      var timer = null;
+
+      function goToSlide(nextIndex) {
+        if (nextIndex === currentIndex) return;
+
+        var prevSlide = slides[currentIndex];
+        var nextSlide = slides[nextIndex];
+
+        slides.forEach(function (slide) {
+          slide.classList.remove('is-prev');
+        });
+
+        prevSlide.classList.add('is-prev');
+        prevSlide.classList.remove('is-active');
+
+        nextSlide.classList.add('is-active');
+        currentIndex = nextIndex;
+
+        setTimeout(function () {
+          prevSlide.classList.remove('is-prev');
+        }, 1250);
+      }
+
+      function nextSlide() {
+        var next = (currentIndex + 1) % slides.length;
+        goToSlide(next);
+      }
+
+      function startTimer() {
+        stopTimer();
+        timer = setInterval(nextSlide, intervalTime);
+      }
+
+      function stopTimer() {
+        if (timer) {
+          clearInterval(timer);
+          timer = null;
+        }
+      }
+
+      var motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+      if (!motionQuery.matches) {
+        startTimer();
+      }
+
+      document.addEventListener('visibilitychange', function () {
+        if (document.hidden) {
+          stopTimer();
+        } else if (!motionQuery.matches) {
+          startTimer();
+        }
+      });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initHeroSlider);
+    } else {
+      initHeroSlider();
+    }
+
+    document.addEventListener('shopify:section:load', function (event) {
+      if (event.target && event.target.querySelector('#homepage-hero-new')) {
+        var hero = event.target.querySelector('#homepage-hero-new');
+        if (hero) hero.removeAttribute('data-slider-initialized');
+        initHeroSlider();
+      }
+    });
+  })();
+{% endjavascript %}
 
 {% schema %}
 {

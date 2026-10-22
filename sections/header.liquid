@@ -30,6 +30,7 @@
         </svg>
         <span class="header__search-placeholder">Search for products...</span>
       </button>
+      {% render 'marketplace-links', placement: 'header' %}
       {%- comment -%} Sẽ show lại sau này, trước hết tạm ẩn để user ko thấy {%- endcomment -%}
       {%- comment -%}
       <a
@@ -552,15 +553,47 @@
       syncMode();
     }
 
+    var initializedMarketplaceLinks = new WeakSet();
+
+    function initMarketplaceLinks() {
+      var destinations = new Set([
+        'https://www.amazon.com/stores/page/4C9B7557-3277-471F-AEAB-03C34C4284F7',
+        'https://etsy.com/shop/BeaconfieldGroup'
+      ]);
+
+      document.querySelectorAll('.header a[data-marketplace-direct]').forEach(function (link) {
+        if (initializedMarketplaceLinks.has(link)) return;
+        if (!destinations.has(link.href)) return;
+
+        link.addEventListener('click', function (event) {
+          if (event.defaultPrevented) return;
+          if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+          if (!destinations.has(link.href)) return;
+
+          event.preventDefault();
+          window.open(link.href, '_blank', 'noopener,noreferrer');
+        });
+        initializedMarketplaceLinks.add(link);
+      });
+    }
+
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', function () {
         initMegaMenu();
         initMobileMenu();
+        initMarketplaceLinks();
       });
     } else {
       initMegaMenu();
       initMobileMenu();
+      initMarketplaceLinks();
     }
+
+    document.addEventListener('shopify:section:load', function () {
+      initMegaMenu();
+      initMobileMenu();
+      initMarketplaceLinks();
+    });
   })();
 {% endjavascript %}
 
@@ -607,6 +640,19 @@
     justify-content: flex-start;
     min-width: 0;
     gap: 12px;
+  }
+
+  .header__left .marketplace-links {
+    color: var(--color-earth-brown);
+  }
+
+  body:has(:is(.hero-new, .about-new, .blog-editorial, .col-banner, .srp-hero, .customization-hero)) .header__left .marketplace-links {
+    color: var(--color-cream, #f5f1ed);
+  }
+
+  .header__search-widget {
+    min-width: 0;
+    min-height: 44px;
   }
 
   .header__icon.header__real-spaces-link {
@@ -1093,13 +1139,18 @@
     }
 
     .header__main {
-      display: flex;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      row-gap: 12px;
       align-items: center;
       justify-content: space-between;
     }
 
     .header__left {
-      display: none !important;
+      display: flex !important;
+      grid-column: 1 / -1;
+      grid-row: 2;
+      width: 100%;
     }
 
     .header__center {
@@ -1126,11 +1177,13 @@
     }
 
     .header__search-widget {
-      display: none !important;
+      display: inline-flex !important;
+      flex: 1;
+      width: auto;
     }
 
     .header__search-mobile {
-      display: flex !important;
+      display: none !important;
     }
 
     @media screen and (max-width: 380px) {

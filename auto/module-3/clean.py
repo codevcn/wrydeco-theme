@@ -26,6 +26,7 @@ KEEP_CONTENT = [
     "main.py",
     "notes.json",
     "proxy_config.json",
+    "proxy_manager.py",
     "requirements.txt",
     "shopify-admin-app.conf",
     "shopify-admin-app.service",
