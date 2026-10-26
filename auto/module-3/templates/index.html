@@ -77,7 +77,7 @@
     {% include 'drawer.html' %}
     
     <main class="p-4 sm:p-8">
-    <div class="mx-auto">
+    <div id="products-content" class="mx-auto">
         <div class="flex items-center justify-between mb-8">
             <div class="flex items-center gap-4">
                 <h1 class="text-3xl font-bold text-gray-800 tracking-tight">Danh sách Sản phẩm</h1>
@@ -117,6 +117,7 @@
                         <option value="collection" {% if filter_type == 'collection' %}selected{% endif %}>Collection (Handle của Collection)</option>
                         <option value="title" {% if filter_type == 'title' %}selected{% endif %}>Tên sản phẩm</option>
                         <option value="description" {% if filter_type == 'description' %}selected{% endif %}>Mô tả (Description)</option>
+                        <option value="variant_name" {% if filter_type == 'variant_name' %}selected{% endif %}>Tên biến thể</option>
                         <option value="variant_option" {% if filter_type == 'variant_option' %}selected{% endif %}>Tên/Giá trị Variant Option</option>
                         <option value="not_variant_option" {% if filter_type == 'not_variant_option' %}selected{% endif %}>KHÔNG chứa Tên/Giá trị Variant Option</option>
                         <option value="product_type" {% if filter_type == 'product_type' %}selected{% endif %}>Product Type</option>
@@ -161,59 +162,59 @@
                 <div class="flex items-center flex-wrap gap-4 pt-4 mt-2 border-t border-gray-100 w-full">
                     <label class="text-sm font-semibold text-gray-700 whitespace-nowrap">Bộ lọc đặc biệt:</label>
                     <label class="inline-flex items-center cursor-pointer">
-                        <input type="radio" name="special_filter" value="" class="form-radio h-4 w-4 text-indigo-600 focus:ring-indigo-500" {% if not special_filter %}checked{% endif %} onchange="document.getElementById('filter-form').submit()">
+                        <input type="radio" name="special_filter" value="" class="form-radio h-4 w-4 text-indigo-600 focus:ring-indigo-500" {% if not special_filter %}checked{% endif %} onchange="submitFilterForm()">
                         <span class="ml-2 text-sm text-gray-700">Tất cả</span>
                     </label>
                     <label class="inline-flex items-center cursor-pointer">
-                        <input type="radio" name="special_filter" value="out_of_stock" class="form-radio h-4 w-4 text-indigo-600 focus:ring-indigo-500" {% if special_filter == 'out_of_stock' %}checked{% endif %} onchange="document.getElementById('filter-form').submit()">
+                        <input type="radio" name="special_filter" value="out_of_stock" class="form-radio h-4 w-4 text-indigo-600 focus:ring-indigo-500" {% if special_filter == 'out_of_stock' %}checked{% endif %} onchange="submitFilterForm()">
                         <span class="ml-2 text-sm text-gray-700">Out of stock</span>
                     </label>
                     <label class="inline-flex items-center cursor-pointer">
-                        <input type="radio" name="special_filter" value="in_stock" class="form-radio h-4 w-4 text-indigo-600 focus:ring-indigo-500" {% if special_filter == 'in_stock' %}checked{% endif %} onchange="document.getElementById('filter-form').submit()">
+                        <input type="radio" name="special_filter" value="in_stock" class="form-radio h-4 w-4 text-indigo-600 focus:ring-indigo-500" {% if special_filter == 'in_stock' %}checked{% endif %} onchange="submitFilterForm()">
                         <span class="ml-2 text-sm text-gray-700">In stock</span>
                     </label>
                     <label class="inline-flex items-center cursor-pointer">
-                        <input type="radio" name="special_filter" value="not_tracked" class="form-radio h-4 w-4 text-indigo-600 focus:ring-indigo-500" {% if special_filter == 'not_tracked' %}checked{% endif %} onchange="document.getElementById('filter-form').submit()">
+                        <input type="radio" name="special_filter" value="not_tracked" class="form-radio h-4 w-4 text-indigo-600 focus:ring-indigo-500" {% if special_filter == 'not_tracked' %}checked{% endif %} onchange="submitFilterForm()">
                         <span class="ml-2 text-sm text-gray-700">Tắt track quantity</span>
                     </label>
                     <label class="inline-flex items-center cursor-pointer">
-                        <input type="radio" name="special_filter" value="has_reviews" class="form-radio h-4 w-4 text-indigo-600 focus:ring-indigo-500" {% if special_filter == 'has_reviews' %}checked{% endif %} onchange="document.getElementById('filter-form').submit()">
+                        <input type="radio" name="special_filter" value="has_reviews" class="form-radio h-4 w-4 text-indigo-600 focus:ring-indigo-500" {% if special_filter == 'has_reviews' %}checked{% endif %} onchange="submitFilterForm()">
                         <span class="ml-2 text-sm text-gray-700">Có review</span>
                     </label>
                     <label class="inline-flex items-center cursor-pointer">
-                        <input type="radio" name="special_filter" value="no_reviews" class="form-radio h-4 w-4 text-indigo-600 focus:ring-indigo-500" {% if special_filter == 'no_reviews' %}checked{% endif %} onchange="document.getElementById('filter-form').submit()">
+                        <input type="radio" name="special_filter" value="no_reviews" class="form-radio h-4 w-4 text-indigo-600 focus:ring-indigo-500" {% if special_filter == 'no_reviews' %}checked{% endif %} onchange="submitFilterForm()">
                         <span class="ml-2 text-sm text-gray-700">Thiếu review</span>
                     </label>
                     <label class="inline-flex items-center cursor-pointer">
-                        <input type="radio" name="special_filter" value="has_rich" class="form-radio h-4 w-4 text-indigo-600 focus:ring-indigo-500" {% if special_filter == 'has_rich' %}checked{% endif %} onchange="document.getElementById('filter-form').submit()">
+                        <input type="radio" name="special_filter" value="has_rich" class="form-radio h-4 w-4 text-indigo-600 focus:ring-indigo-500" {% if special_filter == 'has_rich' %}checked{% endif %} onchange="submitFilterForm()">
                         <span class="ml-2 text-sm text-gray-700">Có Rich Description</span>
                     </label>
                     <label class="inline-flex items-center cursor-pointer">
-                        <input type="radio" name="special_filter" value="no_rich" class="form-radio h-4 w-4 text-indigo-600 focus:ring-indigo-500" {% if special_filter == 'no_rich' %}checked{% endif %} onchange="document.getElementById('filter-form').submit()">
+                        <input type="radio" name="special_filter" value="no_rich" class="form-radio h-4 w-4 text-indigo-600 focus:ring-indigo-500" {% if special_filter == 'no_rich' %}checked{% endif %} onchange="submitFilterForm()">
                         <span class="ml-2 text-sm text-gray-700">Thiếu Rich Description</span>
                     </label>
                     <label class="inline-flex items-center cursor-pointer">
-                        <input type="radio" name="special_filter" value="missing_aeo" class="form-radio h-4 w-4 text-indigo-600 focus:ring-indigo-500" {% if special_filter == 'missing_aeo' %}checked{% endif %} onchange="document.getElementById('filter-form').submit()">
+                        <input type="radio" name="special_filter" value="missing_aeo" class="form-radio h-4 w-4 text-indigo-600 focus:ring-indigo-500" {% if special_filter == 'missing_aeo' %}checked{% endif %} onchange="submitFilterForm()">
                         <span class="ml-2 text-sm text-gray-700">Thiếu AEO</span>
                     </label>
                     <label class="inline-flex items-center cursor-pointer">
-                        <input type="radio" name="special_filter" value="duplicate_asin" class="form-radio h-4 w-4 text-indigo-600 focus:ring-indigo-500" {% if special_filter == 'duplicate_asin' %}checked{% endif %} onchange="document.getElementById('filter-form').submit()">
+                        <input type="radio" name="special_filter" value="duplicate_asin" class="form-radio h-4 w-4 text-indigo-600 focus:ring-indigo-500" {% if special_filter == 'duplicate_asin' %}checked{% endif %} onchange="submitFilterForm()">
                         <span class="ml-2 text-sm text-gray-700">Sản phẩm trùng nhau (ASIN)</span>
                     </label>
                     <label class="inline-flex items-center cursor-pointer">
-                        <input type="radio" name="special_filter" value="duplicate_title" class="form-radio h-4 w-4 text-indigo-600 focus:ring-indigo-500" {% if special_filter == 'duplicate_title' %}checked{% endif %} onchange="document.getElementById('filter-form').submit()">
+                        <input type="radio" name="special_filter" value="duplicate_title" class="form-radio h-4 w-4 text-indigo-600 focus:ring-indigo-500" {% if special_filter == 'duplicate_title' %}checked{% endif %} onchange="submitFilterForm()">
                         <span class="ml-2 text-sm text-gray-700">Tiêu đề trùng nhau</span>
                     </label>
                     <label class="inline-flex items-center cursor-pointer">
-                        <input type="radio" name="special_filter" value="duplicate_seo_title" class="form-radio h-4 w-4 text-indigo-600 focus:ring-indigo-500" {% if special_filter == 'duplicate_seo_title' %}checked{% endif %} onchange="document.getElementById('filter-form').submit()">
+                        <input type="radio" name="special_filter" value="duplicate_seo_title" class="form-radio h-4 w-4 text-indigo-600 focus:ring-indigo-500" {% if special_filter == 'duplicate_seo_title' %}checked{% endif %} onchange="submitFilterForm()">
                         <span class="ml-2 text-sm text-gray-700">SEO title trùng nhau</span>
                     </label>
                     <label class="inline-flex items-center cursor-pointer">
-                        <input type="radio" name="special_filter" value="duplicate_seo_description" class="form-radio h-4 w-4 text-indigo-600 focus:ring-indigo-500" {% if special_filter == 'duplicate_seo_description' %}checked{% endif %} onchange="document.getElementById('filter-form').submit()">
+                        <input type="radio" name="special_filter" value="duplicate_seo_description" class="form-radio h-4 w-4 text-indigo-600 focus:ring-indigo-500" {% if special_filter == 'duplicate_seo_description' %}checked{% endif %} onchange="submitFilterForm()">
                         <span class="ml-2 text-sm text-gray-700">SEO description trùng nhau</span>
                     </label>
                     <label class="inline-flex items-center cursor-pointer">
-                        <input type="radio" name="special_filter" value="duplicate_info" class="form-radio h-4 w-4 text-indigo-600 focus:ring-indigo-500" {% if special_filter == 'duplicate_info' %}checked{% endif %} onchange="document.getElementById('filter-form').submit()">
+                        <input type="radio" name="special_filter" value="duplicate_info" class="form-radio h-4 w-4 text-indigo-600 focus:ring-indigo-500" {% if special_filter == 'duplicate_info' %}checked{% endif %} onchange="submitFilterForm()">
                         <span class="ml-2 text-sm text-gray-700">Thông tin trùng nhau</span>
                     </label>
                 </div>
@@ -1241,6 +1242,14 @@
         }
 
         document.addEventListener('keydown', (e) => {
+            const filterOverlay = document.getElementById('filterLoadingOverlay');
+            if (filterOverlay && !filterOverlay.classList.contains('hidden')) {
+                if (e.key === "Escape") {
+                    cancelFilterRequest();
+                }
+                return;
+            }
+
             const goToModal = document.getElementById('goToProductModal');
             if (goToModal && !goToModal.classList.contains('hidden')) {
                 if (e.key === "Escape") {
@@ -1266,6 +1275,181 @@
                 }
             }
         });
+    
+        // ==========================================
+        // FILTER LOADING OVERLAY & ABORT CONTROLLER
+        // ==========================================
+        let filterAbortController = null;
+
+        function showFilterLoading(detailText) {
+            const overlay = document.getElementById('filterLoadingOverlay');
+            const detailEl = document.getElementById('filterLoadingDetail');
+            if (detailEl && detailText) {
+                detailEl.textContent = detailText;
+            }
+            if (overlay) {
+                overlay.classList.remove('hidden');
+            }
+            document.body.style.overflow = 'hidden';
+        }
+
+        function hideFilterLoading() {
+            const overlay = document.getElementById('filterLoadingOverlay');
+            if (overlay) {
+                overlay.classList.add('hidden');
+            }
+            document.body.style.overflow = '';
+        }
+
+        function cancelFilterRequest() {
+            if (filterAbortController) {
+                filterAbortController.abort();
+                filterAbortController = null;
+            }
+            hideFilterLoading();
+        }
+
+        function submitFilterForm() {
+            const form = document.getElementById('filter-form');
+            if (form) {
+                if (typeof form.requestSubmit === 'function') {
+                    form.requestSubmit();
+                } else {
+                    form.dispatchEvent(new Event('submit', { cancelable: true }));
+                }
+            }
+        }
+
+        async function executeFilterRequest(url) {
+            if (filterAbortController) {
+                filterAbortController.abort();
+            }
+            filterAbortController = new AbortController();
+
+            const filterSelect = document.querySelector('select[name="filter_type"]');
+            const filterInput = document.querySelector('input[name="filter_value"]');
+            const selectedType = filterSelect ? filterSelect.value : '';
+            const val = filterInput ? filterInput.value.trim() : '';
+
+            let msg = "Đang quét và lấy dữ liệu sản phẩm từ Shopify API. Vui lòng chờ trong giây lát...";
+            if (selectedType === 'variant_name') {
+                msg = val ? `Đang tìm các sản phẩm có tên biến thể khớp với "${val}"...` : "Đang lọc theo tên biến thể...";
+            } else if (selectedType === 'variant_option') {
+                msg = val ? `Đang tìm sản phẩm có tùy chọn hoặc giá trị "${val}"...` : "Đang lọc theo tùy chọn...";
+            } else if (selectedType === 'category') {
+                msg = val ? `Đang tìm sản phẩm thuộc category "${val}"...` : "Đang lọc theo category...";
+            }
+
+            showFilterLoading(msg);
+
+            try {
+                const response = await fetch(url, {
+                    method: 'GET',
+                    signal: filterAbortController.signal,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const html = await response.text();
+                const parser = new DOMParser();
+                const newDoc = parser.parseFromString(html, 'text/html');
+
+                const currentContent = document.getElementById('products-content');
+                const newContent = newDoc.getElementById('products-content');
+                if (currentContent && newContent) {
+                    currentContent.innerHTML = newContent.innerHTML;
+                }
+
+                if (newDoc.title) {
+                    document.title = newDoc.title;
+                }
+                window.history.pushState({ url: url }, '', url);
+
+                if (typeof loadColumnPrefs === 'function') {
+                    loadColumnPrefs();
+                }
+            } catch (err) {
+                if (err.name === 'AbortError') {
+                    console.log('Thao tác lọc đã được người dùng hủy bỏ bằng AbortController.');
+                    return;
+                }
+                alert('Lỗi khi lọc sản phẩm: ' + (err.message || err));
+            } finally {
+                hideFilterLoading();
+                filterAbortController = null;
+            }
+        }
+
+        // Bắt sự kiện submit form lọc
+        document.addEventListener('submit', function(e) {
+            if (e.target && e.target.id === 'filter-form') {
+                e.preventDefault();
+                const form = e.target;
+                const formData = new FormData(form);
+                const params = new URLSearchParams();
+                for (const [key, value] of formData.entries()) {
+                    if (value !== undefined && value !== null && String(value).trim() !== '') {
+                        params.append(key, String(value).trim());
+                    }
+                }
+                const targetUrl = '/?' + params.toString();
+                executeFilterRequest(targetUrl);
+            }
+        });
+
+        // Bắt sự kiện click chuyển trang phân trang
+        document.addEventListener('click', function(e) {
+            const pageLink = e.target.closest('a[href*="before="], a[href*="after="]');
+            if (pageLink && pageLink.getAttribute('href') && pageLink.getAttribute('href').startsWith('/?')) {
+                e.preventDefault();
+                executeFilterRequest(pageLink.getAttribute('href'));
+            }
+        });
+
+        // Xử lý khi nhấn nút Back/Forward trên trình duyệt
+        window.addEventListener('popstate', function() {
+            window.location.reload();
+        });
+
     </script>
+
+    <!-- Full-screen Filter Loading Overlay with AbortController -->
+    <div id="filterLoadingOverlay" class="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-gray-900/60 backdrop-blur-sm transition-opacity duration-200 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 max-w-sm w-[90%] mx-auto flex flex-col items-center text-center border border-gray-100">
+            <!-- Spinner -->
+            <div class="relative flex items-center justify-center mb-4">
+                <div class="w-14 h-14 rounded-full border-4 border-indigo-100 border-t-indigo-600 animate-spin"></div>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <svg class="w-6 h-6 text-indigo-600 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Title & Description -->
+            <h3 class="text-lg font-bold text-gray-900 tracking-tight">Đang lọc danh sách sản phẩm...</h3>
+            <p id="filterLoadingDetail" class="text-xs text-gray-500 mt-2 leading-relaxed">
+                Đang quét và lấy dữ liệu sản phẩm từ Shopify API. Vui lòng chờ trong giây lát...
+            </p>
+
+            <!-- Cancel Button (AbortController) -->
+            <button type="button" 
+                    id="cancelFilterBtn" 
+                    onclick="cancelFilterRequest()" 
+                    class="mt-6 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-sm shadow-xs transition-all cursor-pointer active:scale-95 group">
+                <svg class="w-4 h-4 text-rose-500 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+                <span>Hủy (Cancel)</span>
+            </button>
+            <p class="text-[11px] text-gray-400 mt-2.5">Hoặc nhấn phím <kbd class="px-1.5 py-0.5 bg-gray-100 border border-gray-300 rounded text-gray-600 font-mono text-[10px]">Esc</kbd> để hủy</p>
+        </div>
+    </div>
+
 </body>
 </html>

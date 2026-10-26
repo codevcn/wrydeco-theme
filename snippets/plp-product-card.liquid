@@ -1,0 +1,55 @@
+{% doc %}
+  Renders the shared listing card with product images, maker and purchase benefits.
+  Product content and its primary image are server-rendered.
+
+  @param {product} product - The listed product.
+  @param {string} [heading_tag] - Heading level, h2 by default.
+  @param {string} [class] - Host grid or carousel classes.
+  @param {string} [card_style] - Host carousel order variables.
+{% enddoc %}
+
+{% liquid
+  assign title = product.metafields.custom.artwork_name.value | default: product.title
+  assign heading = heading_tag | default: 'h2'
+  assign author = product.metafields.custom.author_info.value
+  if author.author_name.value == blank
+    assign author = author | first
+  endif
+  assign maker_name = author.author_name.value
+  assign maker_image = author.author_image_url.value
+  assign card_variant = product.selected_or_first_available_variant | default: product.variants.first
+%}
+
+<article class="plp-card {{ class }}" data-plp-card data-product-id="{{ product.id }}" data-product-handle="{{ product.handle | escape }}" data-product-url="{{ product.url }}" data-variant-id="{{ card_variant.id }}" {% if card_style != blank %}style="{{ card_style | escape }}"{% endif %}>
+  <div class="plp-card__media">
+    <a class="plp-card__image-link" href="{{ product.url }}" aria-label="View {{ title | escape }}" draggable="false">
+      {% if product.featured_image != blank %}
+        {% assign image_alt = product.featured_image.alt | default: title %}
+        {{ product.featured_image | image_url: width: 960 | image_tag: class: 'plp-card__image', loading: 'lazy', widths: '320, 480, 640, 800, 960', sizes: '(min-width: 1440px) 25vw, (min-width: 768px) 45vw, 95vw', alt: image_alt, draggable: false }}
+      {% else %}
+        {{ 'product-1' | placeholder_svg_tag: 'plp-card__image placeholder-svg' }}
+      {% endif %}
+    </a>
+    {% render 'wishlist-card-button', product: product %}
+  </div>
+
+  <div class="plp-card__body">
+    <{{ heading }} class="plp-card__title"><a href="{{ product.url }}" title="{{ title | escape }}" draggable="false">{{ title | escape }}</a></{{ heading }}>
+    <div class="plp-card__accent" aria-hidden="true"></div>
+    {% if maker_name != blank %}
+      <div class="plp-card__provenance">
+        <div class="plp-card__maker">
+          {% if maker_image != blank %}<img class="plp-card__portrait" src="{{ maker_image | escape }}" alt="{{ maker_name | escape }}" width="80" height="80" loading="lazy">{% endif %}
+          <div><span class="plp-card__eyebrow">Crafted by</span><span class="plp-card__maker-name">{{ maker_name | escape }}</span></div>
+        </div>
+      </div>
+    {% endif %}
+    <p class="plp-card__price"><span>From</span> <strong>{{ product.price | money }}</strong></p>
+    <div class="plp-card__benefits">
+      <div class="plp-card__benefit">{% render 'plp-card-icon', name: 'truck' %}<div><span class="plp-card__benefit-title">Free shipping</span><span class="plp-card__note">On all orders</span></div></div>
+      <div class="plp-card__benefit">{% render 'plp-card-icon', name: 'shield-check' %}<div><span class="plp-card__benefit-title">1-year warranty</span><span class="plp-card__note">Built to last</span></div></div>
+    </div>
+  </div>
+</article>
+
+{% render 'plp-card-resources' %}

@@ -1,0 +1,2327 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="/static/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+    <link rel="shortcut icon" href="/static/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png" />
+    <link rel="manifest" href="/static/site.webmanifest" />
+    <title>Admin - Quản lý Files</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+    <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .active-row { background-color: #eef2ff !important; }
+        #lightbox {
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        #lightbox.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        #lightbox img {
+            transform: scale(0.95);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        #lightbox.active img {
+            transform: scale(1);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 shadow-xs sticky top-0 z-40">
+        <div class="mx-auto px-4 sm:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo -->
+                <div class="flex-shrink-0 flex items-center gap-3">
+                    <a href="/" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 text-indigo-600 font-bold text-xl hover:text-indigo-700 transition-colors" title="Trang chủ Admin (Mở tab mới)">
+                        <img src="/static/favicon.svg" alt="Logo" class="w-8 h-8 object-contain rounded-lg" onerror="this.src='/static/favicon-96x96.png'">
+                        <span>Shopify Admin Manager</span>
+                    </a>
+                    <a target="_blank" rel="noopener noreferrer" href="https://admin.shopify.com/store/{{ active_shop or 'wrydeco' }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-black hover:bg-neutral-800 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors" title="Mở Shopify Admin Store (Mở tab mới)">
+                        <span>Shopify Store</span>
+                        <svg class="w-3.5 h-3.5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                    </a>
+                </div>
+                <!-- Nav Links (Mở tab mới) -->
+                <nav class="flex items-center gap-6">
+                    <a href="/" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1" title="Mở Sản phẩm trong tab mới">
+                        <span>Sản phẩm</span>
+                    </a>
+                    <a href="/collections" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1" title="Mở Collections trong tab mới">
+                        <span>Collections</span>
+                    </a>
+                    <a href="/metaobjects" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1" title="Mở MetaObjects trong tab mới">
+                        <span>MetaObjects</span>
+                    </a>
+                    <a href="/create" target="_blank" rel="noopener noreferrer" class="text-sm font-bold text-red-600 hover:text-red-700 transition-colors flex items-center gap-1" title="Mở Tạo sản phẩm trong tab mới">
+                        <span>Tạo sản phẩm</span>
+                    </a>
+                    <a href="/edit-variants" target="_blank" rel="noopener noreferrer" class="text-sm font-bold text-red-600 hover:text-red-700 transition-colors flex items-center gap-1" title="Mở Sửa hàng loạt trong tab mới">
+                        <span>Sửa hàng loạt</span>
+                    </a>
+                    <a href="/blogs" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1" title="Mở Blog trong tab mới">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path></svg>
+                        <span>Blog</span>
+                    </a>
+                    <a href="/policies" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1" title="Mở Policy trong tab mới">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                        <span>Policy</span>
+                    </a>
+                    <button id="drawer-toggle-btn" type="button" onclick="toggleDrawer()" class="p-1.5 text-gray-600 hover:text-indigo-600 hover:bg-gray-100 rounded-lg transition-colors flex items-center justify-center focus:outline-none cursor-pointer" title="Menu tiện ích">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    {% include 'drawer.html' %}
+
+    <main class="p-4 sm:p-8">
+        <div class="mx-auto max-w-7xl">
+            <!-- Header Title, Store Switch Toggle & Action Buttons -->
+            <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 mb-6">
+                <div>
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center flex-shrink-0">
+                            <iconify-icon icon="mdi:folder-multiple-image" class="text-2xl"></iconify-icon>
+                        </div>
+                        <div>
+                            <h1 class="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight flex items-center gap-2.5">
+                                Quản lý Files
+                                <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">Shopify Content Files</span>
+                            </h1>
+                            <p class="text-xs sm:text-sm text-gray-500 mt-0.5">Tra cứu, quản lý và tải lên tệp tin trực tiếp vào gian hàng Shopify</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Side: Nút Switch Store Mặc định ⟷ Store Riêng (qua Proxy) & Action Buttons -->
+                <div class="flex items-center gap-3 flex-wrap w-full lg:w-auto justify-start lg:justify-end">
+                    <!-- Switch Store Toggle -->
+                    <div class="inline-flex items-center gap-3 bg-white px-3.5 py-2 rounded-2xl border border-gray-200 shadow-2xs">
+                        <div class="flex items-center gap-1.5 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                            <iconify-icon icon="{% if store_type == 'custom' %}mdi:store-cog{% else %}mdi:store{% endif %}" class="text-base {% if store_type == 'custom' %}text-indigo-600{% else %}text-gray-500{% endif %}"></iconify-icon>
+                            <span class="hidden sm:inline">Cửa hàng:</span>
+                        </div>
+
+                        <!-- Switch Toggle Checkbox -->
+                        <label class="relative inline-flex items-center cursor-pointer select-none" title="Bấm để chuyển đổi giữa Store Mặc định và Store Riêng">
+                            <input type="checkbox" id="storeSwitchToggle" class="sr-only peer" {% if store_type == 'custom' %}checked{% endif %} onchange="handleStoreSwitch(this.checked)">
+                            <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                            <span id="storeSwitchLabel" class="ml-2.5 text-xs font-bold {% if store_type == 'custom' %}text-indigo-600{% else %}text-gray-700{% endif %}">
+                                {% if store_type == 'custom' %}
+                                    Store Riêng <span class="font-mono text-[14px] font-semibold text-indigo-500">({{ active_shop_domain or active_shop }})</span>
+                                {% else %}
+                                    Store Mặc định <span class="font-mono text-[14px] font-semibold text-gray-500">({{ active_shop_domain or active_shop }})</span>
+                                {% endif %}
+                            </span>
+                        </label>
+
+                        <!-- Proxy Badge -->
+                        {% if store_type == 'custom' %}
+                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200" title="Bắt buộc kết nối qua Proxy US">
+                            <span>🇺🇸</span>
+                            <span>Proxy US</span>
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-600 border border-gray-200" title="Kết nối trực tiếp Store Mặc định">
+                            <iconify-icon icon="mdi:lightning-bolt" class="text-amber-500 text-xs"></iconify-icon>
+                            <span>Direct VPS</span>
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Action Buttons: Đi đến Shopify Admin Files, Tính tổng dung lượng & Tải lên File -->
+                    <div class="flex items-center gap-2.5 flex-wrap">
+                        <a href="https://admin.shopify.com/store/wrydeco/content/files" 
+                           target="_blank" 
+                           rel="noopener noreferrer" 
+                           id="btnShopifyAdminFiles"
+                           class="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl font-bold text-sm text-gray-700 bg-white hover:bg-gray-50 border border-gray-300 shadow-xs hover:border-gray-400 transition-all cursor-pointer active:scale-95" 
+                           title="Đi đến trang Shopify Admin Files của wrydeco (Mở tab mới)">
+                            <iconify-icon icon="simple-icons:shopify" class="text-lg text-emerald-600"></iconify-icon>
+                            <span>Shopify Files</span>
+                            <iconify-icon icon="mdi:open-in-new" class="text-xs text-gray-400"></iconify-icon>
+                        </a>
+                        <button type="button" 
+                                id="btnOpenStorageModal" 
+                                onclick="openStorageModal()" 
+                                class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm text-gray-700 bg-white hover:bg-gray-50 border border-gray-300 shadow-xs hover:border-gray-400 transition-all cursor-pointer active:scale-95"
+                                title="Tính toán tổng dung lượng toàn bộ file trên Shopify qua Bulk Operation">
+                            <iconify-icon icon="mdi:database-outline" class="text-lg text-indigo-600"></iconify-icon>
+                            <span>Tính tổng dung lượng</span>
+                        </button>
+                        <button type="button" 
+                                id="btnOpenUploadModal" 
+                                onclick="openUploadModal()" 
+                                class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-white bg-indigo-600 hover:bg-indigo-700 shadow-md hover:shadow-indigo-500/20 transition-all cursor-pointer active:scale-95">
+                            <iconify-icon icon="mdi:cloud-upload-outline" class="text-lg"></iconify-icon>
+                            <span>Tải lên File</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error Banner (nếu có) -->
+            {% if error %}
+            <div class="bg-rose-50 border-l-4 border-rose-500 p-4 mb-6 rounded-r-xl shadow-xs">
+                <div class="flex items-start justify-between gap-4">
+                    <div class="flex items-start gap-3">
+                        <iconify-icon icon="mdi:alert-circle-outline" class="text-rose-500 text-xl mt-0.5"></iconify-icon>
+                        <div>
+                            <h4 class="text-sm font-bold text-rose-900">Không thể tải dữ liệu Files từ {% if store_type == 'custom' %}Store Riêng{% else %}Store Mặc định{% endif %}</h4>
+                            <p class="text-xs text-rose-700 mt-1 leading-relaxed">{{ error }}</p>
+                            {% if store_type == 'custom' %}
+                            <div class="mt-3 flex items-center gap-3">
+                                <button type="button" onclick="handleStoreSwitch(false)" class="text-xs font-bold text-rose-800 bg-white border border-rose-300 hover:bg-rose-100/60 px-3 py-1.5 rounded-lg transition-colors shadow-2xs cursor-pointer">
+                                    ↩ Chuyển về Store Mặc định
+                                </button>
+                                <a href="/settings" target="_blank" rel="noopener noreferrer" class="text-xs font-semibold text-rose-700 underline hover:text-rose-900">
+                                    Cài đặt Store Riêng & Proxy
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Bộ lọc (Filters) & Search Bar -->
+            <div class="mb-6 bg-white p-5 rounded-2xl shadow-xs border border-gray-100">
+                <form id="files-search-form" action="/files" method="GET" class="space-y-4">
+                    <input type="hidden" name="store_type" value="{{ store_type }}">
+                    <!-- Hàng 1: Search theo tên file -->
+                    <div class="flex flex-col sm:flex-row gap-3 items-center">
+                        <div class="relative flex-1 w-full">
+                            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                                <iconify-icon icon="mdi:magnify" class="text-xl"></iconify-icon>
+                            </div>
+                            <input type="text" 
+                                   name="query" 
+                                   id="filesSearchInput" 
+                                   value="{{ query }}" 
+                                   placeholder="Tìm kiếm theo tên file, đuôi file (ví dụ: .png, .mp4, shelf)..." 
+                                   class="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all hover:border-gray-300">
+                        </div>
+                        <div class="flex items-center gap-2 w-full sm:w-auto">
+                            <button type="submit" 
+                                    class="w-full sm:w-auto px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-95">
+                                <iconify-icon icon="mdi:filter-variant" class="text-base"></iconify-icon>
+                                <span>Lọc kết quả</span>
+                            </button>
+                            {% if has_filter %}
+                            <a href="/files{% if store_type and store_type != 'default' %}?store_type={{ store_type }}{% endif %}" 
+                               id="btnResetFilter"
+                               class="pagination-link w-full sm:w-auto px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 whitespace-nowrap active:scale-95" 
+                               title="Đặt lại bộ lọc và quay về 20 files mới nhất">
+                                <iconify-icon icon="mdi:close-circle-outline" class="text-base text-white/90"></iconify-icon>
+                                <span>Đặt lại</span>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Hàng 2: Bộ lọc chi tiết (File Type, File Size Min-Max, Alt text) -->
+                    <div class="pt-3 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3.5 items-end">
+                        <!-- 1. Lọc theo File Type -->
+                        <div class="lg:col-span-3">
+                            <label for="filterFileType" class="block text-xs font-bold text-gray-700 mb-1.5 flex items-center gap-1.5">
+                                <iconify-icon icon="mdi:file-cog-outline" class="text-indigo-600 text-sm"></iconify-icon>
+                                <span>Loại tệp (File type):</span>
+                            </label>
+                            <select name="file_type" 
+                                    id="filterFileType" 
+                                    class="w-full px-3 py-2 bg-gray-50 border border-gray-200 text-gray-900 text-xs font-semibold rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all cursor-pointer">
+                                <option value="all" {% if file_type == 'all' %}selected{% endif %}>Tất cả định dạng</option>
+                                <option value="image" {% if file_type == 'image' %}selected{% endif %}>🖼️ Hình ảnh (Image)</option>
+                                <option value="video" {% if file_type == 'video' %}selected{% endif %}>🎬 Video</option>
+                                <option value="audio" {% if file_type == 'audio' %}selected{% endif %}>🎵 Âm thanh (Audio)</option>
+                                <option value="other" {% if file_type == 'other' %}selected{% endif %}>📄 Tệp khác (Other files)</option>
+                            </select>
+                        </div>
+
+                        <!-- 2. Lọc theo File Size (Min MB - Max MB) -->
+                        <div class="lg:col-span-4">
+                            <label class="block text-xs font-bold text-gray-700 mb-1.5 flex items-center gap-1.5">
+                                <iconify-icon icon="mdi:weight" class="text-indigo-600 text-sm"></iconify-icon>
+                                <span>Dung lượng (File size theo MB):</span>
+                            </label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div class="relative">
+                                    <input type="number" 
+                                           step="any" 
+                                           min="0" 
+                                           name="min_size" 
+                                           id="filterMinSize" 
+                                           value="{{ min_size }}" 
+                                           placeholder="Tối thiểu (MB)" 
+                                           class="w-full px-3 py-2 bg-gray-50 border border-gray-200 text-gray-900 text-xs font-mono rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
+                                </div>
+                                <div class="relative">
+                                    <input type="number" 
+                                           step="any" 
+                                           min="0" 
+                                           name="max_size" 
+                                           id="filterMaxSize" 
+                                           value="{{ max_size }}" 
+                                           placeholder="Tối đa (MB)" 
+                                           class="w-full px-3 py-2 bg-gray-50 border border-gray-200 text-gray-900 text-xs font-mono rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 3. Lọc theo Alt Text (Chỉ so khớp alt text) -->
+                        <div class="lg:col-span-5">
+                            <label for="filterAltText" class="block text-xs font-bold text-gray-700 mb-1.5 flex items-center justify-between">
+                                <span class="flex items-center gap-1.5">
+                                    <iconify-icon icon="mdi:text-box-search-outline" class="text-indigo-600 text-sm"></iconify-icon>
+                                    <span>Lọc theo Alt text:</span>
+                                </span>
+                                <span class="text-[10px] text-gray-400 font-normal italic">(chỉ so khớp Alt text)</span>
+                            </label>
+                            <input type="text" 
+                                   name="alt_text" 
+                                   id="filterAltText" 
+                                   value="{{ alt_text }}" 
+                                   placeholder="Nhập nội dung alt text cần tìm..." 
+                                   class="w-full px-3 py-2 bg-gray-50 border border-gray-200 text-gray-900 text-xs rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
+                        </div>
+                    </div>
+
+                    {% if store_type and store_type != 'default' %}
+                    <input type="hidden" name="store_type" value="{{ store_type }}">
+                    {% endif %}
+                </form>
+
+                <!-- Indicator trạng thái bộ lọc -->
+                {% if has_filter %}
+                <div class="mt-3.5 pt-3 border-t border-gray-100 flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <div class="flex items-center gap-2">
+                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-bold border border-indigo-100">
+                            <iconify-icon icon="mdi:check-decagram" class="text-sm text-indigo-600"></iconify-icon>
+                            Đang áp dụng bộ lọc (Hiển thị 50 tệp/trang)
+                        </span>
+                        {% if file_type and file_type != 'all' %}
+                        <span class="px-2 py-0.5 rounded bg-gray-100 text-gray-700 font-semibold text-[11px]">
+                            Loại: {{ file_type | upper }}
+                        </span>
+                        {% endif %}
+                        {% if min_size or max_size %}
+                        <span class="px-2 py-0.5 rounded bg-gray-100 text-gray-700 font-semibold text-[11px] font-mono">
+                            Size: {{ min_size or '0' }}MB - {{ max_size or '∞' }}MB
+                        </span>
+                        {% endif %}
+                        {% if alt_text %}
+                        <span class="px-2 py-0.5 rounded bg-gray-100 text-gray-700 font-semibold text-[11px]">
+                            Alt: "{{ alt_text }}"
+                        </span>
+                        {% endif %}
+                    </div>
+                    <span class="text-gray-400 text-[11px] font-medium">Tìm thấy {{ files | length }} kết quả</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Table Card (7 Cột: STT, Thumbnail, File name, Alt text, Date added, Size, Action) -->
+            <div class="bg-white rounded-2xl shadow-xs border border-gray-100 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-100" id="filesTable">
+                        <thead class="bg-gray-50/80">
+                            <tr>
+                                <th scope="col" class="px-4 py-3.5 text-center text-xs font-bold text-gray-500 uppercase tracking-wider w-14">STT</th>
+                                <th scope="col" class="px-4 py-3.5 text-center text-xs font-bold text-gray-500 uppercase tracking-wider w-24">Thumbnail</th>
+                                <th scope="col" class="px-5 py-3.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">File name</th>
+                                <th scope="col" class="px-5 py-3.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Alt text</th>
+                                <th scope="col" class="px-5 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">
+                                    <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-100 shadow-2xs" title="Đang sắp xếp: Ngày thêm mới nhất lên đầu">
+                                        <span>Date added</span>
+                                        <iconify-icon icon="mdi:sort-calendar-descending" class="text-sm text-indigo-600"></iconify-icon>
+                                        <span class="text-[10px] font-semibold text-indigo-500 lowercase hidden sm:inline">(mới nhất)</span>
+                                    </div>
+                                </th>
+                                <th scope="col" class="px-5 py-3.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Size</th>
+                                <th scope="col" class="px-5 py-3.5 text-center text-xs font-bold text-gray-500 uppercase tracking-wider w-44">
+                                    <div class="inline-flex items-center justify-center gap-1.5">
+                                        <span>ACTION</span>
+                                        <button type="button" 
+                                                id="btnOpenCopyLinksModal" 
+                                                onclick="openCopyLinksModal(event)" 
+                                                class="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 hover:bg-indigo-50 text-gray-700 hover:text-indigo-600 rounded-md transition-colors cursor-pointer border border-gray-200 hover:border-indigo-200 shadow-2xs active:scale-95" 
+                                                title="Tính năng Copy File Links (Alt+Q)">
+                                            <iconify-icon icon="mdi:content-copy" class="text-xs"></iconify-icon>
+                                            <span class="text-[10px] font-bold">COPY</span>
+                                        </button>
+                                    </div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-100">
+                            {% for file in files %}
+                            <tr id="file-row-{{ file.id }}" data-file-url="{{ file.url }}" class="hover:bg-indigo-100 transition-colors duration-150 border-b border-gray-100 last:border-b-0 group">
+                                <!-- 1. STT -->
+                                <td class="px-4 py-4 whitespace-nowrap text-xs font-bold text-gray-500 text-center">
+                                    {{ loop.index }}
+                                </td>
+
+                                <!-- 2. Thumbnail -->
+                                <td class="px-4 py-4 whitespace-nowrap text-center">
+                                    {% if file.fileCategory == 'image' and file.thumbnail %}
+                                    <div class="relative inline-block cursor-pointer group/thumb" onclick="openLightbox('{{ file.thumbnail }}')" title="Nhấn để phóng to ảnh">
+                                        <img src="{{ file.thumbnail }}" 
+                                             class="h-14 w-14 object-cover rounded-xl border border-gray-200 shadow-2xs group-hover/thumb:scale-105 group-hover/thumb:shadow-sm transition-all duration-200 bg-gray-50" 
+                                             alt="{{ file.alt or file.filename }}"
+                                             loading="lazy"
+                                             onerror="this.onerror=null; this.src='/static/favicon-96x96.png';">
+                                        <div class="absolute inset-0 bg-black/0 group-hover/thumb:bg-black/10 rounded-xl transition-colors duration-200"></div>
+                                    </div>
+                                    {% elif file.fileCategory == 'video' %}
+                                    <div class="h-14 w-14 rounded-xl bg-purple-50 border border-purple-200 text-purple-600 flex flex-col items-center justify-center shadow-2xs mx-auto" title="Video file">
+                                        <iconify-icon icon="mdi:video-outline" class="text-2xl"></iconify-icon>
+                                        <span class="text-[9px] font-bold uppercase mt-0.5">VIDEO</span>
+                                    </div>
+                                    {% elif file.fileCategory == 'audio' %}
+                                    <div class="h-14 w-14 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 flex flex-col items-center justify-center shadow-2xs mx-auto" title="Audio file">
+                                        <iconify-icon icon="mdi:music-note" class="text-2xl"></iconify-icon>
+                                        <span class="text-[9px] font-bold uppercase mt-0.5">AUDIO</span>
+                                    </div>
+                                    {% else %}
+                                    <div class="h-14 w-14 rounded-xl bg-gray-100 border border-gray-200 text-gray-500 flex flex-col items-center justify-center shadow-2xs mx-auto" title="File tài nguyên">
+                                        <iconify-icon icon="mdi:file-document-outline" class="text-2xl text-gray-400"></iconify-icon>
+                                        <span class="text-[9px] font-bold uppercase mt-0.5">FILE</span>
+                                    </div>
+                                    {% endif %}
+                                </td>
+
+                                <!-- 3. File name (Nhấp vào để chỉnh sửa file hoặc xóa) -->
+                                <td class="px-5 py-4 text-sm">
+                                    <div class="flex flex-col">
+                                        <button type="button" 
+                                                onclick="openEditFileModal(this)"
+                                                data-id="{{ file.id }}"
+                                                data-full-id="{{ file.fullId }}"
+                                                data-filename="{{ file.filename | escape }}"
+                                                data-alt="{{ (file.alt or '') | escape }}"
+                                                data-url="{{ (file.url or '') | escape }}"
+                                                data-thumbnail="{{ (file.thumbnail or '') | escape }}"
+                                                data-size="{{ file.sizeFormatted }}"
+                                                data-category="{{ file.fileCategory }}"
+                                                data-mime="{{ file.mimeType }}"
+                                                data-created="{{ file.createdAt }}"
+                                                class="font-bold text-gray-900 hover:text-indigo-600 transition-colors break-all leading-snug text-left flex items-center gap-1.5 cursor-pointer group/name" 
+                                                title="Nhấp để chỉnh sửa tên file, alt text hoặc xóa">
+                                            <span id="name-display-{{ file.id }}" class="group-hover/name:underline underline-offset-2">{{ file.filename }}</span>
+                                            <iconify-icon icon="mdi:pencil-outline" class="text-xs text-gray-400 group-hover/name:text-indigo-600 flex-shrink-0 transition-transform group-hover/name:scale-110"></iconify-icon>
+                                        </button>
+                                        {% if file.status and file.status != 'READY' %}
+                                        <div class="mt-0.5">
+                                            {% if file.status == 'FAILED' %}
+                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700">Lỗi xử lý</span>
+                                            {% elif file.status == 'PROCESSING' %}
+                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 animate-pulse">Đang xử lý</span>
+                                            {% endif %}
+                                        </div>
+                                        {% endif %}
+                                        <div class="flex items-center gap-2 mt-1">
+                                            {% if file.mimeType %}
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-gray-100 text-gray-600 border border-gray-200">
+                                                {{ file.mimeType }}
+                                            </span>
+                                            {% endif %}
+                                            <span class="text-[11px] text-gray-400 font-mono">ID: {{ file.id }}</span>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <!-- 4. Alt text -->
+                                <td class="px-5 py-4 text-sm text-gray-700 max-w-xs">
+                                    <div id="alt-display-{{ file.id }}">
+                                        {% if file.alt %}
+                                        <span class="text-xs text-gray-800 line-clamp-2 leading-relaxed" title="{{ file.alt }}">{{ file.alt }}</span>
+                                        {% else %}
+                                        <span class="text-xs text-gray-400 italic">Không có</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+
+                                <!-- 5. Date added -->
+                                <td class="px-5 py-4 whitespace-nowrap text-xs font-semibold text-gray-600">
+                                    <div class="flex items-center gap-1.5">
+                                        <iconify-icon icon="mdi:calendar-clock-outline" class="text-sm text-gray-400"></iconify-icon>
+                                        <span>{{ file.createdAt }}</span>
+                                    </div>
+                                </td>
+
+                                <!-- 6. Size -->
+                                <td class="px-5 py-4 whitespace-nowrap text-xs font-bold text-gray-900">
+                                    <span class="inline-flex items-center px-2.5 py-1 rounded-lg bg-gray-50 border border-gray-200 font-mono">
+                                        {{ file.sizeFormatted }}
+                                    </span>
+                                </td>
+
+                                <!-- 7. Action -->
+                                <td class="px-5 py-4 whitespace-nowrap text-center">
+                                    <div class="flex items-center justify-center gap-1.5">
+                                        {% if file.url %}
+                                        <!-- Nút Copy Link -->
+                                        <button type="button" 
+                                                id="btn-copy-{{ file.id }}"
+                                                onclick="copyFileUrl(this)" 
+                                                data-url="{{ file.url | escape }}"
+                                                class="copy-btn inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition-all cursor-pointer shadow-2xs active:scale-95" 
+                                                title="Copy đường dẫn CDN của file">
+                                            <iconify-icon icon="mdi:content-copy" class="text-sm"></iconify-icon>
+                                            <span class="copy-label">Copy link</span>
+                                        </button>
+                                        <!-- Nút Mở file -->
+                                        <a id="btn-open-link-{{ file.id }}"
+                                           href="{{ file.url }}" 
+                                           target="_blank" 
+                                           rel="noopener noreferrer" 
+                                           class="p-1.5 rounded-lg text-gray-500 hover:text-indigo-600 hover:bg-gray-100 transition-colors" 
+                                           title="Xem file gốc">
+                                            <iconify-icon icon="mdi:external-link" class="text-base"></iconify-icon>
+                                        </a>
+                                        {% else %}
+                                        <span class="text-xs text-gray-400 italic">Chưa có link</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="7" class="px-6 py-16 text-center">
+                                    <div class="flex flex-col items-center justify-center">
+                                        <div class="w-16 h-16 rounded-2xl bg-gray-50 border border-gray-200 text-gray-400 flex items-center justify-center mb-3">
+                                            <iconify-icon icon="mdi:file-search-outline" class="text-3xl"></iconify-icon>
+                                        </div>
+                                        <h3 class="text-base font-bold text-gray-800">Không tìm thấy tệp tin nào</h3>
+                                        <p class="text-xs text-gray-500 mt-1 max-w-sm">Không có file nào khớp với từ khóa tìm kiếm. Bạn hãy thử kiểm tra lại từ khóa hoặc tải lên file mới.</p>
+                                        {% if query %}
+                                        <a href="/files" class="mt-4 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-xl border border-indigo-200 transition-colors">
+                                            Xem tất cả 20 file mới nhất
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Phân trang (Pagination) -->
+            {% set query_params = "" %}
+            {% if file_type and file_type != 'all' %}{% set query_params = query_params ~ "&file_type=" ~ file_type %}{% endif %}
+            {% if min_size %}{% set query_params = query_params ~ "&min_size=" ~ min_size %}{% endif %}
+            {% if max_size %}{% set query_params = query_params ~ "&max_size=" ~ max_size %}{% endif %}
+            {% if alt_text %}{% set query_params = query_params ~ "&alt_text=" ~ (alt_text | urlencode) %}{% endif %}
+            {% if query %}{% set query_params = query_params ~ "&query=" ~ (query | urlencode) %}{% endif %}
+            {% if store_type and store_type != 'default' %}{% set query_params = query_params ~ "&store_type=" ~ store_type %}{% endif %}
+
+            <div class="flex flex-col sm:flex-row justify-between items-center mt-6 gap-4">
+                <div>
+                    {% if page_info.hasPreviousPage %}
+                    <a href="/files?before={{ page_info.startCursor }}{{ query_params }}" 
+                       class="pagination-link inline-flex items-center gap-1.5 px-5 py-2.5 bg-white text-gray-700 font-bold text-xs rounded-xl border border-gray-200 shadow-2xs hover:bg-gray-50 hover:text-indigo-600 transition-all cursor-pointer active:scale-95">
+                        <iconify-icon icon="mdi:chevron-left" class="text-base"></iconify-icon>
+                        <span>Trang trước</span>
+                    </a>
+                    {% else %}
+                    <span class="inline-flex items-center gap-1.5 px-5 py-2.5 bg-gray-100 text-gray-400 font-bold text-xs rounded-xl border border-gray-200 cursor-not-allowed">
+                        <iconify-icon icon="mdi:chevron-left" class="text-base"></iconify-icon>
+                        <span>Trang trước</span>
+                    </span>
+                    {% endif %}
+                </div>
+
+                <div class="text-xs text-gray-500 font-medium flex items-center gap-2">
+                    {% if has_filter %}
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-bold border border-indigo-100">
+                        <iconify-icon icon="mdi:filter-check" class="text-sm text-indigo-600"></iconify-icon>
+                        Đang áp dụng bộ lọc: {{ page_size }} tệp/trang
+                    </span>
+                    {% else %}
+                    <span>Hiển thị tối đa {{ page_size }} file mới nhất mỗi trang</span>
+                    {% endif %}
+                </div>
+
+                <div>
+                    {% if page_info.hasNextPage %}
+                    <a href="/files?after={{ page_info.endCursor }}{{ query_params }}" 
+                       class="pagination-link inline-flex items-center gap-1.5 px-5 py-2.5 bg-indigo-600 text-white font-bold text-xs rounded-xl shadow-xs hover:bg-indigo-700 transition-all cursor-pointer active:scale-95">
+                        <span>Trang sau</span>
+                        <iconify-icon icon="mdi:chevron-right" class="text-base"></iconify-icon>
+                    </a>
+                    {% else %}
+                    <span class="inline-flex items-center gap-1.5 px-5 py-2.5 bg-indigo-300 text-white font-bold text-xs rounded-xl cursor-not-allowed">
+                        <span>Trang sau</span>
+                        <iconify-icon icon="mdi:chevron-right" class="text-base"></iconify-icon>
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- ======================================================== -->
+    <!-- MODAL TẢI LÊN FILE (>200MB CLIENT-SIDE DIRECT STAGED BATCH UPLOAD) -->
+    <!-- ======================================================== -->
+    <div id="uploadModal" onclick="closeUploadModal()" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4 hidden">
+        <div class="bg-white rounded-3xl shadow-2xl p-6 sm:p-8 w-full max-w-2xl relative border border-gray-100 animate-in fade-in zoom-in duration-200 flex flex-col max-h-[92vh]" onclick="event.stopPropagation()">
+            <!-- Close Button -->
+            <button type="button" 
+                    id="uploadModalCloseBtn" 
+                    onclick="closeUploadModal()" 
+                    class="absolute top-5 right-5 text-gray-400 hover:text-gray-700 transition-colors p-1.5 rounded-xl hover:bg-gray-100 cursor-pointer">
+                <iconify-icon icon="mdi:close" class="text-xl"></iconify-icon>
+            </button>
+
+            <!-- Modal Header -->
+            <div class="flex items-center gap-3 mb-5 flex-shrink-0">
+                <div class="w-10 h-10 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center flex-shrink-0">
+                    <iconify-icon icon="mdi:cloud-upload" class="text-2xl"></iconify-icon>
+                </div>
+                <div>
+                    <h3 class="text-lg font-extrabold text-gray-900">Tải lên Shopify Content Files</h3>
+                    <p class="text-xs text-gray-500">Hỗ trợ chọn nhiều tệp cùng lúc & tải trực tiếp dung lượng lớn (> 200MB)</p>
+                </div>
+            </div>
+
+            <!-- Modal Body Scrollable Content -->
+            <div class="overflow-y-auto flex-1 pr-1 space-y-4">
+                <!-- Drag & Drop Area -->
+                <div id="dropZone" 
+                     onclick="document.getElementById('fileInput').click()" 
+                     class="border-2 border-dashed border-gray-300 hover:border-indigo-500 bg-gray-50/60 hover:bg-indigo-50/30 rounded-2xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center group">
+                    <input type="file" id="fileInput" class="hidden" multiple onchange="handleFileSelect(this.files)">
+                    <div class="w-12 h-12 rounded-2xl bg-white shadow-xs border border-gray-200 text-indigo-600 flex items-center justify-center group-hover:scale-110 transition-transform mb-2.5">
+                        <iconify-icon icon="mdi:folder-multiple-image" class="text-2xl"></iconify-icon>
+                    </div>
+                    <p class="text-sm font-bold text-gray-800">Nhấp để chọn một hoặc nhiều tệp, hoặc kéo thả vào đây</p>
+                    <p class="text-xs text-gray-400 mt-1">Hình ảnh, Video (.mp4), CSS, PDF... Giữ Ctrl / Shift để chọn nhiều tệp</p>
+                </div>
+
+                <!-- Danh sách tệp tin chờ tải lên (File Queue) -->
+                <div id="fileQueueContainer" class="hidden">
+                    <div class="flex items-center justify-between pb-2 mb-2 border-b border-gray-100">
+                        <span id="queueSummaryText" class="text-xs font-bold text-gray-800">Đã chọn: 0 tệp (0 MB)</span>
+                        <div class="flex items-center gap-2">
+                            <button type="button" 
+                                    id="btnAddMoreFiles" 
+                                    onclick="document.getElementById('fileInput').click()" 
+                                    class="text-xs font-bold text-indigo-600 hover:text-indigo-800 hover:underline flex items-center gap-1 cursor-pointer">
+                                <iconify-icon icon="mdi:plus-circle-outline" class="text-sm"></iconify-icon>
+                                <span>Thêm tệp</span>
+                            </button>
+                            <span class="text-gray-300">•</span>
+                            <button type="button" 
+                                    id="btnClearAllFiles" 
+                                    onclick="clearSelectedFiles()" 
+                                    class="text-xs font-semibold text-rose-600 hover:text-rose-800 hover:underline cursor-pointer">
+                                Xóa tất cả
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- List cuộn các tệp tin & progress bar riêng -->
+                    <div id="selectedFilesList" class="max-h-56 overflow-y-auto space-y-2 pr-1"></div>
+                </div>
+
+                <!-- Alt Text Input (Optional) -->
+                <div>
+                    <label for="altTextInput" class="block text-xs font-bold text-gray-700 mb-1.5 flex items-center justify-between">
+                        <span>Alt Text chung (Tùy chọn cho các tệp hình ảnh):</span>
+                        <span class="text-[11px] font-normal text-gray-400">Áp dụng cho ảnh nếu nhập</span>
+                    </label>
+                    <input type="text" 
+                           id="altTextInput" 
+                           placeholder="Ví dụ: Modern living room solid wood furniture..." 
+                           class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 text-gray-900 text-xs rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+                </div>
+
+                <!-- Overall Progress Area (Tổng tiến độ toàn bộ batch) -->
+                <div id="uploadOverallProgressContainer" class="hidden p-3.5 bg-indigo-50/70 border border-indigo-100 rounded-2xl">
+                    <div class="flex items-center justify-between text-xs mb-1.5">
+                        <span id="uploadOverallStatusText" class="font-bold text-indigo-900 flex items-center gap-1.5">
+                            <iconify-icon icon="mdi:loading" class="animate-spin text-indigo-600 text-sm"></iconify-icon>
+                            <span>Đang chuẩn bị tải lên...</span>
+                        </span>
+                        <span id="uploadOverallPercentage" class="font-mono font-bold text-indigo-700">0%</span>
+                    </div>
+                    <div class="w-full h-2.5 bg-indigo-200/60 rounded-full overflow-hidden shadow-inner">
+                        <div id="uploadOverallProgressBar" class="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-full transition-all duration-200" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- Alert Box -->
+                <div id="uploadAlertBox" class="hidden p-3 rounded-xl text-xs font-medium border leading-relaxed"></div>
+            </div>
+
+            <!-- Modal Action Buttons Footer -->
+            <div class="flex items-center justify-between gap-3 mt-4 pt-4 border-t border-gray-100 flex-shrink-0">
+                <!-- Nút Hủy upload dùng Abort Controller (hiển thị khi đang upload dở các files) -->
+                <div>
+                    <button type="button" 
+                            id="btnAbortUpload" 
+                            onclick="abortBatchUpload()" 
+                            class="hidden px-4 py-2.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95" 
+                            title="Hủy ngay lập tức tiến trình tải lên của các tệp chưa hoàn tất (Abort Controller)">
+                        <iconify-icon icon="mdi:stop-circle-outline" class="text-base"></iconify-icon>
+                        <span>Hủy upload</span>
+                    </button>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button type="button" 
+                            id="btnCancelUpload" 
+                            onclick="handleCancelUpload()" 
+                            class="px-4 py-2.5 text-xs font-bold text-gray-700 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer">
+                        Đóng
+                    </button>
+                    <button type="button" 
+                            id="btnStartUpload" 
+                            onclick="startBatchUpload()" 
+                            disabled
+                            class="px-5 py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                        <iconify-icon icon="mdi:cloud-upload-outline" class="text-base"></iconify-icon>
+                        <span id="btnStartUploadText">Bắt đầu tải lên (0 tệp)</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- MODAL TÍNH NĂNG COPY LINKS (CHUẨN THEO LOGIC TRANG CHỦ) -->
+    <!-- ======================================================== -->
+    <div id="copyLinksModal" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 backdrop-blur-xs p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-lg relative border border-gray-100 animate-in fade-in zoom-in duration-200" onclick="event.stopPropagation()">
+            <!-- Nút đóng -->
+            <button type="button" 
+                    id="copyLinksCloseBtn" 
+                    onclick="closeCopyLinksModal()" 
+                    class="absolute top-4 right-4 text-gray-400 hover:text-gray-700 transition-colors p-1.5 rounded-xl hover:bg-gray-100 cursor-pointer" 
+                    title="Đóng (Esc)">
+                <iconify-icon icon="mdi:close" class="text-xl"></iconify-icon>
+            </button>
+            
+            <!-- Header Modal -->
+            <div class="flex items-center gap-3 mb-4 pr-6">
+                <div class="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0">
+                    <iconify-icon icon="mdi:content-copy" class="text-2xl"></iconify-icon>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-gray-900">Tính năng Copy</h3>
+                    <p class="text-xs text-gray-500">Sao chép hàng loạt đường dẫn liên kết CDN của file trong bảng</p>
+                </div>
+            </div>
+
+            <!-- Form inputs -->
+            <div class="flex flex-col gap-4">
+                <div class="grid grid-cols-2 gap-3.5">
+                    <div>
+                        <label for="copyStartInput" class="block text-xs font-bold text-gray-700 mb-1">STT bắt đầu:</label>
+                        <input type="number" 
+                               id="copyStartInput" 
+                               class="bg-gray-50 border border-gray-200 text-gray-900 text-xs rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none block w-full p-2.5 transition-all" 
+                               placeholder="Mặc định: 1" 
+                               value="1" 
+                               min="1">
+                    </div>
+                    <div>
+                        <label id="copyModalLabel" for="copyCountInput" class="block text-xs font-bold text-gray-700 mb-1">Số lượng link muốn copy:</label>
+                        <input type="number" 
+                               id="copyCountInput" 
+                               class="bg-gray-50 border border-gray-200 text-gray-900 text-xs rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none block w-full p-2.5 transition-all" 
+                               placeholder="Mặc định: tất cả" 
+                               min="1">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-2">Định dạng copy:</label>
+                    <div class="flex flex-col gap-2 bg-gray-50 p-3 rounded-xl border border-gray-200/70">
+                        <label class="inline-flex items-center cursor-pointer select-none">
+                            <input type="radio" name="copy_links_format" value="newline" class="form-radio h-4 w-4 text-indigo-600 focus:ring-indigo-500" checked>
+                            <span class="ml-2 text-xs text-gray-700 font-medium">Xuống dòng (mỗi đường dẫn file 1 dòng)</span>
+                        </label>
+                        <label class="inline-flex items-center cursor-pointer select-none">
+                            <input type="radio" name="copy_links_format" value="comma" class="form-radio h-4 w-4 text-indigo-600 focus:ring-indigo-500">
+                            <span class="ml-2 text-xs text-gray-700 font-medium">Dấu phẩy (cách nhau bởi dấu ,)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Preview Số lượng tìm thấy -->
+                <div class="text-[11px] text-gray-500 flex items-center justify-between px-1">
+                    <span id="copyPreviewInfo">Tổng cộng: {{ files | length }} file trong bảng hiện tại</span>
+                </div>
+
+                <!-- Nút Tiến hành Copy -->
+                <button type="button" 
+                        id="copyLinksSubmitBtn" 
+                        onclick="performCopyLinks()" 
+                        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs px-5 py-2.5 transition-all shadow-xs flex justify-center items-center gap-2 cursor-pointer active:scale-95">
+                    <iconify-icon icon="mdi:content-copy" class="text-base"></iconify-icon>
+                    <span>Tiến hành Copy</span>
+                </button>
+            </div>
+            <p class="text-[11px] text-gray-400 mt-4">Nhấn <kbd class="bg-gray-100 border border-gray-300 rounded px-1.5 py-0.5 font-mono text-gray-600 text-[10px]">Esc</kbd> để đóng hoặc <kbd class="bg-gray-100 border border-gray-300 rounded px-1.5 py-0.5 font-mono text-gray-600 text-[10px]">Alt + Q</kbd> để mở nhanh.</p>
+        </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- MODAL TỔNG DUNG LƯỢNG LƯU TRỮ (SHOPIFY BULK OPERATION) -->
+    <!-- ======================================================== -->
+    <div id="storageModal" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4 hidden">
+        <div class="bg-white rounded-3xl shadow-2xl p-6 sm:p-8 w-full max-w-xl relative border border-gray-100 animate-in fade-in zoom-in duration-200" onclick="event.stopPropagation()">
+            <!-- Close Button -->
+            <button type="button" 
+                    id="storageModalCloseBtn" 
+                    onclick="closeStorageModal()" 
+                    class="absolute top-5 right-5 text-gray-400 hover:text-gray-700 transition-colors p-1 rounded-xl hover:bg-gray-100 cursor-pointer"
+                    title="Đóng popup">
+                <iconify-icon icon="mdi:close" class="text-xl"></iconify-icon>
+            </button>
+
+            <!-- Modal Header -->
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center flex-shrink-0 shadow-xs">
+                    <iconify-icon icon="mdi:database-outline" class="text-2xl"></iconify-icon>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h3 class="text-lg font-extrabold text-gray-900">Tổng Dung Lượng Lưu Trữ</h3>
+                        <span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 border border-indigo-200">Shopify Bulk API</span>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-0.5">Thống kê toàn bộ tệp tin trên Store theo thời gian thực</p>
+                </div>
+            </div>
+
+            <!-- VIEW 1: LOADING STATE (Hiển thị ngay khi popup vừa mở) -->
+            <div id="storageLoadingView" class="py-10 flex flex-col items-center justify-center text-center">
+                <div class="relative w-16 h-16 mb-4">
+                    <div class="absolute inset-0 rounded-full border-4 border-indigo-100"></div>
+                    <div class="absolute inset-0 rounded-full border-4 border-indigo-600 border-t-transparent animate-spin"></div>
+                    <div class="absolute inset-0 flex items-center justify-center text-indigo-600">
+                        <iconify-icon icon="mdi:cloud-sync-outline" class="text-2xl animate-pulse"></iconify-icon>
+                    </div>
+                </div>
+                <h4 class="text-sm font-bold text-gray-900 mb-1.5" id="storageLoadingStatus">Đang quét toàn bộ file trên Shopify...</h4>
+                <p class="text-xs text-gray-500 max-w-sm leading-relaxed">
+                    Hệ thống đang chạy Bulk Operation để tổng hợp chính xác kích thước của tất cả hình ảnh, video và tài liệu.
+                </p>
+                <div class="mt-4 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 text-[11px] text-gray-500 border border-gray-200 font-mono">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                    <span>Shopify Bulk Operation: Querying files...</span>
+                </div>
+            </div>
+
+            <!-- VIEW 2: RESULT STATE (Hiển thị sau khi tính toán xong) -->
+            <div id="storageResultView" class="hidden space-y-5">
+                <!-- Summary Card -->
+                <div class="bg-gradient-to-br from-indigo-50/80 via-white to-purple-50/80 p-5 rounded-2xl border border-indigo-100/80 shadow-xs">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
+                            <span class="text-xs font-bold uppercase tracking-wider text-indigo-600">Tổng dung lượng đã lưu trữ</span>
+                            <div class="flex items-baseline gap-2.5 mt-1">
+                                <span id="storageTotalFormatted" class="text-3xl sm:text-4xl font-black text-gray-900 tracking-tight">0 MB</span>
+                                <span id="storageTotalFiles" class="text-xs font-bold text-gray-600 bg-white px-2.5 py-1 rounded-full border border-gray-200 shadow-2xs">0 tệp</span>
+                            </div>
+                            <p class="text-[11px] text-gray-400 font-mono mt-1" id="storageTotalBytes">0 bytes</p>
+                        </div>
+                        <div class="sm:text-right flex flex-col justify-end">
+                            <span class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Thời gian quét</span>
+                            <span id="storageCompletedAt" class="text-xs font-semibold text-gray-700 mt-0.5">--</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Breakdown by Category -->
+                <div>
+                    <h5 class="text-xs font-bold text-gray-700 uppercase tracking-wider mb-2.5 flex items-center justify-between">
+                        <span>Chi tiết theo phân loại tệp tin</span>
+                        <span class="text-[11px] font-medium text-gray-400 lowercase">phân loại</span>
+                    </h5>
+                    <div id="storageBreakdownList" class="space-y-2.5">
+                        <!-- Populated dynamically by JS -->
+                    </div>
+                </div>
+
+                <!-- Policy Tip -->
+                <div class="flex items-start gap-2.5 p-3 rounded-xl bg-emerald-50/80 border border-emerald-200/80 text-emerald-800 text-xs">
+                    <iconify-icon icon="mdi:shield-check-outline" class="text-emerald-600 text-base flex-shrink-0 mt-0.5"></iconify-icon>
+                    <p class="leading-relaxed">
+                        <strong class="font-bold">Chính sách Shopify:</strong> Store của bạn được cấp <span class="font-bold underline decoration-emerald-400">dung lượng lưu trữ không giới hạn (Unlimited Storage)</span>, không bị giới hạn tổng dung lượng tài khoản.
+                    </p>
+                </div>
+            </div>
+
+            <!-- VIEW 3: ERROR STATE -->
+            <div id="storageErrorView" class="hidden py-8 text-center">
+                <div class="w-14 h-14 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-3">
+                    <iconify-icon icon="mdi:alert-circle-outline" class="text-3xl"></iconify-icon>
+                </div>
+                <h4 class="text-sm font-bold text-gray-900 mb-1">Không thể tính toán dung lượng</h4>
+                <p id="storageErrorMessage" class="text-xs text-rose-600 max-w-sm mx-auto mb-4 leading-relaxed"></p>
+                <button type="button" 
+                        onclick="refreshStorageCalculation()" 
+                        class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors shadow-xs">
+                    <iconify-icon icon="mdi:refresh" class="text-base"></iconify-icon>
+                    <span>Thử quét lại</span>
+                </button>
+            </div>
+
+            <!-- Modal Actions Footer -->
+            <div class="flex items-center justify-between gap-3 mt-6 pt-4 border-t border-gray-100">
+                <div class="flex items-center gap-1 text-[11px] text-gray-400">
+                    <iconify-icon icon="mdi:lightning-bolt" class="text-amber-500"></iconify-icon>
+                    <span>Shopify Bulk API v2024-04</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button" 
+                            id="btnStorageRefresh" 
+                            onclick="refreshStorageCalculation()" 
+                            class="px-4 py-2 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-xl transition-colors cursor-pointer inline-flex items-center gap-1.5">
+                        <iconify-icon icon="mdi:refresh" class="text-sm"></iconify-icon>
+                        <span>Quét lại</span>
+                    </button>
+                    <button type="button" 
+                            id="btnStorageClose" 
+                            onclick="closeStorageModal()" 
+                            class="px-4 py-2 text-xs font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors cursor-pointer">
+                        Đóng
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- MODAL CHỈNH SỬA TỆP TIN & XÓA FILE (EDIT FILE MODAL) -->
+    <!-- ======================================================== -->
+    <div id="editFileModal" onclick="closeEditFileModal()" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-xs p-4 hidden">
+        <div class="bg-white rounded-3xl shadow-2xl p-6 sm:p-7 w-full max-w-lg relative border border-gray-100 animate-in fade-in zoom-in duration-200" onclick="event.stopPropagation()">
+            <!-- Close Button -->
+            <button type="button" 
+                    id="editFileModalCloseBtn" 
+                    onclick="closeEditFileModal()" 
+                    class="absolute top-5 right-5 text-gray-400 hover:text-gray-700 transition-colors p-1.5 rounded-xl hover:bg-gray-100 cursor-pointer"
+                    title="Đóng popup (Esc)">
+                <iconify-icon icon="mdi:close" class="text-xl"></iconify-icon>
+            </button>
+
+            <!-- Header Modal -->
+            <div class="flex items-center gap-3 mb-5 pr-6">
+                <div class="w-11 h-11 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center flex-shrink-0 shadow-xs">
+                    <iconify-icon icon="mdi:file-document-edit-outline" class="text-2xl"></iconify-icon>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-gray-900">Chỉnh sửa tệp tin</h3>
+                    <p class="text-xs text-gray-500">Cập nhật tên tệp, alt text hoặc xóa file trên Shopify</p>
+                </div>
+            </div>
+
+            <!-- Preview Card -->
+            <div class="mb-4 p-3 bg-gray-50 rounded-2xl border border-gray-200/70 flex items-center gap-3">
+                <div id="editFileThumbWrapper" class="w-14 h-14 rounded-xl bg-white border border-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0 shadow-2xs">
+                    <!-- Dynamic preview: img or icon -->
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2">
+                        <span id="editFileCategoryBadge" class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-700 uppercase">IMAGE</span>
+                        <span id="editFileSizeBadge" class="text-[11px] font-mono text-gray-500">2.5 MB</span>
+                    </div>
+                    <div class="text-[11px] text-gray-400 font-mono mt-0.5 truncate" id="editFileIdText">ID: ...</div>
+                    <a id="editFileOpenLink" href="#" target="_blank" rel="noopener noreferrer" class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 hover:underline inline-flex items-center gap-1 mt-1">
+                        <span>Mở file gốc trong tab mới</span>
+                        <iconify-icon icon="mdi:open-in-new" class="text-xs"></iconify-icon>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Form Inputs -->
+            <form id="editFileForm" onsubmit="handleSaveEditFile(event)" class="space-y-4">
+                <input type="hidden" id="editFileFullId" value="">
+                <input type="hidden" id="editFileNumericId" value="">
+
+                <!-- 1. File Name Input -->
+                <div>
+                    <label for="editFileNameInput" class="block text-xs font-bold text-gray-700 mb-1.5 flex items-center justify-between">
+                        <span>Tên tệp tin (File name):</span>
+                        <span class="text-[11px] text-gray-400 font-normal">Bao gồm phần mở rộng (ví dụ .png, .mp4)</span>
+                    </label>
+                    <input type="text" 
+                           id="editFileNameInput" 
+                           required
+                           class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 text-gray-900 text-xs rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-mono" 
+                           placeholder="Nhập tên tệp tin...">
+                </div>
+
+                <!-- 2. Alt Text Input -->
+                <div>
+                    <label for="editFileAltInput" class="block text-xs font-bold text-gray-700 mb-1.5 flex items-center justify-between">
+                        <span>Alt Text (Mô tả văn bản thay thế):</span>
+                        <span class="text-[11px] text-gray-400 font-normal">Hỗ trợ SEO hình ảnh</span>
+                    </label>
+                    <textarea id="editFileAltInput" 
+                              rows="3" 
+                              class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 text-gray-900 text-xs rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all leading-relaxed" 
+                              placeholder="Nhập nội dung alt text cho tệp tin (nếu có)..."></textarea>
+                </div>
+
+                <!-- Alert Box trong Modal Edit -->
+                <div id="editFileAlertBox" class="hidden p-3 rounded-xl text-xs font-medium border leading-relaxed"></div>
+
+                <!-- Footer Action Buttons -->
+                <div class="flex items-center justify-between gap-3 pt-3 border-t border-gray-100">
+                    <!-- Nút Xóa File -->
+                    <button type="button" 
+                            id="btnDeleteFile" 
+                            onclick="handleDeleteFileClick()" 
+                            class="px-3.5 py-2 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 hover:text-rose-700 border border-rose-200 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 shadow-2xs" 
+                            title="Xóa vĩnh viễn tệp này khỏi Shopify">
+                        <iconify-icon icon="mdi:trash-can-outline" class="text-base"></iconify-icon>
+                        <span id="btnDeleteFileText">Xóa file</span>
+                    </button>
+
+                    <!-- Cụm Hủy / Lưu -->
+                    <div class="flex items-center gap-2">
+                        <button type="button" 
+                                onclick="closeEditFileModal()" 
+                                class="px-4 py-2 text-xs font-bold text-gray-600 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer">
+                            Hủy
+                        </button>
+                        <button type="submit" 
+                                id="btnSaveEditFile" 
+                                class="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <iconify-icon icon="mdi:content-save-outline" class="text-base"></iconify-icon>
+                            <span id="btnSaveEditFileText">Lưu thay đổi</span>
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- LIGHTBOX MODAL (Xem ảnh kích thước lớn) -->
+    <!-- ======================================================== -->
+    <div id="lightbox" class="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/90 backdrop-blur-sm p-4" onclick="closeLightbox()">
+        <button id="lightbox-close" class="absolute top-4 right-4 sm:top-8 sm:right-8 text-white/70 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors focus:outline-none cursor-pointer" onclick="closeLightbox()">
+            <iconify-icon icon="mdi:close" class="text-3xl"></iconify-icon>
+        </button>
+        <img id="lightbox-img" src="" alt="Popup Image" class="max-w-full max-h-[90vh] rounded-2xl shadow-2xl object-contain" onclick="event.stopPropagation()">
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- OVERLAY LOADING SPINNER INDICATOR TRONG QUÁ TRÌNH QUERY -->
+    <!-- ======================================================== -->
+    <div id="queryLoadingOverlay" class="fixed inset-0 z-[120] flex items-center justify-center bg-gray-900/40 backdrop-blur-xs hidden transition-opacity duration-200">
+        <div class="bg-white rounded-3xl shadow-2xl p-6 sm:p-8 flex flex-col items-center justify-center gap-3 border border-gray-100 max-w-xs text-center animate-in zoom-in-95 duration-150">
+            <div class="relative w-14 h-14">
+                <div class="absolute inset-0 rounded-full border-4 border-indigo-100"></div>
+                <div class="absolute inset-0 rounded-full border-4 border-indigo-600 border-t-transparent animate-spin"></div>
+                <div class="absolute inset-0 flex items-center justify-center text-indigo-600">
+                    <iconify-icon icon="mdi:filter-cog-outline" class="text-2xl animate-pulse"></iconify-icon>
+                </div>
+            </div>
+            <div>
+                <p class="text-sm font-extrabold text-gray-900">Đang lọc danh sách files...</p>
+                <p class="text-xs text-gray-500 mt-1">Hệ thống đang truy vấn dữ liệu từ Shopify</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- NÚT CUỘN TRANG (SCROLL TO TOP & SCROLL TO BOTTOM - INSTANT) -->
+    <!-- ======================================================== -->
+    <div class="fixed bottom-6 right-6 z-40 flex flex-col gap-2">
+        <button type="button" 
+                id="btnScrollToTop" 
+                onclick="scrollToTopInstant()" 
+                class="w-10 h-10 rounded-xl bg-white hover:bg-gray-100 text-gray-700 hover:text-indigo-600 border border-gray-200 shadow-md flex items-center justify-center transition-all cursor-pointer active:scale-90" 
+                title="Cuộn lên đầu trang (Ngay lập tức)">
+            <iconify-icon icon="mdi:arrow-up" class="text-xl"></iconify-icon>
+        </button>
+        <button type="button" 
+                id="btnScrollToBottom" 
+                onclick="scrollToBottomInstant()" 
+                class="w-10 h-10 rounded-xl bg-white hover:bg-gray-100 text-gray-700 hover:text-indigo-600 border border-gray-200 shadow-md flex items-center justify-center transition-all cursor-pointer active:scale-90" 
+                title="Cuộn xuống cuối trang (Ngay lập tức)">
+            <iconify-icon icon="mdi:arrow-down" class="text-xl"></iconify-icon>
+        </button>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- TOAST THÔNG BÁO COPY LINK -->
+    <!-- ======================================================== -->
+    <div id="toastNotification" class="fixed bottom-28 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+        <div class="bg-gray-900 text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2.5 text-xs font-semibold border border-gray-800">
+            <iconify-icon icon="mdi:check-circle" class="text-emerald-400 text-base"></iconify-icon>
+            <span id="toastMessage">Đã copy link file vào clipboard!</span>
+        </div>
+    </div>
+
+    <!-- JavaScript Functions -->
+    <script>
+        // Cuộn trang ngay lập tức (behavior: 'instant')
+        function scrollToTopInstant() {
+            window.scrollTo({ top: 0, behavior: 'instant' });
+        }
+
+        function scrollToBottomInstant() {
+            window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' });
+        }
+
+        // Overlay Loading Spinner khi Query hoặc Chuyển trang
+        function showQueryLoading() {
+            const overlay = document.getElementById('queryLoadingOverlay');
+            if (overlay) overlay.classList.remove('hidden');
+        }
+
+        // Chuyển đổi giữa Store Mặc định và Store Riêng (qua Proxy)
+        function handleStoreSwitch(isChecked) {
+            showQueryLoading();
+            const url = new URL(window.location.href);
+            url.searchParams.set('store_type', isChecked ? 'custom' : 'default');
+            url.searchParams.delete('after');
+            url.searchParams.delete('before');
+            window.location.href = url.toString();
+        }
+
+        document.getElementById('files-search-form')?.addEventListener('submit', function(e) {
+            showQueryLoading();
+            // Tối ưu Query String: loại bỏ các input rỗng để URL query string luôn sạch sẽ và chính xác
+            const form = e.target;
+            const inputs = form.querySelectorAll('input, select');
+            inputs.forEach(input => {
+                if (!input.value || input.value.trim() === '' || (input.name === 'file_type' && input.value === 'all')) {
+                    input.disabled = true;
+                }
+            });
+        });
+
+        document.querySelectorAll('.pagination-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                showQueryLoading();
+            });
+        });
+
+        // Lightbox Popup
+        const lightbox = document.getElementById('lightbox');
+        const lightboxImg = document.getElementById('lightbox-img');
+
+        function openLightbox(url) {
+            if (!url) return;
+            lightboxImg.src = url;
+            lightbox.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeLightbox() {
+            lightbox.classList.remove('active');
+            setTimeout(() => { lightboxImg.src = ''; }, 300);
+            document.body.style.overflow = '';
+        }
+
+        // Toast Feedback
+        function showToast(message) {
+            const toast = document.getElementById('toastNotification');
+            const msgEl = document.getElementById('toastMessage');
+            if (msgEl && message) msgEl.textContent = message;
+            if (toast) {
+                toast.classList.remove('translate-y-20', 'opacity-0');
+                setTimeout(() => {
+                    toast.classList.add('translate-y-20', 'opacity-0');
+                }, 2000);
+            }
+        }
+
+        // 1-Click Copy File CDN Link
+        function copyFileUrl(buttonEl, explicitUrl) {
+            const tr = buttonEl ? buttonEl.closest('tr') : null;
+            const url = explicitUrl || (buttonEl && buttonEl.dataset && buttonEl.dataset.url) || (tr ? tr.getAttribute('data-file-url') : '');
+            if (!url) {
+                alert('Không tìm thấy đường dẫn liên kết của tệp tin.');
+                return;
+            }
+            navigator.clipboard.writeText(url).then(() => {
+                const label = buttonEl.querySelector('.copy-label');
+                const origText = label ? label.textContent : 'Copy link';
+                if (label) label.textContent = 'Đã copy!';
+                buttonEl.classList.replace('text-indigo-700', 'text-emerald-700');
+                buttonEl.classList.replace('bg-indigo-50', 'bg-emerald-50');
+                buttonEl.classList.replace('border-indigo-200', 'border-emerald-300');
+
+                showToast('Đã copy link CDN vào clipboard!');
+
+                setTimeout(() => {
+                    if (label) label.textContent = origText;
+                    buttonEl.classList.replace('text-emerald-700', 'text-indigo-700');
+                    buttonEl.classList.replace('bg-emerald-50', 'bg-indigo-50');
+                    buttonEl.classList.replace('border-emerald-300', 'border-indigo-200');
+                }, 1500);
+            }).catch(err => {
+                alert('Không thể copy: ' + err);
+            });
+        }
+
+        // ==========================================
+        // CLIENT-SIDE DIRECT STAGED BATCH UPLOAD (> 200MB)
+        // ==========================================
+        let selectedFilesQueue = [];
+        let currentUploadXhr = null;
+        let isUploadingBatch = false;
+        let shouldCancelBatch = false;
+        let batchUploadAbortController = null;
+
+        function openUploadModal() {
+            const modal = document.getElementById('uploadModal');
+            clearSelectedFiles();
+            if (modal) {
+                modal.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+            }
+        }
+
+        function closeUploadModal() {
+            if (isUploadingBatch) {
+                if (!confirm('Đang có tệp tin đang được tải lên. Bạn có chắc muốn dừng lại không?')) {
+                    return;
+                }
+                abortBatchUploadDirect();
+            }
+            const modal = document.getElementById('uploadModal');
+            if (modal) {
+                modal.classList.add('hidden');
+                document.body.style.overflow = '';
+            }
+        }
+
+        function handleCancelUpload() {
+            closeUploadModal();
+        }
+
+        function abortBatchUpload() {
+            if (!isUploadingBatch) return;
+            if (confirm('Bạn có chắc muốn hủy upload các tệp tin chưa hoàn tất không?')) {
+                abortBatchUploadDirect();
+            }
+        }
+
+        function abortBatchUploadDirect() {
+            shouldCancelBatch = true;
+            if (batchUploadAbortController) {
+                try {
+                    batchUploadAbortController.abort(); // Sử dụng chuẩn Web API AbortController
+                } catch(e) {}
+            }
+            if (currentUploadXhr) {
+                try {
+                    currentUploadXhr.abort();
+                } catch(e) {}
+                currentUploadXhr = null;
+            }
+        }
+
+        function formatBytes(bytes) {
+            if (!bytes || bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function getFileIcon(type, name) {
+            const lowerName = (name || '').toLowerCase();
+            if ((type && type.startsWith('image/')) || /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)$/.test(lowerName)) {
+                return 'mdi:file-image-outline';
+            }
+            if ((type && type.startsWith('video/')) || /\.(mp4|mov|avi|webm|mkv)$/.test(lowerName)) {
+                return 'mdi:file-video-outline';
+            }
+            if ((type && type.startsWith('audio/')) || /\.(mp3|wav|ogg|m4a)$/.test(lowerName)) {
+                return 'mdi:file-music-outline';
+            }
+            if (/\.(pdf)$/.test(lowerName)) {
+                return 'mdi:file-pdf-box';
+            }
+            if (/\.(css|js|json|html)$/.test(lowerName)) {
+                return 'mdi:file-code-outline';
+            }
+            return 'mdi:file-outline';
+        }
+
+        function handleFileSelect(files) {
+            if (!files || files.length === 0) return;
+            const alertBox = document.getElementById('uploadAlertBox');
+            if (alertBox) alertBox.classList.add('hidden');
+
+            for (let i = 0; i < files.length; i++) {
+                const f = files[i];
+                // Kiểm tra trùng lặp
+                const exists = selectedFilesQueue.some(item => item.name === f.name && item.size === f.size);
+                if (!exists) {
+                    selectedFilesQueue.push({
+                        id: 'f_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+                        file: f,
+                        name: f.name,
+                        size: f.size,
+                        type: f.type || 'application/octet-stream',
+                        status: 'pending', // pending, uploading, registering, success, error
+                        progress: 0,
+                        speedText: '',
+                        transferredText: '0 / ' + formatBytes(f.size),
+                        errorMsg: ''
+                    });
+                }
+            }
+
+            const fileInput = document.getElementById('fileInput');
+            if (fileInput) fileInput.value = '';
+
+            renderSelectedFilesQueue();
+        }
+
+        function removeSelectedFile(id) {
+            if (isUploadingBatch) return;
+            selectedFilesQueue = selectedFilesQueue.filter(item => item.id !== id);
+            renderSelectedFilesQueue();
+        }
+
+        function clearSelectedFiles() {
+            if (isUploadingBatch) return;
+            selectedFilesQueue = [];
+            const fileInput = document.getElementById('fileInput');
+            if (fileInput) fileInput.value = '';
+            const altInput = document.getElementById('altTextInput');
+            if (altInput) altInput.value = '';
+
+            const queueContainer = document.getElementById('fileQueueContainer');
+            if (queueContainer) queueContainer.classList.add('hidden');
+
+            const overallContainer = document.getElementById('uploadOverallProgressContainer');
+            if (overallContainer) overallContainer.classList.add('hidden');
+
+            const alertBox = document.getElementById('uploadAlertBox');
+            if (alertBox) alertBox.classList.add('hidden');
+
+            const startBtn = document.getElementById('btnStartUpload');
+            if (startBtn) {
+                startBtn.disabled = true;
+                const startBtnText = document.getElementById('btnStartUploadText');
+                if (startBtnText) startBtnText.textContent = 'Bắt đầu tải lên (0 tệp)';
+            }
+        }
+
+        function getStatusBadgeClass(status) {
+            switch(status) {
+                case 'uploading':
+                    return 'bg-blue-100 text-blue-800';
+                case 'registering':
+                    return 'bg-purple-100 text-purple-800';
+                case 'success':
+                    return 'bg-emerald-100 text-emerald-800';
+                case 'error':
+                    return 'bg-rose-100 text-rose-800';
+                default:
+                    return 'bg-gray-100 text-gray-600';
+            }
+        }
+
+        function getStatusBadgeText(status) {
+            switch(status) {
+                case 'uploading':
+                    return 'Đang tải lên...';
+                case 'registering':
+                    return 'Đang đăng ký Shopify...';
+                case 'success':
+                    return '✅ Hoàn tất';
+                case 'error':
+                    return '❌ Lỗi';
+                default:
+                    return 'Chờ tải';
+            }
+        }
+
+        function renderSelectedFilesQueue() {
+            const queueContainer = document.getElementById('fileQueueContainer');
+            const listEl = document.getElementById('selectedFilesList');
+            const startBtn = document.getElementById('btnStartUpload');
+            const startBtnText = document.getElementById('btnStartUploadText');
+            const summaryText = document.getElementById('queueSummaryText');
+
+            if (!queueContainer || !listEl) return;
+
+            if (selectedFilesQueue.length === 0) {
+                queueContainer.classList.add('hidden');
+                if (startBtn) {
+                    startBtn.disabled = true;
+                    if (startBtnText) startBtnText.textContent = 'Bắt đầu tải lên (0 tệp)';
+                }
+                return;
+            }
+
+            queueContainer.classList.remove('hidden');
+
+            const totalBytes = selectedFilesQueue.reduce((acc, cur) => acc + cur.size, 0);
+            if (summaryText) {
+                summaryText.textContent = `Đã chọn: ${selectedFilesQueue.length} tệp (${formatBytes(totalBytes)})`;
+            }
+
+            if (startBtn && !isUploadingBatch) {
+                startBtn.disabled = false;
+                if (startBtnText) {
+                    startBtnText.textContent = `Bắt đầu tải lên (${selectedFilesQueue.length} tệp)`;
+                }
+            }
+
+            listEl.innerHTML = '';
+            selectedFilesQueue.forEach((item, idx) => {
+                const icon = getFileIcon(item.type, item.name);
+                const itemDiv = document.createElement('div');
+                itemDiv.id = `fileItem_${item.id}`;
+                itemDiv.className = `p-3 bg-gray-50 border border-gray-200 rounded-2xl flex flex-col gap-2 transition-all`;
+
+                itemDiv.innerHTML = `
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-2.5 overflow-hidden">
+                            <div class="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center flex-shrink-0 text-base">
+                                <iconify-icon icon="${icon}"></iconify-icon>
+                            </div>
+                            <div class="overflow-hidden">
+                                <p class="text-xs font-bold text-gray-900 truncate" title="${item.name}">${idx + 1}. ${item.name}</p>
+                                <p class="text-[11px] text-gray-500 font-mono">${formatBytes(item.size)}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 flex-shrink-0">
+                            <span id="fileBadge_${item.id}" class="text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${getStatusBadgeClass(item.status)}">
+                                ${getStatusBadgeText(item.status)}
+                            </span>
+                            ${!isUploadingBatch && item.status !== 'success' ? `
+                                <button type="button" onclick="removeSelectedFile('${item.id}')" class="text-gray-400 hover:text-rose-600 p-1 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer" title="Xóa tệp này">
+                                    <iconify-icon icon="mdi:close" class="text-base"></iconify-icon>
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                    <!-- Thanh Progress Bar của từng file -->
+                    <div class="w-full">
+                        <div class="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                            <div id="fileProgBar_${item.id}" class="h-full bg-indigo-600 rounded-full transition-all duration-150" style="width: ${item.progress}%"></div>
+                        </div>
+                        <div class="flex items-center justify-between text-[10px] text-gray-400 mt-0.5 font-mono">
+                            <span id="fileDetail_${item.id}">${item.transferredText} ${item.speedText ? '• ' + item.speedText : ''}</span>
+                            <span id="filePercent_${item.id}">${item.progress}%</span>
+                        </div>
+                    </div>
+                `;
+                listEl.appendChild(itemDiv);
+            });
+        }
+
+        function updateItemUI(id, status, badgeText, progress, detailText, speed) {
+            const badge = document.getElementById(`fileBadge_${id}`);
+            const progBar = document.getElementById(`fileProgBar_${id}`);
+            const percent = document.getElementById(`filePercent_${id}`);
+            const detail = document.getElementById(`fileDetail_${id}`);
+            const itemCard = document.getElementById(`fileItem_${id}`);
+
+            if (badge) {
+                badge.className = `text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${getStatusBadgeClass(status)}`;
+                badge.textContent = badgeText;
+            }
+            if (progBar) {
+                progBar.style.width = `${progress}%`;
+                if (status === 'error') {
+                    progBar.className = 'h-full bg-rose-500 rounded-full transition-all duration-150';
+                } else if (status === 'success') {
+                    progBar.className = 'h-full bg-emerald-500 rounded-full transition-all duration-150';
+                } else {
+                    progBar.className = 'h-full bg-indigo-600 rounded-full transition-all duration-150';
+                }
+            }
+            if (percent) {
+                percent.textContent = `${progress}%`;
+            }
+            if (detail) {
+                detail.textContent = `${detailText} ${speed ? '• ' + speed : ''}`;
+            }
+            if (itemCard) {
+                if (status === 'uploading') {
+                    itemCard.className = 'p-3 bg-indigo-50/50 border border-indigo-300 rounded-2xl flex flex-col gap-2 transition-all shadow-xs';
+                } else if (status === 'success') {
+                    itemCard.className = 'p-3 bg-emerald-50/40 border border-emerald-200 rounded-2xl flex flex-col gap-2 transition-all';
+                } else if (status === 'error') {
+                    itemCard.className = 'p-3 bg-rose-50/40 border border-rose-200 rounded-2xl flex flex-col gap-2 transition-all';
+                }
+            }
+        }
+
+        // Drag & Drop event handlers
+        const dropZone = document.getElementById('dropZone');
+        if (dropZone) {
+            ['dragenter', 'dragover'].forEach(name => {
+                dropZone.addEventListener(name, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dropZone.classList.add('border-indigo-600', 'bg-indigo-50/50');
+                });
+            });
+            ['dragleave', 'drop'].forEach(name => {
+                dropZone.addEventListener(name, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dropZone.classList.remove('border-indigo-600', 'bg-indigo-50/50');
+                });
+            });
+            dropZone.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                if (dt && dt.files && dt.files.length > 0) {
+                    handleFileSelect(dt.files);
+                }
+            });
+        }
+
+        async function startBatchUpload() {
+            if (isUploadingBatch) return;
+            if (selectedFilesQueue.length === 0) {
+                alert('Vui lòng chọn ít nhất một tệp tin trước khi tải lên.');
+                return;
+            }
+
+            const alertBox = document.getElementById('uploadAlertBox');
+            if (alertBox) alertBox.classList.add('hidden');
+
+            isUploadingBatch = true;
+            shouldCancelBatch = false;
+
+            // Khởi tạo AbortController cho đợt upload này
+            batchUploadAbortController = new AbortController();
+            const signal = batchUploadAbortController.signal;
+
+            const startBtn = document.getElementById('btnStartUpload');
+            const startBtnText = document.getElementById('btnStartUploadText');
+            const abortBtn = document.getElementById('btnAbortUpload');
+            const overallContainer = document.getElementById('uploadOverallProgressContainer');
+            const overallStatusText = document.getElementById('uploadOverallStatusText');
+            const overallPercentage = document.getElementById('uploadOverallPercentage');
+            const overallProgressBar = document.getElementById('uploadOverallProgressBar');
+            const addMoreBtn = document.getElementById('btnAddMoreFiles');
+            const clearAllBtn = document.getElementById('btnClearAllFiles');
+
+            if (startBtn) startBtn.disabled = true;
+            if (startBtnText) startBtnText.textContent = 'Đang tải lên...';
+            if (abortBtn) {
+                abortBtn.classList.remove('hidden');
+                abortBtn.classList.add('inline-flex');
+            }
+            if (addMoreBtn) addMoreBtn.classList.add('pointer-events-none', 'opacity-50');
+            if (clearAllBtn) clearAllBtn.classList.add('pointer-events-none', 'opacity-50');
+            if (overallContainer) overallContainer.classList.remove('hidden');
+
+            const altText = document.getElementById('altTextInput') ? document.getElementById('altTextInput').value.trim() : '';
+            const currentStoreType = new URLSearchParams(window.location.search).get('store_type') || '{{ store_type or "default" }}';
+
+            let successCount = 0;
+            let errorCount = 0;
+            let canceledCount = 0;
+            const totalCount = selectedFilesQueue.length;
+
+            for (let i = 0; i < totalCount; i++) {
+                if (shouldCancelBatch || signal.aborted) {
+                    canceledCount++;
+                    const itemRemaining = selectedFilesQueue[i];
+                    if (itemRemaining.status !== 'success') {
+                        itemRemaining.status = 'error';
+                        itemRemaining.errorMsg = 'Đã hủy tải lên';
+                        updateItemUI(itemRemaining.id, 'error', '❌ Đã hủy', itemRemaining.progress || 0, 'Đã hủy', '');
+                    }
+                    continue;
+                }
+
+                const item = selectedFilesQueue[i];
+                if (item.status === 'success') {
+                    successCount++;
+                    continue;
+                }
+
+                const overallPct = Math.round((i / totalCount) * 100);
+                if (overallPercentage) overallPercentage.textContent = overallPct + '%';
+                if (overallProgressBar) overallProgressBar.style.width = overallPct + '%';
+                if (overallStatusText) {
+                    overallStatusText.innerHTML = `
+                        <iconify-icon icon="mdi:loading" class="animate-spin text-indigo-600 text-sm"></iconify-icon>
+                        <span>Đang tải lên ${i + 1}/${totalCount}: <strong class="font-semibold">${item.name}</strong></span>
+                    `;
+                }
+
+                updateItemUI(item.id, 'uploading', 'Đang xin target...', 5, '0 / ' + formatBytes(item.size), '');
+
+                try {
+                    // Bước 1: Xin Staged Target từ Backend (có gắn signal của AbortController)
+                    const stagedRes = await fetch('/api/files/staged-upload', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            filename: item.name,
+                            fileSize: String(item.size),
+                            mimeType: item.type,
+                            store_type: currentStoreType
+                        }),
+                        signal: signal
+                    });
+
+                    const stagedData = await stagedRes.json();
+                    if (!stagedRes.ok || !stagedData.success) {
+                        throw new Error(stagedData.message || 'Lỗi xin staged target');
+                    }
+
+                    if (shouldCancelBatch || signal.aborted) throw new DOMException('Upload aborted', 'AbortError');
+
+                    // Bước 2: Upload trực tiếp lên Cloud Storage (GCS/S3)
+                    updateItemUI(item.id, 'uploading', 'Đang tải lên...', 10, '0 / ' + formatBytes(item.size), '');
+
+                    const formData = new FormData();
+                    if (stagedData.parameters && Array.isArray(stagedData.parameters)) {
+                        stagedData.parameters.forEach(p => {
+                            formData.append(p.name, p.value);
+                        });
+                    }
+                    formData.append('file', item.file);
+
+                    await new Promise((resolve, reject) => {
+                        if (signal.aborted) {
+                            return reject(new DOMException('Upload aborted by user', 'AbortError'));
+                        }
+
+                        currentUploadXhr = new XMLHttpRequest();
+                        const startTime = Date.now();
+
+                        const onSignalAbort = () => {
+                            if (currentUploadXhr) {
+                                try { currentUploadXhr.abort(); } catch(e) {}
+                            }
+                            reject(new DOMException('Upload aborted by AbortController', 'AbortError'));
+                        };
+                        signal.addEventListener('abort', onSignalAbort, { once: true });
+
+                        currentUploadXhr.upload.onprogress = function(event) {
+                            if (event.lengthComputable) {
+                                const percent = Math.round((event.loaded / event.total) * 100);
+                                const transferred = `${formatBytes(event.loaded)} / ${formatBytes(event.total)}`;
+                                let speed = '';
+                                const elapsedSeconds = (Date.now() - startTime) / 1000;
+                                if (elapsedSeconds > 0) {
+                                    const bytesPerSec = event.loaded / elapsedSeconds;
+                                    speed = `${formatBytes(bytesPerSec)}/s`;
+                                }
+                                updateItemUI(item.id, 'uploading', `Đang tải (${percent}%)`, percent, transferred, speed);
+                            }
+                        };
+
+                        currentUploadXhr.onload = function() {
+                            signal.removeEventListener('abort', onSignalAbort);
+                            if (currentUploadXhr.status >= 200 && currentUploadXhr.status < 300) {
+                                resolve(currentUploadXhr.response);
+                            } else {
+                                reject(new Error(`Storage HTTP ${currentUploadXhr.status}`));
+                            }
+                        };
+
+                        currentUploadXhr.onerror = function() {
+                            signal.removeEventListener('abort', onSignalAbort);
+                            reject(new Error('Lỗi kết nối mạng khi tải lên'));
+                        };
+
+                        currentUploadXhr.onabort = function() {
+                            signal.removeEventListener('abort', onSignalAbort);
+                            reject(new DOMException('Đã hủy tải lên', 'AbortError'));
+                        };
+
+                        currentUploadXhr.open('POST', stagedData.url, true);
+                        currentUploadXhr.send(formData);
+                    });
+
+                    currentUploadXhr = null;
+
+                    if (shouldCancelBatch || signal.aborted) throw new DOMException('Upload aborted', 'AbortError');
+
+                    // Bước 3: Đăng ký file vào Shopify (có gắn signal của AbortController)
+                    updateItemUI(item.id, 'registering', 'Đang đăng ký Shopify...', 100, formatBytes(item.size), '');
+
+                    const createRes = await fetch('/api/files/create', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            resourceUrl: stagedData.resourceUrl,
+                            alt: altText,
+                            filename: item.name,
+                            mimeType: item.type,
+                            store_type: currentStoreType
+                        }),
+                        signal: signal
+                    });
+
+                    const createData = await createRes.json();
+                    if (!createRes.ok || !createData.success) {
+                        throw new Error(createData.message || 'Lỗi đăng ký Shopify');
+                    }
+
+                    item.status = 'success';
+                    item.progress = 100;
+                    successCount++;
+                    updateItemUI(item.id, 'success', '✅ Hoàn tất', 100, formatBytes(item.size), 'Hoàn tất');
+
+                } catch (err) {
+                    currentUploadXhr = null;
+                    if (signal.aborted || shouldCancelBatch || err.name === 'AbortError') {
+                        item.status = 'error';
+                        item.errorMsg = 'Đã hủy tải lên';
+                        canceledCount++;
+                        updateItemUI(item.id, 'error', '❌ Đã hủy', item.progress || 0, 'Đã hủy', '');
+                    } else {
+                        item.status = 'error';
+                        item.errorMsg = err.message;
+                        errorCount++;
+                        updateItemUI(item.id, 'error', `❌ ${err.message || 'Thất bại'}`, item.progress || 0, formatBytes(item.size), 'Lỗi');
+                    }
+                }
+            }
+
+            isUploadingBatch = false;
+            currentUploadXhr = null;
+
+            if (abortBtn) {
+                abortBtn.classList.add('hidden');
+                abortBtn.classList.remove('inline-flex');
+            }
+
+            if (shouldCancelBatch || (signal && signal.aborted)) {
+                if (overallStatusText) {
+                    overallStatusText.innerHTML = `
+                        <iconify-icon icon="mdi:close-octagon-outline" class="text-rose-600 text-sm"></iconify-icon>
+                        <span class="text-rose-700">Đã dừng tải: ${successCount} thành công, ${canceledCount} đã hủy</span>
+                    `;
+                }
+                if (alertBox) {
+                    alertBox.classList.remove('hidden');
+                    alertBox.className = 'mt-4 p-3 rounded-xl text-xs font-medium border leading-relaxed bg-amber-50 text-amber-800 border-amber-200 block';
+                    alertBox.textContent = `Đã hủy upload các file chưa hoàn tất bằng Abort Controller! (Thành công: ${successCount}, Đã hủy: ${canceledCount})`;
+                }
+            } else {
+                if (overallPercentage) overallPercentage.textContent = '100%';
+                if (overallProgressBar) overallProgressBar.style.width = '100%';
+                if (overallStatusText) {
+                    overallStatusText.innerHTML = `
+                        <iconify-icon icon="mdi:check-all" class="text-emerald-600 text-sm"></iconify-icon>
+                        <span>Hoàn tất xử lý: Thành công ${successCount}/${totalCount} tệp</span>
+                    `;
+                }
+
+                if (alertBox) {
+                    alertBox.classList.remove('hidden');
+                    if (errorCount === 0) {
+                        alertBox.className = 'mt-4 p-3 rounded-xl text-xs font-medium border leading-relaxed bg-emerald-50 text-emerald-800 border-emerald-200 block';
+                        alertBox.textContent = `Tải lên thành công toàn bộ ${successCount} tệp tin vào Shopify Content Files! Đang cập nhật trang...`;
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1500);
+                    } else {
+                        alertBox.className = 'mt-4 p-3 rounded-xl text-xs font-medium border leading-relaxed bg-amber-50 text-amber-800 border-amber-200 block';
+                        alertBox.textContent = `Đã tải lên ${successCount}/${totalCount} tệp tin thành công. Có ${errorCount} tệp gặp lỗi (bạn có thể bấm Thử lại tệp lỗi).`;
+                    }
+                }
+            }
+
+            if (addMoreBtn) addMoreBtn.classList.remove('pointer-events-none', 'opacity-50');
+            if (clearAllBtn) clearAllBtn.classList.remove('pointer-events-none', 'opacity-50');
+            if (startBtn) {
+                startBtn.disabled = false;
+                if (startBtnText) {
+                    startBtnText.textContent = (errorCount > 0 || canceledCount > 0) ? 'Thử lại tệp chưa tải' : 'Tải thêm tệp';
+                }
+            }
+        }
+
+        // ==========================================
+        // MODAL TÍNH NĂNG COPY LINKS (CHUẨN TRANG CHỦ)
+        // ==========================================
+        function openCopyLinksModal(e) {
+            if (e) e.stopPropagation();
+            const modal = document.getElementById('copyLinksModal');
+            if (!modal) return;
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+
+            const countInput = document.getElementById('copyCountInput');
+            const startInput = document.getElementById('copyStartInput');
+            const totalRows = document.querySelectorAll('#filesTable tbody tr[data-file-url]').length;
+            if (startInput) startInput.value = 1;
+            if (countInput) {
+                countInput.value = '';
+                countInput.placeholder = `Mặc định: Tất cả (${totalRows} tệp)`;
+                setTimeout(() => countInput.focus(), 80);
+            }
+            const previewInfo = document.getElementById('copyPreviewInfo');
+            if (previewInfo) {
+                previewInfo.textContent = `Tổng cộng: ${totalRows} file trong bảng hiện tại`;
+            }
+        }
+
+        function closeCopyLinksModal() {
+            const modal = document.getElementById('copyLinksModal');
+            if (modal) {
+                modal.classList.add('hidden');
+                document.body.style.overflow = '';
+            }
+        }
+
+        function performCopyLinks() {
+            const startIdx = parseInt(document.getElementById('copyStartInput').value) || 1;
+            const rows = document.querySelectorAll('#filesTable tbody tr[data-file-url]');
+            if (rows.length === 0) {
+                alert('Không có tệp tin nào trong bảng để copy.');
+                return;
+            }
+
+            let count = parseInt(document.getElementById('copyCountInput').value);
+            if (isNaN(count) || count <= 0) {
+                count = rows.length - (startIdx - 1);
+            }
+
+            if (startIdx <= 0 || startIdx > rows.length) {
+                alert(`STT bắt đầu không hợp lệ (Phải từ 1 đến ${rows.length}).`);
+                return;
+            }
+
+            const formatInput = document.querySelector('input[name="copy_links_format"]:checked');
+            const format = formatInput ? formatInput.value : 'newline';
+
+            const start0 = startIdx - 1;
+            const end0 = Math.min(start0 + count, rows.length);
+            const linksToCopy = [];
+
+            for (let i = start0; i < end0; i++) {
+                const url = rows[i].getAttribute('data-file-url');
+                if (url && url.trim()) {
+                    linksToCopy.push(url.trim());
+                }
+            }
+
+            if (linksToCopy.length === 0) {
+                alert('Không tìm thấy liên kết file nào để copy.');
+                return;
+            }
+
+            const textToCopy = format === 'comma' ? linksToCopy.join(', ') : linksToCopy.join('\n');
+            const submitBtn = document.getElementById('copyLinksSubmitBtn');
+
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                const originalHtml = submitBtn.innerHTML;
+                submitBtn.innerHTML = `<iconify-icon icon="mdi:check" class="text-base"></iconify-icon> <span>Đã Copy ${linksToCopy.length} links!</span>`;
+                submitBtn.className = 'w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs px-5 py-2.5 transition-all shadow-xs flex justify-center items-center gap-2 cursor-pointer';
+
+                showToast(`Đã copy ${linksToCopy.length} đường dẫn file vào clipboard!`);
+
+                setTimeout(() => {
+                    submitBtn.innerHTML = originalHtml;
+                    submitBtn.className = 'w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs px-5 py-2.5 transition-all shadow-xs flex justify-center items-center gap-2 cursor-pointer active:scale-95';
+                    closeCopyLinksModal();
+                }, 1200);
+            }).catch(err => {
+                alert('Lỗi khi copy vào clipboard: ' + err);
+            });
+        }
+
+        // ==========================================
+        // STORAGE MODAL (TÍNH TỔNG DUNG LƯỢNG SHOPIFY)
+        // ==========================================
+        let isCalculatingStorage = false;
+
+        function openStorageModal() {
+            const modal = document.getElementById('storageModal');
+            if (!modal) return;
+
+            // 1. Mở popup hiển thị lên trước
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+
+            // Reset view state: hiện loading, ẩn result và error
+            document.getElementById('storageLoadingView').classList.remove('hidden');
+            document.getElementById('storageResultView').classList.add('hidden');
+            document.getElementById('storageErrorView').classList.add('hidden');
+
+            const btnRefresh = document.getElementById('btnStorageRefresh');
+            if (btnRefresh) btnRefresh.disabled = true;
+
+            // 2. Lưu ý từ user: "khi popup mở xong hết rồi thì mới gọi api tới shopify"
+            // Delay 300ms đảm bảo browser đã hoàn tất transition/render popup trên màn hình
+            setTimeout(() => {
+                fetchStorageCalculation();
+            }, 300);
+        }
+
+        function closeStorageModal() {
+            const modal = document.getElementById('storageModal');
+            if (modal) {
+                modal.classList.add('hidden');
+                document.body.style.overflow = '';
+            }
+        }
+
+        function refreshStorageCalculation() {
+            if (isCalculatingStorage) return;
+            document.getElementById('storageLoadingView').classList.remove('hidden');
+            document.getElementById('storageResultView').classList.add('hidden');
+            document.getElementById('storageErrorView').classList.add('hidden');
+
+            const btnRefresh = document.getElementById('btnStorageRefresh');
+            if (btnRefresh) btnRefresh.disabled = true;
+
+            fetchStorageCalculation();
+        }
+
+        async function fetchStorageCalculation() {
+            if (isCalculatingStorage) return;
+            isCalculatingStorage = true;
+            const btnRefresh = document.getElementById('btnStorageRefresh');
+
+            try {
+                const currentStoreType = new URLSearchParams(window.location.search).get('store_type') || '{{ store_type or "default" }}';
+                const res = await fetch('/api/files/calculate-storage', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ store_type: currentStoreType })
+                });
+
+                const data = await res.json();
+                if (!res.ok || !data.success) {
+                    throw new Error(data.message || 'Không thể tính toán tổng dung lượng.');
+                }
+
+                // Render kết quả
+                renderStorageResult(data);
+            } catch (err) {
+                document.getElementById('storageLoadingView').classList.add('hidden');
+                document.getElementById('storageResultView').classList.add('hidden');
+                const errView = document.getElementById('storageErrorView');
+                const errMsg = document.getElementById('storageErrorMessage');
+                if (errMsg) errMsg.textContent = err.message || 'Lỗi kết nối khi quét dữ liệu.';
+                if (errView) errView.classList.remove('hidden');
+            } finally {
+                isCalculatingStorage = false;
+                if (btnRefresh) btnRefresh.disabled = false;
+            }
+        }
+
+        function renderStorageResult(data) {
+            document.getElementById('storageLoadingView').classList.add('hidden');
+            document.getElementById('storageErrorView').classList.add('hidden');
+            const resultView = document.getElementById('storageResultView');
+            resultView.classList.remove('hidden');
+
+            // Format thông tin chính
+            document.getElementById('storageTotalFormatted').textContent = data.total_formatted || '0 B';
+            document.getElementById('storageTotalFiles').textContent = (data.total_files || 0).toLocaleString() + ' tệp';
+            document.getElementById('storageTotalBytes').textContent = (data.total_bytes || 0).toLocaleString() + ' bytes';
+            document.getElementById('storageCompletedAt').textContent = data.completed_at || '--';
+
+            // Render breakdown
+            const listContainer = document.getElementById('storageBreakdownList');
+            if (!listContainer) return;
+            listContainer.innerHTML = '';
+
+            const breakdown = data.breakdown || [];
+            if (breakdown.length === 0) {
+                listContainer.innerHTML = '<p class="text-xs text-gray-500 italic">Chưa có tệp tin nào được tải lên.</p>';
+                return;
+            }
+
+            breakdown.forEach(item => {
+                const row = document.createElement('div');
+                row.className = 'p-3 bg-gray-50/80 rounded-xl border border-gray-200/80 flex flex-col gap-1.5';
+
+                const pct = item.percentage || 0;
+                row.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <div class="w-7 h-7 rounded-lg ${item.color || 'text-indigo-600 bg-indigo-50 border border-indigo-100'} flex items-center justify-center flex-shrink-0 text-base">
+                                <iconify-icon icon="${item.icon || 'mdi:file-outline'}"></iconify-icon>
+                            </div>
+                            <div>
+                                <span class="text-xs font-bold text-gray-900">${item.label}</span>
+                                <span class="text-[11px] text-gray-500 font-medium ml-1.5">(${item.count.toLocaleString()} files)</span>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs font-bold text-gray-900">${item.formatted}</span>
+                            <span class="text-[10px] font-bold text-indigo-600 ml-1">(${pct}%)</span>
+                        </div>
+                    </div>
+                    <div class="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                        <div class="h-full bg-indigo-600 rounded-full" style="width: ${Math.max(pct, 1.5)}%"></div>
+                    </div>
+                `;
+                listContainer.appendChild(row);
+            });
+        }
+
+        // ==========================================
+        // MODAL CHỈNH SỬA TỆP TIN & XÓA FILE
+        // ==========================================
+        let currentEditingBtn = null;
+
+        function openEditFileModal(btn) {
+            if (!btn) return;
+            currentEditingBtn = btn;
+
+            const modal = document.getElementById('editFileModal');
+            if (!modal) return;
+
+            const ds = btn.dataset;
+            const fullId = ds.fullId || (ds.id ? `gid://shopify/MediaImage/${ds.id}` : '');
+            const id = ds.id || '';
+            const filename = ds.filename || '';
+            const alt = ds.alt || '';
+            const url = ds.url || '';
+            const thumbnail = ds.thumbnail || '';
+            const size = ds.size || 'N/A';
+            const category = ds.category || 'other';
+            const mime = ds.mime || '';
+
+            document.getElementById('editFileFullId').value = fullId;
+            document.getElementById('editFileNumericId').value = id;
+            document.getElementById('editFileNameInput').value = filename;
+            document.getElementById('editFileAltInput').value = alt;
+
+            document.getElementById('editFileCategoryBadge').textContent = (category || 'file').toUpperCase();
+            document.getElementById('editFileSizeBadge').textContent = size;
+            document.getElementById('editFileIdText').textContent = `ID: ${id} ${mime ? '• ' + mime : ''}`;
+
+            const openLink = document.getElementById('editFileOpenLink');
+            if (openLink) {
+                if (url) {
+                    openLink.href = url;
+                    openLink.classList.remove('hidden');
+                } else {
+                    openLink.classList.add('hidden');
+                }
+            }
+
+            // Preview Thumbnail
+            const thumbWrapper = document.getElementById('editFileThumbWrapper');
+            if (thumbWrapper) {
+                if (category === 'image' && (thumbnail || url)) {
+                    thumbWrapper.innerHTML = `
+                        <img src="${thumbnail || url}" alt="${alt || filename}" class="w-full h-full object-cover rounded-xl" onerror="this.onerror=null; this.src='/static/favicon-96x96.png';">
+                    `;
+                } else if (category === 'video') {
+                    thumbWrapper.innerHTML = `
+                        <div class="w-full h-full bg-purple-50 text-purple-600 flex items-center justify-center">
+                            <iconify-icon icon="mdi:video-outline" class="text-2xl"></iconify-icon>
+                        </div>
+                    `;
+                } else if (category === 'audio') {
+                    thumbWrapper.innerHTML = `
+                        <div class="w-full h-full bg-amber-50 text-amber-600 flex items-center justify-center">
+                            <iconify-icon icon="mdi:music-note" class="text-2xl"></iconify-icon>
+                        </div>
+                    `;
+                } else {
+                    thumbWrapper.innerHTML = `
+                        <div class="w-full h-full bg-gray-100 text-gray-400 flex items-center justify-center">
+                            <iconify-icon icon="mdi:file-document-outline" class="text-2xl"></iconify-icon>
+                        </div>
+                    `;
+                }
+            }
+
+            // Reset Alert Box & Buttons
+            const alertBox = document.getElementById('editFileAlertBox');
+            if (alertBox) {
+                alertBox.classList.add('hidden');
+                alertBox.textContent = '';
+            }
+
+            const btnSave = document.getElementById('btnSaveEditFile');
+            const btnSaveText = document.getElementById('btnSaveEditFileText');
+            if (btnSave) btnSave.disabled = false;
+            if (btnSaveText) btnSaveText.textContent = 'Lưu thay đổi';
+
+            const btnDelete = document.getElementById('btnDeleteFile');
+            const btnDeleteText = document.getElementById('btnDeleteFileText');
+            if (btnDelete) btnDelete.disabled = false;
+            if (btnDeleteText) btnDeleteText.textContent = 'Xóa file';
+
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+
+            setTimeout(() => {
+                const nameInput = document.getElementById('editFileNameInput');
+                if (nameInput) nameInput.focus();
+            }, 100);
+        }
+
+        function closeEditFileModal() {
+            const modal = document.getElementById('editFileModal');
+            if (modal) {
+                modal.classList.add('hidden');
+                document.body.style.overflow = '';
+            }
+            currentEditingBtn = null;
+        }
+
+        async function handleSaveEditFile(e) {
+            e.preventDefault();
+            const fullId = document.getElementById('editFileFullId').value;
+            const numericId = document.getElementById('editFileNumericId').value;
+            const filename = document.getElementById('editFileNameInput').value.trim();
+            const alt = document.getElementById('editFileAltInput').value.trim();
+            const alertBox = document.getElementById('editFileAlertBox');
+            const btnSave = document.getElementById('btnSaveEditFile');
+            const btnSaveText = document.getElementById('btnSaveEditFileText');
+            const btnDelete = document.getElementById('btnDeleteFile');
+
+            if (!fullId) {
+                alert('Không tìm thấy ID của tệp tin!');
+                return;
+            }
+
+            if (!filename) {
+                if (alertBox) {
+                    alertBox.className = 'p-3 rounded-xl text-xs font-medium border leading-relaxed bg-rose-50 text-rose-700 border-rose-200 block';
+                    alertBox.textContent = 'Vui lòng nhập tên tệp tin!';
+                }
+                return;
+            }
+
+            btnSave.disabled = true;
+            btnDelete.disabled = true;
+            btnSaveText.innerHTML = `
+                <iconify-icon icon="mdi:loading" class="animate-spin text-sm"></iconify-icon>
+                <span>Đang lưu...</span>
+            `;
+            if (alertBox) alertBox.classList.add('hidden');
+
+            try {
+                const currentStoreType = new URLSearchParams(window.location.search).get('store_type') || '{{ store_type or "default" }}';
+                const res = await fetch('/api/files/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        fileId: fullId,
+                        filename: filename,
+                        alt: alt,
+                        store_type: currentStoreType
+                    })
+                });
+
+                const data = await res.json();
+                if (!res.ok || !data.success) {
+                    throw new Error(data.message || 'Lỗi khi cập nhật tệp tin trên Shopify.');
+                }
+
+                if (alertBox) {
+                    alertBox.className = 'p-3 rounded-xl text-xs font-medium border leading-relaxed bg-emerald-50 text-emerald-800 border-emerald-200 block';
+                    alertBox.textContent = 'Đã cập nhật tệp tin thành công!';
+                }
+
+                // Cập nhật lại UI dòng tương ứng
+                const newUrl = data.newUrl;
+                const row = document.getElementById(`file-row-${numericId}`);
+                if (row && newUrl) {
+                    row.setAttribute('data-file-url', newUrl);
+                }
+
+                // Cập nhật nút Copy link và nút Mở file gốc của hàng
+                const copyBtn = document.getElementById(`btn-copy-${numericId}`);
+                if (copyBtn && newUrl) {
+                    copyBtn.dataset.url = newUrl;
+                }
+
+                const openLink = document.getElementById(`btn-open-link-${numericId}`);
+                if (openLink && newUrl) {
+                    openLink.href = newUrl;
+                }
+
+                // Cập nhật button mở edit modal
+                if (currentEditingBtn) {
+                    currentEditingBtn.dataset.filename = filename;
+                    currentEditingBtn.dataset.alt = alt;
+                    if (newUrl) {
+                        currentEditingBtn.dataset.url = newUrl;
+                        currentEditingBtn.dataset.thumbnail = newUrl;
+                    }
+                }
+                const nameDisplay = document.getElementById(`name-display-${numericId}`);
+                if (nameDisplay) nameDisplay.textContent = filename;
+
+                // Cập nhật thumbnail trong bảng nếu có URL mới
+                if (newUrl && row) {
+                    const thumbImg = row.querySelector('td:nth-child(2) img');
+                    if (thumbImg) {
+                        thumbImg.src = newUrl;
+                        thumbImg.alt = alt || filename;
+                    }
+                }
+
+                // Cập nhật link xem file gốc trong popup edit
+                const editModalOpenLink = document.getElementById('editFileOpenLink');
+                if (editModalOpenLink && newUrl) {
+                    editModalOpenLink.href = newUrl;
+                }
+
+                const altDisplay = document.getElementById(`alt-display-${numericId}`);
+                if (altDisplay) {
+                    if (alt) {
+                        altDisplay.innerHTML = `<span class="text-xs text-gray-800 line-clamp-2 leading-relaxed" title="${alt}">${alt}</span>`;
+                    } else {
+                        altDisplay.innerHTML = `<span class="text-xs text-gray-400 italic">Không có</span>`;
+                    }
+                }
+
+                showToast('Đã lưu thay đổi tệp tin thành công!');
+                setTimeout(() => {
+                    closeEditFileModal();
+                }, 800);
+            } catch (err) {
+                if (alertBox) {
+                    alertBox.className = 'p-3 rounded-xl text-xs font-medium border leading-relaxed bg-rose-50 text-rose-700 border-rose-200 block';
+                    alertBox.textContent = err.message || 'Đã có lỗi xảy ra khi cập nhật.';
+                }
+            } finally {
+                btnSave.disabled = false;
+                btnDelete.disabled = false;
+                btnSaveText.textContent = 'Lưu thay đổi';
+            }
+        }
+
+        async function handleDeleteFileClick() {
+            const fullId = document.getElementById('editFileFullId').value;
+            const numericId = document.getElementById('editFileNumericId').value;
+            const filename = document.getElementById('editFileNameInput').value.trim();
+            const alertBox = document.getElementById('editFileAlertBox');
+            const btnDelete = document.getElementById('btnDeleteFile');
+            const btnDeleteText = document.getElementById('btnDeleteFileText');
+            const btnSave = document.getElementById('btnSaveEditFile');
+
+            if (!fullId) {
+                alert('Không tìm thấy ID của tệp tin!');
+                return;
+            }
+
+            if (!confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn tệp "${filename}" khỏi Shopify Content Files không?\n\nHành động này không thể hoàn tác!`)) {
+                return;
+            }
+
+            btnDelete.disabled = true;
+            btnSave.disabled = true;
+            btnDeleteText.innerHTML = `
+                <iconify-icon icon="mdi:loading" class="animate-spin text-sm"></iconify-icon>
+                <span>Đang xóa...</span>
+            `;
+            if (alertBox) alertBox.classList.add('hidden');
+
+            try {
+                const currentStoreType = new URLSearchParams(window.location.search).get('store_type') || '{{ store_type or "default" }}';
+                const res = await fetch('/api/files/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        fileId: fullId,
+                        store_type: currentStoreType
+                    })
+                });
+
+                const data = await res.json();
+                if (!res.ok || !data.success) {
+                    throw new Error(data.message || 'Lỗi khi xóa tệp tin trên Shopify.');
+                }
+
+                showToast('Đã xóa tệp tin thành công!');
+
+                // Xóa dòng tương ứng khỏi bảng với animation mượt
+                const row = document.getElementById(`file-row-${numericId}`);
+                if (row) {
+                    row.style.transition = 'all 0.3s ease';
+                    row.style.opacity = '0';
+                    row.style.transform = 'scale(0.95)';
+                    setTimeout(() => {
+                        row.remove();
+                    }, 300);
+                }
+
+                closeEditFileModal();
+            } catch (err) {
+                if (alertBox) {
+                    alertBox.className = 'p-3 rounded-xl text-xs font-medium border leading-relaxed bg-rose-50 text-rose-700 border-rose-200 block';
+                    alertBox.textContent = err.message || 'Đã có lỗi xảy ra khi xóa tệp.';
+                }
+                btnDelete.disabled = false;
+                btnSave.disabled = false;
+                btnDeleteText.textContent = 'Xóa file';
+            }
+        }
+
+        // Keyboard Shortcut: Esc to close modals & Alt+Q to open copy modal
+        document.addEventListener('keydown', (e) => {
+            // Alt + Q: Mở nhanh Modal Copy File Links
+            if (e.altKey && e.key.toLowerCase() === 'q') {
+                e.preventDefault();
+                openCopyLinksModal();
+                return;
+            }
+
+            if (e.key === 'Escape') {
+                const editModal = document.getElementById('editFileModal');
+                if (editModal && !editModal.classList.contains('hidden')) {
+                    closeEditFileModal();
+                    return;
+                }
+                const copyModal = document.getElementById('copyLinksModal');
+                if (copyModal && !copyModal.classList.contains('hidden')) {
+                    closeCopyLinksModal();
+                    return;
+                }
+                const lightboxEl = document.getElementById('lightbox');
+                if (lightboxEl && lightboxEl.classList.contains('active')) {
+                    closeLightbox();
+                    return;
+                }
+                const uploadModalEl = document.getElementById('uploadModal');
+                if (uploadModalEl && !uploadModalEl.classList.contains('hidden')) {
+                    closeUploadModal();
+                    return;
+                }
+                const storageModalEl = document.getElementById('storageModal');
+                if (storageModalEl && !storageModalEl.classList.contains('hidden')) {
+                    closeStorageModal();
+                }
+            } else if (e.key === 'Enter') {
+                const copyModal = document.getElementById('copyLinksModal');
+                if (copyModal && !copyModal.classList.contains('hidden')) {
+                    const activeEl = document.activeElement;
+                    if (activeEl && (activeEl.id === 'copyCountInput' || activeEl.id === 'copyStartInput')) {
+                        e.preventDefault();
+                        performCopyLinks();
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

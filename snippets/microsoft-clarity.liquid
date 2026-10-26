@@ -1,0 +1,18 @@
+{% doc %}
+  Renders Microsoft Clarity tracking script for heatmaps and user behavior analytics.
+  Reads the project ID dynamically from Theme Settings (`settings.clarity_project_id`).
+  Executes asynchronously with zero impact on initial page render and Core Web Vitals.
+
+  @example
+  {% render 'microsoft-clarity' %}
+{% enddoc %}
+
+{%- if settings.clarity_project_id != blank -%}
+  <script type="text/javascript">
+    (function(c,l,a,r,i,t,y){
+      c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+      t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+      y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", {{ settings.clarity_project_id | strip | json }});
+  </script>
+{%- endif -%}

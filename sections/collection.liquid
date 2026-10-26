@@ -2,7 +2,7 @@
   Collection listing page.
 
   Top toolbar (Price facet on the left, Sort by + item count on the right) and a
-  4-column product grid.
+  responsive product grid using the shared listing card.
 
   https://shopify.dev/docs/storefronts/themes/architecture/templates/collection
 {% endcomment %}
@@ -414,175 +414,7 @@
         {% else %}
           <div class="col-grid">
             {% for product in collection.products %}
-              {% liquid
-                assign artist = ''
-                assign author = product.metafields.custom.author_info.value
-                if author != blank and author.author_name.value != blank
-                  assign artist = author.author_name.value
-                endif
-
-                assign material = product.metafields.custom.product_material
-                assign ptype = product.type
-
-                # Corner badge: "Best Seller" appears only for handles listed
-                # in the first outstanding_materials metaobject entry.
-                assign is_new = false
-                assign is_best_seller = false
-                assign best_seller_entry = metaobjects.outstanding_materials.values | first
-                assign best_seller_handles = best_seller_entry.best_seller_products.value | default: best_seller_entry.best_seller_products | split: ','
-                for best_seller_handle in best_seller_handles
-                  assign normalized_best_seller_handle = best_seller_handle | strip
-                  if normalized_best_seller_handle == product.handle
-                    assign is_best_seller = true
-                    break
-                  endif
-                endfor
-                for coll in product.collections
-                  if coll.handle == 'new-arrivals'
-                    assign is_new = true
-                  endif
-                endfor
-              %}
-              {% assign card_variant = product.selected_or_first_available_variant | default: product.variants.first %}
-              <article class="pcard">
-                <div class="pcard__media-wrap">
-                  <a
-                    class="pcard__media"
-                    href="{{ product.url }}"
-                    aria-label="{{ product.title | escape }}"
-                    data-hover-gallery
-                  >
-                    {% if product.media.size > 0 %}
-                      {% assign img_count = 0 %}
-                      {% for media in product.media %}
-                        {% if media.media_type == 'image' %}
-                          {% assign img_class = 'pcard__image' %}
-                          {% if img_count == 0 %}{% assign img_class = 'pcard__image is-active' %}{% endif %}
-                          {%- comment -%}
-                            Fallback alt to the product title when the media has no alt. Compute it in a
-                            variable: chaining `| default:` after image_tag applies to the <img> string
-                            (never blank), so the fallback never fired. See doc/SEO-diagnose.md #8.
-                          {%- endcomment -%}
-                          {% assign card_alt = media.alt | default: product.title %}
-                          {{
-                            media.preview_image
-                            | image_url: width: 720
-                            | image_tag:
-                              class: img_class,
-                              loading: 'lazy',
-                              widths: '280, 420, 560, 720',
-                              sizes: '(min-width: 1024px) 24vw, (min-width: 720px) 33vw, 90vw',
-                              alt: card_alt
-                          }}
-                          {% assign img_count = img_count | plus: 1 %}
-                          {% if img_count >= 5 %}{% break %}{% endif %}
-                        {% endif %}
-                      {% endfor %}
-                    {% else %}
-                      {{ 'product-1' | placeholder_svg_tag: 'pcard__image is-active placeholder-svg' }}
-                    {% endif %}
-                  </a>
-
-                  {%- comment -%}
-                    Wishlist heart (Wishlist by Square / Vtl app). The app hydrates the
-                    wrapper by its `Vtl-WishlistIcon__Wrapper--Id-{id}-{handle}` class and
-                    replaces the fallback SVG below with its own button once the
-                    `vitals:RenderWishlistIcons` event fires (see script). HTTPS only.
-                  {%- endcomment -%}
-                  <div
-                    class="pcard__wishlist Vtl-WishlistIcon__Wrapper Vtl-WishlistIcon__Wrapper--Id-{{ product.id }}-{{ product.handle | escape }} Vtl-CollectionCardWidget"
-                    data-pcard-wishlist
-                    data-source="os2"
-                    data-app-block="wishlist-button"
-                    data-product-id="{{ product.id }}"
-                    data-product-handle="{{ product.handle | escape }}"
-                    data-variant-id="{{ card_variant.id }}"
-                    aria-label="Add {{ product.title | escape }} to wishlist"
-                  >
-                    <span class="pcard__wishlist-icon" aria-hidden="true">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24">
-                        <path fill="currentColor" d="m12.1 18.55l-.1.1l-.11-.1C7.14 14.24 4 11.39 4 8.5C4 6.5 5.5 5 7.5 5c1.54 0 3.04 1 3.57 2.36h1.86C13.46 6 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5c0 2.89-3.14 5.74-7.9 10.05M16.5 3c-1.74 0-3.41.81-4.5 2.08C10.91 3.81 9.24 3 7.5 3C4.42 3 2 5.41 2 8.5c0 3.77 3.4 6.86 8.55 11.53L12 21.35l1.45-1.32C18.6 15.36 22 12.27 22 8.5C22 5.41 19.58 3 16.5 3"/>
-                      </svg>
-                    </span>
-                  </div>
-
-                  <button
-                    type="button"
-                    class="pcard__add"
-                    data-add-to-cart
-                    data-variant-id="{{ card_variant.id }}"
-                    aria-label="Add {{ product.title | escape }} to cart"
-                    {% unless product.available %}
-                      disabled aria-disabled="true"
-                    {% endunless %}
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="16"
-                      height="16"
-                      fill="currentColor"
-                      class="bi bi-cart-plus-fill"
-                      viewBox="0 0 16 16"
-                      aria-hidden="true"
-                    >
-                      <path d="M.5 1a.5.5 0 0 0 0 1h1.11l.401 1.607 1.498 7.985A.5.5 0 0 0 4 12h1a2 2 0 1 0 0 4 2 2 0 0 0 0-4h7a2 2 0 1 0 0 4 2 2 0 0 0 0-4h1a.5.5 0 0 0 .491-.408l1.5-8A.5.5 0 0 0 14.5 3H2.89l-.405-1.621A.5.5 0 0 0 2 1zM6 14a1 1 0 1 1-2 0 1 1 0 0 1 2 0m7 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0M9 5.5V7h1.5a.5.5 0 0 1 0 1H9v1.5a.5.5 0 0 1-1 0V8H6.5a.5.5 0 0 1 0-1H8V5.5a.5.5 0 0 1 1 0"/>
-                    </svg>
-                  </button>
-
-                  {%- if is_best_seller -%}
-                    <span class="pcard__badge pcard__badge--best">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24">
-                        <path fill="currentColor" d="m12 17.275l-4.15 2.5q-.275.175-.575.15t-.525-.2t-.35-.437t-.05-.588l1.1-4.725L3.775 10.8q-.25-.225-.312-.513t.037-.562t.3-.45t.55-.225l4.85-.425l1.875-4.45q.125-.3.388-.45t.537-.15t.537.15t.388.45l1.875 4.45l4.85.425q.35.05.55.225t.3.45t.038.563t-.313.512l-3.675 3.175l1.1 4.725q.075.325-.05.588t-.35.437t-.525.2t-.575-.15z"/>
-                      </svg>
-                      <span class="pcard__badge-text">{{ section.settings.best_seller_badge | escape }}</span>
-                    </span>
-                  {%- elsif is_new -%}
-                    <span class="pcard__badge pcard__badge--new">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 36 36">
-                        <path d="M0 0h36v36H0z" fill="none" />
-                        <path fill="currentColor" d="m34.11 24.49l-3.92-6.62l3.88-6.35a1 1 0 0 0-.85-1.52H2a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h31.25a1 1 0 0 0 .86-1.51m-23.6-3.31H9.39l-3.26-4.34v4.35H5V15h1.13l3.27 4.35V15h1.12ZM16.84 16h-3.53v1.49h3.2v1h-3.2v1.61h3.53v1h-4.66V15h4.65Zm8.29 5.16H24l-1.55-4.59l-1.55 4.61h-1.12l-2-6.18H19l1.32 4.43L21.84 15h1.22l1.46 4.43L25.85 15h1.23Z" class="clr-i-solid clr-i-solid-path-1" />
-                        <path fill="none" d="M0 0h36v36H0z" />
-                      </svg>
-                      <span class="pcard__badge-text">{{ section.settings.new_badge | escape }}</span>
-                    </span>
-                  {%- endif -%}
-                </div>
-
-                <div class="pcard__info">
-                  <h2 class="pcard__title">
-                    <a class="pcard__title-link" href="{{ product.url }}">
-                      {{- product.title | split: ',' | first | split: ' - ' | first | strip | escape -}}
-                    </a>
-                  </h2>
-
-                  <hr class="pcard__divider">
-
-                  {% if artist != blank %}
-                    <p class="pcard__artist">Crafted By {{ artist | escape }}</p>
-                  {% endif %}
-
-                  <p class="pcard__price">
-                    <span style="font-weight: var(--font-weight-light);">From</span> {{ product.price | money }}
-                  </p>
-
-                  <div class="pcard__badges-row">
-                    <span class="pcard__freeshipping">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="1.2em" height="1.2em" viewBox="0 0 24 24">
-                        <path d="M0 0h24v24H0z" fill="none" />
-                        <path fill="currentColor" d="M18 8h-2V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10h2a3 3 0 1 0 6 0h4a3 3 0 1 0 6 0h2v-5zM7 18.5a1.5 1.5 0 1 1 .001-3.001A1.5 1.5 0 0 1 7 18.5M4 14V7h10v7zm13 4.5a1.5 1.5 0 1 1 .001-3.001A1.5 1.5 0 0 1 17 18.5" />
-                      </svg>
-                      <span class="pcard__freeshipping-text">Free Shipping</span>
-                    </span>
-
-                    <span class="pcard__warranty">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="1.2em" height="1.2em" viewBox="0 0 24 24">
-                        <path fill="currentColor" d="m10 17l-4-4l1.41-1.41L10 14.17l6.59-6.59L18 9m-6-8L3 5v6c0 5.55 3.84 10.74 9 12c5.16-1.26 9-6.45 9-12V5z" />
-                      </svg>
-                      <span class="pcard__warranty-text">1-Year Warranty</span>
-                    </span>
-                  </div>
-                </div>
-              </article>
+              {% render 'plp-product-card', product: product %}
             {% endfor %}
           </div>
 
@@ -697,7 +529,7 @@
   .collection-page {
     width: 100%;
     background-color: var(--color-cream);
-    font-family: var(--font-body);
+    font-family: var(--font-roboto);
   }
 
   /* Toolbar */
@@ -843,7 +675,7 @@
     align-items: center;
     gap: var(--sp-3);
     padding: var(--sp-3) var(--sp-5);
-    font-family: var(--font-body);
+    font-family: var(--font-roboto);
     font-size: var(--font-size-body-sm);
     color: var(--text-primary);
     text-decoration: none;
@@ -956,7 +788,7 @@
     padding: var(--sp-2) var(--sp-3);
     border: 1px solid var(--border-light);
     border-radius: var(--radius-md);
-    font-family: var(--font-body);
+    font-family: var(--font-roboto);
     font-size: var(--font-size-body-sm);
     color: var(--text-primary);
     outline: none;
@@ -977,7 +809,7 @@
     color: var(--color-milk);
     border: none;
     border-radius: var(--radius-md);
-    font-family: var(--font-body);
+    font-family: var(--font-roboto);
     font-size: var(--font-size-body-sm);
     font-weight: var(--font-weight-semibold);
     cursor: pointer;
@@ -1078,7 +910,7 @@
     min-height: 56px;
     padding: 0 var(--sp-7);
     border-radius: var(--radius-md);
-    font-family: var(--font-display);
+    font-family: var(--font-display-light);
     font-size: var(--font-size-body-lg);
     font-weight: var(--font-weight-regular);
     letter-spacing: 0.01em;
@@ -1162,7 +994,7 @@
     transform: scale(1.04);
   }
   .col-empty-state__other-title {
-    font-family: var(--font-display);
+    font-family: var(--font-display-light);
     font-size: var(--font-size-body-lg);
     font-weight: var(--font-weight-regular);
     line-height: var(--line-height-tight);
@@ -1261,7 +1093,7 @@
     border-radius: 99px;
     background: var(--color-milk, #fffdf9);
     color: var(--color-earth-brown, #4a2c18);
-    font-family: var(--font-body);
+    font-family: var(--font-roboto);
     font-weight: var(--font-weight-bold);
     font-size: 14px;
     line-height: 1;
@@ -1361,7 +1193,7 @@
   .pcard__title {
     margin: var(--sp-2) 0 0;
     min-width: 0;
-    font-family: var(--font-body);
+    font-family: var(--font-roboto);
     font-size: var(--font-size-body-xl);
     font-weight: var(--font-weight-semibold);
     line-height: var(--line-height-tight);
@@ -1379,7 +1211,7 @@
   .pcard__artist {
     margin: var(--sp-2) 0 0;
     font-size: var(--font-size-body-sm);
-    font-family: var(--font-body);
+    font-family: var(--font-roboto);
     color: var(--color-clay);
   }
   .pcard__meta-item {
@@ -1407,7 +1239,7 @@
   }
   .pcard__price {
     margin: var(--sp-2) 0 0;
-    font-family: var(--font-body);
+    font-family: var(--font-roboto);
     font-size: var(--font-size-body-lg);
     font-weight: var(--font-weight-semibold);
     color: var(--text-primary);
@@ -1456,7 +1288,7 @@
     align-items: center;
     gap: var(--sp-2);
     padding: 0 var(--sp-5);
-    font-family: var(--font-body);
+    font-family: var(--font-roboto);
     font-size: var(--font-size-caption);
     font-weight: var(--font-weight-medium);
     letter-spacing: 0.12em;
@@ -1498,7 +1330,7 @@
     height: 36px;
     padding: 0 var(--sp-2);
     border-radius: var(--radius-lg);
-    font-family: var(--font-body);
+    font-family: var(--font-roboto);
     font-size: var(--font-size-body-sm);
     font-weight: var(--font-weight-semibold);
     color: var(--text-primary);

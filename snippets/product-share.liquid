@@ -1,0 +1,180 @@
+{% doc %}
+  Renders product sharing links and a clipboard action for the canonical product URL.
+
+  @param {product} product - The product to share.
+{% enddoc %}
+
+{%- liquid
+  assign share_url = canonical_url | split: '?' | first
+  assign encoded_url = share_url | url_encode
+  assign encoded_title = product.title | url_encode
+  assign share_image = ''
+  if product.featured_image != blank
+    assign share_image = product.featured_image | image_url: width: 1200
+    assign image_prefix = share_image | slice: 0, 2
+    if image_prefix == '//'
+      assign share_image = share_image | prepend: 'https:'
+    endif
+  endif
+  assign encoded_image = share_image | url_encode
+-%}
+
+<nav class="product-share" aria-label="Share this product">
+  <span class="product-share__label">Share:</span>
+  <ul class="product-share__list" role="list">
+    <li>
+      <a class="product-share__link" href="https://twitter.com/intent/tweet?url={{ encoded_url }}&amp;text={{ encoded_title }}" target="_blank" rel="noopener noreferrer" aria-label="Share on X" title="Share on X">
+        <svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 512 512"><path fill="currentColor" d="M389.2 48h70.6L305.6 224.2L487 464H345L233.7 318.6L106.5 464H35.8l164.9-188.5L26.8 48h145.6l100.5 132.9zm-24.8 373.8h39.1L151.1 88h-42z"/></svg>
+      </a>
+    </li>
+    <li>
+      <a class="product-share__link" href="https://www.facebook.com/sharer/sharer.php?u={{ encoded_url }}" target="_blank" rel="noopener noreferrer" aria-label="Share on Facebook" title="Share on Facebook">
+        <svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 512 512"><path fill="currentColor" d="M512 256C512 114.6 397.4 0 256 0S0 114.6 0 256c0 120 82.7 220.8 194.2 248.5V334.2h-52.8V256h52.8v-33.7c0-87.1 39.4-127.5 125-127.5c16.2 0 44.2 3.2 55.7 6.4V172c-6-.6-16.5-1-29.6-1c-42 0-58.2 15.9-58.2 57.2V256h83.6l-14.4 78.2H287v175.9C413.8 494.8 512 386.9 512 256"/></svg>
+      </a>
+    </li>
+    <li>
+      <a class="product-share__link" href="https://pinterest.com/pin/create/button/?url={{ encoded_url }}&amp;description={{ encoded_title }}{% if share_image != blank %}&amp;media={{ encoded_image }}{% endif %}" target="_blank" rel="noopener noreferrer" aria-label="Share on Pinterest" title="Share on Pinterest">
+        <svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 496 512"><path fill="currentColor" d="M496 256c0 137-111 248-248 248c-25.6 0-50.2-3.9-73.4-11.1c10.1-16.5 25.2-43.5 30.8-65c3-11.6 15.4-59 15.4-59c8.1 15.4 31.7 28.5 56.8 28.5c74.8 0 128.7-68.8 128.7-154.3c0-81.9-66.9-143.2-152.9-143.2c-107 0-163.9 71.8-163.9 150.1c0 36.4 19.4 81.7 50.3 96.1c4.7 2.2 7.2 1.2 8.3-3.3c.8-3.4 5-20.3 6.9-28.1c.6-2.5.3-4.7-1.7-7.1c-10.1-12.5-18.3-35.3-18.3-56.6c0-54.7 41.4-107.6 112-107.6c60.9 0 103.6 41.5 103.6 100.9c0 67.1-33.9 113.6-78 113.6c-24.3 0-42.6-20.1-36.7-44.8c7-29.5 20.5-61.3 20.5-82.6c0-19-10.2-34.9-31.4-34.9c-24.9 0-44.9 25.7-44.9 60.2c0 22 7.4 36.8 7.4 36.8s-24.5 103.8-29 123.2c-5 21.4-3 51.6-.9 71.2C65.4 450.9 0 361.1 0 256C0 119 111 8 248 8s248 111 248 248"/></svg>
+      </a>
+    </li>
+    <li>
+      <button class="product-share__link" type="button" data-product-share-copy data-product-share-url="{{ share_url | escape }}" aria-label="Copy product link" title="Copy product link">
+        <svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></g></svg>
+      </button>
+    </li>
+  </ul>
+  <span class="product-share__status" data-product-share-status role="status" aria-live="polite"></span>
+</nav>
+
+{% stylesheet %}
+  .product-share {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--sp-2);
+    padding-top: var(--sp-2);
+    color: var(--text-primary);
+    font-family: var(--font-roboto);
+  }
+  .product-share__label {
+    font-size: var(--font-size-body-md);
+    font-weight: var(--font-weight-semibold);
+    line-height: 1.25;
+  }
+  .product-share__list {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--sp-1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .product-share__link {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    color: inherit;
+    text-decoration: none;
+    border-radius: var(--radius-sm);
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    cursor: pointer;
+  }
+  .product-share__link:disabled { opacity: 0.6; cursor: wait; }
+  .product-share__status {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+  .product-share__clipboard-proxy { position: fixed; top: 0; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+  .product-share__list > li {
+    margin: 0;
+    padding: 0;
+  }
+  .product-share__link svg {
+    width: 24px;
+    height: 24px;
+  }
+  .product-share__link:hover {
+    color: var(--color-clay);
+  }
+  .product-share__link:focus-visible {
+    outline: 2px solid var(--color-earth-brown);
+    outline-offset: 2px;
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  (function () {
+    function fallbackCopy(url) {
+      var input = document.createElement('textarea');
+      input.value = url;
+      input.readOnly = true;
+      input.tabIndex = -1;
+      input.className = 'product-share__clipboard-proxy';
+      input.setAttribute('aria-hidden', 'true');
+      var selection = window.getSelection();
+      var ranges = [];
+      if (selection) {
+        for (var i = 0; i < selection.rangeCount; i++) ranges.push(selection.getRangeAt(i).cloneRange());
+      }
+      document.body.appendChild(input);
+      try {
+        input.select();
+        input.setSelectionRange(0, url.length);
+        return document.execCommand('copy');
+      } finally {
+        input.remove();
+        if (selection) {
+          selection.removeAllRanges();
+          ranges.forEach(function (range) { selection.addRange(range); });
+        }
+      }
+    }
+
+    document.addEventListener('click', async function (event) {
+      if (!(event.target instanceof Element)) return;
+      var button = event.target.closest('[data-product-share-copy]');
+      if (!button || button.disabled) return;
+      var url = button.dataset.productShareUrl;
+      if (!url) return;
+      var previousFocus = document.activeElement;
+      var status = button.closest('.product-share').querySelector('[data-product-share-status]');
+      button.disabled = true;
+      button.setAttribute('aria-busy', 'true');
+      var type = 'success';
+      var message = 'Product link copied.';
+      try {
+        var copied = false;
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+          try {
+            await navigator.clipboard.writeText(url);
+            copied = true;
+          } catch (error) { /* Use the selection fallback when clipboard access is denied. */ }
+        }
+        if (!copied && !fallbackCopy(url)) throw new Error('Copy failed');
+      } catch (error) {
+        type = 'error';
+        message = 'Unable to copy the link. Please try again.';
+      } finally {
+        button.disabled = false;
+        button.removeAttribute('aria-busy');
+        if (previousFocus && previousFocus.isConnected) previousFocus.focus({ preventScroll: true });
+      }
+      if (status) status.textContent = message;
+      if (typeof window.showToast === 'function') {
+        window.showToast({ message: message, type: type, position: 'bottom-left', duration: 4000 });
+      }
+    });
+  })();
+{% endjavascript %}

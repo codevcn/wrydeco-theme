@@ -45,7 +45,7 @@ CSS_BLOCK = """  /* [DEV-TEST-START:CSS] */
     box-shadow: var(--shadow-elevation-2);
     color: var(--text-inverse);
     cursor: pointer;
-    font-family: var(--font-body);
+    font-family: var(--font-roboto);
     font-size: var(--font-size-body-sm);
     font-weight: var(--font-weight-semibold);
   }

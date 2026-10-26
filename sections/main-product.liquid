@@ -39,22 +39,21 @@
   /* Desktop-first layout */
   .main-product {
     width: 100%;
-    max-width: 96rem;
+    max-width: none;
     margin-inline: auto;
-    padding: calc(var(--gap-main-content-to-header) + 30px) 64px var(--section-spacing-desktop);
+    padding: calc(var(--gap-main-content-to-header) + 30px) var(--sp-7) var(--section-spacing-desktop) 0;
   }
 
   .main-product__summary {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 60fr) minmax(0, 40fr);
     align-items: start;
-    column-gap: var(--sp-7);
+    column-gap: 40px;
   }
   .main-product__media {
     --product-gallery-viewport-offset: var(--main-product-padding-top);
-    position: sticky;
-    top: var(--sp-2);
-    z-index: 20;
+    position: static;
+    top: auto;
     min-width: 0;
     align-self: start;
   }
@@ -63,6 +62,25 @@
     flex-direction: column;
     gap: 15px;
     min-width: 0;
+  }
+
+  /* Tall info scrolls naturally until its bottom reaches the viewport, then pins
+     while the media continues. The summary grid bounds the sticky column. */
+  .main-product__info[data-info-sticky-ready] {
+    position: sticky;
+    top: min(var(--sp-4), calc(100dvh - var(--product-info-height) - var(--sp-4)));
+    align-self: start;
+  }
+
+  @media screen and (min-width: 921px) {
+    .main-product__info[data-info-sticky-ready]:has(
+      .custom-color-guide.is-open,
+      [data-custom-size-popup]:not([hidden]),
+      .custom-link-popup:not([hidden]),
+      size-guide-popup[aria-hidden='false']
+    ) {
+      z-index: 1001;
+    }
   }
 
   .main-product__header {
@@ -106,21 +124,58 @@
     margin-bottom: 0;
   }
 
-  @media screen and (max-width: 1024px) {
-    .main-product__summary {
-      column-gap: var(--sp-6);
+  @media screen and (min-width: 721px) {
+    .main-product__info .variant-tile--size {
+      max-width: 100%;
     }
+    .main-product__info .variant-tile--size .variant-tile__label {
+      min-width: 0;
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+    .main-product__info .product-buy-buttons__quantity-row {
+      flex-wrap: wrap;
+    }
+    .main-product__info .product-trust-benefits {
+      container: product-benefits / inline-size;
+    }
+  }
+  @container product-benefits (max-width: 560px) {
+    .main-product__info .product-trust-benefits__grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .main-product__info .product-trust-benefits__trigger {
+      border-inline-end: 0;
+    }
+    .main-product__info .product-trust-benefits__trigger:nth-last-child(-n + 2) {
+      border-block-end: var(--border-width) solid var(--border-default);
+    }
+    .main-product__info .product-trust-benefits__trigger:last-child {
+      border-block-end: 0;
+    }
+  }
 
+  @media screen and (max-width: 1024px) {
     .main-product {
-      padding-inline: var(--layout-padding-tablet);
+      padding-inline: 0 var(--sp-6);
       padding-bottom: var(--section-spacing-mobile);
     }
 
   }
 
   @media screen and (max-width: 920px) {
+    .main-product {
+      padding-inline: var(--sp-6);
+    }
+
+    .main-product__info[data-info-sticky-ready] {
+      position: static;
+      top: auto;
+    }
+
     .main-product__summary {
       grid-template-columns: minmax(0, 1fr);
+      row-gap: 40px;
     }
 
     .main-product__media {
@@ -136,13 +191,36 @@
 
   @media screen and (max-width: 768px) {
     .main-product {
-      padding: var(--sp-5) var(--layout-padding-mobile) var(--section-spacing-mobile);
+      padding: var(--sp-5) var(--sp-6) var(--section-spacing-mobile);
     }
     .main-product__title {
       font-size: var(--font-size-body-3xl);
     }
     .main-product__media {
       margin-top: var(--sp-10);
+    }
+  }
+
+  /* Keep the tablet grid below the absolute site header. */
+  @media screen and (min-width: 721px) and (max-width: 768px) {
+    .main-product {
+      padding-top: calc(var(--gap-main-content-to-header) + 30px);
+    }
+    .main-product__media {
+      margin-top: 0;
+    }
+  }
+
+  /* Preserve the existing phone layout and carousel spacing. */
+  @media screen and (max-width: 720px) {
+    .main-product {
+      padding-inline: var(--layout-padding-mobile);
+    }
+    .main-product__summary {
+      row-gap: 0;
+    }
+    .main-product__media {
+      z-index: 20;
     }
   }
 
@@ -207,7 +285,7 @@
     min-width: 0;
   }
   .mp-sticky-bar__title {
-    font-family: var(--font-body);
+    font-family: var(--font-roboto);
     font-size: var(--font-size-body-md);
     font-weight: var(--font-weight-semibold);
     color: var(--text-primary);
@@ -257,7 +335,7 @@
     text-align: center;
     border: none;
     background: none;
-    font-family: var(--font-body);
+    font-family: var(--font-roboto);
     font-size: var(--font-size-body-lg);
     color: var(--text-primary);
     -moz-appearance: textfield;
@@ -280,7 +358,7 @@
     color: var(--color-milk);
     border: none;
     border-radius: var(--radius-sm);
-    font-family: var(--font-body);
+    font-family: var(--font-roboto);
     font-size: var(--font-size-body-sm);
     font-weight: var(--font-weight-semibold);
     letter-spacing: 0.15em;
@@ -376,7 +454,7 @@
     display: inline-flex;
     align-items: center;
     gap: var(--sp-2);
-    font-family: var(--font-body);
+    font-family: var(--font-roboto);
     font-size: var(--font-size-body-sm);
     line-height: var(--line-height-normal);
     color: var(--text-primary);
@@ -612,9 +690,10 @@
         form_id_suffix: 'purchase'
       %}
 
+      {% render 'product-consultation', product: product %}
       {% render 'product-trust-benefits', section_id: section.id %}
       {% render 'product-info-accordions', product: product, section: section %}
-      {% render 'product-consultation', product: product %}
+      {% render 'product-share', product: product %}
       {% render 'product-custom-link-popup' %}
 
       {% for block in section.blocks %}
@@ -823,6 +902,20 @@
 
 {% javascript %}
   (function () {
+    function initStickyProductInfo() {
+      if (!window.ResizeObserver) return;
+      document.querySelectorAll('.main-product__info').forEach(function (info) {
+        if (info.dataset.infoStickyReady === 'true') return;
+        function updateInfoHeight() {
+          info.style.setProperty('--product-info-height', Math.ceil(info.getBoundingClientRect().height) + 'px');
+        }
+        updateInfoHeight();
+        info.dataset.infoStickyReady = 'true';
+        var heightObserver = new ResizeObserver(updateInfoHeight);
+        heightObserver.observe(info);
+      });
+    }
+
     function initStickyAddToCart() {
       var bar = document.querySelector('[data-mp-sticky]');
       if (!bar || bar.dataset.init === 'true') return;
@@ -844,7 +937,7 @@
       var stickyAdd = bar.querySelector('[data-mp-sticky-add]');
       var stickyAddText = bar.querySelector('[data-mp-sticky-add-text]');
       var stickyPrice = bar.querySelector('[data-mp-sticky-price]');
-      var mainPrice = document.querySelector('[data-regular-price]');
+      var mainPrice = form.querySelector('[data-product-subtotal]') || document.querySelector('[data-regular-price]');
 
       function readQty() {
         var v = parseInt(mainQty.value, 10);
@@ -894,6 +987,7 @@
       // Mirror the primary button's availability/label and the live price so the
       // bar always reflects the current variant.
       function syncFromMain() {
+        stickyQtyInput.value = readQty();
         stickyAdd.disabled = mainBtn.hasAttribute('disabled');
         if (mainText && stickyAddText && !mainBtn.classList.contains('loading')) {
           stickyAddText.textContent = mainText.textContent.trim();
@@ -902,6 +996,8 @@
           stickyPrice.textContent = mainPrice.textContent.trim();
         }
       }
+      mainQty.addEventListener('input', syncFromMain);
+      mainQty.addEventListener('change', syncFromMain);
       syncFromMain();
       if (window.MutationObserver) {
         new MutationObserver(syncFromMain).observe(form, {
@@ -964,6 +1060,7 @@
     }
 
     function initMainProductEnhancements() {
+      initStickyProductInfo();
       initRatingReviewLinks();
       initStickyAddToCart();
     }

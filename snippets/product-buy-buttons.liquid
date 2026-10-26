@@ -1,9 +1,9 @@
-{% comment %}
+{% doc %}
   Renders buy buttons, quantity input, and product form.
-  @param {product} product
-  @param {variant} current_variant
-  @param {string} product_form_id
-{% endcomment %}
+  @param {product} product - The current product.
+  @param {variant} current_variant - The selected variant.
+  @param {string} product_form_id - The product form ID.
+{% enddoc %}
 
 {% style %}
   .product-buy-buttons {
@@ -50,7 +50,7 @@
     display: inline-flex;
     align-items: center;
     gap: 10px;
-    font-family: var(--font-body, inherit);
+    font-family: var(--font-roboto, inherit);
     font-size: 13.5px;
     font-weight: 500;
     line-height: 1;
@@ -78,17 +78,10 @@
     font-weight: 700;
     letter-spacing: 0.01em;
   }
-  .quantity-label {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.15em;
-    color: #111;
-    font-family: var(--font-body, inherit);
-  }
   .quantity-input-shell {
     display: flex;
     align-items: center;
-    border: 1px solid #dcdcdc;
+    border: 1px solid #bdbdbd;
     border-radius: 2px;
     height: 48px;
     width: 120px;
@@ -116,7 +109,7 @@
     border: none;
     background: none;
     font-size: 16px;
-    font-family: var(--font-body, inherit);
+    font-family: var(--font-roboto, inherit);
     font-weight: 400;
     color: #111;
     padding: 0;
@@ -236,6 +229,7 @@
     background-color: var(--color-earth-brown);
     border: 1px solid var(--color-earth-brown);
     font-weight: 500;
+    border-radius: var(--radius-full);
   }
   .add-to-cart-wrapper .flat-btn:hover:not([disabled]) {
     background-color: #271a0f;
@@ -249,7 +243,7 @@
     justify-content: center;
     gap: 8px;
     height: 48px;
-    font-family: var(--font-body, inherit);
+    font-family: var(--font-roboto, inherit);
     font-size: 13px;
     font-weight: 500;
     letter-spacing: 0.15em;
@@ -289,17 +283,66 @@
     width: 100%;
   }
   .custom-buy-it-now-btn {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
     width: 100%;
+    height: 48px;
+    padding: 4px 64px;
+    border-radius: var(--radius-full);
     background-color: var(--color-clay);
     color: var(--color-cream);
     font-size: 16px;
-    font-weight: 900;
-    border: 1px solid var(--color-clay);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: normal;
+    border: 1px solid var(--color-earth-brown);
     transition: background-color 0.2s ease, border-color 0.2s ease;
   }
-  .custom-buy-it-now-btn:hover:not([disabled]) {
-    background-color: #79391e;
-    border-color: #79391e;
+  .custom-buy-it-now-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    z-index: 0;
+    width: 22%;
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 38%), transparent);
+    transform: translateX(-250%) skewX(-20deg);
+    pointer-events: none;
+  }
+  .custom-buy-it-now-btn__label,
+  .custom-buy-it-now-btn__spinner {
+    position: relative;
+    z-index: 1;
+  }
+  @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+    .custom-buy-it-now-btn:not(:disabled):not(.is-loading):hover::before {
+      animation: custom-buy-now-shine 0.6s linear 0s;
+    }
+  }
+  @keyframes custom-buy-now-shine {
+    from { transform: translateX(-50%) skewX(-20deg); }
+    to { transform: translateX(550%) skewX(-20deg); }
+  }
+  .custom-buy-it-now-btn:focus-visible {
+    outline: 2px solid var(--color-earth-brown);
+    outline-offset: 3px;
+  }
+  .custom-buy-it-now-btn__arrow {
+    position: absolute;
+    z-index: 1;
+    right: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border-radius: var(--radius-full);
+    background-color: var(--color-orange);
+    color: var(--color-white-cream);
+  }
+  .custom-buy-it-now-btn__arrow svg {
+    width: 20px;
+    height: 20px;
   }
 
   /* In-button loading state: spinner shown + button locked while the express
@@ -328,6 +371,10 @@
     }
   }
   @media (prefers-reduced-motion: reduce) {
+    .custom-buy-it-now-btn::before {
+      display: none;
+      animation: none;
+    }
     .product-buy-buttons .spinner,
     .custom-buy-it-now-btn__spinner svg {
       animation: none;
@@ -372,7 +419,6 @@
     <div class="product-buy-buttons__primary">
       <div class="product-buy-buttons__quantity-row">
         <div class="quantity-wrapper">
-          <label class="quantity-label">QUANTITY</label>
           <div class="quantity-input-shell" data-quantity-selector>
             <button type="button" class="quantity-input__btn" aria-label="Decrease quantity" data-action="decrease">
               <svg
@@ -410,7 +456,7 @@
             </button>
           </div>
         </div>
-        <span class="product-buy-buttons__price" data-regular-price>{{ current_variant.price | money }}</span>
+        <span class="product-buy-buttons__price" data-product-subtotal aria-live="polite" aria-atomic="true">{{ current_variant.price | money }}</span>
       </div>
 
       {% assign wishlist_variant = current_variant | default: product.selected_or_first_available_variant %}
@@ -501,6 +547,9 @@
             </svg>
           </span>
           <span class="custom-buy-it-now-btn__label">BUY IT NOW</span>
+          <span class="custom-buy-it-now-btn__arrow" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" focusable="false"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14m-7-7l7 7l-7 7"/></svg>
+          </span>
         </button>
       </div>
       <div class="original-payment-button-wrapper" style="display: none;">

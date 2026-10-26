@@ -72,47 +72,11 @@
 
     <main class="p-4 sm:p-8">
         <div class="mx-auto">
-            <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <a href="/collections?store_type={{ store_type }}" class="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-800 font-medium transition-colors">
+                        <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <a href="/collections?store_type={{ store_type }}" class="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-800 font-semibold transition-colors">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
                     Quay lại danh sách Collections
                 </a>
-
-                <!-- Nút Switch Store Mặc định ⟷ Store Riêng (qua Proxy) -->
-                <div class="flex items-center gap-3 flex-wrap">
-                    <div class="inline-flex items-center gap-3 bg-white px-3.5 py-2 rounded-2xl border border-gray-200 shadow-2xs">
-                        <div class="flex items-center gap-1.5 text-xs font-bold text-gray-500 uppercase tracking-wider">
-                            <iconify-icon icon="{% if store_type == 'custom' %}mdi:store-cog{% else %}mdi:store{% endif %}" class="text-base {% if store_type == 'custom' %}text-indigo-600{% else %}text-gray-500{% endif %}"></iconify-icon>
-                            <span class="hidden sm:inline">Cửa hàng:</span>
-                        </div>
-
-                        <!-- Switch Toggle -->
-                        <label class="relative inline-flex items-center cursor-pointer select-none" title="Bấm để chuyển đổi giữa Store Mặc định và Store Riêng">
-                            <input type="checkbox" id="storeSwitchToggle" class="sr-only peer" {% if store_type == 'custom' %}checked{% endif %} onchange="handleStoreSwitch(this.checked)">
-                            <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                            <span id="storeSwitchLabel" class="ml-2.5 text-xs font-bold {% if store_type == 'custom' %}text-indigo-600{% else %}text-gray-700{% endif %}">
-                                {% if store_type == 'custom' %}
-                                    Store Riêng <span class="font-mono text-[11px] font-semibold text-indigo-500">({{ active_shop_domain or active_shop }})</span>
-                                {% else %}
-                                    Store Mặc định <span class="font-mono text-[11px] font-semibold text-gray-500">({{ active_shop_domain or active_shop }})</span>
-                                {% endif %}
-                            </span>
-                        </label>
-
-                        <!-- Proxy Badge -->
-                        {% if store_type == 'custom' %}
-                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200" title="Bắt buộc kết nối qua Proxy US">
-                            <span>🇺🇸</span>
-                            <span>Proxy US</span>
-                        </span>
-                        {% else %}
-                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-600 border border-gray-200" title="Kết nối trực tiếp Store Mặc định">
-                            <iconify-icon icon="mdi:lightning-bolt" class="text-amber-500 text-xs"></iconify-icon>
-                            <span>Direct VPS</span>
-                        </span>
-                        {% endif %}
-                    </div>
-                </div>
             </div>
 
             {% if error %}
@@ -280,6 +244,87 @@
 
                 <!-- Right column: Metadata (SEO, Channels) -->
                 <div class="space-y-8">
+                    <!-- Cửa hàng & Đồng bộ Store -->
+                    <div class="bg-white rounded-xl shadow-sm border border-indigo-100 p-6 relative">
+                        <h2 class="text-lg font-bold text-gray-800 mb-4 border-b border-gray-100 pb-3 flex items-center justify-between">
+                            <span class="flex items-center gap-2">
+                                <iconify-icon icon="mdi:store-cog" class="text-indigo-600 text-xl"></iconify-icon>
+                                Cửa hàng & Đồng bộ
+                            </span>
+                            <span class="text-xs font-bold px-2.5 py-1 rounded-full {% if store_type == 'custom' %}bg-indigo-50 text-indigo-700 border border-indigo-200{% else %}bg-gray-100 text-gray-600 border border-gray-200{% endif %}">
+                                {% if store_type == 'custom' %}Store Riêng{% else %}Store Mặc định{% endif %}
+                            </span>
+                        </h2>
+
+                        <!-- Nút Tạo mới trên store riêng (Nằm bên trên nút switch) -->
+                        <div class="mb-4">
+                            {% if store_type == 'custom' %}
+                            <div class="p-3 bg-gray-50 rounded-xl border border-gray-200 text-center">
+                                <p class="text-xs font-semibold text-gray-500 flex items-center justify-center gap-1.5">
+                                    <iconify-icon icon="mdi:check-circle" class="text-emerald-600 text-sm"></iconify-icon>
+                                    Đang xem trực tiếp trên Store Riêng
+                                </p>
+                            </div>
+                            {% else %}
+                            <button type="button" 
+                                    id="clone-to-custom-btn" 
+                                    onclick="handleCloneCollectionToCustom()" 
+                                    class="w-full bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-bold py-2.5 px-4 rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed">
+                                <iconify-icon icon="mdi:plus-box-multiple-outline" class="text-lg pointer-events-none"></iconify-icon>
+                                <span id="clone-btn-text" class="pointer-events-none">Tạo mới trên store riêng</span>
+                            </button>
+                            {% endif %}
+                            
+                            <!-- Alert Box hiển thị tiến trình và kết quả kiểm tra/tạo mới -->
+                            <div id="clone-result-alert" class="hidden mt-3 p-3 rounded-xl text-xs font-medium border leading-relaxed"></div>
+                        </div>
+
+                        <!-- Cụm Switch chuyển đổi Store (Store Mặc định ⟷ Store Riêng) -->
+                        <div class="pt-4 border-t border-gray-100">
+                            <div class="flex items-center justify-between">
+                                <div class="flex flex-col">
+                                    <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">Chuyển đổi Store:</span>
+                                    <span id="storeSwitchLabel" class="text-sm font-bold {% if store_type == 'custom' %}text-indigo-600{% else %}text-gray-800{% endif %} mt-0.5">
+                                        {% if store_type == 'custom' %}Store Riêng{% else %}Store Mặc định{% endif %}
+                                    </span>
+                                </div>
+                                
+                                <label class="relative inline-flex items-center cursor-pointer select-none" title="Gạt để chuyển đổi giữa Store Mặc định và Store Riêng">
+                                    <input type="checkbox" id="storeSwitchToggle" class="sr-only peer" {% if store_type == 'custom' %}checked{% endif %} onchange="handleStoreSwitch(this.checked)">
+                                    <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                                </label>
+                            </div>
+
+                            <!-- Thông tin Domain & Trạng thái Proxy Gateway -->
+                            <div class="mt-3 flex items-center justify-between text-xs text-gray-500 bg-gray-50 p-2.5 rounded-lg border border-gray-100">
+                                <span class="font-mono text-[14px] truncate max-w-[160px]" title="{{ active_shop_domain or active_shop }}">
+                                    {{ active_shop_domain or active_shop }}
+                                </span>
+                                {% if store_type == 'custom' %}
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200" title="Bảo mật qua Proxy US">
+                                    <span>🇺🇸</span>
+                                    <span>Proxy US</span>
+                                </span>
+                                {% else %}
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-600 border border-gray-200" title="Kết nối trực tiếp VPS">
+                                    <iconify-icon icon="mdi:lightning-bolt" class="text-amber-500 text-xs"></iconify-icon>
+                                    <span>Direct VPS</span>
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Xóa Collection trên Store đang chọn -->
+                        <div class="mt-4 pt-3.5 border-t border-gray-100 flex items-center justify-between">
+                            <span class="text-xs text-gray-500 font-medium">Thao tác dữ liệu:</span>
+                            <button type="button" 
+                                    onclick="openDeleteCollectionModal()" 
+                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 hover:text-rose-800 border border-rose-200 rounded-lg text-xs font-bold transition-all cursor-pointer shadow-2xs active:scale-95">
+                                <iconify-icon icon="mdi:trash-can-outline" class="text-sm"></iconify-icon>
+                                <span>Xóa trên {% if store_type == 'custom' %}Store Riêng{% else %}Store Mặc định{% endif %}</span>
+                            </button>
+                        </div>
+                    </div>
                     <!-- Kênh bán hàng -->
                     <div class="bg-white rounded-xl shadow-sm border border-indigo-100 p-6 relative">
                         <h2 class="text-lg font-bold text-indigo-800 mb-4 border-b border-indigo-50 pb-3 flex items-center justify-between">
@@ -944,6 +989,136 @@
             }`;
             alertEl.classList.remove('hidden');
         }
+
+        // Logic Tạo mới Collection trên Store Riêng
+        async function handleCloneCollectionToCustom() {
+            const btn = document.getElementById('clone-to-custom-btn');
+            const alertBox = document.getElementById('clone-result-alert');
+            const originalHTML = btn ? btn.innerHTML : '';
+            
+            if (btn) {
+                btn.disabled = true;
+                btn.classList.add('opacity-75', 'cursor-wait');
+                btn.innerHTML = `
+                    <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Đang kiểm tra & tạo trên Store Riêng...</span>
+                `;
+            }
+            if (alertBox) {
+                alertBox.classList.add('hidden');
+                alertBox.className = "hidden mt-3 p-3 rounded-xl text-xs font-medium border leading-relaxed";
+            }
+            
+            try {
+                const res = await fetch(`/api/collections/${collectionId}/clone_to_custom`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        source_store_type: currentStoreType
+                    })
+                });
+                
+                let data = null;
+                try {
+                    data = await res.json();
+                } catch (e) {
+                    console.error("JSON parse error:", e);
+                }
+                
+                if (res.ok && data && data.success) {
+                    if (btn) {
+                        btn.innerHTML = `
+                            <iconify-icon icon="mdi:check-circle" class="text-lg text-white inline"></iconify-icon>
+                            <span>Tạo mới thành công!</span>
+                        `;
+                    }
+                    if (alertBox) {
+                        alertBox.className = "mt-3 p-3 rounded-xl text-xs font-medium border leading-relaxed bg-emerald-50 text-emerald-800 border-emerald-200 block";
+                        alertBox.innerHTML = `
+                            <div class="flex items-start gap-2">
+                                <iconify-icon icon="mdi:check-circle" class="text-emerald-600 text-base flex-shrink-0 mt-0.5"></iconify-icon>
+                                <div>
+                                    <p class="font-bold">${data.message || 'Đã tạo thành công collection trên Store Riêng!'}</p>
+                                    <p class="mt-1 text-emerald-700">Đang tự động chuyển sang trang collection trên Store Riêng...</p>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    setTimeout(() => {
+                        const targetId = data.new_collection_id || collectionId;
+                        const targetHandle = data.handle || collectionHandle;
+                        window.location.href = `/collections/${targetId}?store_type=custom&handle=${encodeURIComponent(targetHandle)}`;
+                    }, 1200);
+                } else if (data && data.already_exists) {
+                    // Collection đã tồn tại trên Store Riêng theo handle hoặc title
+                    if (alertBox) {
+                        const exId = data.existing_collection_id || '';
+                        const exHandle = data.existing_handle || collectionHandle;
+                        const targetUrl = `/collections/${exId}?store_type=custom&handle=${encodeURIComponent(exHandle)}`;
+                        alertBox.className = "mt-3 p-3 rounded-xl text-xs font-medium border leading-relaxed bg-amber-50 text-amber-900 border-amber-200 block";
+                        alertBox.innerHTML = `
+                            <div class="flex items-start gap-2">
+                                <iconify-icon icon="mdi:alert-circle" class="text-amber-600 text-base flex-shrink-0 mt-0.5"></iconify-icon>
+                                <div>
+                                    <p class="font-bold">Collection đã tồn tại trên Store Riêng</p>
+                                    <p class="mt-1 text-amber-800">${data.message}</p>
+                                    <div class="mt-2.5">
+                                        <a href="${targetUrl}" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold transition-colors shadow-2xs">
+                                            <span>👉 Chuyển sang xem trên Store Riêng</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    if (btn) {
+                        btn.innerHTML = originalHTML;
+                        btn.disabled = false;
+                        btn.classList.remove('opacity-75', 'cursor-wait');
+                    }
+                } else {
+                    const msg = (data && data.message) ? data.message : `Lỗi (${res.status}): Không thể tạo mới collection trên Store Riêng.`;
+                    if (alertBox) {
+                        alertBox.className = "mt-3 p-3 rounded-xl text-xs font-medium border leading-relaxed bg-rose-50 text-rose-800 border-rose-200 block";
+                        alertBox.innerHTML = `
+                            <div class="flex items-start gap-2">
+                                <iconify-icon icon="mdi:alert-octagon" class="text-rose-600 text-base flex-shrink-0 mt-0.5"></iconify-icon>
+                                <div>
+                                    <p class="font-bold">Không thể tạo mới trên Store Riêng</p>
+                                    <p class="mt-1">${msg}</p>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    if (btn) {
+                        btn.innerHTML = originalHTML;
+                        btn.disabled = false;
+                        btn.classList.remove('opacity-75', 'cursor-wait');
+                    }
+                }
+            } catch (err) {
+                if (alertBox) {
+                    alertBox.className = "mt-3 p-3 rounded-xl text-xs font-medium border leading-relaxed bg-rose-50 text-rose-800 border-rose-200 block";
+                    alertBox.innerHTML = `
+                        <div class="flex items-start gap-2">
+                            <iconify-icon icon="mdi:alert-octagon" class="text-rose-600 text-base flex-shrink-0 mt-0.5"></iconify-icon>
+                            <div>
+                                <p class="font-bold">Lỗi kết nối máy chủ</p>
+                                <p class="mt-1">${err.message || 'Vui lòng kiểm tra lại kết nối mạng hoặc thử lại sau.'}</p>
+                            </div>
+                        </div>
+                    `;
+                }
+                if (btn) {
+                    btn.innerHTML = originalHTML;
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-75', 'cursor-wait');
+                }
+            }
+        }
     </script>
 
     <!-- Update Rules Modal -->
@@ -1243,6 +1418,130 @@
             }
         }
 
+    </script>
+
+    <!-- Delete Collection Confirmation Modal -->
+    <div id="deleteCollectionModal" class="fixed inset-0 z-[120] flex items-center justify-center hidden">
+        <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-xs" onclick="closeDeleteCollectionModal()"></div>
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 relative z-10 overflow-hidden flex flex-col p-6">
+            <div class="flex items-center gap-3.5 mb-4">
+                <div class="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center flex-shrink-0">
+                    <iconify-icon icon="mdi:trash-can-alert-outline" class="text-2xl"></iconify-icon>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-gray-900">Xác nhận xóa Collection</h3>
+                    <p class="text-xs text-rose-600 font-medium">Hành động này không thể hoàn tác trên Shopify!</p>
+                </div>
+            </div>
+
+            <div class="bg-gray-50 rounded-xl p-4 border border-gray-100 mb-5 space-y-2 text-xs">
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-500">Tên Collection:</span>
+                    <strong class="text-gray-900 font-bold truncate max-w-[200px]">{{ collection.title }}</strong>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-500">Handle:</span>
+                    <span class="font-mono text-gray-700 font-semibold">{{ collection.handle }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-500">Cửa hàng áp dụng:</span>
+                    <span class="font-bold px-2 py-0.5 rounded-full {% if store_type == 'custom' %}bg-indigo-50 text-indigo-700 border border-indigo-200{% else %}bg-gray-200 text-gray-700{% endif %}">
+                        {% if store_type == 'custom' %}Store Riêng (Proxy US){% else %}Store Mặc định (Direct VPS){% endif %}
+                    </span>
+                </div>
+            </div>
+
+            <div id="deleteCollectionAlert" class="hidden mb-4 p-3 rounded-xl text-xs font-medium border leading-relaxed"></div>
+
+            <div class="flex items-center justify-end gap-3 pt-2">
+                <button type="button" 
+                        onclick="closeDeleteCollectionModal()" 
+                        class="px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer">
+                    Hủy bỏ
+                </button>
+                <button type="button" 
+                        id="confirmDeleteCollectionBtn" 
+                        onclick="executeDeleteCollection()" 
+                        class="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                    <iconify-icon icon="mdi:trash-can-outline" class="text-base"></iconify-icon>
+                    <span id="confirmDeleteText">Xác nhận xóa vĩnh viễn</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Logic Xóa Collection trên Store đang chọn
+        function openDeleteCollectionModal() {
+            const modal = document.getElementById('deleteCollectionModal');
+            const alertEl = document.getElementById('deleteCollectionAlert');
+            if (alertEl) {
+                alertEl.classList.add('hidden');
+                alertEl.innerText = '';
+            }
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        function closeDeleteCollectionModal() {
+            const modal = document.getElementById('deleteCollectionModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        async function executeDeleteCollection() {
+            const btn = document.getElementById('confirmDeleteCollectionBtn');
+            const btnText = document.getElementById('confirmDeleteText');
+            const alertEl = document.getElementById('deleteCollectionAlert');
+            const originalText = btnText ? btnText.innerText : 'Xác nhận xóa vĩnh viễn';
+
+            if (btn) {
+                btn.disabled = true;
+                btn.classList.add('opacity-75', 'cursor-wait');
+                if (btnText) btnText.innerText = 'Đang xóa trên Shopify...';
+            }
+            if (alertEl) alertEl.classList.add('hidden');
+
+            try {
+                const res = await fetch(`/api/collections/${collectionId}/delete?store_type=${currentStoreType}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ store_type: currentStoreType })
+                });
+
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    if (btnText) btnText.innerText = 'Đã xóa thành công!';
+                    if (alertEl) {
+                        alertEl.className = "mb-4 p-3 rounded-xl text-xs font-medium border leading-relaxed bg-emerald-50 text-emerald-800 border-emerald-200 block";
+                        alertEl.innerText = data.message || "Đã xóa collection thành công! Đang chuyển hướng...";
+                    }
+                    setTimeout(() => {
+                        window.location.href = `/collections?store_type=${currentStoreType}`;
+                    }, 1000);
+                } else {
+                    const msg = (data && data.message) ? data.message : `Lỗi (${res.status}): Không thể xóa collection.`;
+                    if (alertEl) {
+                        alertEl.className = "mb-4 p-3 rounded-xl text-xs font-medium border leading-relaxed bg-rose-50 text-rose-800 border-rose-200 block";
+                        alertEl.innerText = msg;
+                    }
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.classList.remove('opacity-75', 'cursor-wait');
+                        if (btnText) btnText.innerText = originalText;
+                    }
+                }
+            } catch (err) {
+                if (alertEl) {
+                    alertEl.className = "mb-4 p-3 rounded-xl text-xs font-medium border leading-relaxed bg-rose-50 text-rose-800 border-rose-200 block";
+                    alertEl.innerText = "Lỗi kết nối: " + (err.message || "Vui lòng thử lại sau.");
+                }
+                if (btn) {
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-75', 'cursor-wait');
+                    if (btnText) btnText.innerText = originalText;
+                }
+            }
+        }
     </script>
 </body>
 </html>

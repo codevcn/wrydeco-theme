@@ -1,8 +1,8 @@
-{% comment %}
+{% doc %}
   Renders product price.
-  @param {product} product
-  @param {variant} current_variant
-{% endcomment %}
+  @param {product} product - The current product.
+  @param {variant} current_variant - The selected variant.
+{% enddoc %}
 
 {% style %}
   .product-price {
@@ -82,10 +82,10 @@
 </div>
 
 {%- comment -%}
-  Pre-formatted price data for every variant so the price, compare-at price and
-  "Save" amount can be recalculated instantly on variant change — no API call.
+  Localized unit prices and integer amounts for each variant, so price, savings
+  and quantity subtotals update instantly without an API call.
 {%- endcomment -%}
-<script type="application/json" data-variant-prices>
+<script type="application/json" data-variant-prices data-money-sample="{{ 123456789 | money | strip_html | escape }}">
   {
     {%- for v in product.variants -%}
       {%- assign on_sale = false -%}
@@ -94,6 +94,7 @@
       {%- endif -%}
       "{{ v.id }}": {
         "price": {{ v.price | money | json }},
+        "priceCents": {{ v.price | json }},
         "onSale": {{ on_sale | json }},
         "compareAt": {% if on_sale %}{{ v.compare_at_price | money | json }}{% else %}""{% endif %},
         "savings": {% if on_sale %}{{ v.compare_at_price | minus: v.price | money | json }}{% else %}""{% endif %}
@@ -104,6 +105,19 @@
 
 {% javascript %}
   (function () {
+    // Read separators, precision and currency placement from Liquid's localized
+    // money output. Arithmetic always uses Shopify's integer price, never text.
+    function formatSubtotal(cents, sample) {
+      var number = sample.match(/[0-9](?:[0-9.,\s'’]*[0-9])?/)[0];
+      var decimal = number.match(/([.,])([0-9]{1,2})$/);
+      var precision = decimal ? decimal[2].length : 0;
+      var integer = decimal ? number.slice(0, -precision - 1) : number;
+      var separator = integer.replace(/[0-9]/g, '').charAt(0);
+      var parts = (cents / 100).toFixed(precision).split('.');
+      if (separator) parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, separator);
+      return sample.replace(number, parts[0] + (decimal ? decimal[1] + parts[1] : ''));
+    }
+
     function initPriceUpdater() {
       var container = document.querySelector('[data-price-container]');
       var mapEl = document.querySelector('[data-variant-prices]');
@@ -120,6 +134,25 @@
       var regularEls = document.querySelectorAll('[data-regular-price]');
       var compareEl = container.querySelector('[data-compare-price]');
       var savingsEl = container.querySelector('[data-savings-price]');
+      var form = document.querySelector('form[data-type="add-to-cart-form"]');
+      var quantityInput = form && form.querySelector('[name="quantity"]');
+      var subtotalEl = form && form.querySelector('[data-product-subtotal]');
+      var variantInput = form && form.querySelector('[data-variant-id]');
+      var activeVariantId = variantInput && variantInput.value;
+      var moneySample = mapEl.getAttribute('data-money-sample');
+
+      function updateSubtotal() {
+        var data = map[String(activeVariantId)];
+        if (!data || !subtotalEl || !quantityInput) return;
+        var quantity = Math.max(0, parseInt(quantityInput.value, 10) || 0);
+        subtotalEl.textContent = quantity === 1 ? data.price : formatSubtotal(data.priceCents * quantity, moneySample);
+      }
+
+      if (quantityInput) {
+        quantityInput.addEventListener('input', updateSubtotal);
+        quantityInput.addEventListener('change', updateSubtotal);
+      }
+      updateSubtotal();
 
       // Global entry point called by the variant picker the moment a variant is
       // selected. Updates text content in place (nodes stay stable, so the sticky
@@ -127,10 +160,12 @@
       window.updateProductPrice = function (variantId) {
         var data = map[String(variantId)];
         if (!data || regularEls.length === 0) return;
+        activeVariantId = variantId;
 
         regularEls.forEach(function (regularEl) {
           regularEl.textContent = data.price;
         });
+        updateSubtotal();
 
         if (data.onSale) {
           container.classList.add('product-price--has-sale');

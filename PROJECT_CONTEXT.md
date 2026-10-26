@@ -141,10 +141,13 @@ All styling variables, tokens, and utility classes must align with `assets/base.
 - **Pure Red:** `#FF000D` (Subtle sale/discount highlights)
 
 ### 4.3 Typography
-- **Primary Body & Headings:** `Plus Jakarta Sans`, with fallbacks to `Fraunces`, `Arial`, `sans-serif`.
-- Loaded via `@font-face` in `snippets/css-variables.liquid` referencing the optimized WOFF2 asset hosted on Shopify CDN:
+- **Body Typography:** `--font-roboto` resolves to `Roboto, sans-serif`. All former `--font-body` consumers use `--font-roboto`; the legacy `--font-body` definition aliases it for compatibility.
+- **Display Typography:** `--font-display-light` resolves to `Fraunces Light`, with `Georgia` and `serif` fallbacks. Former `--font-display` consumers use this token.
+- **Primary Compatibility Token:** `--font-primary--family` aliases `--font-roboto` with a direct `Roboto, sans-serif` fallback. Critical body styles and the announcement bar use `--font-roboto` directly, including a Roboto fallback before base CSS loads.
+- **Active Theme Web Fonts (2):** Roboto (body/UI, critical styles, announcement) and Fraunces Light (display). `Courier New` is a system monospace fallback used by code and consultation labels; it has no downloadable font asset. The unused regular Fraunces face, dead Playfair Display fallback names, and the replaced Plus Jakarta Sans face were removed from the storefront. Internal admin/branding tools retain their own actively referenced fonts.
+- Font faces are registered in `snippets/css-variables.liquid` via Shopify `file_url`. Roboto uses `Roboto-VariableFont.ttf` at weights 100-900; Fraunces Light uses `Fraunces_72pt-Light.ttf` at weight 300:
   ```liquid
-  src: url('{{ "Plus-Jakarta-Sans.woff2" | file_url }}') format('woff2');
+  src: url('{{ "Roboto-VariableFont.ttf" | file_url }}') format('truetype');
   ```
 
 ### 4.4 UI Principles

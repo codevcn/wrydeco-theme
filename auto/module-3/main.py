@@ -964,6 +964,155 @@ def get_products_by_variant_option(keyword, sort_by="created_desc", exclude=Fals
         "productsCount": {"count": len(all_matched_edges)}
     }
 
+def get_products_by_variant_name(keyword: str, sort_by: str = "created_desc"):
+    """
+    Lọc các sản phẩm có tên biến thể (Option Name) khớp với keyword (case insensitive).
+    Ví dụ: 'Wood Finish', 'Size', 'Choose Size'.
+    Hỗ trợ danh sách keyword ngăn cách bởi dấu phẩy, hoặc wildcard * nếu có.
+    """
+    raw_kw_list = [k.strip() for k in str(keyword or "").split(",") if k.strip()]
+    if not raw_kw_list:
+        return {
+            "products": {
+                "edges": [],
+                "pageInfo": {"hasNextPage": False, "hasPreviousPage": False}
+            },
+            "productsCount": {"count": 0}
+        }
+
+    query = """
+    query getProductsByVariantName($after: String) {
+      products(first: 50, after: $after) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        edges {
+          node {
+            id
+            handle
+            title
+            descriptionHtml
+            createdAt
+            productType
+            category {
+              name
+            }
+            priceRangeV2 {
+              minVariantPrice {
+                amount
+              }
+            }
+            options {
+              name
+              values
+            }
+            collections(first: 20) {
+              edges {
+                node {
+                  title
+                }
+              }
+            }
+            amazon_link: metafield(namespace: "custom", key: "amazon_link") {
+              value
+            }
+            seo {
+              title
+              description
+            }
+            aeo_html: metafield(namespace: "custom", key: "aeo_html") {
+              value
+            }
+            media(first: 50) {
+              edges {
+                node {
+                  ... on MediaImage {
+                    id
+                    image {
+                      url
+                    }
+                  }
+                  ... on Video {
+                    id
+                    preview {
+                      image {
+                        url
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    """
+    all_matched_edges = []
+    has_next = True
+    cursor = None
+    
+    while has_next:
+        variables = {}
+        if cursor:
+            variables["after"] = cursor
+            
+        res = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=HEADERS)
+        res.raise_for_status()
+        data = res.json()
+        if "errors" in data:
+            print("GraphQL Errors:", data["errors"])
+            break
+            
+        products_data = data["data"]["products"]
+        for edge in products_data.get("edges", []):
+            options = edge["node"].get("options", [])
+            matched = False
+            for opt in options:
+                opt_name = str(opt.get("name") or "").strip().lower()
+                for raw_kw in raw_kw_list:
+                    kw_lower = raw_kw.lower()
+                    if kw_lower.startswith("*") and kw_lower.endswith("*") and len(kw_lower) > 2:
+                        if kw_lower[1:-1] in opt_name:
+                            matched = True
+                            break
+                    elif kw_lower.endswith("*"):
+                        if opt_name.startswith(kw_lower[:-1]):
+                            matched = True
+                            break
+                    elif opt_name == kw_lower:
+                        matched = True
+                        break
+                if matched:
+                    break
+                    
+            if matched:
+                all_matched_edges.append(edge)
+                
+        page_info = products_data.get("pageInfo", {})
+        has_next = page_info.get("hasNextPage", False)
+        cursor = page_info.get("endCursor")
+        
+    def get_sort_key(edge):
+        if sort_by in ["price_asc", "price_desc"]:
+            price_data = edge["node"].get("priceRangeV2")
+            if price_data and price_data.get("minVariantPrice"):
+                return float(price_data["minVariantPrice"].get("amount", 0))
+            return 0.0
+        return edge["node"].get("createdAt", "")
+        
+    reverse_sort = sort_by in ["created_desc", "price_desc"]
+    all_matched_edges.sort(key=get_sort_key, reverse=reverse_sort)
+        
+    return {
+        "products": {
+            "edges": all_matched_edges,
+            "pageInfo": {"hasNextPage": False, "hasPreviousPage": False}
+        },
+        "productsCount": {"count": len(all_matched_edges)}
+    }
+
 def get_products_by_collection(handle, sort_by="created_desc", after=None, before=None):
     query = """
     query getCollectionProducts($handle: String!, $first: Int, $last: Int, $after: String, $before: String, $sortKey: ProductCollectionSortKeys, $reverse: Boolean) {
@@ -2125,6 +2274,8 @@ async def read_root(
             data = get_products_by_description(filter_value, sort_by=sort_by)
         elif filter_value and filter_type == "category":
             data = get_products_by_category(filter_value, sort_by=sort_by)
+        elif filter_value and filter_type in ["variant_name", "variant_option_name"]:
+            data = get_products_by_variant_name(filter_value, sort_by=sort_by)
         elif filter_value and filter_type == "variant_option":
             data = get_products_by_variant_option(filter_value, sort_by=sort_by, exclude=False)
         elif filter_value and filter_type == "not_variant_option":
@@ -3789,6 +3940,894 @@ async def read_collections(request: Request,
             "proxy_cfg": proxy_cfg,
             "error": error_msg
         })
+
+
+# =====================================================================
+# FILE MANAGEMENT (SHOPIFY CONTENT FILES)
+# =====================================================================
+
+def format_file_size(size_bytes) -> str:
+    """Chuyển đổi số byte sang định dạng thân thiện: B, KB, MB, GB."""
+    if size_bytes is None:
+        return "N/A"
+    try:
+        b = float(size_bytes)
+        if b < 0:
+            return "N/A"
+        if b < 1024:
+            return f"{int(b)} B"
+        elif b < 1024 * 1024:
+            return f"{b / 1024:.1f} KB"
+        elif b < 1024 * 1024 * 1024:
+            return f"{b / (1024 * 1024):.1f} MB"
+        else:
+            return f"{b / (1024 * 1024 * 1024):.2f} GB"
+    except (ValueError, TypeError):
+        return "N/A"
+
+def get_shopify_files(
+    query: str = None, 
+    first: int = 20, 
+    last: int = None, 
+    after: str = None, 
+    before: str = None, 
+    store_type: str = "default",
+    file_type: str = "all",
+    min_size: float = None,
+    max_size: float = None,
+    alt_text: str = None
+) -> dict:
+    """
+    Lấy danh sách files từ Shopify GraphQL Admin API.
+    Mặc định sắp xếp theo CREATED_AT reverse: true (mới nhất trước).
+    Hỗ trợ cursor pagination (first/after hoặc last/before) và bộ lọc (file_type, min_size, max_size, alt_text, query).
+    """
+    client_info = get_shopify_client(store_type=store_type)
+    
+    graphql_query = """
+    query getShopifyFiles($first: Int, $last: Int, $after: String, $before: String, $query: String) {
+      files(first: $first, last: $last, after: $after, before: $before, query: $query, sortKey: CREATED_AT, reverse: true) {
+        pageInfo {
+          hasNextPage
+          hasPreviousPage
+          startCursor
+          endCursor
+        }
+        edges {
+          cursor
+          node {
+            id
+            __typename
+            createdAt
+            updatedAt
+            alt
+            fileStatus
+            ... on MediaImage {
+              mimeType
+              image {
+                url
+                width
+                height
+              }
+              originalSource {
+                fileSize
+                url
+              }
+            }
+            ... on GenericFile {
+              mimeType
+              originalFileSize
+              url
+            }
+            ... on Video {
+              originalSource {
+                fileSize
+                url
+              }
+            }
+          }
+        }
+      }
+    }
+    """
+    
+    variables = {}
+    if last and before:
+        variables["last"] = last
+        variables["before"] = before
+    else:
+        variables["first"] = first or 20
+        if after:
+            variables["after"] = after
+            
+    clean_file_type = str(file_type or "all").strip().lower()
+    clean_query = str(query or "").strip()
+    
+    # Kết hợp các query term cho Shopify
+    query_parts = []
+    if clean_file_type == "image":
+        query_parts.append("media_type:IMAGE")
+    elif clean_file_type == "video":
+        query_parts.append("media_type:VIDEO")
+    elif clean_file_type in ["audio", "other"]:
+        query_parts.append("media_type:GENERIC_FILE")
+        
+    if clean_query:
+        query_parts.append(clean_query)
+        
+    if query_parts:
+        variables["query"] = " ".join(query_parts)
+        
+    res = execute_shopify_graphql(client_info, graphql_query, variables)
+    if not res or "data" not in res or not res["data"].get("files"):
+        return {"files": [], "pageInfo": {"hasNextPage": False, "hasPreviousPage": False}}
+        
+    files_data = res["data"]["files"]
+    edges = files_data.get("edges", [])
+    page_info = files_data.get("pageInfo", {})
+    
+    clean_alt_filter = str(alt_text or "").strip().lower()
+    
+    parsed_files = []
+    for edge in edges:
+        if not edge or not isinstance(edge, dict):
+            continue
+        node = edge.get("node")
+        if not node or not isinstance(node, dict):
+            continue
+            
+        node_id = str(node.get("id") or "").split("/")[-1]
+        raw_created_at = node.get("createdAt", "")
+        formatted_date = raw_created_at
+        if raw_created_at:
+            try:
+                # 2026-07-08T09:25:57Z
+                dt = datetime.strptime(raw_created_at, "%Y-%m-%dT%H:%M:%SZ")
+                formatted_date = dt.strftime("%d/%m/%Y %H:%M")
+            except Exception:
+                pass
+                
+        file_node_alt = node.get("alt") or ""
+        file_status = node.get("fileStatus") or ""
+        mime_type = node.get("mimeType") or ""
+        typename = node.get("__typename") or ""
+        
+        file_url = ""
+        file_size_bytes = None
+        thumbnail_url = ""
+        file_category = "other" # image, video, audio, other
+        
+        # An toàn tuyệt đối với NoneType cho mọi dict con (kể cả khi file PROCESSING hoặc FAILED)
+        image_obj = node.get("image") if isinstance(node.get("image"), dict) else {}
+        orig_src = node.get("originalSource") if isinstance(node.get("originalSource"), dict) else {}
+        
+        if typename == "MediaImage" or bool(image_obj):
+            file_category = "image"
+            file_url = image_obj.get("url") or orig_src.get("url") or ""
+            thumbnail_url = file_url
+            if orig_src.get("fileSize"):
+                file_size_bytes = orig_src.get("fileSize")
+        elif typename == "Video" or (typename == "GenericFile" and mime_type and mime_type.startswith("video/")) or (bool(orig_src) and not image_obj and typename != "MediaImage"):
+            file_category = "video"
+            file_url = orig_src.get("url") or node.get("url") or ""
+            file_size_bytes = orig_src.get("fileSize") or node.get("originalFileSize")
+        elif "originalFileSize" in node or typename == "GenericFile":
+            file_url = node.get("url") or orig_src.get("url") or ""
+            file_size_bytes = node.get("originalFileSize") or orig_src.get("fileSize")
+            if mime_type and mime_type.startswith("image/"):
+                file_category = "image"
+                thumbnail_url = file_url
+        else:
+            file_url = orig_src.get("url") or image_obj.get("url") or node.get("url") or ""
+            file_size_bytes = orig_src.get("fileSize") or node.get("originalFileSize")
+            
+        filename = ""
+        if file_url:
+            try:
+                clean_path = file_url.split("?")[0].split("#")[0]
+                filename = clean_path.split("/")[-1]
+            except Exception:
+                filename = f"file-{node_id}"
+        if not filename:
+            filename = f"file-{node_id}"
+            
+        ext = filename.split(".")[-1].lower() if "." in filename else ""
+        if (mime_type and mime_type.startswith("audio/")) or ext in ["mp3", "wav", "ogg", "m4a", "flac", "aac"]:
+            file_category = "audio"
+        elif (mime_type and mime_type.startswith("image/")) or ext in ["jpg", "jpeg", "png", "svg", "webp", "gif", "avif"]:
+            file_category = "image"
+            if not thumbnail_url:
+                thumbnail_url = file_url
+        elif (mime_type and mime_type.startswith("video/")) or ext in ["mp4", "mov", "webm"]:
+            file_category = "video"
+        elif not mime_type:
+            if ext == "css":
+                mime_type = "text/css"
+            elif ext == "js":
+                mime_type = "application/javascript"
+            elif ext == "pdf":
+                mime_type = "application/pdf"
+            else:
+                mime_type = "application/octet-stream"
+
+        if file_category not in ["image", "video", "audio"]:
+            file_category = "other"
+
+        # -------------------------------------------------------------
+        # ÁP DỤNG CÁC ĐIỀU KIỆN LỌC
+        # -------------------------------------------------------------
+        # 1. Lọc theo file type (image, video, audio, other)
+        if clean_file_type != "all":
+            if clean_file_type == "image" and file_category != "image":
+                continue
+            elif clean_file_type == "video" and file_category != "video":
+                continue
+            elif clean_file_type == "audio" and file_category != "audio":
+                continue
+            elif clean_file_type == "other" and file_category != "other":
+                continue
+
+        # 2. Lọc theo alt text (CHỈ so khớp với alt text của file, không so với field khác)
+        if clean_alt_filter:
+            if clean_alt_filter not in (file_node_alt or "").strip().lower():
+                continue
+
+        # 3. Lọc theo file size (min_size và max_size theo MB)
+        if min_size is not None:
+            try:
+                min_bytes = float(min_size) * 1024 * 1024
+                if file_size_bytes is not None and file_size_bytes < min_bytes:
+                    continue
+            except Exception:
+                pass
+
+        if max_size is not None:
+            try:
+                max_bytes = float(max_size) * 1024 * 1024
+                if file_size_bytes is not None and file_size_bytes > max_bytes:
+                    continue
+            except Exception:
+                pass
+                
+        parsed_files.append({
+            "id": node_id,
+            "fullId": str(node.get("id") or ""),
+            "typename": typename,
+            "filename": filename,
+            "alt": file_node_alt,
+            "createdAt": formatted_date,
+            "rawCreatedAt": raw_created_at,
+            "sizeBytes": file_size_bytes,
+            "sizeFormatted": format_file_size(file_size_bytes),
+            "url": file_url,
+            "thumbnail": thumbnail_url,
+            "mimeType": mime_type,
+            "fileCategory": file_category,
+            "status": file_status
+        })
+        
+    return {
+        "files": parsed_files,
+        "pageInfo": page_info,
+        "cursor": edge.get("cursor") if edges else None
+    }
+
+
+@app.get("/files", response_class=HTMLResponse)
+async def read_files_page(
+    request: Request,
+    query: str = "",
+    file_type: str = "all",
+    min_size: str = "",
+    max_size: str = "",
+    alt_text: str = "",
+    after: str = None,
+    before: str = None,
+    store_type: str = "default"
+):
+    norm_store_type = "custom" if str(store_type or "").strip().lower() == "custom" else "default"
+    client_info = None
+    clean_query = str(query or "").strip()
+    clean_file_type = str(file_type or "all").strip().lower()
+    if clean_file_type not in ["all", "image", "video", "audio", "other"]:
+        clean_file_type = "all"
+        
+    clean_alt_text = str(alt_text or "").strip()
+    clean_min_size = str(min_size or "").strip()
+    min_size_val = None
+    if clean_min_size:
+        try:
+            min_size_val = float(clean_min_size)
+        except ValueError:
+            pass
+
+    clean_max_size = str(max_size or "").strip()
+    max_size_val = None
+    if clean_max_size:
+        try:
+            max_size_val = float(clean_max_size)
+        except ValueError:
+            pass
+
+    # Yêu cầu: khi có ít nhất 1 điều kiện lọc được chọn, pagination size sẽ tăng từ 20 lên 50
+    has_filter = bool(
+        (clean_file_type != "all") or
+        (min_size_val is not None) or
+        (max_size_val is not None) or
+        clean_alt_text or
+        clean_query
+    )
+    page_size = 50 if has_filter else 20
+
+    try:
+        client_info = get_shopify_client(store_type=norm_store_type)
+        data = get_shopify_files(
+            query=clean_query if clean_query else None,
+            first=page_size if not before else None,
+            last=page_size if before else None,
+            after=after,
+            before=before,
+            store_type=norm_store_type,
+            file_type=clean_file_type,
+            min_size=min_size_val,
+            max_size=max_size_val,
+            alt_text=clean_alt_text
+        )
+        return templates.TemplateResponse(request=request, name="files.html", context={
+            "request": request,
+            "files": data.get("files", []),
+            "page_info": data.get("pageInfo", {}),
+            "query": clean_query,
+            "file_type": clean_file_type,
+            "min_size": clean_min_size,
+            "max_size": clean_max_size,
+            "alt_text": clean_alt_text,
+            "has_filter": has_filter,
+            "page_size": page_size,
+            "store_type": norm_store_type,
+            "client_info": client_info,
+            "active_shop": client_info.get("shop", "") if client_info else "",
+            "active_shop_domain": client_info.get("shop_domain", "") if client_info else "",
+            "error": None
+        })
+    except Exception as e:
+        return templates.TemplateResponse(request=request, name="files.html", context={
+            "request": request,
+            "files": [],
+            "page_info": {},
+            "query": clean_query,
+            "file_type": clean_file_type,
+            "min_size": clean_min_size,
+            "max_size": clean_max_size,
+            "alt_text": clean_alt_text,
+            "has_filter": has_filter,
+            "page_size": page_size,
+            "store_type": norm_store_type,
+            "client_info": client_info,
+            "active_shop": client_info.get("shop", "") if client_info else "",
+            "active_shop_domain": client_info.get("shop_domain", "") if client_info else "",
+            "error": str(e)
+        })
+
+
+
+@app.post("/api/files/staged-upload")
+async def api_staged_upload_file(request: Request):
+    """
+    Tạo Staged Upload Target trên Cloud Storage của Shopify (GCS / AWS S3).
+    Cho phép trình duyệt tải trực tiếp tệp tin (kể cả tệp nặng > 200MB) lên Shopify Cloud
+    mà không đi qua server FastAPI/Cloudflare, có progress bar và không lo tràn RAM/timeout.
+    """
+    try:
+        data = await request.json()
+        filename = str(data.get("filename") or "").strip()
+        file_size = str(data.get("fileSize") or "").strip()
+        mime_type = str(data.get("mimeType") or "application/octet-stream").strip()
+        store_type = str(data.get("store_type") or "default").strip()
+        
+        if not filename:
+            return JSONResponse({"success": False, "message": "Tên file không được để trống."}, status_code=400)
+            
+        resource = "FILE"
+        if mime_type.startswith("image/"):
+            resource = "IMAGE"
+        elif mime_type.startswith("video/"):
+            resource = "VIDEO"
+            
+        norm_store_type = "custom" if store_type.lower() == "custom" else "default"
+        client_info = get_shopify_client(norm_store_type)
+        staged_mutation = """
+        mutation stagedUploadsCreate($input: [StagedUploadInput!]!) {
+          stagedUploadsCreate(input: $input) {
+            stagedTargets {
+              url
+              resourceUrl
+              parameters {
+                name
+                value
+              }
+            }
+            userErrors {
+              field
+              message
+            }
+          }
+        }
+        """
+        
+        input_payload = [{
+            "resource": resource,
+            "filename": filename,
+            "mimeType": mime_type,
+            "fileSize": file_size,
+            "httpMethod": "POST"
+        }]
+        
+        res = execute_shopify_graphql(client_info, staged_mutation, {"input": input_payload})
+        data_res = res.get("data", {}).get("stagedUploadsCreate", {})
+        errors = data_res.get("userErrors", [])
+        if errors:
+            err_msg = ", ".join([e.get("message", "") for e in errors])
+            return JSONResponse({"success": False, "message": f"Shopify từ chối tạo upload: {err_msg}"}, status_code=400)
+            
+        targets = data_res.get("stagedTargets", [])
+        if not targets:
+            return JSONResponse({"success": False, "message": "Không nhận được staged upload target từ Shopify."}, status_code=500)
+            
+        target = targets[0]
+        return JSONResponse({
+            "success": True,
+            "url": target["url"],
+            "resourceUrl": target["resourceUrl"],
+            "parameters": target["parameters"]
+        })
+    except Exception as e:
+        return JSONResponse({"success": False, "message": str(e)}, status_code=500)
+
+
+@app.post("/api/files/create")
+async def api_create_file(request: Request):
+    """
+    Sau khi client upload file thành công lên Staged Storage,
+    gọi endpoint này để đăng ký file vào Shopify Content Files.
+    """
+    try:
+        data = await request.json()
+        resource_url = str(data.get("resourceUrl") or "").strip()
+        alt = str(data.get("alt") or "").strip()
+        mime_type = str(data.get("mimeType") or "").strip()
+        filename = str(data.get("filename") or "").strip()
+        store_type = str(data.get("store_type") or "default").strip()
+        
+        if not resource_url:
+            return JSONResponse({"success": False, "message": "resourceUrl không hợp lệ."}, status_code=400)
+            
+        content_type = "FILE"
+        if mime_type.startswith("image/"):
+            content_type = "IMAGE"
+        elif mime_type.startswith("video/"):
+            content_type = "VIDEO"
+            
+        file_input = {
+            "originalSource": resource_url,
+            "contentType": content_type
+        }
+        if alt:
+            file_input["alt"] = alt
+        if filename:
+            file_input["filename"] = filename
+            
+        norm_store_type = "custom" if store_type.lower() == "custom" else "default"
+        client_info = get_shopify_client(norm_store_type)
+        create_mutation = """
+        mutation fileCreate($files: [FileCreateInput!]!) {
+          fileCreate(files: $files) {
+            files {
+              id
+              fileStatus
+              alt
+              createdAt
+            }
+            userErrors {
+              field
+              message
+            }
+          }
+        }
+        """
+        res = execute_shopify_graphql(client_info, create_mutation, {"files": [file_input]})
+        data_res = res.get("data", {}).get("fileCreate", {})
+        errors = data_res.get("userErrors", [])
+        if errors:
+            err_msg = ", ".join([e.get("message", "") for e in errors])
+            return JSONResponse({"success": False, "message": f"Shopify lỗi tạo file: {err_msg}"}, status_code=400)
+            
+        created_files = data_res.get("files", [])
+        return JSONResponse({
+            "success": True,
+            "message": "Tải file lên Shopify Content Files thành công!",
+            "file": created_files[0] if created_files else None
+        })
+    except Exception as e:
+        return JSONResponse({"success": False, "message": str(e)}, status_code=500)
+
+
+@app.post("/api/files/update")
+async def api_update_file(request: Request):
+    """
+    Cập nhật thông tin file trong Shopify Content Files (filename, alt text).
+    """
+    try:
+        data = await request.json()
+        file_id = str(data.get("fileId") or "").strip()
+        new_filename = data.get("filename")
+        new_alt = data.get("alt")
+        store_type = str(data.get("store_type") or "default").strip()
+        norm_store_type = "custom" if store_type.lower() == "custom" else "default"
+
+        if not file_id:
+            return JSONResponse({"success": False, "message": "Thiếu fileId"}, status_code=400)
+
+        # Đảm bảo format GID chuẩn của Shopify
+        full_gid = file_id if file_id.startswith("gid://shopify/") else f"gid://shopify/MediaImage/{file_id}"
+
+        client_info = get_shopify_client(store_type=norm_store_type)
+        file_input = {"id": full_gid}
+        if new_filename is not None:
+            file_input["filename"] = str(new_filename).strip()
+        if new_alt is not None:
+            file_input["alt"] = str(new_alt).strip()
+
+        mutation = """
+        mutation fileUpdate($files: [FileUpdateInput!]!) {
+          fileUpdate(files: $files) {
+            files {
+              id
+              alt
+              createdAt
+              fileStatus
+              ... on MediaImage {
+                image { url }
+                originalSource { url }
+              }
+              ... on GenericFile {
+                url
+              }
+              ... on Video {
+                originalSource { url }
+              }
+            }
+            userErrors {
+              field
+              message
+            }
+          }
+        }
+        """
+        res = execute_shopify_graphql(client_info, mutation, {"files": [file_input]})
+        if not res or "data" not in res or not res["data"].get("fileUpdate"):
+            err_msg = res.get("errors", [{}])[0].get("message") if (res and res.get("errors")) else "Lỗi phản hồi Shopify"
+            return JSONResponse({"success": False, "message": err_msg}, status_code=500)
+
+        file_update_res = res["data"]["fileUpdate"]
+        user_errors = file_update_res.get("userErrors", [])
+        if user_errors:
+            err_msg = "; ".join([e.get("message", "Lỗi") for e in user_errors])
+            return JSONResponse({"success": False, "message": err_msg}, status_code=400)
+
+        # Lấy URL CDN mới nhất của file sau khi đổi tên
+        new_url = ""
+        files_list = file_update_res.get("files", [])
+        if files_list and isinstance(files_list[0], dict):
+            uf = files_list[0]
+            if uf.get("image") and isinstance(uf.get("image"), dict):
+                new_url = uf["image"].get("url") or ""
+            elif uf.get("url"):
+                new_url = uf["url"]
+            elif uf.get("originalSource") and isinstance(uf.get("originalSource"), dict):
+                new_url = uf["originalSource"].get("url") or ""
+
+        # Fallback: nếu chưa lấy được url mới trực tiếp từ mutation, query node(id)
+        if not new_url:
+            try:
+                node_q = """
+                query getNode($id: ID!) {
+                  node(id: $id) {
+                    ... on MediaImage {
+                      image { url }
+                      originalSource { url }
+                    }
+                    ... on GenericFile {
+                      url
+                    }
+                    ... on Video {
+                      originalSource { url }
+                    }
+                  }
+                }
+                """
+                nq_res = execute_shopify_graphql(client_info, node_q, {"id": full_gid})
+                node_data = (nq_res.get("data") or {}).get("node") if isinstance(nq_res.get("data"), dict) else {}
+                if node_data and isinstance(node_data, dict):
+                    if node_data.get("image") and isinstance(node_data.get("image"), dict):
+                        new_url = node_data["image"].get("url") or ""
+                    elif node_data.get("url"):
+                        new_url = node_data["url"]
+                    elif node_data.get("originalSource") and isinstance(node_data.get("originalSource"), dict):
+                        new_url = node_data["originalSource"].get("url") or ""
+            except Exception:
+                pass
+
+        return JSONResponse({
+            "success": True, 
+            "message": "Cập nhật tệp tin thành công!",
+            "newUrl": new_url,
+            "filename": new_filename,
+            "alt": new_alt
+        }, status_code=200)
+    except Exception as e:
+        return JSONResponse({"success": False, "message": str(e)}, status_code=500)
+
+
+@app.post("/api/files/delete")
+async def api_delete_file(request: Request):
+    """
+    Xóa file khỏi Shopify Content Files qua GraphQL fileDelete.
+    """
+    try:
+        data = await request.json()
+        file_id = str(data.get("fileId") or "").strip()
+        store_type = str(data.get("store_type") or "default").strip()
+        norm_store_type = "custom" if store_type.lower() == "custom" else "default"
+
+        if not file_id:
+            return JSONResponse({"success": False, "message": "Thiếu fileId"}, status_code=400)
+
+        full_gid = file_id if file_id.startswith("gid://shopify/") else f"gid://shopify/MediaImage/{file_id}"
+
+        client_info = get_shopify_client(store_type=norm_store_type)
+        mutation = """
+        mutation fileDelete($fileIds: [ID!]!) {
+          fileDelete(fileIds: $fileIds) {
+            deletedFileIds
+            userErrors {
+              field
+              message
+            }
+          }
+        }
+        """
+        res = execute_shopify_graphql(client_info, mutation, {"fileIds": [full_gid]})
+        if not res or "data" not in res or not res["data"].get("fileDelete"):
+            err_msg = res.get("errors", [{}])[0].get("message") if (res and res.get("errors")) else "Lỗi phản hồi Shopify"
+            return JSONResponse({"success": False, "message": err_msg}, status_code=500)
+
+        file_delete_res = res["data"]["fileDelete"]
+        user_errors = file_delete_res.get("userErrors", [])
+        if user_errors:
+            err_msg = "; ".join([e.get("message", "Lỗi") for e in user_errors])
+            return JSONResponse({"success": False, "message": err_msg}, status_code=400)
+
+        deleted_ids = file_delete_res.get("deletedFileIds", [])
+        return JSONResponse({
+            "success": True, 
+            "message": "Đã xóa tệp tin thành công khỏi Shopify Content Files!",
+            "deletedFileIds": deleted_ids
+        }, status_code=200)
+    except Exception as e:
+        return JSONResponse({"success": False, "message": str(e)}, status_code=500)
+
+
+@app.post("/api/files/calculate-storage")
+async def api_calculate_storage(request: Request):
+    """
+    Quét và tính toán toàn bộ dung lượng Shopify Content Files thông qua Shopify Bulk Operation.
+    Phân tích chi tiết tổng số tệp, tổng dung lượng và phân loại theo hình ảnh, video, generic files, 3d models.
+    """
+    try:
+        data = {}
+        try:
+            data = await request.json()
+        except Exception:
+            pass
+            
+        store_type = str(data.get("store_type") or "default").strip()
+        norm_store_type = "custom" if store_type.lower() == "custom" else "default"
+        client_info = get_shopify_client(norm_store_type)
+        
+        # 1. Kiểm tra currentBulkOperation
+        check_query = """
+        {
+          currentBulkOperation(type: QUERY) {
+            id
+            status
+            errorCode
+            createdAt
+            completedAt
+            objectCount
+            fileSize
+            url
+            partialDataUrl
+          }
+        }
+        """
+        curr_res = execute_shopify_graphql(client_info, check_query)
+        curr_op = curr_res.get("data", {}).get("currentBulkOperation")
+        
+        need_new_query = True
+        bulk_url = None
+        bulk_completed_at = None
+        
+        # Nếu đang có operation chạy dở, không tạo mới mà tiếp tục đợi
+        if curr_op and curr_op.get("status") in ["RUNNING", "CREATED"]:
+            need_new_query = False
+            
+        if need_new_query:
+            bulk_mutation = """
+            mutation {
+              bulkOperationRunQuery(
+                query: \"\"\"
+                  {
+                    files {
+                      edges {
+                        node {
+                          __typename
+                          id
+                          createdAt
+                          ... on GenericFile {
+                            originalFileSize
+                          }
+                          ... on MediaImage {
+                            originalSource {
+                              fileSize
+                            }
+                          }
+                          ... on Video {
+                            originalSource {
+                              fileSize
+                            }
+                          }
+                          ... on Model3d {
+                            originalSource {
+                              filesize
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                \"\"\"
+              ) {
+                bulkOperation {
+                  id
+                  status
+                }
+                userErrors {
+                  field
+                  message
+                }
+              }
+            }
+            """
+            run_res = execute_shopify_graphql(client_info, bulk_mutation)
+            run_data = run_res.get("data", {}).get("bulkOperationRunQuery", {})
+            user_errors = run_data.get("userErrors", [])
+            if user_errors:
+                err_msg = ", ".join([e.get("message", "") for e in user_errors])
+                if "already in progress" not in err_msg.lower():
+                    return JSONResponse({"success": False, "message": f"Shopify Bulk Operation lỗi: {err_msg}"}, status_code=400)
+
+        # 2. Polling chờ Bulk Operation hoàn thành (tối đa 60s, mỗi 1.5s)
+        max_attempts = 40
+        poll_op = None
+        for _ in range(max_attempts):
+            await asyncio.sleep(1.5)
+            poll_res = execute_shopify_graphql(client_info, check_query)
+            poll_op = poll_res.get("data", {}).get("currentBulkOperation")
+            if not poll_op:
+                continue
+            status = poll_op.get("status")
+            if status == "COMPLETED":
+                bulk_url = poll_op.get("url")
+                bulk_completed_at = poll_op.get("completedAt")
+                break
+            elif status in ["FAILED", "CANCELED", "EXPIRED"]:
+                err_code = poll_op.get("errorCode") or "UNKNOWN_ERROR"
+                return JSONResponse({"success": False, "message": f"Bulk Operation thất bại: {status} ({err_code})"}, status_code=500)
+
+        if not bulk_url:
+            return JSONResponse({"success": False, "message": "Shopify xử lý quá lâu, vui lòng thử lại sau giây lát."}, status_code=504)
+
+        # 3. Tải file JSONL và tính tổng dung lượng streamingly
+        def parse_jsonl(url_target):
+            import ssl
+            import urllib.request
+            ctx = ssl._create_unverified_context()
+            total_b = 0
+            total_c = 0
+            stats = {
+                "MediaImage": {"count": 0, "bytes": 0, "label": "Hình ảnh (Images)", "icon": "mdi:image-outline", "color": "text-blue-600 bg-blue-50 border-blue-200"},
+                "Video": {"count": 0, "bytes": 0, "label": "Video", "icon": "mdi:video-outline", "color": "text-purple-600 bg-purple-50 border-purple-200"},
+                "GenericFile": {"count": 0, "bytes": 0, "label": "Tài liệu & Tệp khác", "icon": "mdi:file-document-outline", "color": "text-amber-600 bg-amber-50 border-amber-200"},
+                "Model3d": {"count": 0, "bytes": 0, "label": "Mô hình 3D", "icon": "mdi:cube-outline", "color": "text-emerald-600 bg-emerald-50 border-emerald-200"},
+                "Other": {"count": 0, "bytes": 0, "label": "Khác", "icon": "mdi:file-question-outline", "color": "text-gray-600 bg-gray-50 border-gray-200"}
+            }
+            req = urllib.request.Request(
+                url_target,
+                headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+            )
+            with urllib.request.urlopen(req, context=ctx, timeout=60) as resp:
+                for line in resp:
+                    line_str = line.strip()
+                    if not line_str:
+                        continue
+                    item = json.loads(line_str.decode("utf-8"))
+                    typename = item.get("__typename") or "Other"
+                    total_c += 1
+                    
+                    size = 0
+                    if typename == "GenericFile":
+                        size = item.get("originalFileSize") or 0
+                    elif typename == "MediaImage":
+                        orig = item.get("originalSource")
+                        if orig:
+                            size = orig.get("fileSize") or 0
+                    elif typename == "Video":
+                        orig = item.get("originalSource")
+                        if orig:
+                            size = orig.get("fileSize") or 0
+                    elif typename == "Model3d":
+                        orig = item.get("originalSource")
+                        if orig:
+                            size = orig.get("filesize") or 0
+                    
+                    total_b += size
+                    category = typename if typename in stats else "Other"
+                    stats[category]["count"] += 1
+                    stats[category]["bytes"] += size
+
+            breakdown = []
+            for cat_key, cat_val in stats.items():
+                if cat_val["count"] > 0 or cat_key in ["MediaImage", "Video", "GenericFile"]:
+                    pct = (cat_val["bytes"] / total_b * 100) if total_b > 0 else 0
+                    breakdown.append({
+                        "key": cat_key,
+                        "label": cat_val["label"],
+                        "icon": cat_val["icon"],
+                        "color": cat_val["color"],
+                        "count": cat_val["count"],
+                        "bytes": cat_val["bytes"],
+                        "formatted": format_file_size(cat_val["bytes"]),
+                        "percentage": round(pct, 1)
+                    })
+            breakdown.sort(key=lambda x: x["bytes"], reverse=True)
+            return total_c, total_b, breakdown
+
+        total_count, total_bytes, breakdown = await asyncio.to_thread(parse_jsonl, bulk_url)
+
+        # Định dạng thời gian hoàn tất
+        completed_formatted = ""
+        if bulk_completed_at:
+            try:
+                dt = datetime.fromisoformat(bulk_completed_at.replace("Z", "+00:00"))
+                local_dt = dt.astimezone(timezone(timedelta(hours=7)))
+                completed_formatted = local_dt.strftime("%H:%M:%S ngày %d/%m/%Y")
+            except Exception:
+                completed_formatted = bulk_completed_at
+        else:
+            completed_formatted = datetime.now().strftime("%H:%M:%S ngày %d/%m/%Y")
+
+        return JSONResponse({
+            "success": True,
+            "total_files": total_count,
+            "total_bytes": total_bytes,
+            "total_formatted": format_file_size(total_bytes),
+            "completed_at": completed_formatted,
+            "breakdown": breakdown
+        })
+    except Exception as e:
+        return JSONResponse({"success": False, "message": str(e)}, status_code=500)
+
 
 
 @app.get("/create", response_class=HTMLResponse)

@@ -1,3 +1,4 @@
+{% render 'plp-card-resources' %}
 {% liquid
   assign rec_limit = section.settings.products_to_show | default: 6
 %}
@@ -29,51 +30,7 @@
 
       <div class="product-recommendations__slider" data-pairs-slider>
         {% for product in recommendations.products limit: rec_limit %}
-          {% liquid
-            assign material = product.metafields.custom.product_material
-            if material == blank
-              assign material = section.settings.material_label
-            endif
-          %}
-          <article class="pairs-card">
-            <a class="pairs-card__media" href="{{ product.url }}" draggable="false">
-              {%- if product.featured_media != blank -%}
-                {% assign recommendation_image_alt = product.featured_media.alt | default: product.title %}
-                {{
-                  product.featured_media.preview_image
-                  | image_url: width: 640
-                  | image_tag:
-                    class: 'pairs-card__image',
-                    loading: 'lazy',
-                    decoding: 'async',
-                    fetchpriority: 'low',
-                    draggable: 'false',
-                    widths: '240, 360, 480, 640',
-                    sizes: '(min-width: 1024px) 24vw, (min-width: 720px) 33vw, 78vw',
-                    alt: recommendation_image_alt
-                }}
-              {%- else -%}
-                {{ 'product-1' | placeholder_svg_tag: 'pairs-card__image placeholder-svg' }}
-              {%- endif -%}
-            </a>
-
-            <div class="pairs-card__info">
-              <h3 class="pairs-card__title">
-                <a class="pairs-card__title-link" href="{{ product.url }}" draggable="false">
-                  {{- product.title | split: ',' | first | split: ' - ' | first | strip | escape -}}
-                </a>
-              </h3>
-              {% if material != blank %}
-                <p class="pairs-card__material">{{ material | escape }}</p>
-              {% endif %}
-              <a class="pairs-card__link" href="{{ product.url }}" draggable="false">
-                <span>{{ section.settings.cta_label | default: 'View piece' }}</span>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <polyline points="9 18 15 12 9 6"></polyline>
-                </svg>
-              </a>
-            </div>
-          </article>
+          {% render 'plp-product-card', product: product, heading_tag: 'h3', class: 'pairs-card' %}
         {% endfor %}
       </div>
 
@@ -110,6 +67,7 @@
               .parseFromString(html, 'text/html')
               .querySelector('.product-recommendations')?.innerHTML || '';
             container.innerHTML = inner;
+            document.dispatchEvent(new CustomEvent('wrydeco:product-cards:loaded', { detail: { root: container } }));
 
             const subtitle = container.querySelector('.product-recommendations__subtitle');
             if (subtitle && subtitle.textContent.indexOf('{product}') !== -1) {
@@ -141,7 +99,7 @@
   }
   .product-recommendations__eyebrow {
     margin: 0 0 var(--sp-3);
-    font-family: var(--font-body);
+    font-family: var(--font-roboto);
     font-size: var(--font-size-body-sm);
     font-weight: var(--font-weight-semibold);
     letter-spacing: 0.16em;
@@ -169,6 +127,24 @@
   /* Carousel */
   .product-recommendations__carousel {
     position: relative;
+    padding-top: 60px;
+  }
+  .product-recommendations__carousel:not(.has-overflow) {
+    padding-top: 0;
+  }
+  .product-recommendations__carousel > .product-recommendations__nav {
+    top: 0;
+    transform: none;
+  }
+  .product-recommendations__carousel > .product-recommendations__nav:hover {
+    transform: scale(1.05);
+  }
+  .product-recommendations__carousel > .product-recommendations__nav--prev {
+    left: auto;
+    right: 60px;
+  }
+  .product-recommendations__carousel > .product-recommendations__nav--next {
+    right: 0;
   }
   .product-recommendations__slider {
     display: flex;
@@ -198,7 +174,7 @@
   .pairs-card {
     display: flex;
     flex-direction: column;
-    flex: 0 0 calc((100% - (var(--sp-5) * 3)) / 4);
+    flex: 0 0 calc((100% - (var(--sp-5) * 2)) / 3);
     min-width: 0;
     scroll-snap-align: start;
   }
@@ -228,7 +204,7 @@
   }
   .pairs-card__title {
     margin: 0;
-    font-family: var(--font-display);
+    font-family: var(--font-display-light);
     font-size: var(--font-size-body-xl);
     font-weight: var(--font-weight-regular);
     line-height: var(--line-height-tight);
@@ -343,6 +319,9 @@
   }
 
   @media screen and (max-width: 768px) {
+    .product-recommendations__carousel {
+      padding-top: 0;
+    }
     .product-recommendations {
       padding: var(--section-spacing-mobile) var(--layout-padding-mobile);
     }
@@ -366,7 +345,7 @@
 
   @media screen and (max-width: 480px) {
     .pairs-card {
-      flex-basis: 78%;
+      flex-basis: 92%;
     }
     .pairs-card__title {
       font-size: var(--font-size-body-lg);
