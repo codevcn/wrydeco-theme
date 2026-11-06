@@ -63,6 +63,10 @@ class AntigravityProtocolError(AntigravityError):
     pass
 
 
+class AntigravityFileReadDenied(AntigravityProtocolError):
+    """A blocked file read, distinguishable from other protocol violations."""
+
+
 def validate_antigravity_model(value: Any) -> str:
     if not isinstance(value, str):
         raise ValueError("Antigravity model must be a string.")
@@ -412,9 +416,13 @@ class AntigravitySupervisor:
                 "agent": self.state(),
             }
 
-    def stop(self) -> None:
+    def request_stop(self) -> None:
         self._shutdown.set()
+        self._session_stop.set()
         self.readiness_gate.clear()
+
+    def stop(self) -> None:
+        self.request_stop()
         self._set_status("stopping", "Stopping Antigravity runtime.")
         self._stop_session(mark_stopped=True)
         thread = self._thread
@@ -597,17 +605,9 @@ class AntigravitySupervisor:
                     )
                 display_name = "list Wrydeco MCP resources"
             elif base == "view_file":
-                file_path = _parameter(
-                    parameters, "path", "file_path", "absolute_path", "AbsolutePath", "FilePath"
+                self._check_spooled_file_read(
+                    parameters, state, session_id=self._session_id, purpose=purpose,
                 )
-                if file_path and not _safe_spooled_output_path(file_path):
-                    raise AntigravityProtocolError(
-                        "Antigravity attempted to read a file outside its MCP output spool."
-                    )
-                if terminal_success and not _safe_spooled_output_path(file_path):
-                    raise AntigravityProtocolError(
-                        "Antigravity completed a file read outside its MCP output spool."
-                    )
                 display_name = "read Antigravity MCP output spool"
             detail = _tool_error_detail(update)
             message = f"{display_name} · {state}"
@@ -802,6 +802,24 @@ class AntigravitySupervisor:
             "conversation_id": None, "model": model,
         }
 
+    def _check_spooled_file_read(self, parameters, state, *, session_id, purpose, task=None):
+        file_path = _parameter(parameters, "path", "file_path", "absolute_path", "AbsolutePath", "FilePath")
+        terminal_success = str(state).upper() in {"DONE", "SUCCESS", "COMPLETED"}
+        if _safe_spooled_output_path(file_path) or (not file_path and not terminal_success):
+            return
+        # Record only the requested path, never complete tool parameters or file contents.
+        denied_path = _sanitize_text(file_path, 600).replace("\r", " ").replace("\n", " ") or "<missing>"
+        actor = "Content Agent" if task else "Antigravity"
+        action = "attempted to read a file" if file_path else "completed a file read"
+        message = f"{actor} {action} outside its MCP output spool. Denied path: {denied_path}"
+        context = {"run_id": task["product"]["run_id"], "product_id": task["task_id"]} if task else {}
+        self.store.event(
+            "agent_file_read_denied", source="antigravity", session_id=session_id,
+            purpose=purpose, tool="view_file", state=state, denied_path=denied_path,
+            policy="MCP output.txt only", message=message, **context,
+        )
+        raise AntigravityFileReadDenied(message)
+
     def _log_content_event(
         self, payload: dict[str, Any], runtime: dict[str, Any], task: dict[str, Any]
     ) -> bool:
@@ -873,17 +891,9 @@ class AntigravitySupervisor:
                     )
                 display_name = "list Wrydeco MCP resources"
             elif base == "view_file":
-                file_path = _parameter(
-                    parameters, "path", "file_path", "absolute_path", "AbsolutePath", "FilePath"
+                self._check_spooled_file_read(
+                    parameters, state, session_id=session_id, purpose="content", task=task,
                 )
-                if file_path and not _safe_spooled_output_path(file_path):
-                    raise AntigravityProtocolError(
-                        "Content Agent attempted to read a file outside its MCP output spool."
-                    )
-                if terminal_success and not _safe_spooled_output_path(file_path):
-                    raise AntigravityProtocolError(
-                        "Content Agent completed a file read outside its MCP output spool."
-                    )
                 display_name = "read Antigravity MCP output spool"
             detail = _tool_error_detail(update)
             message = f"{display_name} · {state}"

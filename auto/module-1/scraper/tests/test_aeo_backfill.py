@@ -6,7 +6,8 @@ from pathlib import Path
 import pytest
 from mcp.server.mcpserver.exceptions import ToolError
 
-from scraper.aeo.backfill import BackfillService, BackfillStore, evidence_digest, product_input, is_duplicate
+from scraper.aeo.backfill import AeoAuthor, BackfillService, BackfillStore, evidence_digest, product_input, is_duplicate
+from scraper.antigravity import AntigravityProcessError, AntigravityProtocolError
 from scraper.content import content_similarity
 from scraper.aeo.backfill_mcp import create_server
 from scraper.aeo.shopify_adapter import apply_html
@@ -138,6 +139,177 @@ def test_target_completion_releases_unused_draft_without_an_extra_write(setup):
     assert len(client.writes)==1
     assert service.db.task(unused['id'])['status']=='not_needed'
     assert service.db.run(run['id'])['status']=='completed'
+
+
+class ScriptedAeoAuthor(AeoAuthor):
+    """Real task-bound MCP/guard with a scripted Agent instead of an external process."""
+    def __init__(self, setup, monkeypatch, actions):
+        super().__init__(setup[0], setup[1], threading.Event())
+        self.monkeypatch = monkeypatch
+        self.actions = actions
+        self.runtimes = []
+        self.turns = []
+        self.closed = []
+        self.max_attempts = 3
+
+    def _launch_content_runtime(self, task):
+        # A replacement process must not inherit a usable old MCP token.
+        if self.runtimes:
+            with pytest.raises(ToolError):
+                self.runtimes[-1]['tools']['get_content_context']()
+        identifier = f"aeo-session-{len(self.runtimes)+1}"
+        worker = f"server-content:{identifier}"
+        self.store.create_agent_session(identifier, session_kind='content', product_id=task['task_id'])
+        self.store.update_agent_session(identifier, 'busy', conversation_id=f'conversation-{identifier}')
+        self.monkeypatch.setenv('WRYDECO_EXPECTED_TASK_ID', task['task_id'])
+        self.monkeypatch.setenv('WRYDECO_AGENT_SESSION_ID', worker)
+        self.monkeypatch.delenv('WRYDECO_CONTROL_SESSION', raising=False)
+        server = create_server(self.package_root, self.store)
+        runtime = {'session_id': identifier, 'worker_id': worker, 'process': identifier,
+                   'tools': {tool.name:tool.fn for tool in server._tool_manager.list_tools()}}
+        self.runtimes.append(runtime)
+        return runtime
+
+    def _terminate_child(self, process):
+        self.closed.append(process)
+
+    def _run_content_turn(self, runtime, task, prompt, attempt):
+        db = BackfillStore(self.store)
+        phase = db.task(task['task_id'])['status']
+        self.turns.append((phase, attempt, prompt))
+        tools = runtime['tools']
+        if 'Claim it once' in prompt:
+            tools['claim_expected_content_task'](task['task_id'])
+        context = tools['get_content_context']()
+        assert 'native MCP image content' in context['workflow']
+        assert 'native MCP image content' in prompt
+        if phase == 'reviewing':
+            assert context['draft'] is not None
+        for name in ('contact-sheet.jpg', '001.jpg', '002.jpg'):
+            tools['read_evidence']('gallery/'+name)
+        action = self.actions.get((phase, attempt))
+        def blocked_read():
+            self._log_content_event({'event':'step_update','step_update':{
+                'tool_name':'view_file','state':'ACTIVE',
+                'tool_info':{'parameters':{'AbsolutePath':'C:/gallery/001.jpg'}},
+            }}, runtime, task)
+        if action == 'unapproved_tool':
+            raise AntigravityProtocolError('Content Agent attempted an unapproved tool: run_command')
+        if action == 'stop_then_denied':
+            self._shutdown.set()
+        if action in {'denied', 'stop_then_denied'}:
+            blocked_read()
+        tools['write_visual_analysis']({
+            'target_identity':context['product']['title'], 'evidence_ids':['gallery/001.jpg'], **VISUAL,
+        })
+        tools['get_content_context']()
+        tools['write_content_draft']({'aeo':draft()})
+        if action != 'no_finalize':
+            assert tools['finalize_content']()['stop_this_turn']
+        if action == 'denied_after_finalize':
+            blocked_read()
+        return {'status':'SUCCESS'}
+
+
+@pytest.mark.parametrize('phase', ['authoring', 'reviewing'])
+def test_denied_read_retries_in_new_session_and_still_requires_full_review(setup, monkeypatch, phase):
+    author = ScriptedAeoAuthor(setup, monkeypatch, {(phase,1):'denied'})
+    service,client = service_for(setup,1,author=author)
+    run = service.db.create(1);service.process(run['id'])
+    result = service.db.run(run['id']);task = result['tasks'][0]
+    assert result['status']=='completed' and result['success']==1
+    assert len(client.writes)==1 and task['reviewed']
+    assert len(author.runtimes)==len(author.closed)==2
+    assert len(author.turns)==3 and author.turns[-1][0]=='reviewing'
+    replacement = next(turn for turn in author.turns if turn[0]==phase and turn[1]==2)
+    assert 'Claim it once' in replacement[2]
+    sessions = setup[1].list_agent_sessions()
+    assert {s['status'] for s in sessions}=={'failed','stopped'}
+    retries = [e for e in setup[1].events_after(0) if e['event']=='aeo_author_retry']
+    assert len(retries)==1 and retries[0]['phase']==phase and retries[0]['next_attempt']==2
+
+
+@pytest.mark.parametrize('action', ['denied','denied_after_finalize'])
+@pytest.mark.parametrize('limit', [1,3])
+@pytest.mark.parametrize('phase', ['authoring','reviewing'])
+def test_repeated_denied_reads_stop_at_limit_without_shopify_write(setup, monkeypatch, action, limit, phase):
+    author = ScriptedAeoAuthor(setup,monkeypatch,{(phase,i):action for i in range(1,limit+1)})
+    author.max_attempts = limit
+    service,client = service_for(setup,1,author=author)
+    run = service.db.create(1);service.process(run['id'])
+    result = service.db.run(run['id']);task = result['tasks'][0]
+    assert not client.writes and result['success']==0 and result['errors']==1
+    assert task['attempts']==limit+(phase=='reviewing') and not task['reviewed']
+    assert bool(task['draft'])==(phase=='reviewing')
+    assert not task['phase_finalized'] and not service.db.task(task['id'])['claim_hash']
+    assert len(author.runtimes)==len(author.closed)==limit
+    assert len(setup[1].list_agent_sessions())==limit
+    assert all(s['status']=='failed' for s in setup[1].list_agent_sessions())
+    assert 'Denied path: C:/gallery/001.jpg' in task['error']
+
+
+def test_other_protocol_violations_are_not_automatically_retried(setup, monkeypatch):
+    author = ScriptedAeoAuthor(setup,monkeypatch,{('authoring',1):'unapproved_tool'})
+    service,client = service_for(setup,1,author=author)
+    run = service.db.create(1);service.process(run['id'])
+    assert not client.writes and len(author.runtimes)==len(author.closed)==1
+    assert 'unapproved tool' in service.db.run(run['id'])['tasks'][0]['error']
+
+
+def test_shutdown_prevents_a_denied_read_retry(setup, monkeypatch):
+    author = ScriptedAeoAuthor(setup,monkeypatch,{('authoring',1):'stop_then_denied'})
+    service,client = service_for(setup,1,author=author)
+    run = service.db.create(1);service.process(run['id'])
+    assert not client.writes and len(author.runtimes)==len(author.closed)==1
+
+
+def test_stopped_author_never_launches_a_new_conversation(setup, monkeypatch):
+    author = ScriptedAeoAuthor(setup,monkeypatch,{})
+    service,client = service_for(setup,1,author=author)
+    run = service.db.create(1);task = service.db.add_task(run['id'],client.products[0])
+    author.request_stop()
+    with pytest.raises(AntigravityProcessError,match='stopping'):
+        author.generate(service.db,task)
+    assert not author.runtimes
+
+
+def test_server_shutdown_during_authoring_preserves_cursor_for_resume(setup):
+    service,client = service_for(setup,1)
+    class StoppedAuthor(FakeAuthor):
+        def generate(self,db,task):
+            service.request_stop()
+            raise RuntimeError('Agent stopping during server shutdown')
+    service.author = StoppedAuthor()
+    run = service.db.create(1);service.process(run['id'])
+    result = service.db.run(run['id'])
+    assert result['status']=='interrupted' and result['page_index']==0
+    assert result['tasks'][0]['status']!='error' and not client.writes
+    service.stop_event.clear();service.author = FakeAuthor()
+    service.resume(run['id']);service.process(run['id'])
+    assert service.db.run(run['id'])['success']==1 and len(client.writes)==1
+
+
+def test_shutdown_after_write_is_counted_once_on_resume(setup):
+    service,client = service_for(setup,1)
+    original = client.write_aeo_metafield
+    def stop_after_write(*args):
+        original(*args)
+        service.request_stop()
+    client.write_aeo_metafield = stop_after_write
+    run = service.db.create(1);service.process(run['id'])
+    assert service.db.run(run['id'])['status']=='interrupted' and len(client.writes)==1
+    service.stop_event.clear();service.resume(run['id']);service.process(run['id'])
+    assert service.db.run(run['id'])['status']=='completed'
+    assert service.db.run(run['id'])['success']==1 and len(client.writes)==1
+
+
+def test_validation_retry_keeps_bound_claim_and_same_conversation(setup, monkeypatch):
+    author = ScriptedAeoAuthor(setup,monkeypatch,{('authoring',1):'no_finalize'})
+    service,client = service_for(setup,1,author=author)
+    run = service.db.create(1);service.process(run['id'])
+    assert service.db.run(run['id'])['success']==1 and len(client.writes)==1
+    assert len(author.runtimes)==len(author.closed)==1
+    assert 'Reuse your bound claim' in author.turns[1][2]
 
 
 def test_existing_and_failed_products_do_not_count_and_exhaustion_is_explicit(setup):
@@ -355,6 +527,33 @@ def test_api_csrf_validation_and_preview_does_not_mutate_shopify(setup):
     assert not client.writes
     assert browser.get('/api/aeo-backfill').json['runs'][0]['target']==1
     assert 'contract' not in browser.get('/api/aeo-backfill').json['runs'][0]
+
+
+def test_history_pagination_reaches_records_older_than_twenty_and_loads_one_run(setup):
+    root,store=setup;db=BackfillStore(store)
+    identifiers=[]
+    for _ in range(27):
+        run=db.create(1);identifiers.append(run['id']);db.update_run(run['id'],status='completed')
+    browser=create_app(root,store=store).test_client()
+    seen=[];cursor=None
+    for expected in (10,10,7):
+        response=browser.get('/api/aeo-backfill/history',query_string={'before':cursor} if cursor else {})
+        assert response.status_code==200
+        page=response.json;assert len(page['runs'])==expected and page['total']==27
+        assert all('tasks' not in run and 'contract' not in run and 'page' not in run for run in page['runs'])
+        seen.extend(run['id'] for run in page['runs']);cursor=page['next_cursor']
+    assert seen==list(reversed(identifiers)) and not cursor and not page['has_more']
+    oldest=browser.get('/api/aeo-backfill/'+identifiers[0])
+    assert oldest.status_code==200 and oldest.json['run']['id']==identifiers[0]
+    assert oldest.json['run']['tasks']==[] and 'contract' not in oldest.json['run']
+    assert 'page' not in oldest.json['run']
+    assert browser.get('/api/aeo-backfill/unknown-run').status_code==404
+
+
+@pytest.mark.parametrize('query', [{'limit':'0'},{'limit':'51'},{'limit':'abc'},{'before':'0'},{'before':'abc'}])
+def test_history_rejects_invalid_pagination_parameters(setup,query):
+    app=create_app(setup[0],store=setup[1]);browser=app.test_client()
+    assert browser.get('/api/aeo-backfill/history',query_string=query).status_code==400
 
 
 @pytest.mark.asyncio

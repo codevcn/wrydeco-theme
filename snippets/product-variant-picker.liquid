@@ -110,6 +110,20 @@
       box-shadow: inset 0 0 0 var(--border-width) var(--color-earth-brown);
     }
 
+    .variant-group--branches .variant-tile:has(.variant-tile__input:checked) {
+      box-shadow: none;
+    }
+
+    .variant-group--branches .variant-tile:has(.variant-tile__input:checked)::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      border: var(--border-width) solid var(--color-earth-brown);
+      border-radius: inherit;
+      pointer-events: none;
+    }
+
     .variant-tile.is-disabled {
       opacity: 0.5;
       cursor: not-allowed;
@@ -337,13 +351,13 @@
       }
     }
 
-    /* Wood Finish alone uses full-bleed swatches; surface/branches keep their layout.
+    /* Color options use full-bleed swatches; surface/branches keep their layout.
        Size the grid against the buy box, which can be narrow even on desktop. */
-    .variant-group--finish {
-      container: wood-finish / inline-size;
+    .variant-group--swatch {
+      container: variant-swatches / inline-size;
     }
 
-    .variant-group--finish .variant-group__list {
+    .variant-group--swatch .variant-group__list {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
       grid-auto-rows: max(80px, calc((100cqw - 3 * var(--sp-3)) / 9));
@@ -351,7 +365,7 @@
       gap: var(--sp-3);
     }
 
-    .variant-group--finish .variant-tile:not(.variant-tile--upload) {
+    .variant-group--swatch .variant-tile:not(.variant-tile--upload) {
       width: 100%;
       height: 100%;
       min-height: 64px;
@@ -361,7 +375,7 @@
       border-radius: var(--radius-lg);
     }
 
-    .variant-group--finish .variant-tile:not(.variant-tile--upload) .variant-tile__media {
+    .variant-group--swatch .variant-tile:not(.variant-tile--upload) .variant-tile__media {
       position: absolute;
       inset: 0;
       width: 100%;
@@ -371,7 +385,7 @@
       border-radius: inherit;
     }
 
-    .variant-group--finish .variant-tile:not(.variant-tile--upload) .variant-tile__label {
+    .variant-group--swatch .variant-tile:not(.variant-tile--upload) .variant-tile__label {
       position: absolute;
       z-index: 1;
       inset: auto auto 6px var(--sp-2);
@@ -379,9 +393,10 @@
       width: fit-content;
       max-width: calc(100% - 2 * var(--sp-2));
       margin: 0;
-      padding: 2px 5px;
-      border-radius: var(--radius-md);
-      font-size: 13px;
+      padding: 0;
+      background: none;
+      border-radius: 0;
+      font-size: 16px;
       font-weight: var(--font-weight-semibold);
       line-height: 1.25;
       text-align: left;
@@ -390,34 +405,33 @@
       pointer-events: none;
     }
 
-    .variant-group--finish .variant-tile:not(.variant-tile--upload):has(.variant-tile__media:not([hidden])) .variant-tile__label {
-      background: rgb(0 0 0 / 60%);
+    .variant-group--swatch .variant-tile:not(.variant-tile--upload):has(.variant-tile__media:not([hidden])) .variant-tile__label {
       color: #fff;
     }
 
-    .variant-group--finish .variant-tile:not(.variant-tile--upload) .variant-tile__check {
+    .variant-group--swatch .variant-tile:not(.variant-tile--upload) .variant-tile__check {
       z-index: 2;
     }
 
-    .variant-group--finish .variant-tile:not(.variant-tile--upload):has(.variant-tile__input:checked) {
+    .variant-group--swatch .variant-tile:not(.variant-tile--upload):has(.variant-tile__input:checked) {
       outline: 2px solid var(--color-earth-brown);
       outline-offset: 2px;
     }
 
-    .variant-group--finish .variant-tile:not(.variant-tile--upload):has(.variant-tile__input:focus-visible) {
+    .variant-group--swatch .variant-tile:not(.variant-tile--upload):has(.variant-tile__input:focus-visible) {
       outline: 2px solid var(--color-earth-brown);
       outline-offset: 4px;
     }
 
     /* Keep the upload box and separate label within the same row height as swatches. */
-    .variant-group--finish .variant-tile--upload {
+    .variant-group--swatch .variant-tile--upload {
       width: max-content;
       height: 100%;
       max-width: 100%;
       justify-self: start;
     }
 
-    .variant-group--finish .variant-tile--upload .variant-tile__media {
+    .variant-group--swatch .variant-tile--upload .variant-tile__media {
       flex: 1 1 auto;
       min-height: 24px;
       max-height: 60px;
@@ -425,56 +439,56 @@
       aspect-ratio: auto;
     }
 
-    .variant-group--finish .variant-tile--upload .variant-tile__label {
+    .variant-group--swatch .variant-tile--upload .variant-tile__label {
       margin-top: var(--sp-1);
       line-height: 1.25;
     }
 
-    @container wood-finish (max-width: 540px) {
-      .variant-group--finish .variant-group__list {
+    @container variant-swatches (max-width: 540px) {
+      .variant-group--swatch .variant-group__list {
         grid-template-columns: repeat(2, minmax(0, 1fr));
         grid-auto-rows: max(80px, calc((100cqw - var(--sp-3)) * 2 / 9));
       }
     }
 
     @media screen and (max-width: 1099px) {
-      .variant-group--finish .variant-tile--upload {
+      .variant-group--swatch .variant-tile--upload {
         grid-column: 1 / -1;
         width: 100%;
       }
 
-      .variant-group--finish .variant-tile--upload .variant-tile__media {
+      .variant-group--swatch .variant-tile--upload .variant-tile__media {
         flex: 0 0 auto;
       }
 
-      .variant-group--finish .variant-tile--upload .variant-tile__label {
+      .variant-group--swatch .variant-tile--upload .variant-tile__label {
         margin-top: 0;
       }
     }
 
-    /* Compact three-column finish grid above the unchanged phone layout. */
+    /* Compact four-column color grid above the unchanged phone layout. */
     @media screen and (min-width: 721px) {
-      .variant-group--finish .variant-group__list {
+      .variant-group--swatch .variant-group__list {
         grid-template-columns: repeat(4, minmax(0, 1fr));
         grid-auto-rows: 64px;
       }
-      .variant-group--finish .variant-tile--upload {
+      .variant-group--swatch .variant-tile--upload {
         grid-column: auto;
         width: 100%;
         flex-direction: column;
         gap: 0;
         padding: var(--sp-1);
       }
-      .variant-group--finish .variant-tile--upload .variant-tile__media {
+      .variant-group--swatch .variant-tile--upload .variant-tile__media {
         flex: 1 1 auto;
         min-height: 0;
         width: min(80px, 100%);
       }
-      .variant-group--finish .variant-tile--upload .variant-tile__upload-icon svg {
+      .variant-group--swatch .variant-tile--upload .variant-tile__upload-icon svg {
         width: 18px;
         height: 18px;
       }
-      .variant-group--finish .variant-tile--upload .variant-tile__label {
+      .variant-group--swatch .variant-tile--upload .variant-tile__label {
         flex: 0 0 auto;
         max-width: 100%;
         margin-top: var(--sp-1);
@@ -499,7 +513,6 @@
       {% assign is_color = false %}
       {% assign is_surface = false %}
       {% assign is_size = false %}
-      {% assign is_wood_finish = false %}
       {% if downcased_option contains 'surface' %}
         {% assign is_surface = true %}
       {% endif %}
@@ -524,13 +537,6 @@
         {% assign is_branches = true %}
         {% assign is_color = true %}
       {% endif %}
-      {% if downcased_option contains 'finish' %}
-        {% unless is_surface %}
-          {% unless is_branches %}
-            {% assign is_wood_finish = true %}
-          {% endunless %}
-        {% endunless %}
-      {% endif %}
       {% comment %}
         Custom-colour image upload applies to both Wood Finish and Colour options
         — for the customer they are the same "pick your own shade" concept. Surface
@@ -548,7 +554,7 @@
       {% assign option_prop = 'option' | append: option.position %}
 
       <div
-        class="variant-group variant-group--{% if is_color %}color{% else %}size{% endif %}{% if is_wood_finish %} variant-group--finish{% endif %}"
+        class="variant-group variant-group--{% if is_color %}color{% else %}size{% endif %}{% if is_branches %} variant-group--branches{% endif %}{% if is_custom_upload %} variant-group--swatch{% endif %}"
         data-variant-field
       >
         <div class="variant-group__head">
@@ -630,7 +636,7 @@
                     >
                   </span>
 
-                  <span class="variant-tile__label" data-custom-color-label>Custom color</span>
+                  <span class="variant-tile__label" data-custom-color-label>Custom</span>
 
                   <span class="variant-tile__check" aria-hidden="true">
                     <svg
@@ -1775,7 +1781,7 @@
         });
 
         var uploadedUrl = '';
-        var defaultLabel = label ? label.textContent : 'Custom color';
+        var defaultLabel = label ? label.textContent : 'Custom';
 
         // Attach the URL only while the custom finish is the active choice.
         function syncProperty() {

@@ -58,28 +58,13 @@
         {%- liquid
           assign artist = ''
           assign author = product.metafields.custom.author_info.value
-          if author != blank and author.author_name.value != blank
+          if author.author_name.value == blank
+            assign author = author | first
+          endif
+          if author.author_name.value != blank
             assign artist = author.author_name.value
           endif
         -%}
-        {%- assign material = product.metafields.custom.product_material.value
-          | default: section.settings.material_default
-        -%}
-        {%- assign finish = product.metafields.custom.finish.value | default: section.settings.finish_default -%}
-        {%- comment -%}
-          Show a "Best Seller" badge only for handles listed in the first
-          outstanding_materials metaobject entry.
-        {%- endcomment -%}
-        {%- assign is_best_seller = false -%}
-        {%- assign best_seller_entry = metaobjects.outstanding_materials.values | first -%}
-        {%- assign best_seller_handles = best_seller_entry.best_seller_products.value | default: best_seller_entry.best_seller_products | split: ',' -%}
-        {%- for best_seller_handle in best_seller_handles -%}
-          {%- assign normalized_best_seller_handle = best_seller_handle | strip -%}
-          {%- if normalized_best_seller_handle == product.handle -%}
-            {%- assign is_best_seller = true -%}
-            {%- break -%}
-          {%- endif -%}
-        {%- endfor -%}
         {%- liquid
           assign desktop_order = forloop.index | times: 10
           if forloop.index == 9
@@ -111,7 +96,7 @@
                     class: 'signature-pieces__image is-active',
                     loading: 'lazy',
                     widths: '240, 360, 480, 540, 720, 900',
-                    sizes: '(min-width: 75rem) 23vw, (min-width: 48rem) 40vw, 48vw',
+                    sizes: '(min-width: 75rem) 23vw, (min-width: 48rem) 40vw, 86vw',
                     draggable: false,
                     alt: featured_media_alt
                 }}
@@ -141,7 +126,7 @@
                       {{ media.preview_image | image_url: width: 720 }} 720w,
                       {{ media.preview_image | image_url: width: 900 }} 900w
                     "
-                    sizes="(min-width: 75rem) 23vw, (min-width: 48rem) 40vw, 48vw"
+                    sizes="(min-width: 75rem) 23vw, (min-width: 48rem) 40vw, 86vw"
                     alt="{{ hover_media_alt | escape }}"
                     width="{{ media.preview_image.width }}"
                     height="{{ media.preview_image.height }}"
@@ -168,17 +153,6 @@
               {%- endif -%}
             </a>
 
-            {%- comment -%}
-              Only approved best-seller handles carry a badge in this homepage
-              section. Other cards remain unbadged.
-            {%- endcomment -%}
-            {%- if is_best_seller -%}
-              <span class="signature-pieces__badge">
-                <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="m12 17.275l-4.15 2.5q-.275.175-.575.15t-.525-.2t-.35-.437t-.05-.588l1.1-4.725L3.775 10.8q-.25-.225-.312-.513t.037-.562t.3-.45t.55-.225l4.85-.425l1.875-4.45q.125-.3.388-.45t.537-.15t.537.15t.388.45l1.875 4.45l4.85.425q.35.05.55.225t.3.45t.038.563t-.313.512l-3.675 3.175l1.1 4.725q.075.325-.05.588t-.35.437t-.525.2t-.575-.15z"/></svg>
-                {{ section.settings.best_seller_badge | escape }}
-              </span>
-            {%- endif -%}
-
             <div
               class="signature-pieces__quick signature-pieces__wishlist Vtl-WishlistIcon__Wrapper Vtl-WishlistIcon__Wrapper--Id-{{ product.id }}-{{ product.handle | escape }} Vtl-CollectionCardWidget"
               data-signature-wishlist
@@ -189,9 +163,9 @@
               data-variant-id="{{ product.variants.first.id }}"
               aria-label="Add {{ display_title | escape }} to wishlist"
             >
-              <span class="signature-pieces__wishlist-icon" aria-hidden="true">
-                <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="m12 21.35l-1.45-1.32C5.4 15.36 2 12.27 2 8.5C2 5.41 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.08C13.09 3.81 14.76 3 16.5 3C19.58 3 22 5.41 22 8.5c0 3.77-3.4 6.86-8.55 11.53z"/></svg>
-              </span>
+              <button type="button" class="signature-pieces__wishlist-icon" aria-label="Add {{ display_title | escape }} to wishlist">
+                {% render 'signature-piece-icon', name: 'heart' %}
+              </button>
             </div>
           </div>
 
@@ -202,12 +176,14 @@
             {%- if artist != blank -%}
               <p class="signature-pieces__artist">by {{ artist | escape }}</p>
             {%- endif -%}
+            <span class="signature-pieces__accent" aria-hidden="true"></span>
             <p class="signature-pieces__price">
               {{ section.settings.price_prefix | escape }}
               <span class="signature-pieces__price-value">
                 {{ product.price | money_without_trailing_zeros }}
               </span>
             </p>
+            {% render 'signature-piece-benefits', made_to_order_label: section.settings.made_to_order_badge, shipping_label: section.settings.shipping_label %}
             <div class="signature-pieces__actions">
               {%- if product.available -%}
                 <button
@@ -216,11 +192,13 @@
                   data-quick-customize
                   data-product-handle="{{ product.handle | escape }}"
                 >
-                  {{- section.settings.customize_label | escape -}}
+                  <span>{{ section.settings.customize_label | escape }}</span>
+                  {% render 'signature-piece-icon', name: 'arrow' %}
                 </button>
               {%- else -%}
                 <a class="signature-pieces__primary" href="{{ product.url }}">
-                  {{- section.settings.customize_label | escape -}}
+                  <span>{{ section.settings.customize_label | escape }}</span>
+                  {% render 'signature-piece-icon', name: 'arrow' %}
                 </a>
               {%- endif -%}
             </div>
@@ -229,13 +207,11 @@
         </article>
       {%- else -%}
         {%- for i in (1..4) -%}
-              {%- assign card_badge = blank -%}
               {%- case i -%}
                 {%- when 1 -%}
                   {%- assign card_title = 'Walnut Lounge Chair' -%}
                   {%- assign card_artist = blank -%}
                   {%- assign card_price = '$2,650' -%}
-                  {%- assign card_badge = section.settings.best_seller_badge -%}
                 {%- when 2 -%}
                   {%- assign card_title = 'Live Edge Dining Table' -%}
                   {%- assign card_artist = blank -%}
@@ -248,7 +224,6 @@
                   {%- assign card_title = 'Treeform Bookshelf' -%}
                   {%- assign card_artist = blank -%}
                   {%- assign card_price = '$3,850' -%}
-              {%- assign card_badge = section.settings.best_seller_badge -%}
           {%- endcase -%}
 
           {%- liquid
@@ -274,31 +249,26 @@
                 >
               </span>
 
-              {%- if card_badge != blank -%}
-                <span class="signature-pieces__badge">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="m12 17.275l-4.15 2.5q-.275.175-.575.15t-.525-.2t-.35-.437t-.05-.588l1.1-4.725L3.775 10.8q-.25-.225-.312-.513t.037-.562t.3-.45t.55-.225l4.85-.425l1.875-4.45q.125-.3.388-.45t.537-.15t.537.15t.388.45l1.875 4.45l4.85.425q.35.05.55.225t.3.45t.038.563t-.313.512l-3.675 3.175l1.1 4.725q.075.325-.05.588t-.35.437t-.525.2t-.575-.15z"/></svg>
-                  {{ card_badge | escape }}
-                </span>
-              {%- endif -%}
-
               <span class="signature-pieces__quick signature-pieces__wishlist" aria-hidden="true">
                 <span class="signature-pieces__wishlist-icon" aria-hidden="true">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="m12 21.35l-1.45-1.32C5.4 15.36 2 12.27 2 8.5C2 5.41 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.08C13.09 3.81 14.76 3 16.5 3C19.58 3 22 5.41 22 8.5c0 3.77-3.4 6.86-8.55 11.53z"/></svg>
+                  {% render 'signature-piece-icon', name: 'heart' %}
                 </span>
               </span>
             </div>
 
             <div class="signature-pieces__content">
               <h3 class="signature-pieces__title">{{ card_title }}</h3>
-              <p class="signature-pieces__artist">by {{ card_artist }}</p>
+              {%- if card_artist != blank -%}<p class="signature-pieces__artist">by {{ card_artist }}</p>{%- endif -%}
+              <span class="signature-pieces__accent" aria-hidden="true"></span>
               <p class="signature-pieces__price">
                 {{ section.settings.price_prefix | escape }}
                 <span class="signature-pieces__price-value">
                   {{ card_price }}
                 </span>
               </p>
-              <div class="signature-pieces__actions">
-                <span class="signature-pieces__primary">{{ section.settings.customize_label | escape }}</span>
+              {% render 'signature-piece-benefits', made_to_order_label: section.settings.made_to_order_badge, shipping_label: section.settings.shipping_label %}
+            <div class="signature-pieces__actions">
+                <span class="signature-pieces__primary"><span>{{ section.settings.customize_label | escape }}</span>{% render 'signature-piece-icon', name: 'arrow' %}</span>
               </div>
             </div>
           </article>
@@ -368,6 +338,7 @@
 
   .signature-pieces__carousel {
     position: relative;
+    container-type: inline-size;
   }
 
   .signature-pieces__controls {
@@ -384,7 +355,7 @@
 
   .signature-pieces__control {
     position: absolute;
-    top: 50%;
+    top: calc(40cqw * 4 / 9);
     display: grid;
     place-items: center;
     inline-size: var(--sp-7);
@@ -448,18 +419,18 @@
   }
 
   .signature-pieces__card {
+    container: signature-card / inline-size;
     order: var(--signature-piece-order, 0);
     display: flex;
     flex-direction: column;
     flex: 0 1 calc((100% - var(--sp-3) * 3) / 4);
     min-width: 0;
     overflow: hidden;
-    border: 1px solid var(--color-border, rgba(76, 48, 30, 0.14));
-    border-radius: var(--card-radius, 6px);
-    background: rgba(255, 252, 248, 0.72);
-    box-shadow: 0 18px 42px rgba(62, 39, 25, 0.05);
-    transition: transform var(--timing-base) var(--ease-standard), box-shadow var(--timing-base) var(--ease-standard),
-      border-color var(--timing-base) var(--ease-standard);
+    border: 0;
+    border-radius: var(--radius-xl);
+    background: var(--color-white-cream);
+    box-shadow: 0 12px 28px rgb(62 39 25 / 10%);
+    transition: transform var(--timing-base) var(--ease-standard), box-shadow var(--timing-base) var(--ease-standard);
   }
 
   .signature-pieces__card[data-product-url] {
@@ -468,7 +439,7 @@
 
   .signature-pieces__media {
     position: relative;
-    aspect-ratio: 1 / 1.08;
+    aspect-ratio: 9 / 8;
     overflow: hidden;
     background: #e5dbd0;
   }
@@ -509,60 +480,23 @@
     z-index: 2;
   }
 
-  .signature-pieces__badge {
-    position: absolute;
-    top: 13px;
-    left: 13px;
-    z-index: 1;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    min-height: 24px;
-    padding: 0 8px;
-    border: 1px solid rgba(74, 44, 24, 0.1);
-    border-radius: 999px;
-    background: rgba(255, 252, 247, 0.9);
-    box-shadow: 0 8px 22px rgba(42, 28, 18, 0.08);
-    color: #4a2c18;
-    font-family: var(--font-roboto);
-    font-size: 12px;
-    font-weight: var(--font-weight-medium);
-    line-height: 1;
-    backdrop-filter: blur(8px);
-  }
-
-  .signature-pieces__badge svg {
-    width: 15px;
-    height: 15px;
-    fill: currentColor;
-    flex: 0 0 auto;
-  }
-
-  /* Fallback badge shown on every card that isn't a best seller. Same pill, with
-     a warm clay heart so the two badges stay distinguishable at a glance. */
-  .signature-pieces__badge--loved svg {
-    color: var(--color-clay, #8a5d37);
-  }
-
   .signature-pieces__quick {
     position: absolute;
-    top: 10px;
-    right: 10px;
-    z-index: 1;
+    top: var(--sp-3);
+    right: var(--sp-3);
+    z-index: 3;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
-    border-radius: 999px;
-    background: rgba(255, 252, 247, 0.94);
-    color: #4a2c18;
-    text-decoration: none;
-    border: none;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-full);
+    background: #fff9f2ab;
+    color: var(--color-earth-brown);
+    border: 0;
     padding: 0;
     cursor: pointer;
-    transition: background-color var(--timing-short) var(--ease-standard),
-      color var(--timing-short) var(--ease-standard), transform var(--timing-short) var(--ease-standard);
+    transition: transform var(--timing-short) var(--ease-standard);
     overflow: hidden;
   }
 
@@ -572,17 +506,21 @@
   }
 
   .signature-pieces__quick svg {
-    width: 18px;
-    height: 18px;
+    width: 24px;
+    height: 24px;
   }
 
   .signature-pieces__wishlist-icon {
     display: inline-flex;
+    width: 100%;
+    height: 100%;
     align-items: center;
     justify-content: center;
-    font-size: var(--font-size-body-lg);
-    line-height: 1;
-    transform: translateY(-1px);
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
   }
 
   .signature-pieces__wishlist:has(.Vtl-WishlistButton) .signature-pieces__wishlist-icon {
@@ -615,88 +553,131 @@
     display: flex;
     flex: 1 1 auto;
     flex-direction: column;
-    padding: 10px 15px 15px;
+    min-width: 0;
+    padding: clamp(14px, 5cqw, 22px);
   }
 
   .signature-pieces__title {
-    margin: 0 0 8px;
-    font-family: var(--font-heading);
-    font-size: clamp(20px, 1.5vw, 24px);
-    font-weight: var(--font-weight-bold);
-    line-height: 1;
-    letter-spacing: 0;
-    color: var(--color-text, #352117);
-    text-wrap: pretty;
+    margin: 0 0 var(--sp-2);
+    min-height: 2.3em;
+    font-family: var(--font-display-light);
+    font-size: clamp(20px, 6.3cqw, 28px);
+    font-weight: 500;
+    line-height: 1.15;
+    letter-spacing: -.02em;
+    color: var(--color-earth-brown);
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    overflow-wrap: anywhere;
   }
 
   .signature-pieces__title a {
     color: inherit;
     text-decoration: none;
-    font-size: 15px;
+    font-size: inherit;
   }
 
   .signature-pieces__artist {
-    margin: 0 0 16px;
+    margin: 0;
     font-family: var(--font-display-light);
     font-style: italic;
-    font-size: 13px;
-    font-weight: var(--font-weight-regular);
-    line-height: 1.2;
-    color: var(--color-muted, #6a625c);
+    font-size: clamp(15px, 4.5cqw, 19px);
+    font-weight: 300;
+    line-height: 1.3;
+    color: var(--text-secondary);
   }
 
   .signature-pieces__price {
-    margin: 0 0;
-    margin-top: auto;
-    padding-top: 14px;
-    border-top: 1px solid var(--color-border, rgba(74, 44, 24, 0.16));
-    font-family: var(--font-roboto);
-    font-size: 14px;
-    font-weight: var(--font-weight-regular);
-    line-height: 1.4;
-    color: #352117;
-    font-variant-numeric: tabular-nums;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--sp-2);
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-display-light);
+    font-size: clamp(20px, 6cqw, 26px);
+    line-height: 1.2;
+    color: var(--color-earth-brown);
   }
   .signature-pieces__price-value {
-    font-size: 18px;
-    font-weight: var(--font-weight-bold);
-    line-height: 1.2;
-    color: #352117;
+    font-size: clamp(18px, 8.5cqw, 22px);
+    font-weight: 600;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
   }
 
   .signature-pieces__actions {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    margin-top: 18px;
+    display: block;
+    margin-top: var(--sp-2);
   }
 
-  .signature-pieces__primary {
-    display: inline-flex;
+  .signature-pieces__accent {
+    flex: 0 0 2px;
+    width: 24px;
+    height: 2px;
+    margin: var(--sp-3) 0;
+    background: var(--color-clay);
+  }
+
+  .signature-pieces__benefits {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--sp-2);
+    margin: var(--sp-4) 0 0;
+    padding: 0;
+    list-style: none;
+    font-family: var(--font-display-light);
+    font-size: clamp(13px, 4.3cqw, 17px);
+    line-height: 1.25;
+  }
+
+  .signature-pieces__benefits li {
+    display: flex;
+    min-width: 0;
     align-items: center;
     justify-content: center;
-    min-height: 38px;
-    font-family: var(--font-roboto);
-    font-size: 14px;
-    font-weight: var(--font-weight-medium);
-    line-height: 1;
-    text-decoration: none;
-    white-space: nowrap;
-    transition: background-color var(--timing-short) var(--ease-standard),
-      color var(--timing-short) var(--ease-standard), border-color var(--timing-short) var(--ease-standard),
-      transform var(--timing-short) var(--ease-standard);
+    gap: var(--sp-2);
+  }
+
+  .signature-pieces__benefits li + li {
+    border-inline-start: 1px solid var(--border-default);
+    padding-inline-start: var(--sp-2);
+  }
+
+  .signature-pieces__benefits svg {
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
   }
 
   .signature-pieces__primary {
-    padding: 0 18px;
-    border: 1px solid #4a2c18;
-    border-radius: 3px;
-    background: #4a2c18;
+    position: relative;
+    display: flex;
+    width: 100%;
+    min-height: 48px;
+    align-items: center;
+    justify-content: center;
+    padding: var(--sp-2) var(--sp-7);
+    border: 1px solid var(--color-earth-brown);
+    border-radius: var(--radius-lg);
+    background: linear-gradient(110deg, #795336, #4a2c18);
     color: #fff8f0;
+    font-family: var(--font-display-light);
+    font-size: clamp(20px, 6cqw, 26px);
+    font-weight: 400;
+    line-height: 1.2;
+    text-decoration: none;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .signature-pieces__primary svg {
+    position: absolute;
+    right: var(--sp-4);
+    width: 22px;
+    height: 22px;
   }
 
   .signature-pieces__footer {
@@ -756,15 +737,8 @@
       color: var(--color-cream);
     }
 
-    .signature-pieces__primary:hover,
     .signature-pieces__button:hover {
       transform: translateY(-2px);
-    }
-
-    .signature-pieces__primary:hover {
-      background: #2f1a0d;
-      border-color: #2f1a0d;
-      color: #fff8f0;
     }
 
     .signature-pieces__button:hover {
@@ -829,7 +803,11 @@
     }
 
     .signature-pieces__card {
-      flex-basis: max(calc(var(--sp-10) * 2 + var(--sp-4)), 56vw);
+      flex-basis: min(86vw, 380px);
+    }
+
+    .signature-pieces__control {
+      top: calc(min(86vw, 380px) * 4 / 9);
     }
   }
 
@@ -1235,6 +1213,12 @@
       "id": "made_to_order_badge",
       "label": "Made to order badge",
       "default": "Made to Order"
+    },
+    {
+      "type": "text",
+      "id": "shipping_label",
+      "label": "Shipping benefit label",
+      "default": "Free Shipping"
     },
     {
       "type": "text",

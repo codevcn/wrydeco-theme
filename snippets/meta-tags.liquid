@@ -110,6 +110,39 @@
   -%}
   <script type="application/ld+json">
     {%- if product.variants.size > 1 -%}
+      {%- liquid
+        assign has_color_option = false
+        assign has_size_option = false
+        assign opt1_type = ''
+        assign opt2_type = ''
+        assign opt3_type = ''
+
+        for option in product.options
+          assign opt_name_lower = option | downcase
+          assign current_opt_type = ''
+          if opt_name_lower contains 'color' or opt_name_lower contains 'finish'
+            assign has_color_option = true
+            assign current_opt_type = 'color'
+          elsif opt_name_lower contains 'size' or opt_name_lower contains 'dimension'
+            assign has_size_option = true
+            assign current_opt_type = 'size'
+          elsif opt_name_lower contains 'width' or opt_name_lower contains 'height'
+            assign has_size_option = true
+            assign current_opt_type = 'size'
+          elsif opt_name_lower contains 'length' or opt_name_lower contains 'depth'
+            assign has_size_option = true
+            assign current_opt_type = 'size'
+          endif
+
+          if forloop.index == 1
+            assign opt1_type = current_opt_type
+          elsif forloop.index == 2
+            assign opt2_type = current_opt_type
+          elsif forloop.index == 3
+            assign opt3_type = current_opt_type
+          endif
+        endfor
+      -%}
       {
         "@context": "https://schema.org",
         "@type": "ProductGroup",
@@ -135,25 +168,66 @@
           "image": {{ product.featured_image | image_url: width: 1200 | prepend: 'https:' | json }},
         {%- endif %}
         "variesBy": [
-          {%- for option in product.options -%}
-            {%- assign opt_name_lower = option | downcase -%}
-            {%- if opt_name_lower contains 'color' or opt_name_lower contains 'finish' -%}
-              "https://schema.org/color"
-            {%- elsif opt_name_lower contains 'size' or opt_name_lower contains 'dimension' -%}
-              "https://schema.org/size"
-            {%- else -%}
-              {{ option | json }}
-            {%- endif -%}
-            {%- unless forloop.last %},{% endunless -%}
-          {%- endfor -%}
+          {%- if has_color_option and has_size_option -%}
+            "https://schema.org/color",
+            "https://schema.org/size"
+          {%- elsif has_color_option -%}
+            "https://schema.org/color"
+          {%- elsif has_size_option -%}
+            "https://schema.org/size"
+          {%- endif -%}
         ],
         "hasVariant": [
           {%- for variant in product.variants -%}
+            {%- liquid
+              assign variant_color = ''
+              assign variant_size = ''
+
+              if opt1_type == 'color' and variant.option1 != blank
+                assign variant_color = variant.option1
+              elsif opt1_type == 'size' and variant.option1 != blank
+                assign variant_size = variant.option1
+              endif
+
+              if opt2_type == 'color' and variant.option2 != blank
+                if variant_color != blank
+                  assign variant_color = variant_color | append: ' / ' | append: variant.option2
+                else
+                  assign variant_color = variant.option2
+                endif
+              elsif opt2_type == 'size' and variant.option2 != blank
+                if variant_size != blank
+                  assign variant_size = variant_size | append: ' / ' | append: variant.option2
+                else
+                  assign variant_size = variant.option2
+                endif
+              endif
+
+              if opt3_type == 'color' and variant.option3 != blank
+                if variant_color != blank
+                  assign variant_color = variant_color | append: ' / ' | append: variant.option3
+                else
+                  assign variant_color = variant.option3
+                endif
+              elsif opt3_type == 'size' and variant.option3 != blank
+                if variant_size != blank
+                  assign variant_size = variant_size | append: ' / ' | append: variant.option3
+                else
+                  assign variant_size = variant.option3
+                endif
+              endif
+            -%}
             {
               "@type": "Product",
               "@id": {{ canonical_url | append: '#variant-' | append: variant.id | json }},
               "name": {{ product.title | append: ' - ' | append: variant.title | json }},
               "description": {{ schema_product_description | json }},
+              {%- if variant_color != blank %}
+                "color": {{ variant_color | json }},
+              {%- endif %}
+              {%- if variant_size != blank %}
+                "size": {{ variant_size | json }},
+              {%- endif %}
               {%- if variant.sku != blank %}
                 "sku": {{ variant.sku | json }},
               {%- endif %}

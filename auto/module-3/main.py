@@ -189,6 +189,9 @@ def get_products(first=50, after=None, before=None, last=None, filter_query=None
             aeo_html: metafield(namespace: "custom", key: "aeo_html") {
               value
             }
+            author_info: metafield(namespace: "custom", key: "author_info") {
+              value
+            }
             media(first: 50) {
               edges {
                 node {
@@ -287,6 +290,9 @@ def get_products_sorted_by_price(first=50, after=None, before=None, filter_query
               value
             }
             aeo_html: metafield(namespace: "custom", key: "aeo_html") {
+              value
+            }
+            author_info: metafield(namespace: "custom", key: "author_info") {
               value
             }
             media(first: 50) {
@@ -1022,6 +1028,9 @@ def get_products_by_variant_name(keyword: str, sort_by: str = "created_desc"):
               description
             }
             aeo_html: metafield(namespace: "custom", key: "aeo_html") {
+              value
+            }
+            author_info: metafield(namespace: "custom", key: "author_info") {
               value
             }
             media(first: 50) {
@@ -1880,6 +1889,9 @@ def fetch_all_products_for_duplicates():
             aeo_html: metafield(namespace: "custom", key: "aeo_html") {
               value
             }
+            author_info: metafield(namespace: "custom", key: "author_info") {
+              value
+            }
             media(first: 50) {
               edges {
                 node {
@@ -2049,24 +2061,45 @@ def get_products_by_duplicate_info(sort_by="created_desc"):
         "productsCount": {"count": len(sorted_edges)}
     }
 
-def get_products_by_missing_aeo(sort_by="created_desc"):
+def get_products_by_aeo_status(has_aeo: bool, sort_by="created_desc"):
     all_edges = fetch_all_products_for_duplicates()
-    missing_edges = []
+    result_edges = []
     for edge in all_edges:
         node = edge.get("node", {})
         aeo_field = node.get("aeo_html")
-        is_missing = False
-        if not aeo_field:
-            is_missing = True
-        else:
-            val = aeo_field.get("value")
-            if val is None or not str(val).strip():
-                is_missing = True
-                
-        if is_missing:
-            missing_edges.append(edge)
+        val = aeo_field.get("value") if aeo_field else None
+        is_present = bool(val is not None and str(val).strip())
+        if has_aeo and is_present:
+            result_edges.append(edge)
+        elif not has_aeo and not is_present:
+            result_edges.append(edge)
 
-    sorted_edges = sort_duplicate_edges(missing_edges, sort_by)
+    sorted_edges = sort_duplicate_edges(result_edges, sort_by)
+    return {
+        "products": {
+            "edges": sorted_edges,
+            "pageInfo": {"hasNextPage": False, "hasPreviousPage": False}
+        },
+        "productsCount": {"count": len(sorted_edges)}
+    }
+
+def get_products_by_missing_aeo(sort_by="created_desc"):
+    return get_products_by_aeo_status(has_aeo=False, sort_by=sort_by)
+
+def get_products_by_author_status(has_author: bool, sort_by="created_desc"):
+    all_edges = fetch_all_products_for_duplicates()
+    result_edges = []
+    for edge in all_edges:
+        node = edge.get("node", {})
+        author_field = node.get("author_info")
+        val = author_field.get("value") if author_field else None
+        is_present = bool(val is not None and str(val).strip())
+        if has_author and is_present:
+            result_edges.append(edge)
+        elif not has_author and not is_present:
+            result_edges.append(edge)
+
+    sorted_edges = sort_duplicate_edges(result_edges, sort_by)
     return {
         "products": {
             "edges": sorted_edges,
@@ -2264,8 +2297,10 @@ async def read_root(
             data = get_products_by_duplicate_seo_description(sort_by=sort_by)
         elif special_filter and special_filter == "duplicate_info":
             data = get_products_by_duplicate_info(sort_by=sort_by)
-        elif special_filter and special_filter == "missing_aeo":
-            data = get_products_by_missing_aeo(sort_by=sort_by)
+        elif special_filter and special_filter in ["has_aeo", "missing_aeo"]:
+            data = get_products_by_aeo_status(special_filter == "has_aeo", sort_by=sort_by)
+        elif special_filter and special_filter in ["has_author", "missing_author"]:
+            data = get_products_by_author_status(special_filter == "has_author", sort_by=sort_by)
         elif filter_value and filter_type in ["metafield_amazon_link", "metafield_amazon_link_list"]:
             data = get_products_by_metafield_amazon_link_list(filter_value, sort_by=sort_by)
         elif filter_value and filter_type == "metafield_rich_description":
@@ -2406,6 +2441,10 @@ async def read_root(
             aeo_html_val = aeo_node.get("value") if aeo_node else None
             has_aeo = bool(aeo_html_val and str(aeo_html_val).strip())
 
+            author_node = node.get("author_info")
+            author_info_val = author_node.get("value") if author_node else None
+            has_author = bool(author_info_val and str(author_info_val).strip())
+
             products.append({
                 "id": node["id"].split("/")[-1],
                 "handle": node["handle"],
@@ -2423,7 +2462,9 @@ async def read_root(
                 "seoTitle": seo_title,
                 "seoDescription": seo_description,
                 "has_aeo": has_aeo,
-                "aeo_html": aeo_html_val
+                "aeo_html": aeo_html_val,
+                "has_author": has_author,
+                "author_info": author_info_val
             })
             
         page_info = products_data.get("pageInfo", {})
@@ -2515,6 +2556,24 @@ def get_product_by_handle(handle: str):
           key
           value
           type
+        }
+        authorMetafield: metafield(namespace: "custom", key: "author_info") {
+          id
+          namespace
+          key
+          value
+          type
+          reference {
+            ... on Metaobject {
+              id
+              handle
+              displayName
+              fields {
+                key
+                value
+              }
+            }
+          }
         }
         variants(first: 250) {
           edges {
@@ -2663,6 +2722,51 @@ async def read_product(request: Request, product_handle: str):
                     aeo_html_val = mf.get("value")
                     break
 
+        # Extract author_info metafield if available
+        author_mf_node = product_data.get("authorMetafield")
+        author_info = None
+        if author_mf_node and author_mf_node.get("value"):
+            author_ref = author_mf_node.get("reference") or {}
+            author_info = {
+                "id": author_mf_node.get("value"),
+                "handle": author_ref.get("handle", ""),
+                "name": None,
+                "role": None,
+                "image_url": None,
+                "exp_years": None,
+                "slogan": None,
+                "bio": None
+            }
+            for f in author_ref.get("fields", []):
+                k = f.get("key")
+                v = f.get("value")
+                if k in ["author_name", "title", "name"]:
+                    author_info["name"] = v
+                elif k in ["author_image_url", "image", "avatar"]:
+                    author_info["image_url"] = v
+                elif k in ["role", "author_role"]:
+                    author_info["role"] = v
+                elif k == "exp_years":
+                    author_info["exp_years"] = v
+                elif k == "author_slogan":
+                    author_info["slogan"] = v
+                elif k == "author_bio":
+                    author_info["bio"] = v
+            if not author_info["name"]:
+                author_info["name"] = author_ref.get("displayName") or author_ref.get("handle") or author_mf_node.get("value")
+
+        if not author_info:
+            for mf in metafields:
+                if mf.get("namespace") == "custom" and mf.get("key") == "author_info" and mf.get("value"):
+                    author_info = {
+                        "id": mf.get("value"),
+                        "name": None,
+                        "role": None,
+                        "image_url": None,
+                        "handle": ""
+                    }
+                    break
+
         product = {
             "id": product_data["id"].split("/")[-1],
             "title": product_data["title"],
@@ -2680,6 +2784,7 @@ async def read_product(request: Request, product_handle: str):
             "prices": sorted_prices,
             "metafields": metafields,
             "aeo_html": aeo_html_val,
+            "author_info": author_info,
             "publications": publications,
             "collections": product_data.get("collections", {})
         }
@@ -3041,6 +3146,138 @@ async def api_get_product_detail(product_id: str):
         })
     except Exception as e:
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+
+@app.get("/api/products/resolve-links")
+async def api_resolve_product_links(query: str):
+    """
+    Truy vấn thông tin sản phẩm và phân giải đầy đủ URL điều hướng đến các nền tảng:
+    - Tool này (/products/{handle})
+    - Amazon (metafield custom.amazon_link)
+    - Shopify Admin (https://admin.shopify.com/store/{shop}/products/{id})
+    - Website Wrydeco Storefront (https://wrydeco.com/products/{handle})
+    """
+    try:
+        raw_val = str(query or "").strip()
+        if not raw_val:
+            return JSONResponse({"success": False, "error": "Vui lòng nhập Handle hoặc ID sản phẩm."}, status_code=400)
+            
+        clean_val = raw_val
+        # Phân tích nếu là URL hoặc chứa đường dẫn sản phẩm /products/...
+        from urllib.parse import urlparse, unquote
+        prod_match = re.search(r'/products/([^/?#\s]+)', clean_val)
+        if prod_match:
+            clean_val = unquote(prod_match.group(1)).strip()
+        elif clean_val.startswith("http://") or clean_val.startswith("https://") or "://" in clean_val:
+            try:
+                u = urlparse(clean_val)
+                parts = [p for p in u.path.strip("/").split("/") if p]
+                if parts:
+                    clean_val = unquote(parts[-1]).strip()
+            except Exception:
+                pass
+                
+        if clean_val.startswith("gid://shopify/Product/"):
+            clean_val = clean_val.replace("gid://shopify/Product/", "").strip()
+            
+        if clean_val.startswith("#"):
+            clean_val = clean_val[1:].strip()
+            
+        # Loại bỏ query parameters (?variant=...) hoặc hash fragment (#...) nếu còn sót
+        if "?" in clean_val:
+            clean_val = clean_val.split("?")[0].strip()
+        if "#" in clean_val:
+            clean_val = clean_val.split("#")[0].strip()
+            
+        is_id = clean_val.isdigit()
+        proxies = get_shopify_request_proxies()
+        
+        prod = None
+        if is_id:
+            gid = f"gid://shopify/Product/{clean_val}"
+            gql = """
+            query getProdById($id: ID!) {
+              product(id: $id) {
+                id
+                handle
+                title
+                amazon_link: metafield(namespace: "custom", key: "amazon_link") {
+                  value
+                }
+              }
+            }
+            """
+            res = requests.post(GRAPHQL_URL, json={"query": gql, "variables": {"id": gid}}, headers=HEADERS, proxies=proxies, timeout=20)
+            res.raise_for_status()
+            prod = res.json().get("data", {}).get("product")
+        else:
+            handle = clean_val.lower().strip("/")
+            gql = """
+            query getProdByHandle($handle: String!) {
+              productByHandle(handle: $handle) {
+                id
+                handle
+                title
+                amazon_link: metafield(namespace: "custom", key: "amazon_link") {
+                  value
+                }
+              }
+            }
+            """
+            res = requests.post(GRAPHQL_URL, json={"query": gql, "variables": {"handle": handle}}, headers=HEADERS, proxies=proxies, timeout=20)
+            res.raise_for_status()
+            prod = res.json().get("data", {}).get("productByHandle")
+            
+            # Fallback search if handle lookup didn't find anything
+            if not prod:
+                gql_search = """
+                query searchProd($q: String!) {
+                  products(first: 1, query: $q) {
+                    edges {
+                      node {
+                        id
+                        handle
+                        title
+                        amazon_link: metafield(namespace: "custom", key: "amazon_link") {
+                          value
+                        }
+                      }
+                    }
+                  }
+                }
+                """
+                res2 = requests.post(GRAPHQL_URL, json={"query": gql_search, "variables": {"q": clean_val}}, headers=HEADERS, proxies=proxies, timeout=20)
+                if res2.ok:
+                    edges = res2.json().get("data", {}).get("products", {}).get("edges", [])
+                    if edges:
+                        prod = edges[0]["node"]
+
+        if not prod:
+            return JSONResponse({"success": False, "error": f"Không tìm thấy sản phẩm nào trên gian hàng khớp với '{raw_val}'!"}, status_code=404)
+            
+        num_id = prod["id"].split("/")[-1]
+        prod_handle = prod.get("handle") or ""
+        prod_title = prod.get("title") or ""
+        amz_node = prod.get("amazon_link")
+        amazon_link = str(amz_node.get("value")).strip() if amz_node and amz_node.get("value") else ""
+        
+        shop_domain = clean_shopify_domain(SHOPIFY_SHOP)
+        shop_name = shop_domain.replace(".myshopify.com", "") if shop_domain else "wrydeco"
+        
+        return JSONResponse({
+            "success": True,
+            "product": {
+                "id": num_id,
+                "handle": prod_handle,
+                "title": prod_title,
+                "amazon_link": amazon_link,
+                "shopify_admin_url": f"https://admin.shopify.com/store/{shop_name}/products/{num_id}",
+                "website_url": f"https://wrydeco.com/products/{prod_handle}",
+                "tool_url": f"/products/{prod_handle}"
+            }
+        })
+    except Exception as e:
+        return JSONResponse({"success": False, "error": f"Lỗi hệ thống: {str(e)}"}, status_code=500)
 
 def clean_collection_description(raw_html: str) -> str:
     """
@@ -6144,6 +6381,7 @@ def get_product_authors():
           node {
             id
             handle
+            displayName
             fields {
               key
               value
@@ -6154,7 +6392,12 @@ def get_product_authors():
     }
     """
     try:
-        res = requests.post(GRAPHQL_URL, json={"query": query}, headers=HEADERS)
+        proxies = get_shopify_request_proxies()
+        res = requests.post(GRAPHQL_URL, json={"query": query}, headers=HEADERS, proxies=proxies, timeout=15)
+        if res.status_code == 401:
+            ok, msg, new_tok = request_default_store_access_token()
+            if ok and new_tok:
+                res = requests.post(GRAPHQL_URL, json={"query": query}, headers=HEADERS, proxies=proxies, timeout=15)
         res.raise_for_status()
         data = res.json()
         
@@ -6162,10 +6405,28 @@ def get_product_authors():
         if "data" in data and "metaobjects" in data["data"]:
             for edge in data["data"]["metaobjects"]["edges"]:
                 node = edge["node"]
-                author = {"id": node["id"], "handle": node["handle"]}
-                for field in node["fields"]:
-                    if field["key"] == "title" or field["key"] == "name":
-                        author["name"] = field["value"]
+                author = {
+                    "id": node["id"], 
+                    "handle": node.get("handle", ""),
+                    "displayName": node.get("displayName", "")
+                }
+                for field in node.get("fields", []):
+                    k = field.get("key")
+                    v = field.get("value")
+                    if k in ["author_name", "title", "name"]:
+                        author["name"] = v
+                    elif k in ["author_image_url", "image", "avatar"]:
+                        author["image_url"] = v
+                    elif k in ["role", "author_role", "job_title"]:
+                        author["role"] = v
+                    elif k == "exp_years":
+                        author["exp_years"] = v
+                    elif k == "author_slogan":
+                        author["slogan"] = v
+                    elif k == "author_bio":
+                        author["bio"] = v
+                if not author.get("name"):
+                    author["name"] = author.get("displayName") or author.get("handle")
                 authors.append(author)
         return JSONResponse(content=authors)
     except Exception as e:
@@ -6180,8 +6441,10 @@ async def internal_edit_product(request: Request):
         target_field = form.get("target_field")
         new_value = form.get("new_value")
 
-        if not product_id or not target_field or not new_value:
+        if not product_id or not target_field:
             return HTMLResponse(content=json.dumps({"success": False, "message": "Thiếu dữ liệu"}), media_type="application/json")
+        if new_value is None:
+            new_value = ""
             
         if not str(product_id).startswith("gid://"):
             product_id = f"gid://shopify/Product/{product_id}"
@@ -6395,7 +6658,7 @@ async def internal_edit_product(request: Request):
             else:
                 return HTMLResponse(content=json.dumps({"success": False, "message": "Sai định dạng metafield"}), media_type="application/json")
                 
-            if new_value == "__DELETE__":
+            if new_value == "__DELETE__" or new_value == "":
                 del_mutation = '''
                 mutation metafieldsDelete($metafields: [MetafieldIdentifierInput!]!) {
                   metafieldsDelete(metafields: $metafields) {
@@ -7941,6 +8204,7 @@ def get_metaobject_definitions_data(store_type: str = "default", client_info: di
             name
             type
             description
+            displayNameKey
             metaobjectsCount
             fieldDefinitions {
               name
@@ -7950,9 +8214,25 @@ def get_metaobject_definitions_data(store_type: str = "default", client_info: di
               }
               description
               required
+              validations {
+                name
+                value
+              }
             }
             access {
               storefront
+              customerAccount
+            }
+            capabilities {
+              publishable {
+                enabled
+              }
+              translatable {
+                enabled
+              }
+              onlineStore {
+                enabled
+              }
             }
           }
         }
@@ -7975,8 +8255,16 @@ def get_metaobject_definitions_data(store_type: str = "default", client_info: di
             d["numeric_id"] = d["id"].split("/")[-1]
             d["is_custom"] = not d["type"].startswith("shopify--")
             d["added_by"] = "Shopify Web" if d["is_custom"] else "Shopify Standard"
+            d["displayNameKey"] = d.get("displayNameKey") or ""
             access_obj = d.get("access") or {}
             d["storefront_access"] = access_obj.get("storefront", "NONE")
+            d["customer_account_access"] = access_obj.get("customerAccount", "NONE")
+            cap_obj = d.get("capabilities") or {}
+            d["capabilities"] = {
+                "publishable": cap_obj.get("publishable", {}).get("enabled", True),
+                "translatable": cap_obj.get("translatable", {}).get("enabled", False),
+                "onlineStore": cap_obj.get("onlineStore", {}).get("enabled", False)
+            }
             d["fields_count"] = len(d.get("fieldDefinitions", []))
             d["entries"] = []
 
@@ -8200,7 +8488,8 @@ async def update_metaobject_entry(request: Request):
         metaobject_input = {
             "fields": cleaned_fields
         }
-        if status_val in ("ACTIVE", "DRAFT"):
+        has_publishable = body.get("has_publishable")
+        if has_publishable is not False and status_val in ("ACTIVE", "DRAFT"):
             metaobject_input["capabilities"] = {
                 "publishable": {
                     "status": status_val
@@ -8245,6 +8534,19 @@ async def update_metaobject_entry(request: Request):
             
         update_res = data.get("data", {}).get("metaobjectUpdate", {})
         user_errors = update_res.get("userErrors", [])
+
+        # Tự động retry lưu dữ liệu nếu Shopify báo lỗi do metaobject definition chưa kích hoạt capability publishable
+        if user_errors and any("publishable" in str(e.get("message", "")).lower() for e in user_errors) and "capabilities" in metaobject_input:
+            metaobject_input_no_cap = dict(metaobject_input)
+            metaobject_input_no_cap.pop("capabilities", None)
+            retry_data = execute_shopify_graphql(client_info, mutation, {
+                "id": gid,
+                "metaobject": metaobject_input_no_cap
+            })
+            if retry_data and "data" in retry_data:
+                update_res = retry_data.get("data", {}).get("metaobjectUpdate", {})
+                user_errors = update_res.get("userErrors", [])
+
         if user_errors:
             error_msgs = [e.get("message", "Lỗi không xác định") for e in user_errors]
             return JSONResponse({"success": False, "message": "; ".join(error_msgs), "errors": user_errors}, status_code=400)
@@ -8313,7 +8615,10 @@ async def update_metaobject_entry_status(entry_id: str, request: Request):
             
         update_res = data.get("data", {}).get("metaobjectUpdate", {})
         user_errors = update_res.get("userErrors", [])
+
         if user_errors:
+            if any("publishable" in str(e.get("message", "")).lower() for e in user_errors):
+                return JSONResponse({"success": False, "message": "Metaobject này chưa kích hoạt tính năng Publishable trên Shopify, không thể đổi trạng thái Active/Draft.", "errors": user_errors}, status_code=400)
             error_msgs = [e.get("message", "Lỗi không xác định") for e in user_errors]
             return JSONResponse({"success": False, "message": "; ".join(error_msgs), "errors": user_errors}, status_code=400)
             
@@ -8429,6 +8734,217 @@ async def create_metaobject_definition(request: Request):
             
         created_def = create_res.get("metaobjectDefinition")
         return JSONResponse({"success": True, "message": "Đã tạo mới Metaobject thành công trên Shopify!", "definition": created_def})
+    except ProxySafetyException as pe:
+        return JSONResponse({"success": False, "message": str(pe), "is_proxy_error": True}, status_code=503)
+    except Exception as e:
+        return JSONResponse({"success": False, "message": f"Lỗi hệ thống: {str(e)}"}, status_code=500)
+
+
+@app.post("/api/metaobjects/definitions/update")
+async def update_metaobject_definition(request: Request):
+    try:
+        body = await request.json()
+        store_type = body.get("store_type", "default")
+        norm_store_type = "custom" if str(store_type or "").strip().lower() == "custom" else "default"
+        client_info = get_shopify_client(store_type=norm_store_type)
+
+        def_id = body.get("id")
+        if not def_id:
+            return JSONResponse({"success": False, "message": "Thiếu ID định nghĩa Metaobject"}, status_code=400)
+            
+        if not str(def_id).startswith("gid://shopify/MetaobjectDefinition/"):
+            gid = f"gid://shopify/MetaobjectDefinition/{def_id}"
+        else:
+            gid = str(def_id)
+
+        name = (body.get("name") or "").strip()
+        description = body.get("description", "")
+        storefront = body.get("storefront", True)
+        display_name_key = body.get("displayNameKey")
+        
+        fields_to_create = body.get("fields_to_create", [])
+        fields_to_update = body.get("fields_to_update", [])
+        fields_to_delete = body.get("fields_to_delete", [])
+
+        # Build field operations
+        field_operations = []
+        
+        # 1. Creates
+        for fc in fields_to_create:
+            k = (fc.get("key") or "").strip().lower()
+            k = re.sub(r'[^a-z0-9_]', '_', k).strip('_')
+            fn = (fc.get("name") or "").strip() or k
+            ft = (fc.get("type") or "single_line_text_field").strip()
+            req = bool(fc.get("required", False))
+            desc = (fc.get("description") or "").strip()
+            validations = fc.get("validations")
+            if k:
+                create_obj = {
+                    "key": k,
+                    "name": fn,
+                    "type": ft,
+                    "required": req
+                }
+                if desc:
+                    create_obj["description"] = desc
+                if validations and isinstance(validations, list) and len(validations) > 0:
+                    create_obj["validations"] = validations
+                field_operations.append({"create": create_obj})
+
+        # 2. Updates
+        for fu in fields_to_update:
+            k = (fu.get("key") or "").strip()
+            fn = (fu.get("name") or "").strip() or k
+            req = bool(fu.get("required", False))
+            desc = (fu.get("description") or "").strip()
+            validations = fu.get("validations")
+            if k:
+                update_obj = {
+                    "key": k,
+                    "name": fn,
+                    "required": req
+                }
+                if desc:
+                    update_obj["description"] = desc
+                if validations and isinstance(validations, list) and len(validations) > 0:
+                    update_obj["validations"] = validations
+                field_operations.append({"update": update_obj})
+
+        # 3. Deletes
+        for fd in fields_to_delete:
+            k = (fd if isinstance(fd, str) else fd.get("key", "")).strip()
+            if k:
+                field_operations.append({"delete": {"key": k}})
+
+        definition_input = {}
+        if name:
+            definition_input["name"] = name
+        if description is not None:
+            definition_input["description"] = description
+            
+        access_input = {}
+        if "storefront" in body:
+            access_input["storefront"] = "PUBLIC_READ" if body["storefront"] else "NONE"
+        if "customer_account" in body:
+            access_input["customerAccount"] = "READ" if body["customer_account"] else "NONE"
+        if access_input:
+            definition_input["access"] = access_input
+
+        capabilities_input = {}
+        if "publishable" in body:
+            capabilities_input["publishable"] = {"enabled": bool(body["publishable"])}
+        if "translatable" in body:
+            capabilities_input["translatable"] = {"enabled": bool(body["translatable"])}
+        if "online_store" in body:
+            capabilities_input["onlineStore"] = {"enabled": bool(body["online_store"])}
+        if capabilities_input:
+            definition_input["capabilities"] = capabilities_input
+
+        if display_name_key:
+            definition_input["displayNameKey"] = display_name_key
+        if field_operations:
+            definition_input["fieldDefinitions"] = field_operations
+
+        mutation = """
+        mutation updateDefinition($id: ID!, $definition: MetaobjectDefinitionUpdateInput!) {
+          metaobjectDefinitionUpdate(id: $id, definition: $definition) {
+            metaobjectDefinition {
+              id
+              name
+              type
+              description
+              displayNameKey
+              metaobjectsCount
+              fieldDefinitions {
+                name
+                key
+                type {
+                  name
+                }
+                description
+                required
+              }
+              access {
+                storefront
+              }
+            }
+            userErrors {
+              field
+              message
+              code
+            }
+          }
+        }
+        """
+        data = execute_shopify_graphql(client_info, mutation, {
+            "id": gid,
+            "definition": definition_input
+        })
+
+        if not data or "errors" in data:
+            return JSONResponse({"success": False, "message": str(data["errors"] if data else "Không nhận được phản hồi từ Shopify")}, status_code=400)
+
+        res_obj = data.get("data", {}).get("metaobjectDefinitionUpdate", {})
+        user_errors = res_obj.get("userErrors", [])
+        if user_errors:
+            error_msgs = [e.get("message", "Lỗi không xác định") for e in user_errors]
+            return JSONResponse({"success": False, "message": "; ".join(error_msgs), "errors": user_errors}, status_code=400)
+
+        updated_def = res_obj.get("metaobjectDefinition")
+        return JSONResponse({"success": True, "message": "Đã cập nhật định nghĩa Metaobject thành công!", "definition": updated_def})
+    except ProxySafetyException as pe:
+        return JSONResponse({"success": False, "message": str(pe), "is_proxy_error": True}, status_code=503)
+    except Exception as e:
+        return JSONResponse({"success": False, "message": f"Lỗi hệ thống: {str(e)}"}, status_code=500)
+
+
+@app.post("/api/metaobjects/definitions/delete")
+async def delete_metaobject_definition(request: Request):
+    try:
+        body = await request.json()
+        store_type = body.get("store_type", "default")
+        norm_store_type = "custom" if str(store_type or "").strip().lower() == "custom" else "default"
+        client_info = get_shopify_client(store_type=norm_store_type)
+
+        def_id = body.get("id")
+        if not def_id:
+            return JSONResponse({"success": False, "message": "Thiếu ID định nghĩa Metaobject cần xóa"}, status_code=400)
+
+        if not str(def_id).startswith("gid://shopify/MetaobjectDefinition/"):
+            gid = f"gid://shopify/MetaobjectDefinition/{def_id}"
+        else:
+            gid = str(def_id)
+
+        mutation = """
+        mutation deleteDefinition($id: ID!) {
+          metaobjectDefinitionDelete(id: $id) {
+            deletedId
+            userErrors {
+              field
+              message
+              code
+            }
+          }
+        }
+        """
+        data = execute_shopify_graphql(client_info, mutation, {
+            "id": gid
+        })
+
+        if not data or "errors" in data:
+            return JSONResponse({"success": False, "message": str(data["errors"] if data else "Không nhận được phản hồi từ Shopify")}, status_code=400)
+
+        res_obj = data.get("data", {}).get("metaobjectDefinitionDelete", {})
+        user_errors = res_obj.get("userErrors", [])
+        if user_errors:
+            error_msgs = [e.get("message", "Lỗi không xác định") for e in user_errors]
+            return JSONResponse({"success": False, "message": "; ".join(error_msgs), "errors": user_errors}, status_code=400)
+
+        return JSONResponse({
+            "success": True, 
+            "message": "Đã xóa định nghĩa Metaobject thành công!", 
+            "deletedId": res_obj.get("deletedId")
+        })
     except ProxySafetyException as pe:
         return JSONResponse({"success": False, "message": str(pe), "is_proxy_error": True}, status_code=503)
     except Exception as e:
@@ -14933,6 +15449,734 @@ async def redirect_to_dev_shopify_admin_product(handle: str):
     else:
         target_url = f"https://admin.shopify.com/store/{dev_shop}/products"
     return RedirectResponse(url=target_url, status_code=302)
+
+
+# ==============================================================================
+# PRODUCT METAFIELDS MANAGEMENT (QUẢN LÝ METAFIELD SẢN PHẨM TOÀN DIỆN)
+# ==============================================================================
+
+def get_product_metafields_page_data(store_type: str = "default", search: str = "", limit: int = 50, client_info: dict = None):
+    """
+    Truy vấn dữ liệu sản phẩm, metafields và metafieldDefinitions của sản phẩm từ Shopify GraphQL API.
+    """
+    if client_info is None:
+        client_info = get_shopify_client(store_type=store_type)
+        
+    search_q = search.strip() if search else None
+    
+    query = """
+    query getProductMetafieldsData($first: Int!, $query: String) {
+      productsCount(query: $query) {
+        count
+      }
+      products(first: $first, query: $query, sortKey: TITLE) {
+        edges {
+          node {
+            id
+            title
+            handle
+            status
+            totalVariants
+            featuredImage {
+              url
+              altText
+            }
+            metafields(first: 65) {
+              edges {
+                node {
+                  id
+                  namespace
+                  key
+                  value
+                  type
+                  description
+                  updatedAt
+                  createdAt
+                }
+              }
+            }
+          }
+        }
+      }
+      metafieldDefinitions(ownerType: PRODUCT, first: 100) {
+        edges {
+          node {
+            id
+            name
+            namespace
+            key
+            description
+            type {
+              name
+              category
+            }
+            validations {
+              name
+              value
+            }
+          }
+        }
+      }
+    }
+    """
+    
+    variables = {
+      "first": limit,
+      "query": search_q
+    }
+    
+    data = execute_shopify_graphql(client_info, query, variables=variables)
+    if not data or "errors" in data:
+        err_msg = "; ".join([e.get("message", "GraphQL error") for e in data.get("errors", [])]) if data else "Không nhận được phản hồi từ Shopify"
+        raise Exception(f"Shopify GraphQL Error: {err_msg}")
+        
+    d = data.get("data", {})
+    
+    # 1. Total count
+    total_count = d.get("productsCount", {}).get("count", 0)
+    
+    # 2. Products
+    products_edges = d.get("products", {}).get("edges", [])
+    
+    processed_products = []
+    all_namespaces_set = set()
+    total_assigned_metafields = 0
+    
+    for edge in products_edges:
+        p = edge.get("node", {})
+        p_id = p.get("id", "")
+        p_numeric_id = p_id.split("/")[-1] if p_id else ""
+        
+        raw_mfs = p.get("metafields", {}).get("edges", [])
+        mfs = []
+        for mf_edge in raw_mfs:
+            mf = mf_edge.get("node", {})
+            if mf:
+                mf_id = mf.get("id", "")
+                mf["numeric_id"] = mf_id.split("/")[-1] if mf_id else ""
+                ns = mf.get("namespace", "")
+                if ns:
+                    all_namespaces_set.add(ns)
+                mfs.append(mf)
+                
+        p["numeric_id"] = p_numeric_id
+        p["metafields_list"] = mfs
+        p["metafields_count"] = len(mfs)
+        total_assigned_metafields += len(mfs)
+        processed_products.append(p)
+        
+    # 3. Metafield Definitions
+    defs_edges = d.get("metafieldDefinitions", {}).get("edges", [])
+    definitions = []
+    for d_edge in defs_edges:
+        df = d_edge.get("node", {})
+        if df:
+            df_id = df.get("id", "")
+            df["numeric_id"] = df_id.split("/")[-1] if df_id else ""
+            ns = df.get("namespace", "")
+            if ns:
+                all_namespaces_set.add(ns)
+            definitions.append(df)
+            
+    return {
+        "products": processed_products,
+        "definitions": definitions,
+        "total_products_count": total_count,
+        "total_assigned_metafields": total_assigned_metafields,
+        "all_namespaces": sorted(list(all_namespaces_set)),
+        "definitions_count": len(definitions)
+    }
+
+
+@app.get("/product-metafields", response_class=HTMLResponse)
+async def product_metafields_page(
+    request: Request,
+    store_type: str = "default",
+    search: str = "",
+    selected_id: str = ""
+):
+    """Trang Quản lý Metafield sản phẩm toàn diện cho Shopify Store"""
+    norm_store_type = "custom" if str(store_type or "").strip().lower() == "custom" else "default"
+    proxy_cfg = load_proxy_config()
+    client_info = None
+    try:
+        client_info = get_shopify_client(store_type=norm_store_type)
+        page_data = get_product_metafields_page_data(
+            store_type=norm_store_type,
+            search=search,
+            limit=50,
+            client_info=client_info
+        )
+        
+        active_shop = client_info.get("shop", "")
+        active_shop_domain = client_info.get("shop_domain", "")
+        active_brand_domain = client_info.get("brand_domain", "")
+        
+        products = page_data["products"]
+        selected_product = None
+        if selected_id:
+            for p in products:
+                if p["numeric_id"] == selected_id or p["id"] == selected_id:
+                    selected_product = p
+                    break
+        if not selected_product and len(products) > 0:
+            selected_product = products[0]
+            
+        return templates.TemplateResponse(request=request, name="product_metafields.html", context={
+            "request": request,
+            "products": products,
+            "selected_product": selected_product,
+            "definitions": page_data["definitions"],
+            "all_namespaces": page_data["all_namespaces"],
+            "total_products_count": page_data["total_products_count"],
+            "total_assigned_metafields": page_data["total_assigned_metafields"],
+            "definitions_count": page_data["definitions_count"],
+            "search": search,
+            "store_type": norm_store_type,
+            "client_info": client_info,
+            "active_shop": active_shop,
+            "active_shop_domain": active_shop_domain,
+            "active_brand_domain": active_brand_domain,
+            "shopify_shop": active_shop or SHOPIFY_SHOP,
+            "is_custom": client_info.get("is_custom", False),
+            "proxy_cfg": proxy_cfg,
+            "error": None
+        })
+    except Exception as e:
+        error_msg = str(e)
+        active_shop = client_info.get("shop", "") if client_info else ""
+        active_shop_domain = client_info.get("shop_domain", "") if client_info else ""
+        active_brand_domain = client_info.get("brand_domain", "") if client_info else ""
+        if not active_shop:
+            active_shop = CUSTOM_SHOPIFY_SHOP if norm_store_type == "custom" else SHOPIFY_SHOP
+        return templates.TemplateResponse(request=request, name="product_metafields.html", context={
+            "request": request,
+            "products": [],
+            "selected_product": None,
+            "definitions": [],
+            "all_namespaces": [],
+            "total_products_count": 0,
+            "total_assigned_metafields": 0,
+            "definitions_count": 0,
+            "search": search,
+            "store_type": norm_store_type,
+            "client_info": client_info,
+            "active_shop": active_shop,
+            "active_shop_domain": active_shop_domain,
+            "active_brand_domain": active_brand_domain,
+            "shopify_shop": active_shop or SHOPIFY_SHOP,
+            "is_custom": norm_store_type == "custom",
+            "proxy_cfg": proxy_cfg,
+            "error": error_msg
+        })
+
+
+@app.get("/api/product-metafields/lookup")
+async def api_lookup_product_metafields(
+    query: str = "",
+    store_type: str = "default"
+):
+    """
+    Tra cứu sản phẩm và toàn bộ Metafields theo Handle hoặc ID (tự động nhận diện).
+    Nếu là ID: dò tìm trên cả Store Mặc Định và Store Riêng.
+    Nếu là Handle: dò tìm trên Store hiện tại trước, nếu không có thì dò tiếp Store còn lại.
+    """
+    import re
+    raw_q = (query or "").strip()
+    if not raw_q:
+        return JSONResponse({"success": False, "message": "Vui lòng nhập ID hoặc Handle của sản phẩm!"}, status_code=400)
+
+    # 1. Tự động nhận diện định dạng (URL, GID, Numeric ID, hay Handle)
+    # Admin URL: https://admin.shopify.com/store/wrydeco/products/10359521083449
+    admin_match = re.search(r'/products/(\d+)', raw_q)
+    # Storefront URL: https://wrydeco.com/products/handle-name
+    sf_match = re.search(r'/products/([^/?#]+)', raw_q)
+
+    if 'admin.shopify.com' in raw_q and admin_match:
+        q_type = "id"
+        val = admin_match.group(1)
+    elif sf_match and not sf_match.group(1).isdigit():
+        q_type = "handle"
+        val = sf_match.group(1)
+    elif raw_q.startswith("gid://shopify/Product/"):
+        q_type = "id"
+        val = raw_q.replace("gid://shopify/Product/", "").strip()
+    elif raw_q.isdigit():
+        q_type = "id"
+        val = raw_q
+    else:
+        q_type = "handle"
+        val = raw_q
+
+    norm_current_store = "custom" if str(store_type or "").strip().lower() == "custom" else "default"
+    other_store = "custom" if norm_current_store == "default" else "default"
+    stores_to_check = [norm_current_store, other_store]
+
+    # GraphQL queries
+    query_by_id = """
+    query getProductById($id: ID!) {
+      product(id: $id) {
+        id
+        title
+        handle
+        status
+        totalVariants
+        featuredImage {
+          url
+          altText
+        }
+        metafields(first: 100) {
+          edges {
+            node {
+              id
+              namespace
+              key
+              value
+              type
+              description
+              updatedAt
+              createdAt
+            }
+          }
+        }
+      }
+    }
+    """
+
+    query_by_handle = """
+    query getProductByHandle($handle: String!) {
+      productByHandle(handle: $handle) {
+        id
+        title
+        handle
+        status
+        totalVariants
+        featuredImage {
+          url
+          altText
+        }
+        metafields(first: 100) {
+          edges {
+            node {
+              id
+              namespace
+              key
+              value
+              type
+              description
+              updatedAt
+              createdAt
+            }
+          }
+        }
+      }
+    }
+    """
+
+    def format_product_node(prod_node, found_store: str):
+        if not prod_node:
+            return None
+        p_id = prod_node.get("id", "")
+        numeric_id = p_id.split("/")[-1] if p_id else ""
+        prod_node["numeric_id"] = numeric_id
+        
+        raw_mfs = prod_node.get("metafields", {}).get("edges", [])
+        mfs = []
+        for mf_edge in raw_mfs:
+            mf = mf_edge.get("node", {})
+            if mf:
+                mf["numeric_id"] = mf.get("id", "").split("/")[-1]
+                mfs.append(mf)
+        prod_node["metafields_list"] = mfs
+        prod_node["metafields_count"] = len(mfs)
+        prod_node["found_in_store"] = found_store
+        
+        c_info = get_shopify_client(store_type=found_store)
+        prod_node["store_shop"] = c_info.get("shop", "")
+        prod_node["store_name"] = "Store Riêng" if found_store == "custom" else "Store Mặc Định"
+        return prod_node
+
+    try:
+        # Trường hợp tìm theo ID
+        if q_type == "id":
+            full_id = f"gid://shopify/Product/{val}"
+            for s_type in stores_to_check:
+                try:
+                    client = get_shopify_client(store_type=s_type)
+                    res = execute_shopify_graphql(client, query_by_id, variables={"id": full_id})
+                    prod = (res or {}).get("data", {}).get("product")
+                    if prod:
+                        formatted = format_product_node(prod, s_type)
+                        return JSONResponse({
+                            "success": True,
+                            "query_type": "id",
+                            "searched_value": val,
+                            "found_in_store": s_type,
+                            "product": formatted
+                        })
+                except Exception as ex_store:
+                    print(f"Lỗi khi tra cứu store {s_type} cho ID {val}: {ex_store}")
+                    continue
+
+            return JSONResponse({
+                "success": False,
+                "message": f"Không tìm thấy sản phẩm có ID '{val}' trên cả Store Mặc Định và Store Riêng."
+            }, status_code=404)
+
+        # Trường hợp tìm theo Handle
+        else:
+            for s_type in stores_to_check:
+                try:
+                    client = get_shopify_client(store_type=s_type)
+                    res = execute_shopify_graphql(client, query_by_handle, variables={"handle": val})
+                    prod = (res or {}).get("data", {}).get("productByHandle")
+                    if prod:
+                        formatted = format_product_node(prod, s_type)
+                        return JSONResponse({
+                            "success": True,
+                            "query_type": "handle",
+                            "searched_value": val,
+                            "found_in_store": s_type,
+                            "product": formatted
+                        })
+                    
+                    # Fallback query qua filter handle:val
+                    res_fb = execute_shopify_graphql(client, """
+                    query searchProdByHandleQuery($q: String!) {
+                      products(first: 1, query: $q) {
+                        edges {
+                          node {
+                            id
+                            title
+                            handle
+                            status
+                            totalVariants
+                            featuredImage { url altText }
+                            metafields(first: 100) {
+                              edges {
+                                node {
+                                  id namespace key value type description updatedAt createdAt
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                    """, variables={"q": f"handle:{val}"})
+                    edges = (res_fb or {}).get("data", {}).get("products", {}).get("edges", [])
+                    if edges and edges[0].get("node"):
+                        formatted = format_product_node(edges[0]["node"], s_type)
+                        return JSONResponse({
+                            "success": True,
+                            "query_type": "handle",
+                            "searched_value": val,
+                            "found_in_store": s_type,
+                            "product": formatted
+                        })
+                except Exception as ex_store:
+                    print(f"Lỗi khi tra cứu store {s_type} cho Handle {val}: {ex_store}")
+                    continue
+
+            return JSONResponse({
+                "success": False,
+                "message": f"Không tìm thấy sản phẩm có Handle '{val}' trên cả Store Mặc Định và Store Riêng."
+            }, status_code=404)
+
+    except Exception as e:
+        return JSONResponse({"success": False, "message": f"Lỗi hệ thống khi tra cứu: {str(e)}"}, status_code=500)
+
+
+@app.get("/api/product-metafields/product/{product_numeric_id}")
+async def api_get_product_metafields_detail(
+    product_numeric_id: str,
+    store_type: str = "default"
+):
+    """Lấy dữ liệu chi tiết của 1 sản phẩm và toàn bộ metafields của nó"""
+    norm_store_type = "custom" if str(store_type or "").strip().lower() == "custom" else "default"
+    try:
+        client_info = get_shopify_client(store_type=norm_store_type)
+        clean_id = product_numeric_id.strip()
+        full_id = clean_id if clean_id.startswith("gid://shopify/Product/") else f"gid://shopify/Product/{clean_id}"
+        
+        query = """
+        query getSingleProductMetafields($id: ID!) {
+          product(id: $id) {
+            id
+            title
+            handle
+            status
+            totalVariants
+            featuredImage {
+              url
+              altText
+            }
+            metafields(first: 65) {
+              edges {
+                node {
+                  id
+                  namespace
+                  key
+                  value
+                  type
+                  description
+                  updatedAt
+                  createdAt
+                }
+              }
+            }
+          }
+        }
+        """
+        data = execute_shopify_graphql(client_info, query, variables={"id": full_id})
+        if not data or "errors" in data:
+            err_msg = "; ".join([e.get("message", "GraphQL error") for e in data.get("errors", [])]) if data else "Không tìm thấy sản phẩm"
+            return JSONResponse({"success": False, "message": err_msg}, status_code=400)
+            
+        prod = data.get("data", {}).get("product")
+        if not prod:
+            return JSONResponse({"success": False, "message": "Không tìm thấy sản phẩm trên Shopify"}, status_code=404)
+            
+        p_id = prod.get("id", "")
+        prod["numeric_id"] = p_id.split("/")[-1] if p_id else ""
+        
+        raw_mfs = prod.get("metafields", {}).get("edges", [])
+        mfs = []
+        for mf_edge in raw_mfs:
+            mf = mf_edge.get("node", {})
+            if mf:
+                mf["numeric_id"] = mf.get("id", "").split("/")[-1]
+                mfs.append(mf)
+                
+        prod["metafields_list"] = mfs
+        prod["metafields_count"] = len(mfs)
+        
+        return JSONResponse({"success": True, "product": prod})
+    except Exception as e:
+        return JSONResponse({"success": False, "message": str(e)}, status_code=500)
+
+
+@app.post("/api/product-metafields/set")
+async def api_set_product_metafield(request: Request):
+    """
+    Tạo mới hoặc cập nhật giá trị/kiểu dữ liệu metafield của một sản phẩm
+    """
+    try:
+        body = await request.json()
+        product_id = str(body.get("product_id") or "").strip()
+        namespace = str(body.get("namespace") or "").strip()
+        key = str(body.get("key") or "").strip()
+        value = str(body.get("value") or "")
+        mf_type = str(body.get("type") or "single_line_text_field").strip()
+        description = body.get("description")
+        store_type = str(body.get("store_type") or "default").strip()
+        
+        if not product_id or not namespace or not key:
+            return JSONResponse({"success": False, "message": "Thiếu thông tin product_id, namespace hoặc key!"}, status_code=400)
+            
+        full_product_id = product_id if product_id.startswith("gid://shopify/Product/") else f"gid://shopify/Product/{product_id}"
+        norm_store_type = "custom" if store_type.lower() == "custom" else "default"
+        
+        client_info = get_shopify_client(store_type=norm_store_type)
+        
+        mutation = """
+        mutation metafieldsSet($metafields: [MetafieldsSetInput!]!) {
+          metafieldsSet(metafields: $metafields) {
+            metafields {
+              id
+              namespace
+              key
+              value
+              type
+              description
+              updatedAt
+              createdAt
+            }
+            userErrors {
+              field
+              message
+              code
+            }
+          }
+        }
+        """
+        
+        metafield_input = {
+            "ownerId": full_product_id,
+            "namespace": namespace,
+            "key": key,
+            "value": value,
+            "type": mf_type
+        }
+            
+        variables = {
+            "metafields": [metafield_input]
+        }
+        
+        data = execute_shopify_graphql(client_info, mutation, variables=variables)
+        if not data or "errors" in data:
+            err_msg = "; ".join([e.get("message", "GraphQL error") for e in data.get("errors", [])]) if data else "Không nhận được phản hồi từ Shopify"
+            return JSONResponse({"success": False, "message": f"Shopify GraphQL Error: {err_msg}"}, status_code=400)
+            
+        res_data = data.get("data", {}).get("metafieldsSet", {})
+        user_errors = res_data.get("userErrors", [])
+        if user_errors:
+            err_details = "; ".join([f"{u.get('field', '')}: {u.get('message', '')}" for u in user_errors])
+            return JSONResponse({"success": False, "message": f"Lỗi lưu Metafield: {err_details}", "errors": user_errors}, status_code=400)
+            
+        saved_mfs = res_data.get("metafields", [])
+        saved_mf = saved_mfs[0] if saved_mfs else None
+        if saved_mf:
+            saved_mf["numeric_id"] = saved_mf.get("id", "").split("/")[-1]
+            
+        return JSONResponse({
+            "success": True,
+            "message": f"Đã lưu thành công metafield {namespace}.{key}!",
+            "metafield": saved_mf
+        })
+    except Exception as e:
+        return JSONResponse({"success": False, "message": f"Lỗi hệ thống: {str(e)}"}, status_code=500)
+
+
+@app.post("/api/product-metafields/delete")
+async def api_delete_product_metafield(request: Request):
+    """
+    Xóa một metafield khỏi sản phẩm thông qua mutation metafieldsDelete
+    """
+    try:
+        body = await request.json()
+        product_id = str(body.get("product_id") or "").strip()
+        namespace = str(body.get("namespace") or "").strip()
+        key = str(body.get("key") or "").strip()
+        store_type = str(body.get("store_type") or "default").strip()
+        
+        if not product_id or not namespace or not key:
+            return JSONResponse({"success": False, "message": "Thiếu product_id, namespace hoặc key!"}, status_code=400)
+            
+        full_product_id = product_id if product_id.startswith("gid://shopify/Product/") else f"gid://shopify/Product/{product_id}"
+        norm_store_type = "custom" if store_type.lower() == "custom" else "default"
+        
+        client_info = get_shopify_client(store_type=norm_store_type)
+        
+        mutation = """
+        mutation metafieldsDelete($metafields: [MetafieldIdentifierInput!]!) {
+          metafieldsDelete(metafields: $metafields) {
+            deletedMetafields {
+              ownerId
+              namespace
+              key
+            }
+            userErrors {
+              field
+              message
+            }
+          }
+        }
+        """
+        
+        variables = {
+            "metafields": [{
+                "ownerId": full_product_id,
+                "namespace": namespace,
+                "key": key
+            }]
+        }
+        
+        data = execute_shopify_graphql(client_info, mutation, variables=variables)
+        if not data or "errors" in data:
+            err_msg = "; ".join([e.get("message", "GraphQL error") for e in data.get("errors", [])]) if data else "Không nhận được phản hồi từ Shopify"
+            return JSONResponse({"success": False, "message": f"Shopify GraphQL Error: {err_msg}"}, status_code=400)
+            
+        res_data = data.get("data", {}).get("metafieldsDelete", {})
+        user_errors = res_data.get("userErrors", [])
+        if user_errors:
+            err_details = "; ".join([f"{u.get('field', '')}: {u.get('message', '')}" for u in user_errors])
+            return JSONResponse({"success": False, "message": f"Lỗi xóa Metafield: {err_details}", "errors": user_errors}, status_code=400)
+            
+        return JSONResponse({
+            "success": True,
+            "message": f"Đã xóa thành công metafield {namespace}.{key} khỏi sản phẩm!"
+        })
+    except Exception as e:
+        return JSONResponse({"success": False, "message": f"Lỗi hệ thống: {str(e)}"}, status_code=500)
+
+
+@app.post("/api/product-metafields/definition/update")
+async def api_update_metafield_definition(request: Request):
+    """
+    Cập nhật thông tin định nghĩa Metafield (Name, Description) của Store qua mutation metafieldDefinitionUpdate
+    """
+    try:
+        body = await request.json()
+        namespace = str(body.get("namespace") or "").strip()
+        key = str(body.get("key") or "").strip()
+        name = str(body.get("name") or "").strip()
+        description = body.get("description")
+        store_type = str(body.get("store_type") or "default").strip()
+        
+        if not namespace or not key:
+            return JSONResponse({"success": False, "message": "Thiếu namespace hoặc key của định nghĩa!"}, status_code=400)
+            
+        norm_store_type = "custom" if store_type.lower() == "custom" else "default"
+        client_info = get_shopify_client(store_type=norm_store_type)
+        
+        mutation = """
+        mutation metafieldDefinitionUpdate($definition: MetafieldDefinitionUpdateInput!) {
+          metafieldDefinitionUpdate(definition: $definition) {
+            updatedDefinition {
+              id
+              name
+              namespace
+              key
+              description
+              type {
+                name
+              }
+            }
+            userErrors {
+              field
+              message
+              code
+            }
+          }
+        }
+        """
+        
+        definition_input = {
+            "ownerType": "PRODUCT",
+            "namespace": namespace,
+            "key": key,
+        }
+        if name:
+            definition_input["name"] = name
+        if description is not None:
+            definition_input["description"] = str(description).strip()
+            
+        variables = {
+            "definition": definition_input
+        }
+        
+        data = execute_shopify_graphql(client_info, mutation, variables=variables)
+        if not data or "errors" in data:
+            err_msg = "; ".join([e.get("message", "GraphQL error") for e in data.get("errors", [])]) if data else "Không nhận được phản hồi từ Shopify"
+            return JSONResponse({"success": False, "message": f"Shopify GraphQL Error: {err_msg}"}, status_code=400)
+            
+        res_data = data.get("data", {}).get("metafieldDefinitionUpdate", {})
+        user_errors = res_data.get("userErrors", [])
+        if user_errors:
+            err_details = "; ".join([f"{u.get('field', '')}: {u.get('message', '')}" for u in user_errors])
+            return JSONResponse({"success": False, "message": f"Lỗi cập nhật Định nghĩa: {err_details}", "errors": user_errors}, status_code=400)
+            
+        updated_def = res_data.get("updatedDefinition")
+        return JSONResponse({
+            "success": True,
+            "message": f"Đã cập nhật thành công định nghĩa {namespace}.{key}!",
+            "definition": updated_def
+        })
+    except Exception as e:
+        return JSONResponse({"success": False, "message": f"Lỗi hệ thống: {str(e)}"}, status_code=500)
+
+
 
 
 

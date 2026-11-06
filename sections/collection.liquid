@@ -38,6 +38,8 @@
           {%- liquid
             assign price_filter = null
             assign category_filter = null
+            assign room_filter = null
+            assign style_filter = null
             for f in collection.filters
               if f.type == 'price_range'
                 assign price_filter = f
@@ -48,6 +50,10 @@
                 # it survives either spelling Shopify uses for the taxonomy param.
                 if f.param_name contains 'category'
                   assign category_filter = f
+                elsif f.param_name contains 'room_type'
+                  assign room_filter = f
+                elsif f.param_name contains 'interior_style'
+                  assign style_filter = f
                 endif
               endif
             endfor
@@ -59,6 +65,20 @@
             if category_filter != blank
               if category_filter.values.size > 1
                 assign show_category_filter = true
+              endif
+            endif
+
+            assign show_room_filter = false
+            if room_filter != blank
+              if room_filter.values.size > 1
+                assign show_room_filter = true
+              endif
+            endif
+
+            assign show_style_filter = false
+            if style_filter != blank
+              if style_filter.values.size > 1
+                assign show_style_filter = true
               endif
             endif
           -%}
@@ -130,6 +150,122 @@
                 </div>
                 {%- if category_filter.active_values.size > 0 -%}
                   <a href="{{ category_filter.url_to_remove }}" class="col-dropdown__clear">Clear</a>
+                {%- endif -%}
+              </div>
+            </div>
+          {%- endif -%}
+
+          {%- comment -%}
+            Room Type — product metafield `custom.room_type` (`filter.p.m.custom.room_type`).
+          {%- endcomment -%}
+          {%- if show_room_filter -%}
+            <div
+              class="col-dropdown col-dropdown--left col-toolbar__facet{% if room_filter.active_values.size > 0 %} has-active{% endif %}"
+              data-dropdown
+            >
+              <button
+                type="button"
+                class="col-dropdown__trigger"
+                data-dropdown-toggle
+                aria-expanded="false"
+                aria-haspopup="true"
+              >
+                <span>{{ section.settings.room_filter_label | default: room_filter.label | escape }}</span>
+                {%- if room_filter.active_values.size > 0 -%}
+                  <span class="col-dropdown__badge">
+                    {{- room_filter.active_values.size -}}
+                    <span class="visually-hidden"> selected</span>
+                  </span>
+                {%- endif -%}
+                {{ col_caret }}
+              </button>
+              <div class="col-dropdown__menu">
+                <div class="col-dropdown__list custom-scrollbar">
+                  {%- for value in room_filter.values -%}
+                    {%- if value.count == 0 -%}
+                      {%- unless value.active -%}
+                        {%- continue -%}
+                      {%- endunless -%}
+                    {%- endif -%}
+                    <a
+                      href="{% if value.active %}{{ value.url_to_remove }}{% else %}{{ value.url_to_add }}{% endif %}"
+                      class="col-dropdown__option{% if value.active %} is-active{% endif %}"
+                    >
+                      <input
+                        type="checkbox"
+                        class="visually-hidden"
+                        {% if value.active %}
+                          checked
+                        {% endif %}
+                        tabindex="-1"
+                        aria-hidden="true"
+                      >
+                      {{ col_check }}
+                      <span class="col-dropdown__option-label">{{ value.label | escape }}</span>
+                      <span class="col-dropdown__option-count">({{ value.count }})</span>
+                    </a>
+                  {%- endfor -%}
+                </div>
+                {%- if room_filter.active_values.size > 0 -%}
+                  <a href="{{ room_filter.url_to_remove }}" class="col-dropdown__clear">Clear</a>
+                {%- endif -%}
+              </div>
+            </div>
+          {%- endif -%}
+
+          {%- comment -%}
+            Interior Style — product metafield `custom.interior_style` (`filter.p.m.custom.interior_style`).
+          {%- endcomment -%}
+          {%- if show_style_filter -%}
+            <div
+              class="col-dropdown col-dropdown--left col-toolbar__facet{% if style_filter.active_values.size > 0 %} has-active{% endif %}"
+              data-dropdown
+            >
+              <button
+                type="button"
+                class="col-dropdown__trigger"
+                data-dropdown-toggle
+                aria-expanded="false"
+                aria-haspopup="true"
+              >
+                <span>{{ section.settings.style_filter_label | default: style_filter.label | escape }}</span>
+                {%- if style_filter.active_values.size > 0 -%}
+                  <span class="col-dropdown__badge">
+                    {{- style_filter.active_values.size -}}
+                    <span class="visually-hidden"> selected</span>
+                  </span>
+                {%- endif -%}
+                {{ col_caret }}
+              </button>
+              <div class="col-dropdown__menu">
+                <div class="col-dropdown__list custom-scrollbar">
+                  {%- for value in style_filter.values -%}
+                    {%- if value.count == 0 -%}
+                      {%- unless value.active -%}
+                        {%- continue -%}
+                      {%- endunless -%}
+                    {%- endif -%}
+                    <a
+                      href="{% if value.active %}{{ value.url_to_remove }}{% else %}{{ value.url_to_add }}{% endif %}"
+                      class="col-dropdown__option{% if value.active %} is-active{% endif %}"
+                    >
+                      <input
+                        type="checkbox"
+                        class="visually-hidden"
+                        {% if value.active %}
+                          checked
+                        {% endif %}
+                        tabindex="-1"
+                        aria-hidden="true"
+                      >
+                      {{ col_check }}
+                      <span class="col-dropdown__option-label">{{ value.label | escape }}</span>
+                      <span class="col-dropdown__option-count">({{ value.count }})</span>
+                    </a>
+                  {%- endfor -%}
+                </div>
+                {%- if style_filter.active_values.size > 0 -%}
+                  <a href="{{ style_filter.url_to_remove }}" class="col-dropdown__clear">Clear</a>
                 {%- endif -%}
               </div>
             </div>
@@ -239,6 +375,60 @@
                 {%- if price_active -%}
                   <a href="{{ price_filter.url_to_remove }}" class="col-dropdown__clear">Clear</a>
                 {%- endif -%}
+              </div>
+            </div>
+          {%- else -%}
+            <div class="col-dropdown col-dropdown--left col-toolbar__facet" data-dropdown>
+              <button
+                type="button"
+                class="col-dropdown__trigger"
+                data-dropdown-toggle
+                aria-expanded="false"
+                aria-haspopup="true"
+              >
+                <span>Price</span>
+                {{ col_caret }}
+              </button>
+              <div class="col-dropdown__menu">
+                <form class="col-price-form">
+                  <div class="col-price-form__header">
+                    <span>MIN ({{ shop.currency | escape }})</span>
+                    <span>MAX ({{ shop.currency | escape }})</span>
+                  </div>
+                  <div class="col-price-form__inputs">
+                    <label class="visually-hidden" for="CollectionPriceMin-{{ section.id }}">Minimum price</label>
+                    <input
+                      id="CollectionPriceMin-{{ section.id }}"
+                      name="filter.v.price.gte"
+                      type="number"
+                      placeholder="0"
+                      step="0.01"
+                      min="0"
+                    >
+                    <label class="visually-hidden" for="CollectionPriceMax-{{ section.id }}">Maximum price</label>
+                    <input
+                      id="CollectionPriceMax-{{ section.id }}"
+                      name="filter.v.price.lte"
+                      type="number"
+                      placeholder="100000.00"
+                      step="0.01"
+                      min="0"
+                    >
+                  </div>
+                  <input type="hidden" name="country" value="US">
+                  <button type="submit" class="col-price-form__apply">Apply</button>
+
+                  {%- for f in collection.filters -%}
+                    {%- if f.type != 'price_range' -%}
+                      {%- for v in f.active_values -%}
+                        <input type="hidden" name="{{ v.param_name }}" value="{{ v.value }}">
+                      {%- endfor -%}
+                    {%- endif -%}
+                  {%- endfor -%}
+                  {%- if collection.sort_by != blank -%}
+                    <input type="hidden" name="sort_by" value="{{ collection.sort_by }}">
+                  {%- endif -%}
+                </form>
               </div>
             </div>
           {%- endif -%}
@@ -414,7 +604,11 @@
         {% else %}
           <div class="col-grid">
             {% for product in collection.products %}
-              {% render 'plp-product-card', product: product %}
+              {% render 'plp-product-card',
+                product: product,
+                price_min: price_filter.min_value.value,
+                price_max: price_filter.max_value.value
+              %}
             {% endfor %}
           </div>
 
@@ -1723,6 +1917,20 @@
       "label": "Category filter label",
       "info": "Shown on the product category facet. Leave empty to use the filter name from Search & Discovery.",
       "default": "Category"
+    },
+    {
+      "type": "text",
+      "id": "room_filter_label",
+      "label": "Room filter label",
+      "info": "Shown on the Room Type facet (custom.room_type). Leave empty to use the filter name from Search & Discovery.",
+      "default": "Room"
+    },
+    {
+      "type": "text",
+      "id": "style_filter_label",
+      "label": "Interior Style filter label",
+      "info": "Shown on the Interior Style facet (custom.interior_style). Leave empty to use the filter name from Search & Discovery.",
+      "default": "Interior Style"
     },
     { "type": "header", "content": "Product card badges" },
     {

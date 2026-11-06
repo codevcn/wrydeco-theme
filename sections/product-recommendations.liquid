@@ -17,33 +17,37 @@
     </div>
 
     <div class="product-recommendations__carousel" data-pairs-carousel>
-      <button
-        class="product-recommendations__nav product-recommendations__nav--prev"
-        type="button"
-        aria-label="{{ 'general.previous' | t | default: 'Previous' }}"
-        data-pairs-prev
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M15 5L8 12L15 19" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </button>
-
-      <div class="product-recommendations__slider" data-pairs-slider>
+      <div class="product-recommendations__slider" id="PairsSlider-{{ section.id }}" data-pairs-slider>
         {% for product in recommendations.products limit: rec_limit %}
           {% render 'plp-product-card', product: product, heading_tag: 'h3', class: 'pairs-card' %}
         {% endfor %}
       </div>
 
-      <button
-        class="product-recommendations__nav product-recommendations__nav--next"
-        type="button"
-        aria-label="{{ 'general.next' | t | default: 'Next' }}"
-        data-pairs-next
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M9 5L16 12L9 19" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </button>
+      <div class="product-recommendations__controls" data-pairs-controls hidden>
+        <button
+          class="product-recommendations__nav product-recommendations__nav--prev"
+          type="button"
+          aria-label="Previous recommendations"
+          aria-controls="PairsSlider-{{ section.id }}"
+          data-pairs-prev
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M15 5L8 12L15 19" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <div class="product-recommendations__dots" role="group" aria-label="Choose recommendation page" data-pairs-dots></div>
+        <button
+          class="product-recommendations__nav product-recommendations__nav--next"
+          type="button"
+          aria-label="Next recommendations"
+          aria-controls="PairsSlider-{{ section.id }}"
+          data-pairs-next
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M9 5L16 12L9 19" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
     </div>
   </div>
 {% else %}
@@ -88,8 +92,8 @@
   .product-recommendations {
     width: 100%;
     margin-inline: auto;
-    padding: var(--sp-7) 140px;
-    background-color: var(--color-white-cream);
+    padding: var(--sp-7) 80px;
+    background-color: #fbf4eb;
   }
 
   .product-recommendations__header {
@@ -108,7 +112,7 @@
   }
   .product-recommendations__title {
     margin: 0 0 var(--sp-4);
-    font-family: var(--font-roboto);
+    font-family: var(--font-display-light);
     font-size: var(--font-size-display-lg);
     font-weight: var(--font-weight-regular);
     line-height: var(--line-height-display);
@@ -127,24 +131,53 @@
   /* Carousel */
   .product-recommendations__carousel {
     position: relative;
-    padding-top: 60px;
   }
-  .product-recommendations__carousel:not(.has-overflow) {
-    padding-top: 0;
+  .product-recommendations__controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: var(--sp-4);
   }
-  .product-recommendations__carousel > .product-recommendations__nav {
-    top: 0;
-    transform: none;
+  .product-recommendations__controls[hidden] {
+    display: none;
   }
-  .product-recommendations__carousel > .product-recommendations__nav:hover {
-    transform: scale(1.05);
+  .product-recommendations__dots {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
   }
-  .product-recommendations__carousel > .product-recommendations__nav--prev {
-    left: auto;
-    right: 60px;
+  .product-recommendations__dot {
+    display: grid;
+    place-items: center;
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--color-earth-brown);
+    cursor: pointer;
   }
-  .product-recommendations__carousel > .product-recommendations__nav--next {
-    right: 0;
+  .product-recommendations__dot::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border: 1px solid currentColor;
+    border-radius: 50%;
+    background: transparent;
+    transition: background-color var(--timing-short) var(--ease-standard);
+  }
+  .product-recommendations__dot[aria-current='true']::before,
+  .product-recommendations__dot:hover::before {
+    background: currentColor;
+  }
+  .product-recommendations__dot:focus-visible {
+    outline: 2px solid var(--color-sage);
+    outline-offset: -2px;
+    border-radius: var(--radius-full);
   }
   .product-recommendations__slider {
     display: flex;
@@ -174,7 +207,7 @@
   .pairs-card {
     display: flex;
     flex-direction: column;
-    flex: 0 0 calc((100% - (var(--sp-5) * 2)) / 3);
+    flex: 0 0 calc((100% - (var(--sp-5) * 3)) / 4);
     min-width: 0;
     scroll-snap-align: start;
   }
@@ -249,9 +282,8 @@
 
   /* Prev / Next navigation */
   .product-recommendations__nav {
-    position: absolute;
-    z-index: 3;
-    top: calc((100% - 96px) / 2);
+    position: relative;
+    flex: 0 0 48px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -262,8 +294,7 @@
     background: color-mix(in srgb, var(--surface-elevated) 88%, transparent);
     color: var(--color-earth-brown);
     cursor: pointer;
-    transform: translateY(-50%);
-    box-shadow: var(--shadow-elevation-2);
+    box-shadow: none;
     transition: background-color var(--timing-short) var(--ease-standard),
       border-color var(--timing-short) var(--ease-standard),
       opacity var(--timing-short) var(--ease-standard),
@@ -272,7 +303,7 @@
   .product-recommendations__nav:hover {
     background: var(--color-milk);
     border-color: var(--color-clay);
-    transform: translateY(-50%) scale(1.05);
+    transform: scale(1.05);
   }
   .product-recommendations__nav:focus-visible {
     outline: 2px solid var(--color-sage);
@@ -283,29 +314,12 @@
     cursor: default;
     pointer-events: none;
   }
-  .product-recommendations__nav--prev {
-    left: calc(var(--sp-5) * -1);
-  }
-  .product-recommendations__nav--next {
-    right: calc(var(--sp-5) * -1);
-  }
-  /* No arrows when everything already fits. */
-  .product-recommendations__carousel:not(.has-overflow) .product-recommendations__nav {
-    display: none;
-  }
-
   @media screen and (max-width: 1280px) {
     .product-recommendations {
       padding-inline: 64px;
     }
     .pairs-card {
-      flex-basis: calc((100% - (var(--sp-5) * 2)) / 3);
-    }
-    .product-recommendations__nav--prev {
-      left: var(--sp-2);
-    }
-    .product-recommendations__nav--next {
-      right: var(--sp-2);
+      flex-basis: calc((100% - (var(--sp-5) * 3)) / 4);
     }
   }
 
@@ -316,12 +330,15 @@
     .product-recommendations__title {
       font-size: var(--font-size-display-md);
     }
+    .product-recommendations__slider {
+      gap: var(--sp-4);
+    }
+    .pairs-card {
+      flex-basis: calc((100% - (var(--sp-4) * 3)) / 4);
+    }
   }
 
   @media screen and (max-width: 768px) {
-    .product-recommendations__carousel {
-      padding-top: 0;
-    }
     .product-recommendations {
       padding: var(--section-spacing-mobile) var(--layout-padding-mobile);
     }
@@ -337,19 +354,28 @@
     .pairs-card {
       flex-basis: calc((100% - var(--sp-4)) / 2);
     }
-    /* Touch devices scroll/drag directly; hide the arrows on small screens. */
-    .product-recommendations__nav {
-      display: none !important;
-    }
   }
 
   @media screen and (max-width: 480px) {
+    .product-recommendations__controls {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 4px 16px;
+    }
+    .product-recommendations__nav--prev { justify-self: end; }
+    .product-recommendations__nav--next { grid-column: 2; grid-row: 1; justify-self: start; }
+    .product-recommendations__dots { grid-column: 1 / -1; grid-row: 2; }
     .pairs-card {
-      flex-basis: 92%;
+      flex-basis: 88%;
     }
     .pairs-card__title {
       font-size: var(--font-size-body-lg);
     }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .product-recommendations__slider { scroll-behavior: auto; }
+    .product-recommendations__nav,
+    .product-recommendations__dot::before { transition: none; }
   }
 {% endstyle %}
 
@@ -357,10 +383,12 @@
   window.initPairsCarousels = function () {
     document.querySelectorAll('[data-pairs-carousel]').forEach(function (carousel) {
       if (carousel.dataset.pairsInit === 'true') return;
-      carousel.dataset.pairsInit = 'true';
 
       var slider = carousel.querySelector('[data-pairs-slider]');
-      if (!slider) return;
+      var controls = carousel.querySelector('[data-pairs-controls]');
+      var dots = carousel.querySelector('[data-pairs-dots]');
+      if (!slider || !controls || !dots) return;
+      carousel.dataset.pairsInit = 'true';
       var prev = carousel.querySelector('[data-pairs-prev]');
       var next = carousel.querySelector('[data-pairs-next]');
       var navFrame = null;
@@ -413,11 +441,46 @@
         return positions[0];
       }
 
+      function scrollToFrame(left) {
+        var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        slider.scrollTo({ left: left, behavior: reducedMotion ? 'auto' : 'smooth' });
+      }
+
       function updateNav() {
+        var positions = framePositions();
         var maxScroll = slider.scrollWidth - slider.clientWidth;
-        carousel.classList.toggle('has-overflow', maxScroll > 1);
+        var hasOverflow = maxScroll > 1;
+        carousel.classList.toggle('has-overflow', hasOverflow);
+        controls.hidden = !hasOverflow;
         if (prev) prev.disabled = slider.scrollLeft <= 1;
         if (next) next.disabled = slider.scrollLeft >= maxScroll - 1;
+
+        if (dots.children.length !== positions.length) {
+          var focusedIndex = Array.prototype.indexOf.call(dots.children, document.activeElement);
+          var fragment = document.createDocumentFragment();
+          positions.forEach(function (_, index) {
+            var dot = document.createElement('button');
+            dot.type = 'button';
+            dot.className = 'product-recommendations__dot';
+            dot.dataset.pairsPage = index;
+            dot.setAttribute('aria-label', 'Go to recommendation page ' + (index + 1) + ' of ' + positions.length);
+            dot.setAttribute('aria-controls', slider.id);
+            fragment.appendChild(dot);
+          });
+          dots.replaceChildren(fragment);
+          if (focusedIndex >= 0 && hasOverflow) {
+            dots.children[Math.min(focusedIndex, positions.length - 1)].focus({ preventScroll: true });
+          }
+        }
+
+        var activeIndex = 0;
+        positions.forEach(function (left, index) {
+          if (Math.abs(left - slider.scrollLeft) < Math.abs(positions[activeIndex] - slider.scrollLeft)) activeIndex = index;
+        });
+        Array.prototype.forEach.call(dots.children, function (dot, index) {
+          if (index === activeIndex) dot.setAttribute('aria-current', 'true');
+          else dot.removeAttribute('aria-current');
+        });
       }
 
       function scheduleNavUpdate() {
@@ -429,14 +492,25 @@
       }
 
       if (prev) prev.addEventListener('click', function () {
-        slider.scrollTo({ left: targetFrame(-1), behavior: 'smooth' });
+        scrollToFrame(targetFrame(-1));
       });
       if (next) next.addEventListener('click', function () {
-        slider.scrollTo({ left: targetFrame(1), behavior: 'smooth' });
+        scrollToFrame(targetFrame(1));
+      });
+
+      dots.addEventListener('click', function (event) {
+        var dot = event.target.closest('[data-pairs-page]');
+        if (!dot) return;
+        scrollToFrame(framePositions()[Number(dot.dataset.pairsPage)]);
       });
 
       slider.addEventListener('scroll', scheduleNavUpdate, { passive: true });
       window.addEventListener('resize', scheduleNavUpdate);
+      if ('ResizeObserver' in window) {
+        var resizeObserver = new ResizeObserver(scheduleNavUpdate);
+        resizeObserver.observe(slider);
+        if (slider.firstElementChild) resizeObserver.observe(slider.firstElementChild);
+      }
       updateNav();
 
       // Press-and-drag to scroll (mouse). Uses a small threshold so a plain
@@ -491,6 +565,8 @@
       });
     });
   };
+
+  document.addEventListener('shopify:section:load', window.initPairsCarousels);
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', window.initPairsCarousels);

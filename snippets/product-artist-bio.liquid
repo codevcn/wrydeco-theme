@@ -1,0 +1,34 @@
+{% doc %}
+  Formats a plain-text artisan biography without changing its wording.
+  Preserves supplied line breaks. Single-line biographies use an opening
+  paragraph followed by groups of up to three sentences.
+  @param {string} bio - The biography from the artist metaobject.
+{% enddoc %}
+{% liquid
+  assign biography = bio | strip
+  assign biography_lines = biography | newline_to_br | split: '<br />'
+%}
+{% if biography_lines.size > 1 %}
+  {% for line in biography_lines %}
+    {% assign paragraph = line | strip %}
+    {% if paragraph != blank %}<p>{{ paragraph | escape }}</p>{% endif %}
+  {% endfor %}
+{% else %}
+  {% liquid
+    assign sentences = biography | split: '. '
+    assign group_count = 0
+  %}
+  {% for sentence in sentences %}
+    {% if forloop.first %}
+      <p>{{ sentence | strip | escape }}{% unless forloop.last %}.{% endunless %}</p>
+    {% else %}
+      {% if group_count == 0 %}<p>{% endif %}
+      {{ sentence | strip | escape }}{% unless forloop.last %}. {% endunless %}
+      {% assign group_count = group_count | plus: 1 %}
+      {% if group_count == 3 or forloop.last %}
+        </p>
+        {% assign group_count = 0 %}
+      {% endif %}
+    {% endif %}
+  {% endfor %}
+{% endif %}

@@ -1,0 +1,29 @@
+{% doc %}
+  Renders one server-side FAQ as a native, keyboard-accessible disclosure.
+  Questions and answer HTML come from the product's trusted AEO metafield.
+  @param {string} question - Question text without heading markup.
+  @param {string} answer - Answer HTML.
+  @param {number} index - One-based question number.
+{% enddoc %}
+{% liquid
+  assign faq_question = question | strip
+  assign question_prefix = faq_question | slice: 0, 2 | downcase
+  if question_prefix == 'q:'
+    assign faq_question = faq_question | slice: 2, 99999 | strip
+  endif
+  assign faq_answer = answer | strip
+  assign answer_prefix = faq_answer | slice: 0, 2 | downcase
+  if answer_prefix == 'a:'
+    assign faq_answer = faq_answer | slice: 2, 99999 | strip
+  endif
+%}
+{% if faq_question != blank %}
+  <details class="product-aeo__faq-item"{% if index == 1 %} open{% endif %}>
+    <summary>
+      <span class="product-aeo__number" aria-hidden="true">{% if index < 10 %}0{% endif %}{{ index }}</span>
+      <span class="product-aeo__question">{{ faq_question }}</span>
+      {% render 'product-aeo-icon', name: 'chevron' %}
+    </summary>
+    <div class="product-aeo__answer">{{ faq_answer }}</div>
+  </details>
+{% endif %}

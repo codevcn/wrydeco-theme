@@ -6,6 +6,8 @@
   @param {string} [heading_tag] - Heading level, h2 by default.
   @param {string} [class] - Host grid or carousel classes.
   @param {string} [card_style] - Host carousel order variables.
+  @param {number} [price_min] - Optional minimum price filter in cents (from price_range filter).
+  @param {number} [price_max] - Optional maximum price filter in cents (from price_range filter).
 {% enddoc %}
 
 {% liquid
@@ -18,14 +20,69 @@
   assign maker_name = author.author_name.value
   assign maker_image = author.author_image_url.value
   assign card_variant = product.selected_or_first_available_variant | default: product.variants.first
+  assign display_price = product.price
+  assign card_url = product.url
+
+  assign has_price_filter = false
+  if price_min != null
+    assign has_price_filter = true
+  elsif price_max != null
+    assign has_price_filter = true
+  endif
+
+  if has_price_filter
+    assign matched_variant = null
+    for variant in product.variants
+      assign matches_min = true
+      if price_min != null
+        if variant.price < price_min
+          assign matches_min = false
+        endif
+      endif
+
+      assign matches_max = true
+      if price_max != null
+        if variant.price > price_max
+          assign matches_max = false
+        endif
+      endif
+
+      if matches_min
+        if matches_max
+          if matched_variant == null
+            assign matched_variant = variant
+          elsif variant.price < matched_variant.price
+            assign matched_variant = variant
+          endif
+        endif
+      endif
+    endfor
+
+    if matched_variant != null
+      assign card_variant = matched_variant
+      assign display_price = matched_variant.price
+      if matched_variant.price > product.price
+        assign card_url = matched_variant.url | default: product.url
+      endif
+    endif
+  endif
 %}
 
-<article class="plp-card {{ class }}" data-plp-card data-product-id="{{ product.id }}" data-product-handle="{{ product.handle | escape }}" data-product-url="{{ product.url }}" data-variant-id="{{ card_variant.id }}" {% if card_style != blank %}style="{{ card_style | escape }}"{% endif %}>
+<article class="plp-card {{ class }}" data-plp-card data-product-id="{{ product.id }}" data-product-handle="{{ product.handle | escape }}" data-product-url="{{ card_url }}" data-variant-id="{{ card_variant.id }}" {% if card_style != blank %}style="{{ card_style | escape }}"{% endif %}>
   <div class="plp-card__media">
-    <a class="plp-card__image-link" href="{{ product.url }}" aria-label="View {{ title | escape }}" draggable="false">
+    <a class="plp-card__image-link" href="{{ card_url }}" aria-label="View {{ title | escape }}" draggable="false" data-plp-hover-gallery>
       {% if product.featured_image != blank %}
         {% assign image_alt = product.featured_image.alt | default: title %}
-        {{ product.featured_image | image_url: width: 960 | image_tag: class: 'plp-card__image', loading: 'lazy', widths: '320, 480, 640, 800, 960', sizes: '(min-width: 1440px) 25vw, (min-width: 768px) 45vw, 95vw', alt: image_alt, draggable: false }}
+        {{ product.featured_image | image_url: width: 960 | image_tag: class: 'plp-card__image is-active', loading: 'lazy', widths: '320, 480, 640, 800, 960', sizes: '(min-width: 1440px) 25vw, (min-width: 768px) 45vw, 95vw', alt: image_alt, draggable: false }}
+        <template data-plp-hover-template>
+          {% assign hover_count = 0 %}
+          {% for image in product.images %}
+            {% if image.id == product.featured_image.id %}{% continue %}{% endif %}
+            {{ image | image_url: width: 960 | image_tag: class: 'plp-card__image', loading: 'eager', widths: '320, 480, 640, 800, 960', sizes: '(min-width: 1440px) 25vw, (min-width: 768px) 45vw, 95vw', alt: '', draggable: false }}
+            {% assign hover_count = hover_count | plus: 1 %}
+            {% if hover_count >= 4 %}{% break %}{% endif %}
+          {% endfor %}
+        </template>
       {% else %}
         {{ 'product-1' | placeholder_svg_tag: 'plp-card__image placeholder-svg' }}
       {% endif %}
@@ -34,7 +91,7 @@
   </div>
 
   <div class="plp-card__body">
-    <{{ heading }} class="plp-card__title"><a href="{{ product.url }}" title="{{ title | escape }}" draggable="false">{{ title | escape }}</a></{{ heading }}>
+    <{{ heading }} class="plp-card__title"><a href="{{ card_url }}" title="{{ title | escape }}" draggable="false">{{ title | escape }}</a></{{ heading }}>
     <div class="plp-card__accent" aria-hidden="true"></div>
     {% if maker_name != blank %}
       <div class="plp-card__provenance">
@@ -44,7 +101,7 @@
         </div>
       </div>
     {% endif %}
-    <p class="plp-card__price"><span>From</span> <strong>{{ product.price | money }}</strong></p>
+    <p class="plp-card__price"><span>From</span> <strong>{{ display_price | money_without_trailing_zeros }}</strong></p>
     <div class="plp-card__benefits">
       <div class="plp-card__benefit">{% render 'plp-card-icon', name: 'truck' %}<div><span class="plp-card__benefit-title">Free shipping</span><span class="plp-card__note">On all orders</span></div></div>
       <div class="plp-card__benefit">{% render 'plp-card-icon', name: 'shield-check' %}<div><span class="plp-card__benefit-title">1-year warranty</span><span class="plp-card__note">Built to last</span></div></div>

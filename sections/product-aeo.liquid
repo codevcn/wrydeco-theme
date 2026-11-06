@@ -1,0 +1,44 @@
+{% liquid
+  assign aeo_metafield = product.metafields.custom.aeo_html
+  assign aeo_html = aeo_metafield.value | default: aeo_metafield | strip
+%}
+{% if aeo_html != blank %}
+  {% render 'product-aeo', html: aeo_html, section: section %}
+{% endif %}
+
+{% schema %}
+{
+  "name": "Product overview & FAQ",
+  "max_blocks": 4,
+  "settings": [
+    { "type": "text", "id": "overview_eyebrow", "label": "Overview label", "default": "About the piece" },
+    { "type": "text", "id": "faq_eyebrow", "label": "FAQ label", "default": "Common questions" }
+  ],
+  "blocks": [
+    {
+      "type": "benefit",
+      "name": "Product highlight",
+      "settings": [
+        { "type": "select", "id": "icon", "label": "Icon", "options": [
+          { "value": "leaf", "label": "Leaf" },
+          { "value": "layers", "label": "Layers" },
+          { "value": "home", "label": "Home" },
+          { "value": "infinity", "label": "Infinity" }
+        ], "default": "leaf" },
+        { "type": "text", "id": "text", "label": "Text", "default": "Solid Wood Craftsmanship" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Product overview & FAQ",
+      "blocks": [
+        { "type": "benefit", "settings": { "icon": "leaf", "text": "Solid Wood Craftsmanship" } },
+        { "type": "benefit", "settings": { "icon": "layers", "text": "Multiple Sizes & Finishes" } },
+        { "type": "benefit", "settings": { "icon": "home", "text": "Artistic Statement for Any Space" } },
+        { "type": "benefit", "settings": { "icon": "infinity", "text": "Timeless & Functional Design" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

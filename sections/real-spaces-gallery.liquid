@@ -40,8 +40,8 @@
 
 <section class="real-spaces" id="RealSpaces-{{ section.id }}" data-real-spaces>
   {%- if featured_entry != blank -%}
-    <header class="real-spaces__hero" aria-labelledby="RealSpacesTitle-{{ section.id }}">
-      <div class="real-spaces__hero-copy custom-scrollbar">
+    <header class="real-spaces__hero" aria-labelledby="RealSpacesTitle-{{ section.id }}" style="--real-spaces-botanical: url('{{ 'real-spaces-botanical.webp' | asset_url }}');">
+      <div class="real-spaces__hero-copy">
         <p class="real-spaces__eyebrow">The WRYDECO Journal</p>
         <h1 id="RealSpacesTitle-{{ section.id }}">Wrydeco in Real Spaces</h1>
         <p class="real-spaces__intro">
@@ -58,12 +58,18 @@
               <a href="{{ featured_author.system.url }}">{{ featured_author.author_name.value | escape }}</a>
             </p>
           {%- endif -%}
-          <a class="real-spaces__text-link" href="{{ featured_product_url }}">View the Piece</a>
+          <a class="real-spaces__text-link" href="{{ featured_product_url }}"><span>View the Piece</span>{% render 'real-space-project-icon', name: 'arrow' %}</a>
+          <div class="real-spaces__hero-benefits">
+            <div><span class="real-spaces__hero-benefit-icon">{% render 'signature-piece-icon', name: 'craft' %}</span><p><strong>Made to Order</strong><span>Handcrafted by Artisans</span></p></div>
+            <div><span class="real-spaces__hero-benefit-icon">{% render 'signature-piece-icon', name: 'shipping' %}</span><p><strong>Ships Worldwide</strong><span>Secure &amp; Insured Delivery</span></p></div>
+          </div>
         </div>
       </div>
 
+      <div class="real-spaces__hero-visual" data-hero-gallery>
       <button
         class="real-spaces__hero-media"
+        data-hero-stage
         type="button"
         data-lightbox-trigger
         data-gallery="{{ featured_gallery | escape }}"
@@ -102,10 +108,37 @@
             fetchpriority="high"
           >
         {%- endif -%}
-        <span class="real-spaces__media-index"
-          >01 / {{ featured_gallery_count | prepend: '0' | slice: -2, 2 -}}
-        </span>
       </button>
+        {% for gallery_item in featured_gallery_items %}
+          {% assign hero_slide_url = gallery_item | strip %}
+          {% if hero_slide_url != blank %}
+            {% liquid
+              assign hero_slide_normalized = hero_slide_url | downcase
+              assign hero_slide_video = false
+              if hero_slide_normalized contains '.mp4'
+                assign hero_slide_video = true
+              elsif hero_slide_normalized contains '.webm'
+                assign hero_slide_video = true
+              elsif hero_slide_normalized contains '.mov'
+                assign hero_slide_video = true
+              endif
+            %}
+            <template data-hero-slide>
+              {% if hero_slide_video %}
+                <video data-viewport-video data-src="{{ hero_slide_url | escape }}" poster="{{ featured_entry.video_poster.value | escape }}" preload="none" muted playsinline loop aria-label="{{ featured_entry.title.value | escape }} featured project video"></video>
+                <span class="real-space-card__play" aria-hidden="true">{% render 'real-space-project-icon', name: 'play' %}</span>
+              {% else %}
+                <img src="{{ hero_slide_url | escape }}" alt="{{ featured_entry.title.value | escape }} handcrafted WRYDECO piece" width="1920" height="2560" loading="lazy" decoding="async">
+              {% endif %}
+            </template>
+          {% endif %}
+        {% endfor %}
+        <div class="real-spaces__hero-controls" role="group" aria-label="Featured project media">
+          <button type="button" data-hero-previous aria-label="Previous featured media"{% if featured_gallery_count < 2 %} disabled{% endif %}>{% render 'real-space-project-icon', name: 'arrow' %}</button>
+          <span data-hero-counter aria-live="polite" aria-atomic="true">01 / {{ featured_gallery_count | prepend: '0' | slice: -2, 2 }}</span>
+          <button type="button" data-hero-next aria-label="Next featured media"{% if featured_gallery_count < 2 %} disabled{% endif %}>{% render 'real-space-project-icon', name: 'arrow' %}</button>
+        </div>
+      </div>
     </header>
   {%- endif -%}
 
@@ -121,105 +154,46 @@
       </p>
     </div>
 
-    <div class="real-spaces__project-grid" data-project-grid="projects">
-      {%- assign project_index = 0 -%}
-      {%- for entry in real_space_entries -%}
-        {%- assign card_gallery = entry.gallery_media.value | append: '' -%}
-        {%- assign card_gallery_items = card_gallery | split: ',' -%}
-        {%- assign card_media = card_gallery_items | first | strip -%}
-        {%- if card_media != blank -%}
-          {%- assign project_index = project_index | plus: 1 -%}
-          {%- assign card_media_normalized = card_media | downcase -%}
-          {%- assign card_media_is_video = false -%}
-          {%- if card_media_normalized contains '.mp4' -%}
-            {%- assign card_media_is_video = true -%}
-          {%- elsif card_media_normalized contains '.webm' -%}
-            {%- assign card_media_is_video = true -%}
-          {%- elsif card_media_normalized contains '.mov' -%}
-            {%- assign card_media_is_video = true -%}
-          {%- endif -%}
-          {%- assign card_gallery_count = 0 -%}
-          {%- for gallery_item in card_gallery_items -%}
-            {%- assign normalized_gallery_item = gallery_item | strip -%}
-            {%- if normalized_gallery_item != blank -%}
-              {%- assign card_gallery_count = card_gallery_count | plus: 1 -%}
-            {%- endif -%}
-          {%- endfor -%}
-          {%- assign card_author = entry.author.value -%}
-          {%- comment -%}Reserve one of Shopify's 20 all_products lookups for the featured project.{%- endcomment -%}
-          {%- assign card_description = blank -%}
-          {%- if entry.product_handle.value == featured_entry.product_handle.value -%}
-            {%- assign card_description = featured_description -%}
-          {%- elsif forloop.index <= 19 -%}
-            {%- assign card_product = all_products[entry.product_handle.value] -%}
-            {%- assign card_description = card_product.description | strip_html | strip | truncate: 380 -%}
-          {%- endif -%}
-          <article
-            class="real-space-card real-space-card--project"
-            data-project-card
-          >
-            <button
-              class="real-space-card__media"
-              type="button"
-              data-lightbox-trigger
-              data-gallery="{{ card_gallery | escape }}"
-              data-title="{{ entry.title.value | escape }}"
-              data-poster="{{ entry.video_poster.value | escape }}"
-              data-author="{{ card_author.author_name.value | escape }}"
-              data-author-url="{{ card_author.system.url | escape }}"
-              data-description="{{ card_description | escape }}"
-              data-product-url="/products/{{ entry.product_handle.value | escape }}"
-              data-featured="{% if entry.system.id == featured_entry.system.id %}true{% else %}false{% endif %}"
-              aria-label="Open {{ entry.title.value | escape }} gallery"
-            >
-              {%- if card_media_is_video -%}
-                <video
-                  data-viewport-video
-                  data-src="{{ card_media | escape }}"
-                  poster="{{ entry.video_poster.value | escape }}"
-                  preload="none"
-                  muted
-                  playsinline
-                  loop
-                  aria-label="{{ entry.title.value | escape }} project video"
-                ></video>
-                <span class="real-space-card__play" aria-hidden="true">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-                    <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/>
-                  </svg>
-                </span>
-              {%- else -%}
-                <img
-                  src="{{ card_media | escape }}"
-                  alt="{{ entry.title.value | escape }} by {{ card_author.author_name.value | escape }}"
-                  width="1920"
-                  height="2560"
-                  loading="lazy"
-                  decoding="async"
-                >
-              {%- endif -%}
-              <span class="real-space-card__count">{{ card_gallery_count }} views</span>
-            </button>
-            <div class="real-space-card__details">
-              <div>
-                <span class="real-space-card__number"
-                  >Commissioned piece {{ project_index | prepend: '0' | slice: -2, 2 }}</span
-                >
-                <h3>{{ entry.title.value | escape }}</h3>
-                {%- if card_author != blank -%}
-                  <p>
-                    Crafted by <a href="{{ card_author.system.url }}">{{ card_author.author_name.value | escape }}</a>
-                  </p>
-                {%- endif -%}
-              </div>
-              <a class="real-spaces__text-link" href="/products/{{ entry.product_handle.value | escape }}"
-                >View the Piece</a
-              >
-            </div>
-          </article>
-        {%- endif -%}
-      {%- endfor -%}
-    </div>
+    {% paginate metaobjects.real_in_spaces.values by 19 %}
+      {% assign carousel_count = 0 %}
+      <div class="real-spaces__project-grid" id="RealProjectsCarousel-{{ section.id }}" data-project-grid="projects">
+        {% for entry in metaobjects.real_in_spaces.values %}
+          {% assign card_media = entry.gallery_media.value | split: ',' | first | strip %}
+          {% if card_media != blank %}
+            {% assign carousel_count = carousel_count | plus: 1 %}
+            {% liquid
+              assign card_featured = false
+              assign card_product = blank
+              if entry.product_handle.value == featured_entry.product_handle.value
+                assign card_product = featured_product
+              else
+                assign card_product = all_products[entry.product_handle.value]
+              endif
+              assign card_description = card_product.description | strip_html | strip | truncate: 380
+              if entry.system.id == featured_entry.system.id
+                assign card_featured = true
+              endif
+            %}
+            {% render 'real-space-project-card', entry: entry, product: card_product, description: card_description, featured: card_featured %}
+          {% endif %}
+        {% endfor %}
+      </div>
+      {% if carousel_count > 1 %}
+        <div class="real-spaces__carousel-controls" data-project-controls role="group" aria-label="Project carousel navigation" hidden>
+          <button class="real-spaces__carousel-button real-spaces__carousel-button--previous" type="button" data-project-previous aria-controls="RealProjectsCarousel-{{ section.id }}" aria-label="Previous project" disabled>{% render 'real-space-project-icon', name: 'arrow' %}</button>
+          <div class="real-spaces__carousel-dots" data-project-dots role="group" aria-label="Choose a project">
+            {% for index in (1..carousel_count) %}
+              <button class="real-spaces__carousel-dot" type="button" data-project-dot="{{ index | minus: 1 }}" aria-controls="RealProjectsCarousel-{{ section.id }}" aria-label="Go to project {{ index }}"{% if forloop.first %} aria-current="true"{% endif %}></button>
+            {% endfor %}
+          </div>
+          <button class="real-spaces__carousel-button" type="button" data-project-next aria-controls="RealProjectsCarousel-{{ section.id }}" aria-label="Next project">{% render 'real-space-project-icon', name: 'arrow' %}</button>
+          <span class="real-spaces__carousel-status" data-project-carousel-status aria-live="polite" aria-atomic="true"></span>
+        </div>
+      {% endif %}
+      {% if paginate.pages > 1 %}
+        <nav class="real-spaces__pagination" aria-label="Project pages">{{ paginate | default_pagination }}</nav>
+      {% endif %}
+    {% endpaginate %}
 
   </section>
 
@@ -255,7 +229,7 @@
           <h2 id="RealSpacesLightboxTitle-{{ section.id }}" data-lightbox-title>Project gallery</h2>
           <p class="real-spaces-lightbox__author" data-lightbox-author></p>
           <p class="real-spaces-lightbox__description" data-lightbox-description></p>
-          <a class="real-spaces-lightbox__product-link" data-lightbox-product>View the Piece</a>
+          <a class="real-spaces-lightbox__product-link" data-lightbox-product><span>View the Piece</span>{% render 'real-space-project-icon', name: 'arrow' %}</a>
         </div>
         <div class="real-spaces-lightbox__gallery">
           <p data-lightbox-counter aria-live="polite">1 / 1</p>
@@ -302,22 +276,28 @@
 
   .real-spaces__hero {
     display: grid;
-    grid-template-columns: minmax(360px, 0.72fr) minmax(0, 1.15fr);
-    height: min(830px, 100vh);
-    max-height: 100vh;
-    min-height: 0;
+    grid-template-columns: minmax(350px, 0.385fr) minmax(0, 0.615fr);
+    margin: 0 16px;
+    border: 1px solid var(--rs-line);
+    border-radius: 14px;
     overflow: hidden;
+    background: var(--rs-cream);
   }
 
   .real-spaces__hero-copy {
+    position: relative;
     display: flex;
     flex-direction: column;
-    justify-content: safe center;
-    min-height: 0;
-    overflow-y: auto;
-    padding: clamp(22px,8vw,42px) clamp(30px,6.5vw,88px);
-    background: var(--rs-cream);
+    justify-content: center;
+    min-width: 0;
+    padding: clamp(40px, 4.5vw, 80px) clamp(32px, 3.9vw, 72px) 40px;
+    background: #faf7f2;
+    overflow: hidden;
   }
+  .real-spaces__hero-copy::before { content: ''; position: absolute; top: 32px; right: -34px; width: min(58%, 280px); aspect-ratio: 992 / 1586; background: var(--real-spaces-botanical) center / contain no-repeat; mask-image: radial-gradient(ellipse at 70% 50%, #000 48%, transparent 75%); opacity: .5; mix-blend-mode: multiply; pointer-events: none; }
+  .real-spaces__hero-copy > * { position: relative; }
+  .real-spaces__hero-copy > .real-spaces__eyebrow { margin-bottom: 22px; font-size: 11px; letter-spacing: .3em; }
+  .real-spaces__hero-copy > .real-spaces__eyebrow::after { content: ''; display: block; width: 32px; height: 2px; margin-top: 18px; background: #c49870; }
 
   .real-spaces__eyebrow {
     margin: 0 0 22px;
@@ -331,25 +311,15 @@
   .real-spaces__hero h1 {
     max-width: 620px;
     margin: 0;
-    font-family: var(--font-heading, var(--font-roboto));
-    font-size: clamp(54px, 5.6vw, 94px);
+    font-family: var(--font-display-light);
+    font-size: clamp(52px, 5.4vw, 96px);
     font-weight: 400;
-    letter-spacing: -0.055em;
-    line-height: 0.96;
+    letter-spacing: -.05em;
+    line-height: .98;
+    text-wrap: balance;
   }
-
-  .real-spaces__intro {
-    max-width: 570px;
-    margin: 32px 0 0;
-    font-size: clamp(17px, 1.3vw, 21px);
-    line-height: 1.65;
-  }
-
-  .real-spaces__featured-meta {
-    margin-top: clamp(58px, 8vh, 100px);
-    padding-top: 24px;
-    border-top: 1px solid var(--rs-line);
-  }
+  .real-spaces__intro { margin: 28px 0 0; color: #654b3b; font-size: clamp(17px, 1.4vw, 23px); line-height: 1.6; }
+  .real-spaces__featured-meta { margin-top: 30px; padding-top: 28px; border-top: 1px solid var(--rs-line); }
 
   .real-spaces__featured-label {
     margin: 0 0 10px;
@@ -359,13 +329,7 @@
     text-transform: uppercase;
   }
 
-  .real-spaces__featured-meta h2 {
-    margin: 0 0 8px;
-    font-size: clamp(24px, 2vw, 34px);
-    font-weight: 500;
-    letter-spacing: -0.03em;
-  }
-
+  .real-spaces__featured-meta h2 { margin: 0 0 12px; font-family: var(--font-display-light); font-size: clamp(28px, 2.7vw, 46px); font-weight: 400; letter-spacing: -.04em; line-height: 1.08; }
   .real-spaces__featured-meta p:not(.real-spaces__featured-label),
   .real-space-card__details p {
     margin: 0;
@@ -379,18 +343,70 @@
     text-decoration-color: rgba(74, 44, 24, 0.35);
     text-underline-offset: 3px;
   }
+  .real-spaces__hero .real-spaces__featured-meta > p:not(.real-spaces__featured-label) { font-size: clamp(14px, 1.2vw, 20px); }
 
-  .real-spaces__text-link {
-    display: inline-flex;
-    margin-top: 20px;
-    border-bottom: 1px solid currentColor;
-    color: inherit;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    line-height: 1.8;
+  .real-spaces__hero .real-spaces__text-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    width: min(100%, 390px);
+    min-height: 56px;
+    margin-top: 22px;
+    padding: 12px 26px;
+    border: 1px solid #63452f;
+    border-radius: 8px;
+    background: linear-gradient(110deg, #4a2c18, #64452f);
+    box-shadow: 0 12px 24px rgb(74 44 24 / 12%);
+    color: var(--color-white-cream);
+    font-family: var(--font-display-light);
+    font-size: clamp(22px, 1.9vw, 30px);
+    line-height: 1.2;
     text-decoration: none;
-    text-transform: uppercase;
+    transition: transform var(--timing-short) var(--ease-standard),
+                box-shadow var(--timing-short) var(--ease-standard),
+                filter var(--timing-short) var(--ease-standard);
+  }
+  .real-spaces__hero .real-spaces__text-link > * {
+    pointer-events: none;
+  }
+  .real-spaces__text-link svg {
+    flex: 0 0 24px;
+    width: 24px;
+    height: 24px;
+    transition: transform var(--timing-short) var(--ease-standard);
+  }
+  .real-spaces__hero-benefits { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 28px; }
+  .real-spaces__hero-benefits > div { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .real-spaces__hero-benefits > div + div { border-left: 1px solid var(--rs-line); padding-left: 18px; }
+  .real-spaces__hero-benefit-icon { display: grid; place-items: center; flex: 0 0 44px; height: 44px; border-radius: var(--radius-full); background: #efe4d6; color: #67452f; }
+  .real-spaces__hero-benefit-icon svg { width: 26px; height: 26px; stroke-width: 1.5; }
+  .real-spaces__hero-benefits p { display: flex; flex-direction: column; gap: 4px; min-width: 0; line-height: 1.3; }
+  .real-spaces__hero-benefits p strong { color: var(--rs-ink); font-size: clamp(12px, .95vw, 16px); font-weight: 500; }
+  .real-spaces__hero-benefits p span { color: #947b68; font-size: clamp(10px, .8vw, 13px); }
+  .real-spaces__hero-visual { position: relative; min-width: 0; min-height: 740px; }
+  .real-spaces__hero-visual .real-spaces__hero-media { position: absolute; inset: 0; height: 100%; }
+  .real-spaces__hero-controls { position: absolute; z-index: 3; right: 28px; bottom: 28px; display: flex; align-items: center; border-radius: var(--radius-full); background: rgb(255 249 242 / 92%); color: var(--rs-ink); }
+  .real-spaces__hero-controls button { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: var(--radius-full); background: transparent; color: inherit; cursor: pointer; }
+  .real-spaces__hero-controls button:disabled { opacity: .4; cursor: default; }
+  .real-spaces__hero-controls svg { width: 18px; height: 18px; }
+  .real-spaces__hero-controls [data-hero-previous] svg { transform: rotate(180deg); }
+  .real-spaces__hero-controls span { min-width: 62px; text-align: center; font-size: 12px; font-weight: 600; letter-spacing: .08em; font-variant-numeric: tabular-nums; }
+  .real-spaces__hero :is(a, button):focus-visible { outline: 2px solid #c49870; outline-offset: -4px; }
+  @media (hover: hover) {
+    .real-spaces__hero .real-spaces__text-link:hover {
+      filter: brightness(0.92);
+      box-shadow: 0 14px 28px rgb(74 44 24 / 20%);
+    }
+    .real-spaces__hero .real-spaces__text-link:hover svg {
+      transform: translateX(4px);
+    }
+    .real-spaces__hero-controls button:hover { background: #e9dbca; }
+  }
+
+  .real-spaces__hero .real-spaces__text-link:active {
+    transform: translateY(1px);
+    box-shadow: 0 6px 14px rgb(74 44 24 / 16%);
   }
 
   .real-spaces__hero-media,
@@ -482,8 +498,8 @@
 
   .real-spaces__project-grid {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 420px));
-    align-items: start;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: stretch;
     gap: 24px;
     padding: 4px 0 10px;
   }
@@ -499,84 +515,23 @@
     user-select: none;
   }
 
-  .real-space-card {
-    min-width: 0;
-  }
+  .real-spaces__carousel-controls { display: none; }
+  .real-spaces__carousel-controls[hidden] { display: none; }
+  .real-spaces__carousel-button { display: grid; place-items: center; flex: 0 0 44px; width: 44px; height: 44px; padding: 0; border: 1px solid var(--border-default); border-radius: var(--radius-full); background: var(--color-white-cream); color: var(--color-earth-brown); cursor: pointer; }
+  .real-spaces__carousel-button svg { width: 20px; height: 20px; }
+  .real-spaces__carousel-button--previous svg { transform: rotate(180deg); }
+  .real-spaces__carousel-button:disabled { opacity: .35; cursor: default; }
+  .real-spaces__carousel-dots { display: flex; min-width: 0; flex: 1; justify-content: safe center; overflow-x: auto; scrollbar-width: none; }
+  .real-spaces__carousel-dots::-webkit-scrollbar { display: none; }
+  .real-spaces__carousel-dot { display: grid; place-items: center; flex: 0 0 44px; width: 44px; height: 44px; padding: 0; border: 0; background: transparent; cursor: pointer; }
+  .real-spaces__carousel-dot::before { content: ''; width: 6px; height: 6px; border-radius: var(--radius-full); background: var(--color-earth-brown); opacity: .35; }
+  .real-spaces__carousel-dot[aria-current='true']::before { width: 20px; opacity: 1; }
+  .real-spaces__carousel-controls button:focus-visible { outline: 2px solid var(--color-clay); outline-offset: -2px; }
+  .real-spaces__carousel-status { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
-  .real-space-card--project {
-    position: relative;
-    display: grid;
-    grid-template-rows: minmax(0, 1fr) 124px;
-    box-sizing: border-box;
-    height: min(760px, 90vh);
-    max-height: 90vh;
-    padding: 10px 10px 20px;
-    border: 1px solid rgba(74, 44, 24, 0.26);
-    border-radius: 2px;
-    background: color-mix(in srgb, var(--color-cream, #f7f2ec) 82%, #fff 18%);
-    box-shadow:
-      0 18px 46px rgba(74, 44, 24, 0.09),
-      inset 0 0 0 4px rgba(255, 255, 255, 0.38);
-    scroll-snap-align: start;
-    cursor: pointer;
-    transition:
-      border-color 260ms ease,
-      box-shadow 260ms ease;
-  }
-
-  .real-space-card--project:hover {
-    border-color: rgba(74, 44, 24, 0.48);
-    box-shadow:
-      0 24px 58px rgba(74, 44, 24, 0.14),
-      inset 0 0 0 4px rgba(255, 255, 255, 0.48);
-  }
-
-  .real-space-card--project .real-space-card__media {
-    min-height: 0;
-    height: 100%;
-    border: 1px solid rgba(74, 44, 24, 0.18);
-  }
-
-  .real-space-card__details {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 24px;
-    padding: 20px 8px 4px;
-  }
-
-  .real-space-card__details h3 {
-    display: -webkit-box;
-    margin: 0 0 6px;
-    font-size: 19px;
-    font-weight: 500;
-    letter-spacing: -0.02em;
-    line-height: 1.25;
-    overflow: hidden;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-  }
-
-  .real-space-card__details > div {
-    min-width: 0;
-  }
-
-  .real-space-card__number {
-    display: block;
-    margin-bottom: 9px;
-    color: rgba(74, 44, 24, 0.58);
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.18em;
-    line-height: 1.4;
-    text-transform: uppercase;
-  }
-
-  .real-space-card__details .real-spaces__text-link {
-    flex: 0 0 auto;
-    margin-top: 1px;
-    font-size: 10px;
-  }
+  .real-spaces__pagination { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; margin-top: 40px; }
+  .real-spaces__pagination a,
+  .real-spaces__pagination .current { display: inline-flex; min-width: 44px; min-height: 44px; align-items: center; justify-content: center; padding: 8px 12px; color: inherit; text-underline-offset: 4px; }
 
   .real-space-card__play {
     position: absolute;
@@ -758,15 +713,28 @@
 
   .real-spaces-lightbox__product-link {
     display: inline-flex;
-    min-height: 44px;
+    min-height: 48px;
+    max-width: 100%;
     align-items: center;
+    justify-content: center;
+    gap: 12px;
     margin-top: 20px;
-    color: #e0b984;
-    font-size: 11px;
+    padding: 12px 20px;
+    border: 1px solid var(--color-white-cream);
+    border-radius: var(--radius-full);
+    background: var(--color-white-cream);
+    color: var(--color-earth-brown);
+    font-size: 12px;
     font-weight: 700;
+    line-height: 1.4;
     letter-spacing: 0.12em;
-    text-underline-offset: 5px;
+    text-align: center;
+    text-decoration: none;
     text-transform: uppercase;
+  }
+  .real-spaces-lightbox__product-link svg { flex: 0 0 18px; width: 18px; height: 18px; }
+  @media (hover: hover) {
+    .real-spaces-lightbox__product-link:hover { background: #e0b984; border-color: #e0b984; }
   }
 
   .real-spaces-lightbox__gallery { margin-top: 40px; }
@@ -829,16 +797,8 @@
     overflow: hidden;
   }
 
-  @media (max-width: 1599px) {
-    .real-spaces__project-grid {
-      grid-template-columns: repeat(3, minmax(0, 420px));
-    }
-  }
-
-  @media (max-width: 1279px) {
-    .real-spaces__project-grid {
-      grid-template-columns: repeat(2, minmax(0, 420px));
-    }
+  @media (max-width: 1099px) {
+    .real-spaces__project-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   }
 
   @media (max-width: 859px) {
@@ -848,30 +808,16 @@
   }
 
   @media (max-width: 1099px) {
-    .real-spaces__hero {
-      grid-template-columns: 1fr;
-      grid-template-rows: minmax(0, 0.48fr) minmax(0, 0.52fr);
-      height: 100vh;
-      min-height: 0;
-    }
-
-    .real-spaces__hero-media {
-      min-height: 0;
-      grid-row: 1;
-    }
-
-    .real-spaces__hero-copy {
-      grid-row: 2;
-      padding: 24px 28px;
-    }
-
-    .real-spaces__hero h1 {
-      font-size: clamp(42px, 6vw, 64px);
-    }
-
-    .real-spaces__featured-meta {
-      margin-top: 24px;
-    }
+    .real-spaces__hero { grid-template-columns: minmax(0, .44fr) minmax(0, .56fr); }
+    .real-spaces__hero-copy { padding: 36px 28px; }
+    .real-spaces__hero h1 { font-size: clamp(44px, 5.6vw, 60px); }
+    .real-spaces__intro { margin-top: 22px; font-size: 16px; }
+    .real-spaces__featured-meta { margin-top: 24px; padding-top: 24px; }
+    .real-spaces__featured-meta h2 { font-size: 30px; }
+    .real-spaces__hero-benefits { gap: 12px; }
+    .real-spaces__hero-benefits > div { gap: 8px; align-items: flex-start; flex-direction: column; }
+    .real-spaces__hero-benefits > div + div { padding-left: 12px; }
+    .real-spaces__hero-visual { min-height: 740px; }
 
     .real-spaces__projects {
       padding: 88px 24px 96px;
@@ -909,27 +855,23 @@
       padding-top: calc(var(--gap-main-content-to-header-mobile) + 20px);
     }
 
-    .real-spaces__hero-media {
-      min-height: 0;
-    }
-
-    .real-spaces__hero-copy {
-      padding: 24px 20px;
-    }
-
-    .real-spaces__eyebrow {
-      margin-bottom: 16px;
-      font-size: 10px;
-    }
-
-    .real-spaces__hero h1 {
-      font-size: clamp(32px, 9vw, 44px);
-    }
-
-    .real-spaces__intro {
-      margin-top: 16px;
-      font-size: 15px;
-    }
+    .real-spaces__hero { grid-template-columns: minmax(0, 1fr); margin-inline: 12px; border-radius: 12px; }
+    .real-spaces__hero-copy { padding: 32px 24px 28px; }
+    .real-spaces__hero-copy::before { width: 48%; top: 28px; right: -10px; opacity: .38; }
+    .real-spaces__hero-copy > .real-spaces__eyebrow { font-size: 10px; letter-spacing: .23em; margin-bottom: 20px; }
+    .real-spaces__hero h1 { max-width: 450px; font-size: clamp(44px, 11.5vw, 64px); }
+    .real-spaces__intro { margin-top: 20px; font-size: 16px; }
+    .real-spaces__featured-meta h2 { font-size: 30px; }
+    .real-spaces__hero .real-spaces__text-link { width: 100%; min-height: 52px; font-size: 25px; padding: 12px 20px; }
+    .real-spaces__hero-benefits { margin-top: 24px; }
+    .real-spaces__hero-benefits > div { flex-direction: row; align-items: center; }
+    .real-spaces__hero-benefit-icon { flex-basis: 36px; height: 36px; }
+    .real-spaces__hero-benefit-icon svg { width: 22px; height: 22px; }
+    .real-spaces__hero-benefits p strong { font-size: 12px; }
+    .real-spaces__hero-benefits p span { font-size: 10px; }
+    .real-spaces__hero-visual { min-height: 0; aspect-ratio: 4 / 5; }
+    .real-spaces__hero-controls { right: 16px; bottom: 16px; }
+    .real-spaces__eyebrow { margin-bottom: 16px; font-size: 10px; }
 
     .real-spaces__projects {
       padding: 72px 16px 80px;
@@ -941,19 +883,6 @@
 
     .real-spaces__section-heading > p {
       font-size: 15px;
-    }
-
-    .real-space-card__details {
-      gap: 12px;
-      padding: 14px 2px 0;
-    }
-
-    .real-space-card__details h3 {
-      font-size: 17px;
-    }
-
-    .real-space-card__details .real-spaces__text-link {
-      display: none;
     }
 
     .real-spaces__projects {
@@ -979,13 +908,9 @@
       -webkit-overflow-scrolling: touch;
     }
 
-    .real-space-card--project {
-      flex: 0 0 min(78vw, 350px);
-      height: min(600px, 90vh);
-      grid-template-rows: minmax(0, 1fr) 118px;
-      padding: 8px 8px 16px;
-      scroll-snap-align: start;
-    }
+    .real-spaces__carousel-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 8px; margin-top: 20px; padding-right: 16px; }
+    .real-spaces__carousel-dots { order: 0; flex: 1 0 100%; }
+    .real-spaces__carousel-button { order: 1; }
 
     .real-spaces-lightbox__dialog {
       display: grid;
@@ -1027,6 +952,7 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
+    .real-spaces__project-grid { scroll-behavior: auto; }
     .real-spaces__hero-media img,
     .real-space-card__media img,
     .real-space-card__media video {
@@ -1043,20 +969,75 @@
       root.dataset.realSpacesReady = 'true';
 
       root.querySelectorAll('[data-project-grid]').forEach((slider) => {
+        const cards = Array.from(slider.querySelectorAll('[data-project-card]'));
+        const controls = root.querySelector('[data-project-controls]');
+        const previous = controls && controls.querySelector('[data-project-previous]');
+        const next = controls && controls.querySelector('[data-project-next]');
+        const dots = controls ? Array.from(controls.querySelectorAll('[data-project-dot]')) : [];
+        const status = controls && controls.querySelector('[data-project-carousel-status]');
+        const mobile = window.matchMedia('(max-width: 749px)');
+        let activeIndex = 0;
+        let updateFrame = null;
         let pointerId = null;
         let startX = 0;
         let startScrollLeft = 0;
         let wasDragged = false;
 
+        const positions = () => {
+          const left = slider.getBoundingClientRect().left;
+          return cards.map(card => card.getBoundingClientRect().left - left + slider.scrollLeft);
+        };
+        const updateControls = () => {
+          if (!controls) return;
+          const hasOverflow = mobile.matches && slider.scrollWidth > slider.clientWidth + 1;
+          controls.hidden = !hasOverflow;
+          if (!hasOverflow) return;
+          const offsets = positions();
+          activeIndex = offsets.reduce((closest, offset, index) => Math.abs(offset - slider.scrollLeft) < Math.abs(offsets[closest] - slider.scrollLeft) ? index : closest, 0);
+          if (slider.scrollLeft >= slider.scrollWidth - slider.clientWidth - 1) activeIndex = cards.length - 1;
+          previous.disabled = activeIndex === 0;
+          next.disabled = activeIndex === cards.length - 1;
+          dots.forEach((dot, index) => {
+            if (index === activeIndex) dot.setAttribute('aria-current', 'true');
+            else dot.removeAttribute('aria-current');
+          });
+          const activeDot = dots[activeIndex];
+          if (activeDot) {
+            const strip = activeDot.parentElement;
+            const offset = activeDot.getBoundingClientRect().left - strip.getBoundingClientRect().left + strip.scrollLeft;
+            if (offset < strip.scrollLeft) strip.scrollLeft = offset;
+            else if (offset + activeDot.offsetWidth > strip.scrollLeft + strip.clientWidth) strip.scrollLeft = offset + activeDot.offsetWidth - strip.clientWidth;
+          }
+          const text = `Project ${activeIndex + 1} of ${cards.length}`;
+          if (status.textContent !== text) status.textContent = text;
+        };
+        const scheduleUpdate = () => {
+          if (updateFrame !== null) return;
+          updateFrame = requestAnimationFrame(() => { updateFrame = null; updateControls(); });
+        };
+        const goTo = index => {
+          if (!mobile.matches) return;
+          const target = Math.max(0, Math.min(cards.length - 1, index));
+          slider.scrollTo({ left: Math.min(positions()[target], slider.scrollWidth - slider.clientWidth), behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
+        };
+        if (controls) {
+          previous.addEventListener('click', () => goTo(activeIndex - 1));
+          next.addEventListener('click', () => goTo(activeIndex + 1));
+          dots.forEach((dot, index) => dot.addEventListener('click', () => goTo(index)));
+        }
+        slider.addEventListener('scroll', scheduleUpdate, { passive: true });
+        window.addEventListener('resize', scheduleUpdate);
+        mobile.addEventListener('change', scheduleUpdate);
+        if ('ResizeObserver' in window) new ResizeObserver(scheduleUpdate).observe(slider);
+
         slider.addEventListener('pointerdown', (event) => {
-          if (getComputedStyle(slider).display !== 'flex') return;
+          if (!mobile.matches || event.target.closest('[data-project-compare-range]')) return;
           if (event.pointerType !== 'mouse' || event.button !== 0) return;
           pointerId = event.pointerId;
           startX = event.clientX;
           startScrollLeft = slider.scrollLeft;
           wasDragged = false;
         });
-
         slider.addEventListener('pointermove', (event) => {
           if (event.pointerId !== pointerId) return;
           const distance = event.clientX - startX;
@@ -1067,49 +1048,46 @@
           }
           if (wasDragged) slider.scrollLeft = startScrollLeft - distance;
         });
-
         const endDrag = (event) => {
           if (event.pointerId !== pointerId) return;
           if (slider.hasPointerCapture(pointerId)) slider.releasePointerCapture(pointerId);
           pointerId = null;
           slider.classList.remove('is-dragging');
+          scheduleUpdate();
         };
-
         slider.addEventListener('pointerup', endDrag);
         slider.addEventListener('pointercancel', endDrag);
-        slider.addEventListener('lostpointercapture', () => {
-          pointerId = null;
-          slider.classList.remove('is-dragging');
-        });
+        slider.addEventListener('lostpointercapture', () => { pointerId = null; slider.classList.remove('is-dragging'); });
         slider.addEventListener('dragstart', (event) => event.preventDefault());
-        slider.addEventListener(
-          'click',
-          (event) => {
-            if (!wasDragged) return;
-            event.preventDefault();
-            event.stopPropagation();
-            wasDragged = false;
-          },
-          true
-        );
+        slider.addEventListener('click', (event) => {
+          if (event.target.closest('[data-project-compare-range]') || !wasDragged) return;
+          event.preventDefault();
+          event.stopPropagation();
+          wasDragged = false;
+        }, true);
+        updateControls();
       });
 
       root.querySelectorAll('[data-project-card]').forEach((card) => {
         card.addEventListener('click', (event) => {
-          if (event.target.closest('a, button')) return;
+          if (event.target.closest('a, button, input, [data-project-comparison]')) return;
           const trigger = card.querySelector('[data-lightbox-trigger]');
           if (trigger) trigger.click();
         });
       });
 
-      const viewportVideos = root.querySelectorAll('[data-viewport-video]');
-      viewportVideos.forEach((video) => {
-        video.addEventListener('playing', () => video.classList.add('is-playing'));
-        video.addEventListener('pause', () => video.classList.remove('is-playing'));
-      });
+      let viewportVideoObserver = null;
+      const prepareViewportVideo = (video) => {
+        if (!video.dataset.viewportReady) {
+          video.dataset.viewportReady = 'true';
+          video.addEventListener('playing', () => video.classList.add('is-playing'));
+          video.addEventListener('pause', () => video.classList.remove('is-playing'));
+        }
+        if (viewportVideoObserver) viewportVideoObserver.observe(video);
+      };
       const startViewportVideos = () => {
         if (!('IntersectionObserver' in window)) return;
-        const observer = new IntersectionObserver(
+        viewportVideoObserver = new IntersectionObserver(
           (entries) => {
             entries.forEach((entry) => {
               const video = entry.target;
@@ -1126,11 +1104,40 @@
           },
           { threshold: [0, 0.5, 1] }
         );
-        viewportVideos.forEach((video) => observer.observe(video));
+        root.querySelectorAll('[data-viewport-video]').forEach(prepareViewportVideo);
       };
 
       if (document.readyState === 'complete') startViewportVideos();
       else window.addEventListener('load', startViewportVideos, { once: true });
+
+      const hero = root.querySelector('[data-hero-gallery]');
+      if (hero) {
+        const heroStage = hero.querySelector('[data-hero-stage]');
+        const slides = Array.from(hero.querySelectorAll('[data-hero-slide]'));
+        const heroCounter = hero.querySelector('[data-hero-counter]');
+        let heroIndex = 0;
+        const showHeroSlide = (direction) => {
+          if (slides.length < 2) return;
+          const outgoingVideo = heroStage.querySelector('video');
+          if (outgoingVideo) {
+            outgoingVideo.pause();
+            if (viewportVideoObserver) viewportVideoObserver.unobserve(outgoingVideo);
+          }
+          heroIndex = (heroIndex + direction + slides.length) % slides.length;
+          heroStage.replaceChildren(slides[heroIndex].content.cloneNode(true));
+          heroStage.dataset.galleryIndex = String(heroIndex);
+          heroCounter.textContent = `${String(heroIndex + 1).padStart(2, '0')} / ${String(slides.length).padStart(2, '0')}`;
+          const incomingVideo = heroStage.querySelector('video');
+          if (incomingVideo) prepareViewportVideo(incomingVideo);
+        };
+        hero.querySelector('[data-hero-previous]').addEventListener('click', () => showHeroSlide(-1));
+        hero.querySelector('[data-hero-next]').addEventListener('click', () => showHeroSlide(1));
+        hero.querySelector('.real-spaces__hero-controls').addEventListener('keydown', (event) => {
+          if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+          event.preventDefault();
+          showHeroSlide(event.key === 'ArrowLeft' ? -1 : 1);
+        });
+      }
 
       const lightbox = root.querySelector('[data-lightbox]');
       const dialog = root.querySelector('.real-spaces-lightbox__dialog');
@@ -1241,7 +1248,8 @@
             .map((item) => item.trim())
             .filter(Boolean);
           if (!mediaItems.length) return;
-          currentIndex = 0;
+          const requestedIndex = Number(trigger.dataset.galleryIndex || 0);
+          currentIndex = Number.isInteger(requestedIndex) && requestedIndex >= 0 && requestedIndex < mediaItems.length ? requestedIndex : 0;
           poster = trigger.dataset.poster || '';
           title.textContent = trigger.dataset.title || 'Project gallery';
           projectLabel.textContent = trigger.dataset.featured === 'true' ? 'Featured project' : 'Client project';

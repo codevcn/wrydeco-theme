@@ -8,6 +8,7 @@ import subprocess
 import threading
 import time
 import webbrowser
+from contextlib import ExitStack
 from html import escape
 from pathlib import Path
 from typing import Any
@@ -22,7 +23,7 @@ from .errors import ContentValidationError, ManifestError, ShopifyError
 from .io_utils import atomic_write_json, atomic_write_text, load_json
 from .manifest import parse_manifest_payload
 from .orchestrator import RunCoordinator
-from .server_control import register_server_process, unregister_server_process
+from .server_control import ServerStopController, register_server_process, unregister_server_process
 from .shopify import ShopifyClient, ShopifyConfig
 from .store import ClaimError, OrchestratorStore, QueueConflict
 from .aeo.lifecycle import prompt_text
@@ -375,13 +376,25 @@ def create_app(
             agent=agent_state,
         )
 
+    def public_aeo_run(run):
+        for key in ("contract", "page", "cursor", "next_cursor"):
+            run.pop(key, None)
+        return run
+
+    @app.get("/api/aeo-backfill/history")
+    def aeo_backfill_history():
+        before = request.args.get("before")
+        return jsonify(aeo_backfill.db.history(
+            limit=int(request.args.get("limit", "10")), before=int(before) if before is not None else None))
+
+    @app.get("/api/aeo-backfill/<run_id>")
+    def read_aeo_backfill_run(run_id):
+        return jsonify(run=public_aeo_run(aeo_backfill.db.run(run_id)))
+
     @app.get("/api/aeo-backfill")
     def list_aeo_backfill():
         runs = aeo_backfill.db.list_runs()
-        for run in runs:
-            for key in ("contract", "page", "cursor", "next_cursor"):
-                run.pop(key, None)
-        return jsonify(runs=runs)
+        return jsonify(runs=[public_aeo_run(run) for run in runs])
 
     @app.post("/api/aeo-backfill")
     def create_aeo_backfill():
@@ -732,26 +745,39 @@ def serve(host: str = "127.0.0.1", port: int = 5000) -> None:
     http_server = make_server(host, port, app, threaded=True)
     registration = register_server_process(PACKAGE_ROOT, host, port)
     dashboard_url = _dashboard_url(host, port)
-    try:
-        app.extensions["aeo_backfill"].recover()
-        app.extensions["aeo_backfill"].start()
-        coordinator.start()
-        agent.start()
-        browser_timer = threading.Timer(0.2, _open_dashboard, args=(dashboard_url,))
-        browser_timer.daemon = True
-        browser_timer.start()
-        print(" * Serving Flask app 'scraper.server'", flush=True)
-        print(" * Debug mode: off", flush=True)
-        print("WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.", flush=True)
-        print(f" * Running on {dashboard_url}", flush=True)
-        print("Press CTRL+C to quit", flush=True)
-        http_server.serve_forever()
-    except KeyboardInterrupt:
-        pass
-    finally:
-        readiness_gate.clear()
-        http_server.server_close()
-        coordinator.stop()
-        app.extensions["aeo_backfill"].stop()
-        agent.stop()
-        unregister_server_process(registration)
+    backfill = app.extensions["aeo_backfill"]
+    with ServerStopController(registration) as shutdown, ExitStack() as cleanup:
+        # ExitStack runs every cleanup even if another worker's stop raises.
+        cleanup.callback(unregister_server_process, registration)
+        cleanup.callback(agent.stop)
+        cleanup.callback(backfill.stop)
+        cleanup.callback(coordinator.stop)
+        cleanup.callback(http_server.server_close)
+        cleanup.callback(readiness_gate.clear)
+        try:
+            backfill.recover()
+            for start in (backfill.start, coordinator.start, agent.start):
+                if shutdown.requested():
+                    break
+                start()
+            if not shutdown.requested():
+                browser_timer = threading.Timer(0.2, _open_dashboard, args=(dashboard_url,))
+                browser_timer.daemon = True
+                browser_timer.start()
+                cleanup.callback(browser_timer.cancel)
+            print(" * Serving Flask app 'scraper.server'", flush=True)
+            print(" * Debug mode: off", flush=True)
+            print("WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.", flush=True)
+            print(f" * Running on {dashboard_url}", flush=True)
+            print("Press Q (no Enter needed) or CTRL+C to stop the server.", flush=True)
+            http_server.timeout = .25
+            while not shutdown.requested():
+                http_server.handle_request()
+        except KeyboardInterrupt:
+            shutdown.request_stop()
+        finally:
+            shutdown.request_stop()
+            print("Stopping server and workers...", flush=True)
+            for worker in (coordinator, backfill, agent):
+                worker.request_stop()
+    print("Server stopped.", flush=True)

@@ -27,7 +27,15 @@ python -m scraper serve --host 127.0.0.1 --port 5000
 
 After the port is bound successfully, the server automatically opens `http://127.0.0.1:5000` in the default browser. The process runs the Dashboard, a single crawler, one long-lived Antigravity control conversation, isolated product content workers, and a single Shopify dispatcher. The crawler and Shopify dispatcher are driven by their durable queues rather than the Agent readiness gate, so Antigravity cold-start latency never blocks manifest work or new crawl runs.
 
-To stop every Dashboard server registered by this workspace, run `stop-server.cmd` from the project root. The command validates registered process IDs before terminating their process trees.
+On Windows, `run-server.cmd` resolves its own project folder and starts the same command above.
+In that server console, press **Q** (no Enter needed) or **Ctrl+C** to stop. Both stop accepting
+requests, signal the workers, run their cleanup and remove the server registration.
+
+`stop-server.cmd` can also be launched from any working directory. It requests the same cleanup
+for registered servers in this workspace and waits up to 30 seconds per server. If a server is
+unresponsive or was started by an older version without cooperative shutdown, it validates the
+process identity again and force-stops its process tree. The returned `forced` list identifies
+that fallback. Stale registrations are removed without signalling unrelated processes.
 
 For a headless Shopify dispatcher without the Dashboard:
 

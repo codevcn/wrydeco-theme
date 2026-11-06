@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from scraper.antigravity import (
+    AntigravityFileReadDenied,
     AntigravityProtocolError,
     AntigravitySupervisor,
     _sanitize_text,
@@ -80,6 +81,53 @@ for line in sys.stdin:
     model_idx = commands[0].index("--model")
     assert commands[0][model_idx + 1] == "Gemini 3.8 Flash (High)"
     supervisor.stop()
+
+
+@pytest.mark.parametrize("content", [False, True])
+@pytest.mark.parametrize("state", ["ACTIVE", "DONE"])
+def test_denied_file_read_logs_only_sanitized_path_and_keeps_guard(tmp_path, content, state):
+    root = make_root(tmp_path)
+    store = OrchestratorStore(root)
+    supervisor = AntigravitySupervisor(root, store, threading.Event())
+    path = "C:/gallery/password=path-secret/001.jpg"
+    payload = {"event": "step_update", "step_update": {
+        "tool_name": "view_file", "state": state, "tool_info": {"parameters": json.dumps({
+            "AbsolutePath": path, "claim_token": "parameter-secret", "other": "not-for-logs",
+        })},
+    }}
+    with pytest.raises(AntigravityFileReadDenied) as error:
+        if content:
+            supervisor._log_content_event(payload, {"session_id": "isolated-session"}, {
+                "task_id": "assigned-task", "product": {"run_id": "assigned-run", "asin": "example"},
+            })
+        else:
+            supervisor._log_stream_event(payload, purpose="test")
+    entries = store.events_after(0)
+    entry = next(e for e in entries if e["event"] == "agent_file_read_denied")
+    assert entry["denied_path"].startswith("C:/gallery/password=")
+    assert "<redacted>" in entry["denied_path"]
+    serialized = json.dumps(entries) + str(error.value)
+    assert all(secret not in serialized for secret in ("path-secret", "parameter-secret", "not-for-logs"))
+    assert entry["tool"] == "view_file" and entry["state"] == state
+    if content:
+        assert entry["product_id"] == "assigned-task" and entry["run_id"] == "assigned-run"
+        assert entry["session_id"] == "isolated-session"
+
+
+@pytest.mark.parametrize("path", [r"C:\cache\output.txt", "/cache/output.txt"])
+def test_spooled_text_read_still_allowed_with_incremental_metadata(tmp_path, path):
+    root = make_root(tmp_path)
+    store = OrchestratorStore(root)
+    supervisor = AntigravitySupervisor(root, store, threading.Event())
+    def send(state, parameters):
+        supervisor._log_stream_event({"event": "step_update", "step_update": {
+            "tool_name": "view_file", "state": state, "tool_info": {"parameters": parameters},
+        }}, purpose="test")
+    send("ACTIVE", {})
+    send("DONE", {"AbsolutePath": path})
+    assert not any(e["event"] == "agent_file_read_denied" for e in store.events_after(0))
+    with pytest.raises(AntigravityFileReadDenied, match="<missing>"):
+        send("DONE", {})
 
 
 def test_antigravity_config_file_read_save_and_custom_model_propagation(tmp_path):

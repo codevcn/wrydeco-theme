@@ -895,6 +895,7 @@ function scrollToSection(selector) {
 }
 $("#page-view-progress").addEventListener("click", () => scrollToSection("#progress-panel"));
 $("#page-view-links").addEventListener("click", () => scrollToSection("#manifest-panel"));
+$("#page-view-aeo").addEventListener("click", () => scrollToSection("#store-aeo-panel"));
 $("#page-scroll-top").addEventListener("click", () => window.scrollTo(0, 0));
 $("#page-scroll-bottom").addEventListener("click", () => window.scrollTo(0, document.documentElement.scrollHeight));
 $("#close-product-type").addEventListener("click", closeProductTypePicker);

@@ -95,6 +95,7 @@ def test_dashboard_has_agent_startup_toast_and_event_log_scroll_control():
     assert 'id="page-scroll-top"' in html
     assert 'id="page-scroll-bottom"' in html
     assert 'id="page-view-progress"' in html
+    assert 'id="page-view-aeo"' in html
     assert 'id="product-type-modal"' in html
     assert 'id="check-agent"' in html
     assert 'id="agent-status-tooltip"' in html

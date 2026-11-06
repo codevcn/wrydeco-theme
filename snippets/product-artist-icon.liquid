@@ -1,0 +1,22 @@
+{% doc %}
+  Renders the studio's existing craft illustrations and Iconify controls.
+  Namespaces illustration styles and gradients so multiple icons cannot clash.
+  @param {string} icon - award, leaf, hand, check, arrow or ornament.
+  @param {string} [id] - Unique ID for an illustrated recognition block.
+{% enddoc %}
+{% case icon %}
+  {% when 'award', 'leaf', 'check' %}
+    {% capture illustration %}{% render 'icon-artist-recognition', icon: icon %}{% endcapture %}
+    {% liquid
+      assign icon_namespace = id | default: icon | handleize | prepend: 'ArtistIcon-'
+      assign class_prefix = icon_namespace | append: '-cls-'
+      assign gradient_prefix = icon_namespace | append: '-gradient-'
+      echo illustration | replace: 'cls-', class_prefix | replace: 'SVGID_', gradient_prefix
+    %}
+  {% when 'hand' %}
+    <svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><rect width="18.5" height="5.5" x="2.75" y="14" rx="1.5"/><circle cx="5.75" cy="12" r="2"/><path d="m16.25 14l-.75-4.5a2 2 0 0 1 2-2.25h.75A2.25 2.25 0 0 1 20.5 9.5V14m-10.25 2.5l2-7"/></g></svg>
+  {% when 'arrow' %}
+    <svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m18 8l4 4l-4 4M2 12h20"/></svg>
+  {% when 'ornament' %}
+    <svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/></svg>
+{% endcase %}

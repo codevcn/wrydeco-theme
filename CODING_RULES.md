@@ -108,4 +108,16 @@ The technical implementation must align with the brand's luxury positioning.
   - `.hero-new__inner`: `z-index: 10`
 - **Scope of Modification:** When updating the hero banner (e.g. swapping images, adjusting animation timing, or managing crossfade opacity transitions), you are ONLY permitted to change image display/presentation logic. The underlying layout mechanics, container positioning, and responsive media queries must remain strictly unchanged.
 
+## 16. [CRITICAL / QUY TẮC QUAN TRỌNG] Prohibition of Unauthorized Theme Uploads
+
+> [!CAUTION]
+> **QUY TẮC BẮT BUỘC / STRICT MANDATORY RULE:**
+> AI Agent **TUYỆT ĐỐI KHÔNG ĐƯỢC PHÉP** tự ý upload, đồng bộ hay deploy code theme này lên bất cứ store nào (kể cả store Production/Live, Development hay bất kỳ store/theme nào khác) qua Shopify Admin API, Theme API, CLI hay script tự động, trừ khi có yêu cầu và chỉ định cụ thể, trực tiếp từ người dùng.
+> 
+> AI Agents are **STRICTLY PROHIBITED** from arbitrarily uploading or deploying this theme code to **ANY** Shopify store without explicit, unambiguous user request and instruction.
+
+- **Scope:** Applies to all Shopify stores, environments (Live/Main, Development, Staging), and all upload methods (Shopify Admin Asset API, Shopify CLI, Theme Kit, Python/Node scripts).
+- **Enforcement:** Code changes and bug fixes must strictly remain within the local workspace. Do NOT call upload endpoints (`/admin/api/.../themes/{theme_id}/assets.json`) on your own initiative. Wait for the user to explicitly instruct an upload before pushing changes to any remote store.
+
+
 

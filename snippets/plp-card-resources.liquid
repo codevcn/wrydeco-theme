@@ -1,5 +1,5 @@
 {% doc %}
-  Loads shared listing-card styles and wishlist integration, including asynchronous recommendations.
+  Loads shared listing-card styles, hover galleries and wishlist integration, including asynchronous recommendations.
 {% enddoc %}
 
 {% stylesheet %}
@@ -13,7 +13,6 @@
     border: 1px solid var(--border-light);
     border-radius: var(--radius-xl);
     background: var(--color-white-cream);
-    box-shadow: 0 12px 32px rgb(43 29 14 / 6%);
     color: var(--text-primary);
     font-family: var(--font-roboto);
     overflow: visible;
@@ -38,6 +37,14 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+    opacity: 0;
+    transition: opacity 350ms ease;
+  }
+  .plp-card__image.is-active { z-index: 2; opacity: 1; }
+  .plp-card__image.is-prev { z-index: 1; opacity: 1; }
+  .plp-card .placeholder-svg { opacity: 1; }
+  @media (prefers-reduced-motion: reduce) {
+    .plp-card .plp-card__image { transition: none; }
   }
   .plp-card .card-wishlist {
     top: var(--sp-3) !important;
@@ -92,6 +99,64 @@
 
 {% javascript %}
   (function () {
+    var hoverPointer = window.matchMedia('(hover: hover) and (pointer: fine)');
+    var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    function initHoverGallery(gallery) {
+      var template = gallery.querySelector('[data-plp-hover-template]');
+      if (!template || !template.content.querySelector('img')) return;
+      var images = gallery.querySelectorAll('.plp-card__image');
+      var currentIndex = 0;
+      var intervalId = null;
+      var generation = 0;
+      var pending = false;
+      function showImage(index) {
+        images.forEach(function (image) {
+          image.classList.toggle('is-prev', image.classList.contains('is-active'));
+          image.classList.remove('is-active');
+        });
+        images[index].classList.remove('is-prev');
+        images[index].classList.add('is-active');
+        currentIndex = index;
+      }
+      function stop() {
+        clearInterval(intervalId);
+        intervalId = null;
+        generation++;
+        pending = false;
+        showImage(0);
+      }
+      async function advance() {
+        if (pending) return;
+        pending = true;
+        var requestGeneration = generation;
+        var nextIndex = (currentIndex + 1) % images.length;
+        var image = images[nextIndex];
+        try {
+          await image.decode();
+          if (requestGeneration === generation) showImage(nextIndex);
+        } catch (error) {
+          if (requestGeneration === generation && image.naturalWidth > 0) showImage(nextIndex);
+        } finally {
+          if (requestGeneration === generation) pending = false;
+        }
+      }
+      gallery.addEventListener('mouseenter', function () {
+        if (!hoverPointer.matches || reducedMotion.matches || intervalId !== null) return;
+        if (template) {
+          gallery.appendChild(template.content.cloneNode(true));
+          template.remove();
+          template = null;
+          images = gallery.querySelectorAll('.plp-card__image');
+          Array.prototype.slice.call(images, 1).forEach(function (image) { image.setAttribute('aria-hidden', 'true'); });
+        }
+        advance();
+        intervalId = setInterval(function () {
+          if (!gallery.isConnected || document.hidden) stop();
+          else advance();
+        }, 2000);
+      });
+      gallery.addEventListener('mouseleave', stop);
+    }
     function requestWishlistRender() {
       ['vitals:ProductCardsDetected', 'vitals:RenderWishlistIcons'].forEach(function (name) {
         document.dispatchEvent(new CustomEvent(name));
@@ -102,6 +167,8 @@
       (root || document).querySelectorAll('[data-plp-card]').forEach(function (card) {
         if (card.dataset.plpReady) return;
         card.dataset.plpReady = 'true';
+        var gallery = card.querySelector('[data-plp-hover-gallery]');
+        if (gallery) initHoverGallery(gallery);
         var wishlist = card.querySelector('[data-card-wishlist]');
         if (wishlist) wishlist.addEventListener('click', requestWishlistRender);
       });

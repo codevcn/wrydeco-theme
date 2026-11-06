@@ -337,10 +337,13 @@ class RunCoordinator:
         self._threads.append(thread)
         thread.start()
 
-    def stop(self) -> None:
+    def request_stop(self) -> None:
         self._stop.set()
         with self.store._condition:
             self.store._condition.notify_all()
+
+    def stop(self) -> None:
+        self.request_stop()
         for thread in self._threads:
             thread.join(timeout=3)
 

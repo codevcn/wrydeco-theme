@@ -1,0 +1,511 @@
+{% doc %}
+  Renders a product overview, highlights and native FAQ disclosures.
+  Supports both h3-based aeo-faq-item blocks and paragraph-based Q/A HTML.
+  All content is parsed in Liquid and remains in the initial HTML without JS.
+  Unknown markup is rendered intact rather than silently discarded.
+  @param {string} html - Trusted HTML from custom.aeo_html.
+  @param {section} section - Parent section settings and highlight blocks.
+{% enddoc %}
+{% liquid
+  assign aeo_html = html | strip | replace: '<H2', '<h2' | replace: '</H2>', '</h2>'
+  assign aeo_parts = aeo_html | split: '<h2'
+  assign overview_title = 'Product Overview'
+  assign faq_title = 'Frequently Asked Questions'
+  assign overview_html = blank
+  assign faq_html = blank
+  assign faq_index = 0
+  assign structured_aeo = false
+  if aeo_parts.size == 3
+    assign overview_part = aeo_parts[1]
+    assign overview_heading = overview_part | split: '</h2>' | first
+    assign overview_title = overview_heading | split: '>' | last | strip_html | strip
+    assign overview_html = overview_part | remove_first: overview_heading | remove_first: '</h2>' | strip
+    assign faq_part = aeo_parts[2]
+    assign faq_heading = faq_part | split: '</h2>' | first
+    assign faq_html = faq_part | remove_first: faq_heading | remove_first: '</h2>' | strip
+    if faq_html contains '</h3>'
+      assign structured_aeo = true
+    elsif faq_html contains '</strong>'
+      assign structured_aeo = true
+    endif
+  endif
+  assign overview_summary = blank
+  if overview_html contains '<ul'
+    assign overview_paragraphs = overview_html | split: '<ul' | first
+    assign overview_summary = overview_html | remove_first: overview_paragraphs
+    assign overview_html = overview_paragraphs
+  endif
+%}
+<section class="product-aeo" aria-labelledby="ProductAeoHeading-{{ section.id }}" data-product-aeo>
+    {% if structured_aeo %}
+      <div class="product-aeo__overview">
+        <div class="product-aeo__panel">
+        {% if section.settings.overview_eyebrow != blank %}
+          <p class="product-aeo__eyebrow">{{ section.settings.overview_eyebrow | escape }}</p>
+        {% endif %}
+        <h2 class="product-aeo__title" id="ProductAeoHeading-{{ section.id }}">{{ overview_title }}</h2>
+        <div class="product-aeo__copy">{{ overview_html }}</div>
+        {% if overview_summary != blank %}
+          <details class="product-aeo__specs">
+            <summary><span>Product specifications</span>{% render 'product-aeo-icon', name: 'chevron' %}</summary>
+            <div class="product-aeo__copy">{{ overview_summary }}</div>
+          </details>
+        {% endif %}
+        {% if section.blocks.size > 0 %}
+          <ul class="product-aeo__highlights" role="list">
+            {% for block in section.blocks %}
+              {% if block.type == 'benefit' %}
+                {% if block.settings.text != blank %}
+                  <li {{ block.shopify_attributes }}><span class="product-aeo__highlight-icon" aria-hidden="true">{% render 'product-aeo-icon', name: block.settings.icon %}</span><span class="product-aeo__highlight-label">{{ block.settings.text | escape }}</span></li>
+                {% endif %}
+              {% endif %}
+            {% endfor %}
+          </ul>
+        {% endif %}
+        </div>
+      </div>
+      <div class="product-aeo__faq" aria-labelledby="ProductAeoFaqHeading-{{ section.id }}">
+        <div class="product-aeo__panel">
+        {% if section.settings.faq_eyebrow != blank %}
+          <p class="product-aeo__eyebrow">{{ section.settings.faq_eyebrow | escape }}</p>
+        {% endif %}
+        <h2 class="product-aeo__title" id="ProductAeoFaqHeading-{{ section.id }}">{{ faq_title }}</h2>
+        <div class="product-aeo__faq-list">
+        {% if faq_html contains '</h3>' %}
+          {% assign faq_items = faq_html | split: '<h3' %}
+          {% for item in faq_items offset: 1 %}
+            {% liquid
+              assign question_heading = item | split: '</h3>' | first
+              assign question = question_heading | split: '>' | last | strip_html | strip
+              assign answer = item | remove_first: question_heading | remove_first: '</h3>' | split: '</div>' | first | strip
+              assign faq_index = faq_index | plus: 1
+            %}
+            {% render 'product-aeo-faq', question: question, answer: answer, index: faq_index %}
+          {% endfor %}
+        {% else %}
+          {% assign faq_items = faq_html | split: '<p' %}
+          {% for item in faq_items offset: 1 %}
+            {% liquid
+              assign paragraph_attributes = item | split: '>' | first
+              assign paragraph = item | remove_first: paragraph_attributes | remove_first: '>' | split: '</p>' | first
+              assign question_heading = paragraph | split: '</strong>' | first
+              assign question = question_heading | strip_html | strip
+              assign answer = paragraph | remove_first: question_heading | remove_first: '</strong>' | strip | remove_first: '<br />' | remove_first: '<br/>' | remove_first: '<br>' | strip
+              assign faq_index = faq_index | plus: 1
+            %}
+            {% if paragraph contains '</strong>' %}
+              {% render 'product-aeo-faq', question: question, answer: answer, index: faq_index %}
+            {% else %}
+              <div class="product-aeo__copy"><p>{{ paragraph }}</p></div>
+            {% endif %}
+          {% endfor %}
+        {% endif %}
+        </div>
+        </div>
+      </div>
+    {% else %}
+      <div class="product-aeo__panel product-aeo__fallback">
+        <h2 id="ProductAeoHeading-{{ section.id }}" class="product-aeo__sr-only">Product information and frequently asked questions</h2>
+        {{ aeo_html }}
+      </div>
+    {% endif %}
+</section>
+
+{% stylesheet %}
+  .product-aeo {
+    --aeo-border: color-mix(in srgb, var(--color-clay) 28%, transparent);
+    --aeo-circle: color-mix(in srgb, var(--color-milk) 65%, #eadccc);
+    --aeo-inline-padding: var(--layout-padding-desktop, 32px);
+    padding: 0;
+    background: color-mix(in srgb, var(--color-white-cream) 48%, #fff);
+    color: var(--text-primary);
+    font-family: var(--font-roboto);
+  }
+  .product-aeo__panel {
+    width: 100%;
+    max-width: 1104px;
+    min-width: 0;
+    margin-inline: auto;
+  }
+  .product-aeo__overview {
+    display: block;
+    width: auto;
+    min-width: 0;
+    padding: 52px var(--aeo-inline-padding) 42px;
+  }
+  .product-aeo__eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: fit-content;
+    max-width: 100%;
+    margin: 0 auto 12px;
+    color: var(--color-clay);
+    font-size: 15px;
+    font-weight: 400;
+    line-height: 1.4;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+  }
+  .product-aeo__eyebrow::after {
+    content: '';
+    flex: 0 1 130px;
+    width: 130px;
+    min-width: 40px;
+    height: 1px;
+    background: var(--aeo-border);
+  }
+  .product-aeo .product-aeo__title {
+    margin: 0 0 12px;
+    font-family: var(--font-display-light);
+    font-size: 72px;
+    font-weight: 300;
+    line-height: 1.08;
+    letter-spacing: -.035em;
+    text-align: center;
+    text-wrap: balance;
+    overflow-wrap: anywhere;
+  }
+  .product-aeo__copy,
+  .product-aeo__answer {
+    color: var(--color-earth-brown);
+    font-size: 19px;
+    font-weight: 400;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+  }
+  .product-aeo__overview > .product-aeo__panel > .product-aeo__copy {
+    max-width: 880px;
+    margin-inline: auto;
+    text-align: center;
+  }
+  .product-aeo__copy > :first-child,
+  .product-aeo__answer > :first-child {
+    margin-top: 0;
+  }
+  .product-aeo__copy > :last-child,
+  .product-aeo__answer > :last-child {
+    margin-bottom: 0;
+  }
+  .product-aeo__copy p,
+  .product-aeo__answer p {
+    margin: 0 0 16px;
+  }
+  .product-aeo__copy ul,
+  .product-aeo__copy ol,
+  .product-aeo__answer ul,
+  .product-aeo__answer ol {
+    padding-left: 20px;
+    margin-block: 12px;
+  }
+  .product-aeo__copy li,
+  .product-aeo__answer li {
+    margin-block: 6px;
+  }
+  .product-aeo__highlights {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0;
+    margin: 28px -32px 0;
+    padding: 0;
+    border: 0;
+    list-style: none;
+  }
+  .product-aeo__highlights > li {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    margin: 0;
+    padding-inline: 20px;
+    color: var(--text-primary);
+    font-family: var(--font-display-light);
+    font-size: 24px;
+    font-weight: 300;
+    line-height: 1.2;
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+  .product-aeo__highlights > li + li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 24px;
+    bottom: 12px;
+    width: 1px;
+    background: var(--aeo-border);
+  }
+  .product-aeo__highlight-icon {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: var(--aeo-circle);
+    color: var(--color-earth-brown);
+  }
+  .product-aeo__highlight-icon svg {
+    width: 44px;
+    height: 44px;
+  }
+  .product-aeo__highlight-icon [stroke-width] {
+    stroke-width: 1.4;
+  }
+  .product-aeo__highlight-label {
+    width: 100%;
+    max-width: 200px;
+    text-wrap: wrap;
+  }
+  .product-aeo__faq {
+    width: auto;
+    min-width: 0;
+    margin: 0;
+    padding: 48px var(--aeo-inline-padding) 56px;
+    border-top: 1px solid var(--aeo-border);
+  }
+  .product-aeo__faq .product-aeo__title {
+    margin-bottom: 32px;
+    font-size: 68px;
+  }
+  .product-aeo__faq .product-aeo__eyebrow {
+    margin-bottom: 4px;
+  }
+  .product-aeo__faq-list {
+    display: grid;
+    gap: 12px;
+  }
+  .product-aeo__faq-item {
+    min-width: 0;
+    border: 1px solid var(--aeo-border);
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--color-milk) 22%, transparent);
+    transition: border-color .2s ease;
+  }
+  .product-aeo__faq-item:last-child {
+    border-bottom: 1px solid var(--aeo-border);
+  }
+  .product-aeo__faq-item > summary {
+    display: grid;
+    grid-template-columns: 46px minmax(0, 1fr) 24px;
+    align-items: center;
+    gap: 30px;
+    min-height: 62px;
+    padding: 8px 24px;
+    cursor: pointer;
+    list-style: none;
+  }
+  .product-aeo summary::-webkit-details-marker {
+    display: none;
+  }
+  .product-aeo summary::marker {
+    content: '';
+  }
+  .product-aeo__number {
+    display: grid;
+    place-items: center;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: var(--aeo-circle);
+    color: var(--color-earth-brown);
+    font-family: var(--font-roboto);
+    font-size: 17px;
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+  }
+  .product-aeo__question {
+    font-family: var(--font-display-light);
+    font-size: 24px;
+    font-weight: 300;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+  }
+  .product-aeo__faq-item > summary > svg,
+  .product-aeo__specs > summary > svg {
+    width: 24px;
+    height: 24px;
+    color: var(--color-earth-brown);
+    transition: transform .2s ease;
+  }
+  .product-aeo__faq-item[open] > summary > svg,
+  .product-aeo__specs[open] > summary > svg {
+    transform: rotate(180deg);
+  }
+  .product-aeo__answer {
+    padding: 0 72px 18px 100px;
+    line-height: 1.55;
+  }
+  .product-aeo__specs {
+    max-width: 880px;
+    margin-top: 18px;
+  }
+  .product-aeo__specs > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 44px;
+    color: var(--color-earth-brown);
+    font-size: 15px;
+    font-weight: 500;
+    list-style: none;
+    cursor: pointer;
+  }
+  .product-aeo summary:focus-visible {
+    outline: 2px solid var(--color-clay);
+    outline-offset: 3px;
+    border-radius: 12px;
+  }
+  .product-aeo__fallback {
+    padding: 32px var(--aeo-inline-padding) 36px;
+    font-size: 18px;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+  }
+  .product-aeo__sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  @media (hover: hover) {
+    .product-aeo__faq-item:hover {
+      border-color: color-mix(in srgb, var(--color-clay) 55%, transparent);
+    }
+  }
+  @media (max-width: 1099px) {
+    .product-aeo {
+      --aeo-inline-padding: 32px;
+    }
+    .product-aeo .product-aeo__title {
+      font-size: 52px;
+    }
+    .product-aeo__highlights > li {
+      padding-inline: 16px;
+      font-size: 22px;
+    }
+    .product-aeo__highlights {
+      margin-inline: 0;
+    }
+    .product-aeo__highlight-icon {
+      width: 72px;
+      height: 72px;
+    }
+    .product-aeo__highlight-icon svg {
+      width: 40px;
+      height: 40px;
+    }
+    .product-aeo__faq-item > summary {
+      gap: 20px;
+      padding-inline: 20px;
+    }
+    .product-aeo__question {
+      font-size: 22px;
+    }
+    .product-aeo__answer {
+      padding-inline: 86px 64px;
+    }
+  }
+  @media (max-width: 749px) {
+    .product-aeo {
+      --aeo-inline-padding: var(--layout-padding-mobile, 16px);
+    }
+    .product-aeo__overview {
+      padding-block: 28px;
+    }
+    .product-aeo__eyebrow {
+      gap: 12px;
+      margin-bottom: 12px;
+      font-size: 13px;
+      letter-spacing: .18em;
+    }
+    .product-aeo__eyebrow::after {
+      width: 80px;
+      flex-basis: 80px;
+    }
+    .product-aeo .product-aeo__title {
+      font-size: 36px;
+      line-height: 1.12;
+    }
+    .product-aeo__copy,
+    .product-aeo__answer,
+    .product-aeo__fallback {
+      font-size: 16px;
+      line-height: 1.6;
+    }
+    .product-aeo__highlights {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 28px 0;
+      margin-top: 24px;
+      padding: 0;
+    }
+    .product-aeo__highlights > li {
+      padding-inline: 8px;
+      font-size: 20px;
+      line-height: 1.25;
+    }
+    .product-aeo__highlights > li:nth-child(odd)::before {
+      display: none;
+    }
+    .product-aeo__highlights > li + li::before {
+      top: 16px;
+      bottom: 8px;
+    }
+    .product-aeo__highlight-icon {
+      width: 64px;
+      height: 64px;
+    }
+    .product-aeo__highlight-icon svg {
+      width: 36px;
+      height: 36px;
+    }
+    .product-aeo__faq {
+      padding-block: 24px 32px;
+    }
+    .product-aeo__faq .product-aeo__title {
+      margin-bottom: 20px;
+    }
+    .product-aeo__faq-item {
+      border-radius: 14px;
+    }
+    .product-aeo__faq-item > summary {
+      grid-template-columns: 36px minmax(0, 1fr) 20px;
+      gap: 12px;
+      min-height: 64px;
+      padding: 12px 16px;
+    }
+    .product-aeo__number {
+      width: 36px;
+      height: 36px;
+      font-size: 14px;
+    }
+    .product-aeo__question {
+      font-size: 20px;
+      line-height: 1.3;
+    }
+    .product-aeo__faq-item > summary > svg,
+    .product-aeo__specs > summary > svg {
+      width: 20px;
+      height: 20px;
+    }
+    .product-aeo__answer {
+      padding: 0 16px 18px;
+    }
+  }
+  @media (max-width: 359px) {
+    .product-aeo__highlights > li {
+      font-size: 18px;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .product-aeo__faq-item,
+    .product-aeo summary > svg {
+      transition: none;
+    }
+  }
+{% endstylesheet %}

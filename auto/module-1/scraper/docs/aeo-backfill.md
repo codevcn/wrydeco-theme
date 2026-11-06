@@ -32,3 +32,28 @@ and isolated authoring shares a process-local runtime lock with the ordinary bat
 The task details view shows the complete escaped AEO preview, structured draft and cited evidence for review.
 Mechanical validation does not prove every semantic claim; the full author review and final product-level review
 remain important. The feature does not promise placement or ranking in an AI search service.
+
+The Dashboard shows the five newest runs as expandable cards. **Xem toàn bộ lịch sử** opens a dialog
+with ten summaries per page; **Xem thêm lịch sử** loads older runs without the previous twenty-run limit.
+Opening a history card fetches its product details on demand. Selecting a product opens the padded AEO
+review panel. Closing the dialog is supported through its close button, Escape, or the backdrop.
+**Tải lại tiến trình AEO** shows a spinner while loading, disables duplicate clicks, and reports the
+completion time or connection error. Refreshing and browsing history do not create jobs or retry products.
+
+## Image reading and bounded recovery
+
+`read_evidence` supplies native MCP image content. The AEO Agent must inspect those pixels directly;
+`view_file` remains restricted to Antigravity's explicitly spooled `output.txt` results.
+A denied file read records an `agent_file_read_denied` event with the sanitized `denied_path`,
+tool state, session and assigned task. Other tool parameters and file contents are not logged.
+
+For this specific violation, the worker revokes the old MCP claim, closes the failed conversation,
+then starts a fresh one for the same product and phase. The replacement must claim and read all
+required gallery evidence again. A review retry preserves the draft and still requires a complete
+review. Retries share the phase's existing `ANTIGRAVITY_MAX_CONTENT_ATTEMPTS` budget (default 3).
+After that limit, the product is marked as an error and older candidates are considered.
+Other protocol violations are not automatically retried by this recovery path.
+
+When starting with `run-server.cmd`, Python code changes require a server restart: after the current
+job finishes, press Q or Ctrl+C in the server window and run `run-server.cmd` again. The command file and
+launch procedure stay the same. Restarting does not rerun a historical completed job.

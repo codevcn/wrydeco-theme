@@ -1,0 +1,1772 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Quản lý Metafield Sản phẩm ({{ total_products_count }} sản phẩm)</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/static/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+    <link rel="shortcut icon" href="/static/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="Wrydeco" />
+    <link rel="manifest" href="/static/site.webmanifest" />
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS v4 CDN -->
+    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+    <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Product Item Active State */
+        .product-item {
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .product-item:hover {
+            background-color: #f8fafc;
+        }
+        .product-item.active-product {
+            background-color: #f0f3ff !important;
+            border-color: #6366f1 !important;
+            border-left-width: 4px !important;
+            border-left-color: #4f46e5 !important;
+        }
+        .product-item.active-product .product-title {
+            color: #4f46e5 !important;
+            font-weight: 700 !important;
+        }
+        .product-item.active-product .product-badge {
+            background-color: #4f46e5 !important;
+            color: #ffffff !important;
+        }
+        /* Custom scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
+        <div class="mx-auto px-4 sm:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo -->
+                <div class="flex-shrink-0 flex items-center gap-3">
+                    <a target="_blank" rel="noopener noreferrer" href="/" class="flex items-center gap-2 text-indigo-600 font-bold text-xl hover:text-indigo-700 transition-colors">
+                        <img src="/static/favicon.svg" alt="Logo" class="w-8 h-8 object-contain rounded-lg" onerror="this.src='/static/favicon-96x96.png'">
+                        <span>Shopify Admin Manager</span>
+                    </a>
+                    <a target="_blank" rel="noopener noreferrer" href="https://admin.shopify.com/store/{{ active_shop or shopify_shop }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-black hover:bg-neutral-800 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors" title="Mở Shopify Admin Store">
+                        <span>Shopify Store</span>
+                        <svg class="w-3.5 h-3.5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                    </a>
+                </div>
+                <!-- Nav Links -->
+                <nav class="flex items-center gap-6">
+                    <a target="_blank" rel="noopener noreferrer" href="/" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Sản phẩm</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/collections" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Collections</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/metaobjects" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">MetaObjects</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/product-metafields" class="text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 pb-0.5">Metafield SP</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/create" class="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">Tạo sản phẩm</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/edit-variants" class="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">Sửa hàng loạt</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/blogs" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path></svg>
+                        <span>Blog</span>
+                    </a>
+                    <a target="_blank" rel="noopener noreferrer" href="/policies" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                        <span>Policy</span>
+                    </a>
+                    <button id="drawer-toggle-btn" type="button" onclick="toggleDrawer()" class="p-1.5 text-gray-600 hover:text-indigo-600 hover:bg-gray-100 rounded-lg transition-colors flex items-center justify-center focus:outline-none" title="Menu tiện ích">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 max-w-[106rem] w-full mx-auto px-4 sm:px-8 py-6">
+        <!-- Error Banner nếu có lỗi API hoặc proxy -->
+        {% if error %}
+        <div class="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-800 flex items-start gap-3 shadow-xs">
+            <svg class="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            <div>
+                <h4 class="font-bold text-sm">Đã xảy ra lỗi khi tải dữ liệu từ Shopify:</h4>
+                <p class="text-xs text-red-700 mt-0.5">{{ error }}</p>
+                {% if store_type == 'custom' %}
+                <p class="text-xs text-red-600 mt-1 font-semibold">Gợi ý: Kiểm tra kết nối Proxy US trong menu Tiện ích hoặc chuyển về Store Mặc định.</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Breadcrumb & Title Section -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div>
+                <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-indigo-600 mb-1">
+                    <iconify-icon icon="{% if store_type == 'custom' %}mdi:store-cog{% else %}mdi:store{% endif %}" class="text-sm"></iconify-icon>
+                    <span>Cửa hàng: {{ active_shop or shopify_shop }}</span>
+                    <span>•</span>
+                    <span>Dữ liệu tùy chỉnh (Metafields)</span>
+                </div>
+                <h1 class="text-2xl font-bold text-gray-900 flex items-center gap-3">
+                    <span>Quản lý Metafield Sản phẩm</span>
+                    <span id="active-count-badge" class="px-2.5 py-0.5 text-xs font-semibold bg-indigo-100 text-indigo-700 rounded-full border border-indigo-200">
+                        {{ total_products_count }} sản phẩm
+                    </span>
+                    <span class="px-2.5 py-0.5 text-xs font-semibold bg-emerald-100 text-emerald-700 rounded-full border border-emerald-200">
+                        {{ total_assigned_metafields }} metafields
+                    </span>
+                </h1>
+                <p class="text-xs text-gray-500 mt-1">
+                    Quản lý toàn diện các trường dữ liệu tùy chỉnh (Metafield) của từng sản phẩm trên Shopify. Thêm, chỉnh sửa hoặc xóa nhanh chóng, an toàn.
+                </p>
+            </div>
+
+            <!-- Action buttons: Nút Switch Store + Nút Thao tác -->
+            <div class="flex items-center gap-2.5 flex-wrap">
+                <!-- Nút Switch Store Mặc định ⟷ Store Riêng (qua Proxy) -->
+                <div class="inline-flex items-center gap-3 bg-white px-3.5 py-2 rounded-2xl border border-gray-200 shadow-2xs">
+                    <div class="flex items-center gap-1.5 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                        <iconify-icon icon="{% if store_type == 'custom' %}mdi:store-cog{% else %}mdi:store{% endif %}" class="text-base {% if store_type == 'custom' %}text-indigo-600{% else %}text-gray-500{% endif %}"></iconify-icon>
+                        <span class="hidden sm:inline">Cửa hàng:</span>
+                    </div>
+
+                    <!-- Switch Toggle -->
+                    <label class="relative inline-flex items-center cursor-pointer select-none" title="Bấm để chuyển đổi giữa Store Mặc định và Store Riêng">
+                        <input type="checkbox" id="storeSwitchToggle" class="sr-only peer" {% if store_type == 'custom' %}checked{% endif %} onchange="handleStoreSwitch(this.checked)">
+                        <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                        <span id="storeSwitchLabel" class="ml-2.5 text-xs font-bold {% if store_type == 'custom' %}text-indigo-600{% else %}text-gray-700{% endif %}">
+                            {% if store_type == 'custom' %}
+                                Store Riêng <span class="font-mono text-[14px] font-semibold text-indigo-500">({{ active_shop_domain or active_shop }})</span>
+                            {% else %}
+                                Store Mặc định <span class="font-mono text-[14px] font-semibold text-gray-500">({{ active_shop_domain or active_shop }})</span>
+                            {% endif %}
+                        </span>
+                    </label>
+
+                    <!-- Proxy Badge -->
+                    {% if store_type == 'custom' %}
+                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200" title="Bắt buộc kết nối qua Proxy US">
+                        <span>🛡️</span>
+                        <span>Proxy US</span>
+                    </span>
+                    {% else %}
+                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-600 border border-gray-200" title="Kết nối trực tiếp Store Mặc định">
+                        <iconify-icon icon="mdi:lightning-bolt" class="text-amber-500 text-xs"></iconify-icon>
+                        <span>Direct VPS</span>
+                    </span>
+                    {% endif %}
+                </div>
+
+                <!-- Nút Thêm Metafield (đã bỏ dấu + thừa) -->
+                <button 
+                    type="button" 
+                    onclick="openAddMetafieldModal()" 
+                    class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                    title="Thêm metafield mới cho sản phẩm đang chọn"
+                >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    <span>Thêm Metafield</span>
+                </button>
+
+                <!-- Link mở Custom Data -->
+                <a target="_blank" rel="noopener noreferrer" href="https://admin.shopify.com/store/{{ active_shop or shopify_shop }}/settings/custom_data" class="inline-flex items-center gap-1.5 px-3 py-2 bg-white text-gray-700 hover:text-indigo-600 text-xs font-medium rounded-lg border border-gray-300 hover:border-indigo-300 shadow-sm transition-colors" title="Quản lý định nghĩa Metafield trong Shopify Admin">
+                    <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                    <span class="hidden md:inline">Custom Data</span>
+                </a>
+
+                <!-- Nút Reload -->
+                <button type="button" onclick="window.location.reload()" class="p-2 text-gray-600 hover:text-indigo-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm cursor-pointer" title="Tải lại dữ liệu">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Thống kê tổng quan KPI Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white rounded-xl border border-gray-200 p-4 shadow-2xs">
+                <div class="flex items-center justify-between text-gray-500 mb-1">
+                    <span class="text-xs font-semibold uppercase tracking-wider">Tổng sản phẩm</span>
+                    <iconify-icon icon="mdi:package-variant-closed" class="text-xl text-indigo-500"></iconify-icon>
+                </div>
+                <div class="text-2xl font-bold text-gray-900">{{ total_products_count }}</div>
+                <div class="text-[11px] text-gray-500 mt-1">Đang hiển thị {{ products|length }} sản phẩm</div>
+            </div>
+            <div class="bg-white rounded-xl border border-gray-200 p-4 shadow-2xs">
+                <div class="flex items-center justify-between text-gray-500 mb-1">
+                    <span class="text-xs font-semibold uppercase tracking-wider">Metafields đã gán</span>
+                    <iconify-icon icon="mdi:database-tag" class="text-xl text-emerald-500"></iconify-icon>
+                </div>
+                <div class="text-2xl font-bold text-emerald-600">{{ total_assigned_metafields }}</div>
+                <div class="text-[11px] text-gray-500 mt-1">Trên danh sách sản phẩm hiện tại</div>
+            </div>
+            <div class="bg-white rounded-xl border border-gray-200 p-4 shadow-2xs">
+                <div class="flex items-center justify-between text-gray-500 mb-1">
+                    <span class="text-xs font-semibold uppercase tracking-wider">Định nghĩa Store</span>
+                    <iconify-icon icon="mdi:format-list-checks" class="text-xl text-blue-500"></iconify-icon>
+                </div>
+                <div class="text-2xl font-bold text-blue-600">{{ definitions_count }}</div>
+                <div class="text-[11px] text-gray-500 mt-1">Định nghĩa cấu hình sẵn (Definitions)</div>
+            </div>
+            <div class="bg-white rounded-xl border border-gray-200 p-4 shadow-2xs">
+                <div class="flex items-center justify-between text-gray-500 mb-1">
+                    <span class="text-xs font-semibold uppercase tracking-wider">Namespaces</span>
+                    <iconify-icon icon="mdi:folder-tag-outline" class="text-xl text-amber-500"></iconify-icon>
+                </div>
+                <div class="text-2xl font-bold text-amber-600">{{ all_namespaces|length }}</div>
+                <div class="text-[11px] text-gray-500 mt-1">Không gian tên phân loại</div>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs: Theo Sản Phẩm | Định nghĩa Store -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-2 mb-6">
+            <div class="flex items-center gap-2">
+                <button type="button" id="tab-btn-definitions" onclick="switchViewTab('definitions')" class="px-4 py-2 text-xs font-semibold rounded-lg transition-colors flex items-center gap-2 bg-indigo-50 text-indigo-600 border border-indigo-200 shadow-2xs cursor-pointer">
+                    <iconify-icon icon="mdi:shape-outline" class="text-base"></iconify-icon>
+                    <span>Định nghĩa Metafield của Store</span>
+                    <span id="tab-badge-definitions" class="px-2 py-0.5 text-[14px] font-bold rounded-full bg-indigo-200 text-indigo-800">{{ definitions_count }}</span>
+                </button>
+                <button type="button" id="tab-btn-products" onclick="switchViewTab('products')" class="px-4 py-2 text-xs font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-2 cursor-pointer">
+                    <iconify-icon icon="mdi:package-variant-closed" class="text-base"></iconify-icon>
+                    <span>Quản lý theo Sản phẩm</span>
+                    <span id="tab-badge-products" class="px-2 py-0.5 text-[11px] font-semibold rounded-full bg-indigo-100 text-indigo-700 border border-indigo-200">Tra cứu ID/Handle</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- VIEW 1: QUẢN LÝ THEO SẢN PHẨM (TRA CỨU THEO ID HOẶC HANDLE) -->
+        <div id="view-products" class="hidden space-y-6">
+            <!-- Search Hero Card -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                    <div>
+                        <h3 class="text-sm font-bold text-gray-900 flex items-center gap-2">
+                            <iconify-icon icon="mdi:package-variant-search" class="text-xl text-indigo-600"></iconify-icon>
+                            <span>Tra cứu & Quản lý Metafield theo Sản phẩm</span>
+                        </h3>
+                        <p class="text-xs text-gray-500 mt-0.5">
+                            Nhập ID hoặc Handle sản phẩm (code tự nhận diện). Nếu là ID, hệ thống tự động dò tìm trên cả <strong>Store Mặc Định</strong> và <strong>Store Riêng</strong>.
+                        </p>
+                    </div>
+                    <!-- Store Context Badge -->
+                    <div class="flex items-center gap-2 text-xs">
+                        <span class="text-gray-400">Store ưu tiên:</span>
+                        <span class="px-2.5 py-1 rounded-lg font-semibold {% if is_custom %}bg-purple-100 text-purple-700 border border-purple-200{% else %}bg-blue-100 text-blue-700 border border-blue-200{% endif %}">
+                            {{ 'Store Riêng (' ~ (active_shop or '236qm8-w7') ~ ')' if is_custom else 'Store Mặc Định (' ~ (active_shop or 'wrydeco') ~ ')' }}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Ô nhập liệu và nút OK -->
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                    <div class="relative flex-1">
+                        <!-- Icon nhận diện động -->
+                        <div class="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 flex items-center pointer-events-none" id="lookupInputIcon">
+                            <iconify-icon icon="mdi:magnify" class="text-lg"></iconify-icon>
+                        </div>
+                        <!-- Input field -->
+                        <input 
+                            type="text" 
+                            id="productLookupInput" 
+                            placeholder="Nhập ID (ví dụ: 10359521083449) hoặc Handle sản phẩm (ví dụ: boho-sun-wall-shelf...)..." 
+                            oninput="handleLookupInput(this.value)"
+                            onkeydown="if(event.key === 'Enter') { event.preventDefault(); doLookupProduct(); }"
+                            class="w-full pl-11 pr-32 py-3 text-sm bg-gray-50 hover:bg-white focus:bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-2xs transition-all"
+                        >
+                        <!-- Badge nhận diện tự động & nút Clear -->
+                        <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+                            <span id="lookupDetectionBadge" class="hidden px-2 py-0.5 text-[10px] font-bold rounded-full"></span>
+                            <button 
+                                type="button" 
+                                id="lookupClearBtn" 
+                                onclick="clearLookupInput()" 
+                                class="hidden p-1 text-gray-400 hover:text-gray-600 rounded-md transition-colors cursor-pointer text-xs"
+                                title="Xóa ô nhập"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Nút OK / Tìm kiếm -->
+                    <button 
+                        type="button" 
+                        id="lookupSubmitBtn" 
+                        onclick="doLookupProduct()" 
+                        class="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-bold rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer flex-shrink-0"
+                    >
+                        <iconify-icon id="lookupBtnIcon" icon="mdi:check-bold" class="text-base"></iconify-icon>
+                        <span id="lookupBtnText">OK</span>
+                    </button>
+                </div>
+
+                <!-- Mẫu ví dụ thử nhanh -->
+                <div class="mt-3 flex items-center gap-2 flex-wrap text-[11px] text-gray-500">
+                    <span class="font-medium text-gray-400">Ví dụ nhanh:</span>
+                    <button type="button" onclick="fillAndLookup('boho-sun-wall-shelf-wooden-sunburst-plant-floating-shelf')" class="px-2 py-0.5 bg-gray-100 hover:bg-indigo-50 hover:text-indigo-600 rounded-md border border-gray-200 transition-colors font-mono cursor-pointer">
+                        boho-sun-wall-shelf...
+                    </button>
+                    <button type="button" onclick="fillAndLookup('10359521083449')" class="px-2 py-0.5 bg-gray-100 hover:bg-indigo-50 hover:text-indigo-600 rounded-md border border-gray-200 transition-colors font-mono cursor-pointer">
+                        10359521083449
+                    </button>
+                </div>
+            </div>
+
+            <!-- KHU VỰC HIỂN THỊ KẾT QUẢ TRA CỨU -->
+            <div id="lookupResultContainer">
+                <!-- 1. Trạng thái ban đầu (Chưa tìm) -->
+                <div id="lookupStateInitial" class="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center">
+                    <div class="w-16 h-16 mx-auto mb-3 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+                        <iconify-icon icon="mdi:package-variant-closed" class="text-3xl"></iconify-icon>
+                    </div>
+                    <h4 class="text-sm font-bold text-gray-900 mb-1">Chưa có sản phẩm nào được chọn</h4>
+                    <p class="text-xs text-gray-500 max-w-md mx-auto">
+                        Vui lòng nhập ID hoặc Handle của sản phẩm vào ô tìm kiếm phía trên rồi nhấn <strong>OK</strong> (hoặc nhấn <strong>Enter</strong>) để tải dữ liệu chi tiết và toàn bộ Metafields.
+                    </p>
+                </div>
+
+                <!-- 2. Trạng thái Loading -->
+                <div id="lookupStateLoading" class="hidden bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center">
+                    <div class="w-16 h-16 mx-auto mb-3 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+                        <iconify-icon icon="mdi:loading" class="text-3xl animate-spin"></iconify-icon>
+                    </div>
+                    <h4 class="text-sm font-bold text-gray-900 mb-1">Đang dò tìm sản phẩm trên Shopify...</h4>
+                    <p class="text-xs text-gray-500 max-w-md mx-auto" id="lookupLoadingSubtext">
+                        Hệ thống đang truy vấn dữ liệu và dò tìm sản phẩm trên cả Store Mặc Định và Store Riêng. Vui lòng đợi trong giây lát...
+                    </p>
+                </div>
+
+                <!-- 3. Trạng thái Lỗi / Không tìm thấy -->
+                <div id="lookupStateError" class="hidden bg-white rounded-2xl shadow-sm border border-red-200 p-8 text-center">
+                    <div class="w-14 h-14 mx-auto mb-3 rounded-2xl bg-red-50 border border-red-200 flex items-center justify-center text-red-600">
+                        <iconify-icon icon="mdi:alert-circle-outline" class="text-3xl"></iconify-icon>
+                    </div>
+                    <h4 class="text-sm font-bold text-red-800 mb-1" id="lookupErrorTitle">Không tìm thấy sản phẩm</h4>
+                    <p class="text-xs text-red-600 max-w-md mx-auto mb-4" id="lookupErrorMessage">
+                        Vui lòng kiểm tra lại Handle hoặc ID sản phẩm.
+                    </p>
+                    <button type="button" onclick="focusLookupInput()" class="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold rounded-lg transition-colors cursor-pointer">
+                        Thử tìm lại
+                    </button>
+                </div>
+
+                <!-- 4. Trạng thái Tìm thấy sản phẩm (Hiển thị chi tiết) -->
+                <div id="lookupStateSuccess" class="hidden space-y-6">
+                    <!-- Card 1: Thông tin cơ bản của sản phẩm -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                            <!-- Thumbnail & Info -->
+                            <div class="flex items-start sm:items-center gap-4 min-w-0">
+                                <!-- Ảnh Thumbnail -->
+                                <div class="w-20 h-20 rounded-xl border border-gray-200 overflow-hidden flex-shrink-0 bg-gray-50 flex items-center justify-center shadow-2xs group relative">
+                                    <img id="foundProdImg" src="" alt="" class="w-full h-full object-cover">
+                                    <iconify-icon id="foundProdNoImg" icon="mdi:image-outline" class="hidden text-gray-300 text-3xl"></iconify-icon>
+                                </div>
+
+                                <!-- Thông tin sản phẩm -->
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 flex-wrap mb-1">
+                                        <!-- Store badge -->
+                                        <span id="foundProdStoreBadge" class="px-2.5 py-0.5 text-xs font-bold rounded-full"></span>
+                                        <!-- Status badge -->
+                                        <span id="foundProdStatusBadge" class="px-2.5 py-0.5 text-xs font-bold rounded-full"></span>
+                                        <!-- Variant count -->
+                                        <span id="foundProdVariants" class="px-2 py-0.5 text-[11px] font-medium rounded-full bg-gray-100 text-gray-600 border border-gray-200"></span>
+                                    </div>
+
+                                    <h2 id="foundProdTitle" class="text-base font-bold text-gray-900 leading-snug truncate" title=""></h2>
+
+                                    <div class="flex items-center gap-3 text-xs text-gray-500 mt-2 flex-wrap">
+                                        <!-- Numeric ID -->
+                                        <div class="flex items-center gap-1 font-mono bg-gray-50 px-2 py-0.5 rounded border border-gray-200">
+                                            <span class="text-gray-400 font-sans">ID:</span>
+                                            <span id="foundProdId" class="font-bold text-gray-800"></span>
+                                            <button type="button" onclick="copyText(document.getElementById('foundProdId').textContent, this)" class="text-gray-400 hover:text-indigo-600 transition-colors p-0.5" title="Copy ID">
+                                                <iconify-icon icon="mdi:content-copy" class="text-xs"></iconify-icon>
+                                            </button>
+                                        </div>
+
+                                        <!-- Handle -->
+                                        <div class="flex items-center gap-1 font-mono bg-gray-50 px-2 py-0.5 rounded border border-gray-200">
+                                            <span class="text-gray-400 font-sans">Handle:</span>
+                                            <span id="foundProdHandle" class="font-semibold text-gray-800"></span>
+                                            <button type="button" onclick="copyText(document.getElementById('foundProdHandle').textContent, this)" class="text-gray-400 hover:text-indigo-600 transition-colors p-0.5" title="Copy Handle">
+                                                <iconify-icon icon="mdi:content-copy" class="text-xs"></iconify-icon>
+                                            </button>
+                                        </div>
+
+                                        <!-- Metafields Count -->
+                                        <div class="flex items-center gap-1 font-bold text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-200">
+                                            <iconify-icon icon="mdi:database" class="text-sm"></iconify-icon>
+                                            <span id="foundProdMetafieldsCount">0 Metafields</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Nút thao tác nhanh trên sản phẩm -->
+                            <div class="flex items-center gap-2.5 flex-wrap flex-shrink-0">
+                                <!-- Mở Shopify Admin -->
+                                <a id="foundProdAdminLink" target="_blank" rel="noopener noreferrer" href="#" class="px-3.5 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer" title="Mở trang sản phẩm trên Shopify Admin">
+                                    <iconify-icon icon="mdi:shopify" class="text-base text-emerald-600"></iconify-icon>
+                                    <span>Shopify Admin</span>
+                                    <iconify-icon icon="mdi:open-in-new" class="text-xs text-gray-400"></iconify-icon>
+                                </a>
+
+                                <!-- Mở trên Storefront Wrydeco -->
+                                <a id="foundProdStorefrontLink" target="_blank" rel="noopener noreferrer" href="#" class="px-3.5 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer" title="Xem sản phẩm trên Website">
+                                    <iconify-icon icon="mdi:web" class="text-base text-blue-600"></iconify-icon>
+                                    <span>Storefront</span>
+                                    <iconify-icon icon="mdi:open-in-new" class="text-xs text-gray-400"></iconify-icon>
+                                </a>
+
+                                <!-- Mở trong Tool này -->
+                                <a id="foundProdToolLink" href="#" class="px-3.5 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer" title="Xem trang chi tiết sản phẩm trong Tool Admin Manager">
+                                    <iconify-icon icon="mdi:application-cog" class="text-base text-indigo-600"></iconify-icon>
+                                    <span>Xem trong Tool</span>
+                                </a>
+
+                                <!-- Nút Thêm Metafield mới -->
+                                <button type="button" onclick="openAddMetafieldModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-bold rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer">
+                                    <iconify-icon icon="mdi:plus-circle" class="text-base"></iconify-icon>
+                                    <span>Thêm Metafield</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: Bảng Danh sách Metafields của sản phẩm -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                        <!-- Toolbar lọc Namespace & Search Metafields -->
+                        <div class="p-4 border-b border-gray-200 bg-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                            <!-- Namespace filter pills -->
+                            <div class="flex items-center gap-2 flex-1 min-w-0">
+                                <span class="text-[11px] font-bold text-gray-500 uppercase tracking-wider flex-shrink-0 flex items-center gap-1">
+                                    <iconify-icon icon="mdi:filter-variant"></iconify-icon>
+                                    <span>Namespace:</span>
+                                </span>
+                                <div class="flex items-center gap-1.5 overflow-x-auto py-1 max-w-full custom-scrollbar" id="foundProdNamespaceContainer">
+                                    <!-- Dynamic pills -->
+                                </div>
+                            </div>
+
+                            <!-- Search Input trong metafields -->
+                            <div class="relative w-full md:w-64 flex-shrink-0">
+                                <input 
+                                    type="text" 
+                                    id="foundMetafieldSearchInput" 
+                                    placeholder="Lọc key hoặc giá trị..." 
+                                    onkeyup="filterFoundMetafields(this.value)"
+                                    class="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-2xs"
+                                >
+                                <iconify-icon icon="mdi:magnify" class="w-4 h-4 text-gray-400 absolute left-3 top-2"></iconify-icon>
+                            </div>
+                        </div>
+
+                        <!-- Table -->
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200 text-left">
+                                <thead class="bg-gray-50 text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                                    <tr>
+                                        <th class="py-3 px-4 w-12 text-center">STT</th>
+                                        <th class="py-3 px-4 w-1/4">Namespace & Key</th>
+                                        <th class="py-3 px-4 w-40">Kiểu dữ liệu</th>
+                                        <th class="py-3 px-4">Giá trị (Value)</th>
+                                        <th class="py-3 px-4 w-28 text-right">Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="foundMetafieldsTableBody" class="divide-y divide-gray-100 bg-white text-xs">
+                                    <!-- Rows rendered via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW 2: STORE DEFINITIONS (ĐỊNH NGHĨA METAVIEW CỦA STORE) - Mặc định hiển thị khi mới vào trang -->
+        <div id="view-definitions" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="p-4 border-b border-gray-200 bg-gray-50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                    <h3 class="text-sm font-bold text-gray-900 flex items-center gap-2">
+                        <span>Danh sách Định nghĩa Metafield của Store (Product Metafield Definitions)</span>
+                        <span class="px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-700 rounded-full border border-blue-200">{{ definitions|length }} definitions</span>
+                    </h3>
+                    <p class="text-xs text-gray-500 mt-0.5">
+                        Các trường dữ liệu chuẩn được cấu hình trong Shopify Admin Settings > Custom Data > Products. Bạn có thể chỉnh sửa tên, mô tả hoặc gán giá trị nhanh cho sản phẩm.
+                    </p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <a target="_blank" rel="noopener noreferrer" href="https://admin.shopify.com/store/{{ active_shop or shopify_shop }}/settings/custom_data" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-gray-700 hover:text-indigo-600 text-xs font-semibold rounded-lg border border-gray-300 shadow-sm transition-colors">
+                        <span>Mở Shopify Custom Data</span>
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Bảng danh sách Definitions: STT và Nút copy to rõ ràng -->
+            <div class="overflow-x-auto custom-scrollbar">
+                <table class="min-w-full divide-y divide-gray-200 text-left text-xs">
+                    <thead class="bg-gray-50 text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                        <tr>
+                            <th class="py-3 px-4 w-14 text-center">STT</th>
+                            <th class="py-3 px-4 w-1/4">Tên định nghĩa</th>
+                            <th class="py-3 px-4 w-1/4">Namespace & Key</th>
+                            <th class="py-3 px-4 w-36">Kiểu dữ liệu</th>
+                            <th class="py-3 px-4">Mô tả & Quy tắc kiểm tra (Validations)</th>
+                            <th class="py-3 px-4 w-44 text-right">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 bg-white">
+                        {% for d in definitions %}
+                        <tr class="hover:bg-slate-50 transition-colors" id="def-row-{{ d.namespace }}-{{ d.key }}">
+                            <!-- STT TO LÊN (14px font-semibold) theo yêu cầu -->
+                            <td class="py-3 px-4 text-center text-gray-700 font-semibold font-mono text-[14px]">
+                                {{ loop.index }}
+                            </td>
+                            <td class="py-3 px-4">
+                                <span class="font-bold text-gray-900 text-xs block def-name-display">{{ d.name }}</span>
+                            </td>
+                            <td class="py-3 px-4">
+                                <div class="flex items-center gap-2 font-mono">
+                                    <span class="text-indigo-600 font-semibold">{{ d.namespace }}</span>.<span class="text-gray-900 font-bold">{{ d.key }}</span>
+                                    <!-- Nút copy namespace.key TO LÊN 16px x 16px -->
+                                    <button type="button" onclick="copyToClipboard('{{ d.namespace }}.{{ d.key }}', this)" class="p-1 text-gray-400 hover:text-indigo-600 hover:bg-gray-100 rounded-md transition-colors cursor-pointer inline-flex items-center justify-center" title="Sao chép">
+                                        <iconify-icon icon="mdi:content-copy" class="text-[16px] w-4 h-4"></iconify-icon>
+                                    </button>
+                                </div>
+                            </td>
+                            <td class="py-3 px-4">
+                                <span class="inline-flex items-center px-2.5 py-1 rounded text-[13px] font-mono bg-blue-50 text-blue-700 border border-blue-200">
+                                    {{ d.type.name }}
+                                </span>
+                            </td>
+                            <td class="py-3 px-4 text-gray-600">
+                                <div class="def-desc-display">{{ d.description or '—' }}</div>
+                                {% if d.validations and d.validations|length > 0 %}
+                                <div class="flex items-center gap-1.5 mt-1 flex-wrap">
+                                    {% for v in d.validations %}
+                                    <span class="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.2 rounded border border-gray-200">
+                                        {{ v.name }}: {{ v.value }}
+                                    </span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-4 text-right whitespace-nowrap">
+                                <div class="inline-flex items-center gap-2">
+                                    <!-- Nút Chỉnh sửa Định nghĩa (Edit Definition) mới bổ sung -->
+                                    <button 
+                                        type="button" 
+                                        onclick="openEditDefinitionModal('{{ d.namespace }}', '{{ d.key }}', '{{ d.name|escape }}', '{{ d.type.name }}', '{{ (d.description or '')|escape }}')" 
+                                        class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-colors cursor-pointer"
+                                        title="Chỉnh sửa Tên & Mô tả định nghĩa này"
+                                    >
+                                        <iconify-icon icon="mdi:pencil-outline" class="text-[14px] w-3.5 h-3.5"></iconify-icon>
+                                        <span>Sửa</span>
+                                    </button>
+                                    
+                                    <!-- Nút Gán giá trị cho sản phẩm -->
+                                    <button 
+                                        type="button" 
+                                        onclick="applyDefinitionToCurrentProduct('{{ d.namespace }}', '{{ d.key }}', '{{ d.type.name }}', '{{ d.description or '' }}')" 
+                                        class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors cursor-pointer"
+                                        title="Áp dụng định nghĩa này cho sản phẩm đang chọn"
+                                    >
+                                        <span>Gán giá trị</span>
+                                        <iconify-icon icon="mdi:arrow-right" class="text-xs"></iconify-icon>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- ============================================================================== -->
+    <!-- MODAL: THÊM METAVIEW CHO SẢN PHẨM (#addMetafieldModal) -->
+    <!-- ============================================================================== -->
+    <div id="addMetafieldModal" onclick="if(event.target === this) closeAddMetafieldModal()" class="fixed inset-0 z-50 hidden bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl border border-gray-200 w-full max-w-xl overflow-hidden animate-in fade-in zoom-in duration-150">
+            <!-- Modal Header -->
+            <div class="p-5 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                        <iconify-icon icon="mdi:database-plus" class="text-xl"></iconify-icon>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-gray-900">Thêm Metafield cho Sản phẩm</h3>
+                        <p id="addModalProductSubtitle" class="text-xs text-gray-500 truncate max-w-sm"></p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeAddMetafieldModal()" class="text-gray-400 hover:text-gray-600 p-1 rounded-lg">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <!-- Modal Form -->
+            <form id="addMetafieldForm" onsubmit="submitAddMetafield(event)" class="p-6 space-y-4">
+                <input type="hidden" id="add_product_id" name="product_id" value="">
+
+                <!-- Chọn từ định nghĩa có sẵn của Store -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">
+                        Chọn nhanh từ định nghĩa của Store (Tùy chọn):
+                    </label>
+                    <select id="quickDefinitionSelect" onchange="onQuickDefinitionSelected(this.value)" class="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="">-- Nhập thủ công (Custom Metafield) --</option>
+                        {% for d in definitions %}
+                        <option value="{{ d.namespace }}|||{{ d.key }}|||{{ d.type.name }}|||{{ d.description or '' }}">
+                            {{ d.name }} ({{ d.namespace }}.{{ d.key }} • {{ d.type.name }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Namespace & Key -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">
+                            Namespace <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" id="add_namespace" name="namespace" required placeholder="ví dụ: custom, global, judgeme" class="w-full px-3 py-2 text-xs font-mono border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">
+                            Key <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" id="add_key" name="key" required placeholder="ví dụ: wood_type, material" class="w-full px-3 py-2 text-xs font-mono border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                </div>
+
+                <!-- Kiểu dữ liệu (Type) -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">
+                        Kiểu dữ liệu (Type) <span class="text-red-500">*</span>
+                    </label>
+                    <select id="add_type" name="type" required class="w-full px-3 py-2 text-xs font-mono bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="single_line_text_field">single_line_text_field (Văn bản một dòng)</option>
+                        <option value="multi_line_text_field">multi_line_text_field (Văn bản nhiều dòng)</option>
+                        <option value="json">json (Cấu trúc JSON)</option>
+                        <option value="boolean">boolean (true/false)</option>
+                        <option value="number_integer">number_integer (Số nguyên)</option>
+                        <option value="number_decimal">number_decimal (Số thập phân)</option>
+                        <option value="url">url (Đường dẫn liên kết)</option>
+                        <option value="color">color (Mã màu HEX)</option>
+                        <option value="date">date (Ngày YYYY-MM-DD)</option>
+                        <option value="date_time">date_time (Ngày giờ ISO)</option>
+                        <option value="rating">rating (Đánh giá sao)</option>
+                        <option value="list.single_line_text_field">list.single_line_text_field (Danh sách text)</option>
+                        <option value="product_reference">product_reference (Tham chiếu sản phẩm)</option>
+                        <option value="list.product_reference">list.product_reference (Danh sách tham chiếu SP)</option>
+                        <option value="metaobject_reference">metaobject_reference (Tham chiếu Metaobject)</option>
+                    </select>
+                </div>
+
+                <!-- Giá trị (Value) -->
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="block text-xs font-semibold text-gray-700">
+                            Giá trị (Value) <span class="text-red-500">*</span>
+                        </label>
+                        <span id="valueTypeTip" class="text-[11px] text-gray-400">Nhập chuỗi giá trị tương ứng với Type</span>
+                    </div>
+                    <textarea id="add_value" name="value" rows="4" required placeholder="Nhập giá trị metafield..." class="w-full px-3 py-2 text-xs font-mono border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 leading-relaxed"></textarea>
+                </div>
+
+                <!-- Mô tả (Description) -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">
+                        Mô tả (Description - Tùy chọn)
+                    </label>
+                    <input type="text" id="add_description" name="description" placeholder="Ghi chú mục đích của trường này" class="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+
+                <!-- Form Action Buttons -->
+                <div class="pt-4 border-t border-gray-200 flex items-center justify-end gap-3">
+                    <button type="button" onclick="closeAddMetafieldModal()" class="px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer">
+                        Hủy
+                    </button>
+                    <button type="submit" id="addSubmitBtn" class="inline-flex items-center gap-1.5 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-bold rounded-lg shadow-sm transition-colors cursor-pointer">
+                        <iconify-icon icon="mdi:check" class="text-sm"></iconify-icon>
+                        <span>Lưu Metafield</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============================================================================== -->
+    <!-- MODAL: SỬA METAVIEW CHO SẢN PHẨM (#editMetafieldModal) -->
+    <!-- ============================================================================== -->
+    <div id="editMetafieldModal" onclick="if(event.target === this) closeEditMetafieldModal()" class="fixed inset-0 z-50 hidden bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl border border-gray-200 w-full max-w-xl overflow-hidden animate-in fade-in zoom-in duration-150">
+            <!-- Modal Header -->
+            <div class="p-5 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                        <iconify-icon icon="mdi:pencil-outline" class="text-xl"></iconify-icon>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-gray-900">Chỉnh sửa Metafield Sản phẩm</h3>
+                        <p id="editModalSubtitle" class="text-xs text-gray-500 font-mono"></p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeEditMetafieldModal()" class="text-gray-400 hover:text-gray-600 p-1 rounded-lg">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <!-- Modal Form -->
+            <form id="editMetafieldForm" onsubmit="submitEditMetafield(event)" class="p-6 space-y-4">
+                <input type="hidden" id="edit_product_id" name="product_id" value="">
+                <input type="hidden" id="edit_namespace" name="namespace" value="">
+                <input type="hidden" id="edit_key" name="key" value="">
+
+                <!-- Namespace & Key Display (Readonly) -->
+                <div class="p-3 bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-between">
+                    <div>
+                        <span class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider block">Trường định danh:</span>
+                        <div class="font-mono text-xs font-bold text-indigo-600 mt-0.5" id="edit_display_identifier">
+                            namespace.key
+                        </div>
+                    </div>
+                    <span class="text-[10px] text-gray-400">Khóa cố định key</span>
+                </div>
+
+                <!-- Kiểu dữ liệu (Type): Cho phép chọn đổi Data Type linh hoạt -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">
+                        Kiểu dữ liệu (Data Type) <span class="text-red-500">*</span>
+                    </label>
+                    <select id="edit_type" name="type" required class="w-full px-3 py-2 text-xs font-mono bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="single_line_text_field">single_line_text_field (Văn bản một dòng)</option>
+                        <option value="multi_line_text_field">multi_line_text_field (Văn bản nhiều dòng)</option>
+                        <option value="json">json (Cấu trúc JSON)</option>
+                        <option value="boolean">boolean (true/false)</option>
+                        <option value="number_integer">number_integer (Số nguyên)</option>
+                        <option value="number_decimal">number_decimal (Số thập phân)</option>
+                        <option value="url">url (Đường dẫn liên kết)</option>
+                        <option value="color">color (Mã màu HEX)</option>
+                        <option value="date">date (Ngày YYYY-MM-DD)</option>
+                        <option value="date_time">date_time (Ngày giờ ISO)</option>
+                        <option value="rating">rating (Đánh giá sao)</option>
+                        <option value="list.single_line_text_field">list.single_line_text_field (Danh sách text)</option>
+                        <option value="product_reference">product_reference (Tham chiếu sản phẩm)</option>
+                        <option value="list.product_reference">list.product_reference (Danh sách tham chiếu SP)</option>
+                        <option value="metaobject_reference">metaobject_reference (Tham chiếu Metaobject)</option>
+                    </select>
+                </div>
+
+                <!-- Giá trị (Value) -->
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="block text-xs font-semibold text-gray-700">
+                            Giá trị (Value) <span class="text-red-500">*</span>
+                        </label>
+                        <div class="flex items-center gap-2">
+                            <span id="editUrlOpenBtnWrapper" class="hidden">
+                                <a id="editUrlOpenBtn" href="#" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-[11px] text-indigo-600 hover:text-indigo-800 font-semibold">
+                                    <span>Mở URL</span>
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                                </a>
+                            </span>
+                        </div>
+                    </div>
+                    <textarea id="edit_value" name="value" rows="5" required oninput="checkEditValueUrl(this.value)" class="w-full px-3 py-2 text-xs font-mono border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 leading-relaxed"></textarea>
+                </div>
+
+                <!-- Mô tả (Description) -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">
+                        Mô tả (Description)
+                    </label>
+                    <input type="text" id="edit_description" name="description" placeholder="Ghi chú mô tả" class="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+
+                <!-- Form Action Buttons -->
+                <div class="pt-4 border-t border-gray-200 flex items-center justify-end gap-3">
+                    <button type="button" onclick="closeEditMetafieldModal()" class="px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer">
+                        Hủy
+                    </button>
+                    <button type="submit" id="editSubmitBtn" class="inline-flex items-center gap-1.5 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-bold rounded-lg shadow-sm transition-colors cursor-pointer">
+                        <iconify-icon icon="mdi:check" class="text-sm"></iconify-icon>
+                        <span>Cập nhật Metafield</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============================================================================== -->
+    <!-- MODAL: SỬA ĐỊNH NGHĨA METAVIEW CỦA STORE (#editDefinitionModal) -->
+    <!-- ============================================================================== -->
+    <div id="editDefinitionModal" onclick="if(event.target === this) closeEditDefinitionModal()" class="fixed inset-0 z-50 hidden bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl border border-gray-200 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-150">
+            <!-- Modal Header -->
+            <div class="p-5 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center">
+                        <iconify-icon icon="mdi:shape-outline" class="text-xl"></iconify-icon>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-gray-900">Chỉnh sửa Định nghĩa Metafield</h3>
+                        <p id="editDefSubtitle" class="text-xs text-gray-500 font-mono"></p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeEditDefinitionModal()" class="text-gray-400 hover:text-gray-600 p-1 rounded-lg">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <!-- Modal Form -->
+            <form id="editDefinitionForm" onsubmit="submitEditDefinition(event)" class="p-6 space-y-4">
+                <input type="hidden" id="edit_def_namespace" name="namespace" value="">
+                <input type="hidden" id="edit_def_key" name="key" value="">
+
+                <!-- Namespace & Key Display -->
+                <div class="p-3 bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-between">
+                    <div>
+                        <span class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider block">Namespace & Key:</span>
+                        <div class="font-mono text-xs font-bold text-blue-600 mt-0.5" id="edit_def_display_identifier">
+                            namespace.key
+                        </div>
+                    </div>
+                    <span class="text-[10px] text-gray-400">Định danh Store</span>
+                </div>
+
+                <!-- Tên định nghĩa (Name) -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">
+                        Tên định nghĩa (Name) <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" id="edit_def_name" name="name" required class="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <!-- Kiểu dữ liệu (Data Type - Readonly với hướng dẫn rõ ràng font 14px) -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">
+                        Kiểu dữ liệu (Data Type)
+                    </label>
+                    <input type="text" id="edit_def_type" name="type" readonly class="w-full px-3 py-2 text-xs font-mono bg-gray-100 border border-gray-300 rounded-lg text-gray-600 cursor-not-allowed">
+                    <div class="mt-2.5 p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-[14px] text-amber-900 leading-relaxed">
+                        <div class="font-bold flex items-center gap-1.5 text-amber-950 mb-1.5 text-[14px]">
+                            <iconify-icon icon="mdi:information" class="text-base text-amber-600"></iconify-icon>
+                            <span>Lưu ý về Kiểu dữ liệu trong Shopify:</span>
+                        </div>
+                        <p class="text-[14px] text-amber-900">
+                            Shopify khóa cố định kiểu dữ liệu của Definition khi đã tạo để bảo vệ tính toàn vẹn dữ liệu.
+                        </p>
+                        <ul class="list-disc pl-5 mt-2 space-y-1.5 text-[14px] text-amber-900">
+                            <li>Nếu muốn đổi kiểu dữ liệu cho <strong>sản phẩm cụ thể</strong>: Hãy vào tab <strong>"Quản lý theo Sản phẩm"</strong>, bấm nút <strong>Sửa</strong> và chọn kiểu dữ liệu mới.</li>
+                            <li>Nếu muốn đổi kiểu dữ liệu cho <strong>toàn Store</strong>: Vui lòng vào <a target="_blank" rel="noopener noreferrer" href="https://admin.shopify.com/store/{{ active_shop or shopify_shop }}/settings/custom_data" class="underline font-bold text-amber-950 hover:text-amber-800">Shopify Custom Data</a> để xóa và định nghĩa lại.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Mô tả (Description) -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">
+                        Mô tả (Description)
+                    </label>
+                    <textarea id="edit_def_description" name="description" rows="3" placeholder="Mô tả mục đích của định nghĩa này..." class="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 leading-relaxed"></textarea>
+                </div>
+
+                <!-- Form Action Buttons -->
+                <div class="pt-4 border-t border-gray-200 flex items-center justify-end gap-3">
+                    <button type="button" onclick="closeEditDefinitionModal()" class="px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer">
+                        Hủy
+                    </button>
+                    <button type="submit" id="editDefSubmitBtn" class="inline-flex items-center gap-1.5 px-5 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-bold rounded-lg shadow-sm transition-colors cursor-pointer">
+                        <iconify-icon icon="mdi:check" class="text-sm"></iconify-icon>
+                        <span>Lưu Thay Đổi</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============================================================================== -->
+    <!-- MODAL: XÓA METAVIEW KHỎI SẢN PHẨM (#deleteMetafieldModal) -->
+    <!-- ============================================================================== -->
+    <div id="deleteMetafieldModal" onclick="if(event.target === this) closeDeleteMetafieldModal()" class="fixed inset-0 z-50 hidden bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl border border-gray-200 w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-150">
+            <div class="p-6 text-center">
+                <div class="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-4">
+                    <iconify-icon icon="mdi:alert-circle-outline" class="text-3xl"></iconify-icon>
+                </div>
+                <h3 class="text-base font-bold text-gray-900 mb-1">Xác nhận xóa Metafield?</h3>
+                <p class="text-xs text-gray-500 mb-4">
+                    Hành động này sẽ xóa vĩnh viễn trường dữ liệu <code id="deleteIdentifier" class="font-bold text-red-600 bg-red-50 px-1 py-0.5 rounded"></code> khỏi sản phẩm. Dữ liệu này không thể khôi phục.
+                </p>
+                <div class="flex items-center justify-center gap-3">
+                    <button type="button" onclick="closeDeleteMetafieldModal()" class="px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer">
+                        Hủy bỏ
+                    </button>
+                    <button type="button" id="confirmDeleteBtn" onclick="confirmDeleteMetafield()" class="inline-flex items-center gap-1.5 px-5 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors cursor-pointer">
+                        <iconify-icon icon="mdi:trash-can-outline" class="text-sm"></iconify-icon>
+                        <span>Xóa vĩnh viễn</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toastNotification" class="fixed top-5 right-5 z-50 transform transition-all duration-300 translate-y-[-150%] opacity-0 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg border text-xs font-semibold">
+        <iconify-icon id="toastIcon" class="text-lg"></iconify-icon>
+        <span id="toastMessage"></span>
+    </div>
+
+    <!-- Drawer Menu Component -->
+    {% include "drawer.html" %}
+
+    <!-- ============================================================================== -->
+    <!-- JAVASCRIPT LOGIC -->
+    <!-- ============================================================================== -->
+    <script>
+        const CURRENT_STORE_TYPE = "{{ store_type }}";
+        const ACTIVE_SHOP = "{{ active_shop or shopify_shop }}";
+        let CURRENT_SELECTED_PRODUCT_ID = "{{ selected_product.numeric_id if selected_product else '' }}";
+        let CURRENT_LOADED_PRODUCT = null;
+        let CURRENT_PRODUCT_STORE = CURRENT_STORE_TYPE;
+        let ALL_PRODUCTS_DATA = {{ products|tojson|safe }};
+        let deleteTarget = { productId: '', namespace: '', key: '' };
+
+        // 1. Chuyển đổi Store Mặc định ⟷ Store Riêng
+        function handleStoreSwitch(isChecked) {
+            const newStoreType = isChecked ? 'custom' : 'default';
+            showToast('Đang chuyển đổi cửa hàng...', 'info');
+            const searchParam = new URLSearchParams(window.location.search).get('search') || '';
+            const queryParam = new URLSearchParams(window.location.search).get('query') || '';
+            let newUrl = `/product-metafields?store_type=${newStoreType}`;
+            if (searchParam) newUrl += `&search=${encodeURIComponent(searchParam)}`;
+            if (queryParam) newUrl += `&query=${encodeURIComponent(queryParam)}&tab=products`;
+            window.location.href = newUrl;
+        }
+
+        // 2. Chuyển đổi View Tab (Products vs Definitions)
+        function switchViewTab(tab) {
+            const viewProducts = document.getElementById('view-products');
+            const viewDefs = document.getElementById('view-definitions');
+            const btnProducts = document.getElementById('tab-btn-products');
+            const btnDefs = document.getElementById('tab-btn-definitions');
+            const badgeProducts = document.getElementById('tab-badge-products');
+            const badgeDefs = document.getElementById('tab-badge-definitions');
+
+            if (tab === 'products') {
+                viewProducts.classList.remove('hidden');
+                viewDefs.classList.add('hidden');
+                btnProducts.className = "px-4 py-2 text-xs font-semibold rounded-lg transition-colors flex items-center gap-2 bg-indigo-50 text-indigo-600 border border-indigo-200 shadow-2xs cursor-pointer";
+                if (badgeProducts) badgeProducts.className = "px-2 py-0.5 text-[11px] font-semibold rounded-full bg-indigo-200 text-indigo-800";
+                btnDefs.className = "px-4 py-2 text-xs font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-2 cursor-pointer";
+                if (badgeDefs) badgeDefs.className = "px-2 py-0.5 text-[14px] font-bold rounded-full bg-gray-200 text-gray-700";
+                
+                // Focus ô input tìm kiếm
+                setTimeout(() => {
+                    const inp = document.getElementById('productLookupInput');
+                    if (inp && !CURRENT_LOADED_PRODUCT) inp.focus();
+                }, 150);
+            } else {
+                viewProducts.classList.add('hidden');
+                viewDefs.classList.remove('hidden');
+                btnDefs.className = "px-4 py-2 text-xs font-semibold rounded-lg transition-colors flex items-center gap-2 bg-indigo-50 text-indigo-600 border border-indigo-200 shadow-2xs cursor-pointer";
+                if (badgeDefs) badgeDefs.className = "px-2 py-0.5 text-[14px] font-bold rounded-full bg-indigo-200 text-indigo-800";
+                btnProducts.className = "px-4 py-2 text-xs font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-2 cursor-pointer";
+                if (badgeProducts) badgeProducts.className = "px-2 py-0.5 text-[11px] font-semibold rounded-full bg-gray-200 text-gray-700";
+            }
+        }
+
+        // 3. Xử lý nhận diện định dạng ô tìm kiếm realtime
+        function handleLookupInput(val) {
+            const raw = (val || '').trim();
+            const iconContainer = document.getElementById('lookupInputIcon');
+            const badge = document.getElementById('lookupDetectionBadge');
+            const clearBtn = document.getElementById('lookupClearBtn');
+
+            if (clearBtn) {
+                if (raw.length > 0) clearBtn.classList.remove('hidden');
+                else clearBtn.classList.add('hidden');
+            }
+
+            if (!raw) {
+                if (iconContainer) iconContainer.innerHTML = '<iconify-icon icon="mdi:magnify" class="text-lg text-gray-400"></iconify-icon>';
+                if (badge) badge.classList.add('hidden');
+                return;
+            }
+
+            // Nhận diện kiểu dữ liệu
+            const isUrl = raw.startsWith('http://') || raw.startsWith('https://') || raw.includes('/products/');
+            const isNumericId = /^\d+$/.test(raw) || raw.startsWith('gid://shopify/Product/');
+            const isAdminProductUrl = isUrl && raw.includes('admin.shopify.com');
+
+            if (isAdminProductUrl || isNumericId) {
+                if (iconContainer) iconContainer.innerHTML = '<iconify-icon icon="mdi:identifier" class="text-lg text-blue-600"></iconify-icon>';
+                if (badge) {
+                    badge.textContent = 'ID Sản phẩm';
+                    badge.className = 'px-2 py-0.5 text-[10px] font-bold rounded-full bg-blue-100 text-blue-700 border border-blue-200';
+                    badge.classList.remove('hidden');
+                }
+            } else if (isUrl) {
+                if (iconContainer) iconContainer.innerHTML = '<iconify-icon icon="mdi:link-variant" class="text-lg text-amber-600"></iconify-icon>';
+                if (badge) {
+                    badge.textContent = 'URL Sản phẩm';
+                    badge.className = 'px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-100 text-amber-700 border border-amber-200';
+                    badge.classList.remove('hidden');
+                }
+            } else {
+                if (iconContainer) iconContainer.innerHTML = '<iconify-icon icon="mdi:tag-outline" class="text-lg text-purple-600"></iconify-icon>';
+                if (badge) {
+                    badge.textContent = 'Handle Sản phẩm';
+                    badge.className = 'px-2 py-0.5 text-[10px] font-bold rounded-full bg-purple-100 text-purple-700 border border-purple-200';
+                    badge.classList.remove('hidden');
+                }
+            }
+        }
+
+        function clearLookupInput() {
+            const inp = document.getElementById('productLookupInput');
+            if (inp) {
+                inp.value = '';
+                handleLookupInput('');
+                inp.focus();
+            }
+        }
+
+        function focusLookupInput() {
+            const inp = document.getElementById('productLookupInput');
+            if (inp) inp.focus();
+        }
+
+        function fillAndLookup(sampleVal) {
+            switchViewTab('products');
+            const inp = document.getElementById('productLookupInput');
+            if (inp) {
+                inp.value = sampleVal;
+                handleLookupInput(sampleVal);
+            }
+            doLookupProduct(sampleVal);
+        }
+
+        // 4. Thực hiện tra cứu sản phẩm và Metafields
+        function doLookupProduct(customQuery) {
+            const inputEl = document.getElementById('productLookupInput');
+            const query = (customQuery !== undefined ? customQuery : (inputEl ? inputEl.value : '')).trim();
+
+            if (!query) {
+                showToast('Vui lòng nhập ID hoặc Handle của sản phẩm cần tìm!', 'error');
+                if (inputEl) inputEl.focus();
+                return;
+            }
+
+            // Cập nhật trạng thái nút OK
+            const btn = document.getElementById('lookupSubmitBtn');
+            const btnIcon = document.getElementById('lookupBtnIcon');
+            const btnText = document.getElementById('lookupBtnText');
+            btn.disabled = true;
+            btnIcon.setAttribute('icon', 'mdi:loading');
+            btnIcon.classList.add('animate-spin');
+            btnText.textContent = 'Đang tìm...';
+
+            // Chuyển container sang trạng thái Loading
+            document.getElementById('lookupStateInitial').classList.add('hidden');
+            document.getElementById('lookupStateError').classList.add('hidden');
+            document.getElementById('lookupStateSuccess').classList.add('hidden');
+            document.getElementById('lookupStateLoading').classList.remove('hidden');
+
+            const isIdQuery = /^\d+$/.test(query) || query.startsWith('gid://shopify/Product/');
+            const loadingSubtext = document.getElementById('lookupLoadingSubtext');
+            if (loadingSubtext) {
+                loadingSubtext.textContent = isIdQuery
+                    ? `Hệ thống đang dò tìm sản phẩm có ID '${query}' trên cả Store Mặc Định và Store Riêng. Vui lòng đợi...`
+                    : `Hệ thống đang tra cứu sản phẩm có Handle '${query}' trên Store... Vui lòng đợi...`;
+            }
+
+            // Gọi API tra cứu
+            fetch(`/api/product-metafields/lookup?query=${encodeURIComponent(query)}&store_type=${CURRENT_STORE_TYPE}`)
+                .then(r => r.json())
+                .then(data => {
+                    btn.disabled = false;
+                    btnIcon.setAttribute('icon', 'mdi:check-bold');
+                    btnIcon.classList.remove('animate-spin');
+                    btnText.textContent = 'OK';
+
+                    if (data.success && data.product) {
+                        CURRENT_LOADED_PRODUCT = data.product;
+                        CURRENT_PRODUCT_STORE = data.found_in_store || CURRENT_STORE_TYPE;
+                        CURRENT_SELECTED_PRODUCT_ID = data.product.numeric_id;
+
+                        // Render kết quả
+                        renderFoundProductDetails(data.product, CURRENT_PRODUCT_STORE);
+
+                        document.getElementById('lookupStateLoading').classList.add('hidden');
+                        document.getElementById('lookupStateSuccess').classList.remove('hidden');
+
+                        // Cập nhật URL không reload
+                        const newUrl = `?tab=products&query=${encodeURIComponent(query)}`;
+                        window.history.replaceState({ path: newUrl }, '', newUrl);
+
+                        showToast(`Đã tìm thấy sản phẩm trên ${data.product.store_name || 'Store'}!`, 'success');
+                    } else {
+                        document.getElementById('lookupStateLoading').classList.add('hidden');
+                        document.getElementById('lookupStateError').classList.remove('hidden');
+                        document.getElementById('lookupErrorMessage').textContent = data.message || 'Không tìm thấy sản phẩm phù hợp trên hệ thống.';
+                        showToast(data.message || 'Không tìm thấy sản phẩm!', 'error');
+                    }
+                })
+                .catch(err => {
+                    btn.disabled = false;
+                    btnIcon.setAttribute('icon', 'mdi:check-bold');
+                    btnIcon.classList.remove('animate-spin');
+                    btnText.textContent = 'OK';
+
+                    document.getElementById('lookupStateLoading').classList.add('hidden');
+                    document.getElementById('lookupStateError').classList.remove('hidden');
+                    document.getElementById('lookupErrorMessage').textContent = 'Lỗi kết nối mạng: ' + err.message;
+                    showToast('Lỗi mạng khi tra cứu: ' + err.message, 'error');
+                });
+        }
+
+        // 5. Render thông tin cơ bản sản phẩm và bảng Metafields
+        function renderFoundProductDetails(prod, foundStore) {
+            // Header card basic info
+            document.getElementById('foundProdTitle').textContent = prod.title || 'Không có tiêu đề';
+            document.getElementById('foundProdTitle').title = prod.title || '';
+            document.getElementById('foundProdId').textContent = prod.numeric_id || '';
+            document.getElementById('foundProdHandle').textContent = prod.handle || '';
+            document.getElementById('foundProdVariants').textContent = `${prod.totalVariants || 1} biến thể`;
+            document.getElementById('foundProdMetafieldsCount').textContent = `${prod.metafields_count || (prod.metafields_list || []).length} Metafields`;
+
+            // Thumbnail
+            const imgEl = document.getElementById('foundProdImg');
+            const noImgEl = document.getElementById('foundProdNoImg');
+            if (prod.featuredImage && prod.featuredImage.url) {
+                imgEl.src = prod.featuredImage.url;
+                imgEl.alt = prod.title || '';
+                imgEl.classList.remove('hidden');
+                noImgEl.classList.add('hidden');
+            } else {
+                imgEl.classList.add('hidden');
+                noImgEl.classList.remove('hidden');
+            }
+
+            // Store Badge (Nổi bật cho biết tìm thấy ở Store nào)
+            const storeBadge = document.getElementById('foundProdStoreBadge');
+            const isCustomStore = (foundStore === 'custom');
+            const shopName = prod.store_shop || (isCustomStore ? '236qm8-w7' : 'wrydeco');
+            if (isCustomStore) {
+                storeBadge.className = 'px-2.5 py-0.5 text-xs font-bold rounded-full bg-purple-100 text-purple-800 border border-purple-200 inline-flex items-center gap-1';
+                storeBadge.innerHTML = `<iconify-icon icon="mdi:store-check"></iconify-icon><span>Store Riêng (${shopName})</span>`;
+            } else {
+                storeBadge.className = 'px-2.5 py-0.5 text-xs font-bold rounded-full bg-blue-100 text-blue-800 border border-blue-200 inline-flex items-center gap-1';
+                storeBadge.innerHTML = `<iconify-icon icon="mdi:store-check"></iconify-icon><span>Store Mặc Định (${shopName})</span>`;
+            }
+
+            // Status Badge
+            const statusBadge = document.getElementById('foundProdStatusBadge');
+            const status = (prod.status || '').toUpperCase();
+            if (status === 'ACTIVE') {
+                statusBadge.className = 'px-2.5 py-0.5 text-xs font-bold rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200';
+                statusBadge.textContent = 'ACTIVE';
+            } else if (status === 'DRAFT') {
+                statusBadge.className = 'px-2.5 py-0.5 text-xs font-bold rounded-full bg-amber-100 text-amber-800 border border-amber-200';
+                statusBadge.textContent = 'DRAFT';
+            } else {
+                statusBadge.className = 'px-2.5 py-0.5 text-xs font-bold rounded-full bg-gray-100 text-gray-700 border border-gray-200';
+                statusBadge.textContent = status || 'UNKNOWN';
+            }
+
+            // Quick Links
+            const adminLink = document.getElementById('foundProdAdminLink');
+            adminLink.href = `https://admin.shopify.com/store/${shopName}/products/${prod.numeric_id}`;
+
+            const sfLink = document.getElementById('foundProdStorefrontLink');
+            sfLink.href = `https://wrydeco.com/products/${prod.handle}`;
+
+            const toolLink = document.getElementById('foundProdToolLink');
+            toolLink.href = `/products/${prod.handle}?store_type=${foundStore}`;
+
+            // Render Namespace pills
+            renderFoundNamespacePills(prod.metafields_list || []);
+
+            // Render Metafields table
+            renderFoundMetafieldsTable(prod.metafields_list || []);
+        }
+
+        // 6. Render Namespace Filter Pills
+        function renderFoundNamespacePills(mfs) {
+            const container = document.getElementById('foundProdNamespaceContainer');
+            container.innerHTML = '';
+
+            const nsSet = new Set();
+            mfs.forEach(m => {
+                if (m.namespace) nsSet.add(m.namespace);
+            });
+            const nsList = Array.from(nsSet).sort();
+
+            // Pill 'Tất cả'
+            const allBtn = document.createElement('button');
+            allBtn.type = 'button';
+            allBtn.className = 'found-ns-pill active whitespace-nowrap flex-shrink-0 px-3 py-1 text-xs font-semibold rounded-lg bg-indigo-100 text-indigo-700 border border-indigo-200 shadow-2xs cursor-pointer';
+            allBtn.textContent = `Tất cả (${mfs.length})`;
+            allBtn.onclick = function() { filterFoundMetafieldsByNamespace('ALL', this); };
+            container.appendChild(allBtn);
+
+            nsList.forEach(ns => {
+                const count = mfs.filter(m => m.namespace === ns).length;
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'found-ns-pill whitespace-nowrap flex-shrink-0 px-3 py-1 text-xs font-medium rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200 transition-colors cursor-pointer';
+                btn.textContent = `${ns} (${count})`;
+                btn.onclick = function() { filterFoundMetafieldsByNamespace(ns, this); };
+                container.appendChild(btn);
+            });
+        }
+
+        // 7. Render Metafields Table
+        function renderFoundMetafieldsTable(mfs) {
+            const tbody = document.getElementById('foundMetafieldsTableBody');
+            tbody.innerHTML = '';
+
+            if (mfs.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="py-12 text-center text-gray-400">
+                            <iconify-icon icon="mdi:database-remove-outline" class="text-4xl text-gray-300 mb-2"></iconify-icon>
+                            <p class="text-xs font-medium text-gray-500">Sản phẩm này hiện chưa có Metafield nào.</p>
+                            <button type="button" onclick="openAddMetafieldModal()" class="mt-3 inline-flex items-center gap-1.5 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors cursor-pointer">
+                                <iconify-icon icon="mdi:plus-circle" class="text-base"></iconify-icon>
+                                <span>Thêm Metafield đầu tiên</span>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            mfs.forEach((mf, idx) => {
+                const tr = document.createElement('tr');
+                tr.className = 'found-metafield-row hover:bg-slate-50 transition-colors';
+                tr.setAttribute('data-namespace', mf.namespace);
+                tr.setAttribute('data-key', mf.key);
+                tr.setAttribute('data-value', mf.value || '');
+
+                const isUrl = (mf.value || '').startsWith('http://') || (mf.value || '').startsWith('https://');
+
+                tr.innerHTML = `
+                    <td class="py-3 px-4 text-center text-gray-500 font-mono text-xs font-semibold">${idx + 1}</td>
+                    <td class="py-3 px-4 align-top">
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                ${escapeHtml(mf.namespace)}
+                            </span>
+                            <span class="font-bold text-gray-900 font-mono text-xs">${escapeHtml(mf.key)}</span>
+                            <!-- Nút copy namespace.key -->
+                            <button type="button" onclick="copyText('${escapeHtml(mf.namespace)}.${escapeHtml(mf.key)}', this)" class="p-1 text-gray-400 hover:text-indigo-600 hover:bg-gray-100 rounded-md transition-colors cursor-pointer inline-flex items-center justify-center" title="Sao chép namespace.key">
+                                <iconify-icon icon="mdi:content-copy" class="text-sm"></iconify-icon>
+                            </button>
+                        </div>
+                        ${mf.description ? `<p class="text-[11px] text-gray-500 mt-1 italic">${escapeHtml(mf.description)}</p>` : ''}
+                    </td>
+                    <td class="py-3 px-4 align-top">
+                        <span class="inline-flex items-center px-2.5 py-1 rounded text-[13px] font-mono font-medium bg-gray-100 text-gray-700 border border-gray-200">
+                            ${escapeHtml(mf.type)}
+                        </span>
+                    </td>
+                    <td class="py-3 px-4 align-top font-mono text-[11px] text-gray-800 break-all">
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="max-h-24 overflow-y-auto whitespace-pre-wrap flex-1 bg-gray-50 p-2.5 rounded-lg border border-gray-200 text-gray-700 leading-relaxed font-sans text-xs select-all">
+                                ${escapeHtml(mf.value || '')}
+                            </div>
+                            <div class="flex flex-col gap-1.5 flex-shrink-0">
+                        <button type="button" onclick="copyMetafieldValue(${idx}, this)" class="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-gray-200 rounded-lg transition-colors cursor-pointer inline-flex items-center justify-center shadow-2xs" title="Sao chép giá trị">
+                                    <iconify-icon icon="mdi:content-copy" class="text-sm"></iconify-icon>
+                                </button>
+                                ${isUrl ? `
+                                <a href="${escapeHtml(mf.value)}" target="_blank" rel="noopener noreferrer" class="p-1.5 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-100 rounded-lg transition-colors inline-flex items-center justify-center shadow-2xs" title="Mở liên kết trong tab mới">
+                                    <iconify-icon icon="mdi:open-in-new" class="text-sm"></iconify-icon>
+                                </a>` : ''}
+                            </div>
+                        </div>
+                    </td>
+                    <td class="py-3 px-4 align-top text-right whitespace-nowrap">
+                        <div class="inline-flex items-center gap-1.5">
+                            <button type="button" onclick="openEditMetafieldModal('${CURRENT_LOADED_PRODUCT.numeric_id}', '${escapeHtml(mf.namespace)}', '${escapeHtml(mf.key)}', '${escapeHtml(mf.type)}', '${escapeHtml(mf.description || '')}')" class="p-1.5 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer inline-flex items-center justify-center" title="Chỉnh sửa Metafield này">
+                                <iconify-icon icon="mdi:pencil-outline" class="text-base"></iconify-icon>
+                            </button>
+                            <button type="button" onclick="openDeleteMetafieldModal('${CURRENT_LOADED_PRODUCT.numeric_id}', '${escapeHtml(mf.namespace)}', '${escapeHtml(mf.key)}')" class="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer inline-flex items-center justify-center" title="Xóa Metafield này">
+                                <iconify-icon icon="mdi:trash-can-outline" class="text-base"></iconify-icon>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // 8. Lọc Metafields theo Namespace (Tab tra cứu)
+        function filterFoundMetafieldsByNamespace(ns, btnEl) {
+            document.querySelectorAll('.found-ns-pill').forEach(btn => {
+                btn.className = 'found-ns-pill whitespace-nowrap flex-shrink-0 px-3 py-1 text-xs font-medium rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200 transition-colors cursor-pointer';
+            });
+            if (btnEl) {
+                btnEl.className = 'found-ns-pill active whitespace-nowrap flex-shrink-0 px-3 py-1 text-xs font-semibold rounded-lg bg-indigo-100 text-indigo-700 border border-indigo-200 shadow-2xs cursor-pointer';
+            }
+
+            document.querySelectorAll('.found-metafield-row').forEach(row => {
+                const rowNs = row.getAttribute('data-namespace');
+                if (ns === 'ALL' || rowNs === ns) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        // 9. Lọc Metafields theo text search
+        function filterFoundMetafields(keyword) {
+            const q = (keyword || '').trim().toLowerCase();
+            document.querySelectorAll('.found-metafield-row').forEach(row => {
+                const ns = (row.getAttribute('data-namespace') || '').toLowerCase();
+                const key = (row.getAttribute('data-key') || '').toLowerCase();
+                const val = (row.getAttribute('data-value') || '').toLowerCase();
+                if (!q || ns.includes(q) || key.includes(q) || val.includes(q)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        
+        // Copy giá trị Metafield an toàn theo index
+        function copyMetafieldValue(idx, triggerEl) {
+            if (!CURRENT_LOADED_PRODUCT || !CURRENT_LOADED_PRODUCT.metafields_list) return;
+            const mf = CURRENT_LOADED_PRODUCT.metafields_list[idx];
+            if (mf && mf.value !== undefined) {
+                copyText(mf.value, triggerEl);
+            }
+        }
+
+        // 10. Copy text tiện ích
+        function copyText(text, triggerEl) {
+            if (!text) return;
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('Đã sao chép vào bộ nhớ tạm!', 'success');
+                if (triggerEl) {
+                    const originalHtml = triggerEl.innerHTML;
+                    triggerEl.innerHTML = '<iconify-icon icon="mdi:check" class="text-emerald-500 text-sm"></iconify-icon>';
+                    setTimeout(() => {
+                        triggerEl.innerHTML = originalHtml;
+                    }, 2000);
+                }
+            }).catch(err => {
+                showToast('Không thể sao chép: ' + err.message, 'error');
+            });
+        }
+
+        // 11. Toast Notification Handler
+        function showToast(msg, type = 'success') {
+            const toast = document.getElementById('toastNotification');
+            const toastIcon = document.getElementById('toastIcon');
+            const toastMsg = document.getElementById('toastMessage');
+
+            toastMsg.textContent = msg;
+            if (type === 'success') {
+                toast.className = 'fixed top-5 right-5 z-50 transform transition-all duration-300 translate-y-0 opacity-100 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg border text-xs font-semibold bg-emerald-50 text-emerald-800 border-emerald-200';
+                toastIcon.className = 'text-lg text-emerald-600';
+                toastIcon.setAttribute('icon', 'mdi:check-circle');
+            } else if (type === 'error') {
+                toast.className = 'fixed top-5 right-5 z-50 transform transition-all duration-300 translate-y-0 opacity-100 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg border text-xs font-semibold bg-red-50 text-red-800 border-red-200';
+                toastIcon.className = 'text-lg text-red-600';
+                toastIcon.setAttribute('icon', 'mdi:alert-circle');
+            } else {
+                toast.className = 'fixed top-5 right-5 z-50 transform transition-all duration-300 translate-y-0 opacity-100 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg border text-xs font-semibold bg-indigo-50 text-indigo-800 border-indigo-200';
+                toastIcon.className = 'text-lg text-indigo-600';
+                toastIcon.setAttribute('icon', 'mdi:information');
+            }
+
+            setTimeout(() => {
+                toast.classList.replace('translate-y-0', 'translate-y-[-150%]');
+                toast.classList.replace('opacity-100', 'opacity-0');
+            }, 3500);
+        }
+
+        // Reload lại dữ liệu sản phẩm đang xem sau khi thêm/sửa/xóa
+        function reloadCurrentProduct() {
+            if (CURRENT_LOADED_PRODUCT && (CURRENT_LOADED_PRODUCT.numeric_id || CURRENT_LOADED_PRODUCT.handle)) {
+                doLookupProduct(CURRENT_LOADED_PRODUCT.numeric_id);
+            }
+        }
+
+        // 12. Modal Thêm Metafield
+        function openAddMetafieldModal() {
+            if (!CURRENT_LOADED_PRODUCT) {
+                showToast('Vui lòng tra cứu một sản phẩm trước khi thêm Metafield', 'error');
+                return;
+            }
+            document.getElementById('add_product_id').value = CURRENT_LOADED_PRODUCT.numeric_id;
+            document.getElementById('addModalProductSubtitle').textContent = CURRENT_LOADED_PRODUCT.title ? `${CURRENT_LOADED_PRODUCT.title} (#${CURRENT_LOADED_PRODUCT.numeric_id})` : `Sản phẩm #${CURRENT_LOADED_PRODUCT.numeric_id}`;
+            document.getElementById('quickDefinitionSelect').value = '';
+            document.getElementById('add_namespace').value = '';
+            document.getElementById('add_key').value = '';
+            document.getElementById('add_value').value = '';
+            document.getElementById('add_description').value = '';
+            document.getElementById('addMetafieldModal').classList.remove('hidden');
+        }
+
+        function closeAddMetafieldModal() {
+            document.getElementById('addMetafieldModal').classList.add('hidden');
+        }
+
+        function onQuickDefinitionSelected(val) {
+            if (!val) return;
+            const parts = val.split('|||');
+            if (parts.length >= 3) {
+                document.getElementById('add_namespace').value = parts[0];
+                document.getElementById('add_key').value = parts[1];
+                const typeSelect = document.getElementById('add_type');
+                typeSelect.value = parts[2];
+                if (!typeSelect.value) {
+                    const opt = document.createElement('option');
+                    opt.value = parts[2];
+                    opt.text = parts[2];
+                    typeSelect.add(opt);
+                    typeSelect.value = parts[2];
+                }
+                document.getElementById('add_description').value = parts[3] || '';
+            }
+        }
+
+        function applyDefinitionToCurrentProduct(ns, key, type, desc) {
+            switchViewTab('products');
+            if (!CURRENT_LOADED_PRODUCT) {
+                showToast('Vui lòng tra cứu một sản phẩm trước khi gán Metafield này!', 'info');
+                return;
+            }
+            openAddMetafieldModal();
+            document.getElementById('add_namespace').value = ns;
+            document.getElementById('add_key').value = key;
+            const typeSelect = document.getElementById('add_type');
+            typeSelect.value = type;
+            if (!typeSelect.value) {
+                const opt = document.createElement('option');
+                opt.value = type;
+                opt.text = type;
+                typeSelect.add(opt);
+                typeSelect.value = type;
+            }
+            document.getElementById('add_description').value = desc;
+        }
+
+        function submitAddMetafield(e) {
+            e.preventDefault();
+            const btn = document.getElementById('addSubmitBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<iconify-icon icon="mdi:loading" class="animate-spin text-sm"></iconify-icon><span>Đang lưu...</span>';
+
+            const payload = {
+                product_id: document.getElementById('add_product_id').value,
+                namespace: document.getElementById('add_namespace').value.trim(),
+                key: document.getElementById('add_key').value.trim(),
+                value: document.getElementById('add_value').value,
+                type: document.getElementById('add_type').value.trim(),
+                description: document.getElementById('add_description').value.trim(),
+                store_type: CURRENT_PRODUCT_STORE || CURRENT_STORE_TYPE
+            };
+
+            fetch('/api/product-metafields/set', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(r => r.json())
+            .then(data => {
+                btn.disabled = false;
+                btn.innerHTML = '<iconify-icon icon="mdi:check" class="text-sm"></iconify-icon><span>Lưu Metafield</span>';
+                if (data.success) {
+                    showToast(data.message || 'Thêm Metafield thành công!', 'success');
+                    closeAddMetafieldModal();
+                    reloadCurrentProduct();
+                } else {
+                    showToast(data.message || 'Lỗi khi lưu Metafield', 'error');
+                }
+            })
+            .catch(err => {
+                btn.disabled = false;
+                btn.innerHTML = '<iconify-icon icon="mdi:check" class="text-sm"></iconify-icon><span>Lưu Metafield</span>';
+                showToast('Lỗi mạng: ' + err.message, 'error');
+            });
+        }
+
+        // Modal Sửa Metafield
+        function openEditMetafieldModal(productId, namespace, key, type, description) {
+            const mfs = CURRENT_LOADED_PRODUCT ? (CURRENT_LOADED_PRODUCT.metafields_list || []) : [];
+            const mf = mfs.find(m => m.namespace === namespace && m.key === key);
+            const val = mf ? mf.value : '';
+
+            document.getElementById('edit_product_id').value = productId;
+            document.getElementById('edit_namespace').value = namespace;
+            document.getElementById('edit_key').value = key;
+            document.getElementById('edit_display_identifier').textContent = `${namespace}.${key}`;
+            document.getElementById('editModalSubtitle').textContent = CURRENT_LOADED_PRODUCT ? `${CURRENT_LOADED_PRODUCT.title} (#${productId})` : `Sản phẩm #${productId}`;
+            
+            const editTypeSelect = document.getElementById('edit_type');
+            editTypeSelect.value = type;
+            if (!editTypeSelect.value) {
+                const opt = document.createElement('option');
+                opt.value = type;
+                opt.text = type;
+                editTypeSelect.add(opt);
+                editTypeSelect.value = type;
+            }
+
+            document.getElementById('edit_value').value = val;
+            document.getElementById('edit_description').value = description || '';
+
+            checkEditValueUrl(val);
+            document.getElementById('editMetafieldModal').classList.remove('hidden');
+        }
+
+        function closeEditMetafieldModal() {
+            document.getElementById('editMetafieldModal').classList.add('hidden');
+        }
+
+        function checkEditValueUrl(val) {
+            const isUrl = (val || '').startsWith('http://') || (val || '').startsWith('https://');
+            const wrapper = document.getElementById('editUrlOpenBtnWrapper');
+            const link = document.getElementById('editUrlOpenBtn');
+            if (isUrl) {
+                link.href = val;
+                wrapper.classList.remove('hidden');
+            } else {
+                wrapper.classList.add('hidden');
+            }
+        }
+
+        function submitEditMetafield(e) {
+            e.preventDefault();
+            const btn = document.getElementById('editSubmitBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<iconify-icon icon="mdi:loading" class="animate-spin text-sm"></iconify-icon><span>Đang lưu...</span>';
+
+            const payload = {
+                product_id: document.getElementById('edit_product_id').value,
+                namespace: document.getElementById('edit_namespace').value.trim(),
+                key: document.getElementById('edit_key').value.trim(),
+                value: document.getElementById('edit_value').value,
+                type: document.getElementById('edit_type').value.trim(),
+                description: document.getElementById('edit_description').value.trim(),
+                store_type: CURRENT_PRODUCT_STORE || CURRENT_STORE_TYPE
+            };
+
+            fetch('/api/product-metafields/set', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(r => r.json())
+            .then(data => {
+                btn.disabled = false;
+                btn.innerHTML = '<iconify-icon icon="mdi:check" class="text-sm"></iconify-icon><span>Cập nhật Metafield</span>';
+                if (data.success) {
+                    showToast(data.message || 'Cập nhật Metafield thành công!', 'success');
+                    closeEditMetafieldModal();
+                    reloadCurrentProduct();
+                } else {
+                    showToast(data.message || 'Lỗi khi cập nhật Metafield', 'error');
+                }
+            })
+            .catch(err => {
+                btn.disabled = false;
+                btn.innerHTML = '<iconify-icon icon="mdi:check" class="text-sm"></iconify-icon><span>Cập nhật Metafield</span>';
+                showToast('Lỗi mạng: ' + err.message, 'error');
+            });
+        }
+
+        // Modal Xóa Metafield
+        function openDeleteMetafieldModal(productId, namespace, key) {
+            deleteTarget = { productId, namespace, key };
+            document.getElementById('deleteIdentifier').textContent = `${namespace}.${key}`;
+            document.getElementById('deleteMetafieldModal').classList.remove('hidden');
+        }
+
+        function closeDeleteMetafieldModal() {
+            document.getElementById('deleteMetafieldModal').classList.add('hidden');
+        }
+
+        function confirmDeleteMetafield() {
+            const btn = document.getElementById('confirmDeleteBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<iconify-icon icon="mdi:loading" class="animate-spin text-sm"></iconify-icon><span>Đang xóa...</span>';
+
+            const payload = {
+                product_id: deleteTarget.productId,
+                namespace: deleteTarget.namespace,
+                key: deleteTarget.key,
+                store_type: CURRENT_PRODUCT_STORE || CURRENT_STORE_TYPE
+            };
+
+            fetch('/api/product-metafields/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(r => r.json())
+            .then(data => {
+                btn.disabled = false;
+                btn.innerHTML = '<iconify-icon icon="mdi:trash-can-outline" class="text-sm"></iconify-icon><span>Xóa vĩnh viễn</span>';
+                if (data.success) {
+                    showToast(data.message || 'Đã xóa Metafield thành công!', 'success');
+                    closeDeleteMetafieldModal();
+                    reloadCurrentProduct();
+                } else {
+                    showToast(data.message || 'Lỗi khi xóa Metafield', 'error');
+                }
+            })
+            .catch(err => {
+                btn.disabled = false;
+                btn.innerHTML = '<iconify-icon icon="mdi:trash-can-outline" class="text-sm"></iconify-icon><span>Xóa vĩnh viễn</span>';
+                showToast('Lỗi mạng: ' + err.message, 'error');
+            });
+        }
+
+        // Tự động kiểm tra URL params khi khởi tạo
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const reqTab = urlParams.get('tab');
+            const reqQuery = urlParams.get('query') || urlParams.get('id') || urlParams.get('handle') || urlParams.get('selected_id');
+
+            if (reqQuery) {
+                switchViewTab('products');
+                fillAndLookup(reqQuery);
+            } else if (reqTab === 'products') {
+                switchViewTab('products');
+            } else {
+                switchViewTab('definitions');
+            }
+        });
+
+        // 13. Modal Sửa Định Nghĩa Metafield của Store (Mới)
+        function openEditDefinitionModal(namespace, key, name, type, description) {
+            document.getElementById('edit_def_namespace').value = namespace;
+            document.getElementById('edit_def_key').value = key;
+            document.getElementById('edit_def_display_identifier').textContent = `${namespace}.${key}`;
+            document.getElementById('editDefSubtitle').textContent = `${namespace}.${key}`;
+            document.getElementById('edit_def_name').value = name;
+            document.getElementById('edit_def_type').value = type;
+            document.getElementById('edit_def_description').value = description || '';
+            document.getElementById('editDefinitionModal').classList.remove('hidden');
+        }
+
+        function closeEditDefinitionModal() {
+            document.getElementById('editDefinitionModal').classList.add('hidden');
+        }
+
+        function submitEditDefinition(e) {
+            e.preventDefault();
+            const btn = document.getElementById('editDefSubmitBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<iconify-icon icon="mdi:loading" class="animate-spin text-sm"></iconify-icon><span>Đang lưu...</span>';
+
+            const payload = {
+                namespace: document.getElementById('edit_def_namespace').value.trim(),
+                key: document.getElementById('edit_def_key').value.trim(),
+                name: document.getElementById('edit_def_name').value.trim(),
+                description: document.getElementById('edit_def_description').value.trim(),
+                store_type: CURRENT_STORE_TYPE
+            };
+
+            fetch('/api/product-metafields/definition/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(r => r.json())
+            .then(data => {
+                btn.disabled = false;
+                btn.innerHTML = '<iconify-icon icon="mdi:check" class="text-sm"></iconify-icon><span>Lưu Thay Đổi</span>';
+                if (data.success) {
+                    showToast(data.message || 'Cập nhật định nghĩa thành công!', 'success');
+                    closeEditDefinitionModal();
+                    // Cập nhật DOM trên hàng definition
+                    const row = document.getElementById(`def-row-${payload.namespace}-${payload.key}`);
+                    if (row) {
+                        const nameEl = row.querySelector('.def-name-display');
+                        const descEl = row.querySelector('.def-desc-display');
+                        if (nameEl) nameEl.textContent = payload.name;
+                        if (descEl) descEl.textContent = payload.description || '—';
+                    }
+                } else {
+                    showToast(data.message || 'Lỗi khi cập nhật định nghĩa', 'error');
+                }
+            })
+            .catch(err => {
+                btn.disabled = false;
+                btn.innerHTML = '<iconify-icon icon="mdi:check" class="text-sm"></iconify-icon><span>Lưu Thay Đổi</span>';
+                showToast('Lỗi mạng: ' + err.message, 'error');
+            });
+        }
+
+        // 14. Reload dữ liệu Metafields của 1 sản phẩm sau mutation
+        function reloadProductMetafields(productId) {
+            fetch(`/api/product-metafields/product/${productId}?store_type=${CURRENT_STORE_TYPE}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success && data.product) {
+                        const updatedProd = data.product;
+                        const idx = ALL_PRODUCTS_DATA.findIndex(p => p.numeric_id === productId);
+                        if (idx !== -1) {
+                            ALL_PRODUCTS_DATA[idx] = updatedProd;
+                        }
+                        const badge = document.getElementById(`badge-count-${productId}`);
+                        if (badge) {
+                            badge.textContent = `${updatedProd.metafields_count} mf`;
+                        }
+                        if (CURRENT_SELECTED_PRODUCT_ID === productId) {
+                            renderSelectedProductDetails(updatedProd);
+                        }
+                    }
+                })
+                .catch(console.error);
+        }
+
+        // Helper: Escape HTML
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+    </script>
+</body>
+</html>
