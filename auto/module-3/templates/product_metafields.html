@@ -85,7 +85,7 @@
                     <a target="_blank" rel="noopener noreferrer" href="/collections" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Collections</a>
                     <a target="_blank" rel="noopener noreferrer" href="/metaobjects" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">MetaObjects</a>
                     <a target="_blank" rel="noopener noreferrer" href="/product-metafields" class="text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 pb-0.5">Metafield SP</a>
-                    <a target="_blank" rel="noopener noreferrer" href="/create" class="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">Tạo sản phẩm</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/create" class="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">Tạo sản phẩm mới</a>
                     <a target="_blank" rel="noopener noreferrer" href="/edit-variants" class="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">Sửa hàng loạt</a>
                     <a target="_blank" rel="noopener noreferrer" href="/blogs" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path></svg>
@@ -938,8 +938,8 @@
         </div>
     </div>
 
-    <!-- Toast Notification -->
-    <div id="toastNotification" class="fixed top-5 right-5 z-50 transform transition-all duration-300 translate-y-[-150%] opacity-0 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg border text-xs font-semibold">
+    <!-- Toast Notification (Chuyển xuống bottom góc phải) -->
+    <div id="toastNotification" class="fixed bottom-6 right-6 z-50 transform transition-all duration-300 translate-y-12 opacity-0 pointer-events-none flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-2xl border text-xs font-semibold">
         <iconify-icon id="toastIcon" class="text-lg"></iconify-icon>
         <span id="toastMessage"></span>
     </div>
@@ -962,9 +962,15 @@
         // 1. Chuyển đổi Store Mặc định ⟷ Store Riêng
         function handleStoreSwitch(isChecked) {
             const newStoreType = isChecked ? 'custom' : 'default';
-            showToast('Đang chuyển đổi cửa hàng...', 'info');
+            showToast(`Đang chuyển sang ${newStoreType === 'custom' ? 'Store Riêng' : 'Store Mặc Định'}...`, 'info');
             const searchParam = new URLSearchParams(window.location.search).get('search') || '';
-            const queryParam = new URLSearchParams(window.location.search).get('query') || '';
+            let queryParam = new URLSearchParams(window.location.search).get('query') || '';
+            
+            // Nếu đang xem sản phẩm, luôn ưu tiên truyền handle để giữa 2 store tìm đúng sản phẩm tương ứng mà không bị ID mismatch
+            if (CURRENT_LOADED_PRODUCT && CURRENT_LOADED_PRODUCT.handle) {
+                queryParam = CURRENT_LOADED_PRODUCT.handle;
+            }
+
             let newUrl = `/product-metafields?store_type=${newStoreType}`;
             if (searchParam) newUrl += `&search=${encodeURIComponent(searchParam)}`;
             if (queryParam) newUrl += `&query=${encodeURIComponent(queryParam)}&tab=products`;
@@ -1128,8 +1134,8 @@
                         document.getElementById('lookupStateLoading').classList.add('hidden');
                         document.getElementById('lookupStateSuccess').classList.remove('hidden');
 
-                        // Cập nhật URL không reload
-                        const newUrl = `?tab=products&query=${encodeURIComponent(query)}`;
+                        // Cập nhật URL không reload (kèm store_type chuẩn)
+                        const newUrl = `?tab=products&query=${encodeURIComponent(query)}&store_type=${encodeURIComponent(CURRENT_PRODUCT_STORE || CURRENT_STORE_TYPE)}`;
                         window.history.replaceState({ path: newUrl }, '', newUrl);
 
                         showToast(`Đã tìm thấy sản phẩm trên ${data.product.store_name || 'Store'}!`, 'success');
@@ -1161,7 +1167,16 @@
             document.getElementById('foundProdId').textContent = prod.numeric_id || '';
             document.getElementById('foundProdHandle').textContent = prod.handle || '';
             document.getElementById('foundProdVariants').textContent = `${prod.totalVariants || 1} biến thể`;
-            document.getElementById('foundProdMetafieldsCount').textContent = `${prod.metafields_count || (prod.metafields_list || []).length} Metafields`;
+
+            const mfsList = prod.metafields_list || [];
+            const totalCount = prod.metafields_count !== undefined ? prod.metafields_count : mfsList.length;
+            const assignedCount = prod.assigned_count !== undefined ? prod.assigned_count : mfsList.filter(m => m.has_value).length;
+            const emptyCount = prod.empty_count !== undefined ? prod.empty_count : (totalCount - assignedCount);
+
+            document.getElementById('foundProdMetafieldsCount').innerHTML = `
+                <span>${totalCount} Metafields</span>
+                <span class="text-[11px] font-normal text-indigo-500">(${assignedCount} có giá trị • ${emptyCount} trống)</span>
+            `;
 
             // Thumbnail
             const imgEl = document.getElementById('foundProdImg');
@@ -1212,17 +1227,21 @@
             const toolLink = document.getElementById('foundProdToolLink');
             toolLink.href = `/products/${prod.handle}?store_type=${foundStore}`;
 
-            // Render Namespace pills
-            renderFoundNamespacePills(prod.metafields_list || []);
+            // Render Namespace & Status filter pills
+            renderFoundNamespacePills(mfsList);
 
             // Render Metafields table
-            renderFoundMetafieldsTable(prod.metafields_list || []);
+            renderFoundMetafieldsTable(mfsList);
         }
 
-        // 6. Render Namespace Filter Pills
+        // 6. Render Filter Pills (Tất cả, Đã gán, Đang trống, và theo từng Namespace)
         function renderFoundNamespacePills(mfs) {
             const container = document.getElementById('foundProdNamespaceContainer');
             container.innerHTML = '';
+
+            const total = mfs.length;
+            const assignedCount = mfs.filter(m => m.has_value).length;
+            const emptyCount = total - assignedCount;
 
             const nsSet = new Set();
             mfs.forEach(m => {
@@ -1230,26 +1249,47 @@
             });
             const nsList = Array.from(nsSet).sort();
 
-            // Pill 'Tất cả'
+            // 1. Pill 'Tất cả'
             const allBtn = document.createElement('button');
             allBtn.type = 'button';
             allBtn.className = 'found-ns-pill active whitespace-nowrap flex-shrink-0 px-3 py-1 text-xs font-semibold rounded-lg bg-indigo-100 text-indigo-700 border border-indigo-200 shadow-2xs cursor-pointer';
-            allBtn.textContent = `Tất cả (${mfs.length})`;
-            allBtn.onclick = function() { filterFoundMetafieldsByNamespace('ALL', this); };
+            allBtn.innerHTML = `<span>Tất cả</span> <span class="ml-1 px-1.5 py-0.2 bg-indigo-200 text-indigo-900 rounded-full text-[10px]">${total}</span>`;
+            allBtn.onclick = function() { filterFoundMetafieldsByCriteria('ALL', this); };
             container.appendChild(allBtn);
 
+            // 2. Pill 'Có giá trị'
+            if (assignedCount > 0) {
+                const assignedBtn = document.createElement('button');
+                assignedBtn.type = 'button';
+                assignedBtn.className = 'found-ns-pill whitespace-nowrap flex-shrink-0 px-3 py-1 text-xs font-medium rounded-lg bg-gray-100 text-emerald-700 hover:bg-emerald-50 border border-gray-200 transition-colors cursor-pointer flex items-center gap-1.5';
+                assignedBtn.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500"></span><span>Có giá trị</span> <span class="px-1.5 py-0.2 bg-emerald-100 text-emerald-800 rounded-full text-[10px] font-bold">${assignedCount}</span>`;
+                assignedBtn.onclick = function() { filterFoundMetafieldsByCriteria('ASSIGNED', this); };
+                container.appendChild(assignedBtn);
+            }
+
+            // 3. Pill 'Đang trống'
+            if (emptyCount > 0) {
+                const emptyBtn = document.createElement('button');
+                emptyBtn.type = 'button';
+                emptyBtn.className = 'found-ns-pill whitespace-nowrap flex-shrink-0 px-3 py-1 text-xs font-medium rounded-lg bg-gray-100 text-amber-700 hover:bg-amber-50 border border-gray-200 transition-colors cursor-pointer flex items-center gap-1.5';
+                emptyBtn.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400"></span><span>Đang trống</span> <span class="px-1.5 py-0.2 bg-amber-100 text-amber-800 rounded-full text-[10px] font-bold">${emptyCount}</span>`;
+                emptyBtn.onclick = function() { filterFoundMetafieldsByCriteria('EMPTY', this); };
+                container.appendChild(emptyBtn);
+            }
+
+            // 4. Pills theo từng Namespace
             nsList.forEach(ns => {
                 const count = mfs.filter(m => m.namespace === ns).length;
                 const btn = document.createElement('button');
                 btn.type = 'button';
                 btn.className = 'found-ns-pill whitespace-nowrap flex-shrink-0 px-3 py-1 text-xs font-medium rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200 transition-colors cursor-pointer';
                 btn.textContent = `${ns} (${count})`;
-                btn.onclick = function() { filterFoundMetafieldsByNamespace(ns, this); };
+                btn.onclick = function() { filterFoundMetafieldsByCriteria(ns, this); };
                 container.appendChild(btn);
             });
         }
 
-        // 7. Render Metafields Table
+        // 7. Render Metafields Table (Hiển thị đầy đủ cả có giá trị và trường trống)
         function renderFoundMetafieldsTable(mfs) {
             const tbody = document.getElementById('foundMetafieldsTableBody');
             tbody.innerHTML = '';
@@ -1276,36 +1316,43 @@
                 tr.setAttribute('data-namespace', mf.namespace);
                 tr.setAttribute('data-key', mf.key);
                 tr.setAttribute('data-value', mf.value || '');
+                tr.setAttribute('data-has-value', mf.has_value ? 'true' : 'false');
 
                 const isUrl = (mf.value || '').startsWith('http://') || (mf.value || '').startsWith('https://');
+                const hasVal = Boolean(mf.has_value);
 
                 tr.innerHTML = `
-                    <td class="py-3 px-4 text-center text-gray-500 font-mono text-xs font-semibold">${idx + 1}</td>
-                    <td class="py-3 px-4 align-top">
+                    <td class="py-3.5 px-4 text-center text-gray-400 font-mono text-xs font-semibold">${idx + 1}</td>
+                    <td class="py-3.5 px-4 align-top">
                         <div class="flex items-center gap-1.5 flex-wrap">
+                            <!-- Indicator status dot -->
+                            <span class="w-2 h-2 rounded-full flex-shrink-0 ${hasVal ? 'bg-emerald-500 shadow-2xs' : 'bg-amber-400'}" title="${hasVal ? 'Đã có giá trị' : 'Chưa có giá trị (Đang trống)'}"></span>
+                            
                             <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
                                 ${escapeHtml(mf.namespace)}
                             </span>
-                            <span class="font-bold text-gray-900 font-mono text-xs">${escapeHtml(mf.key)}</span>
+                            <span class="font-bold font-mono text-xs ${hasVal ? 'text-gray-900' : 'text-gray-700'}">${escapeHtml(mf.key)}</span>
+                            
                             <!-- Nút copy namespace.key -->
-                            <button type="button" onclick="copyText('${escapeHtml(mf.namespace)}.${escapeHtml(mf.key)}', this)" class="p-1 text-gray-400 hover:text-indigo-600 hover:bg-gray-100 rounded-md transition-colors cursor-pointer inline-flex items-center justify-center" title="Sao chép namespace.key">
+                            <button type="button" onclick="copyText('${escapeHtml(mf.namespace)}.${escapeHtml(mf.key)}', this)" class="p-1 text-gray-400 hover:text-indigo-600 hover:bg-gray-100 rounded-md transition-colors cursor-pointer inline-flex items-center justify-center" title="Sao chép ${escapeHtml(mf.namespace)}.${escapeHtml(mf.key)}">
                                 <iconify-icon icon="mdi:content-copy" class="text-sm"></iconify-icon>
                             </button>
                         </div>
-                        ${mf.description ? `<p class="text-[11px] text-gray-500 mt-1 italic">${escapeHtml(mf.description)}</p>` : ''}
+                        ${mf.description ? `<p class="text-[11px] text-gray-500 mt-1 italic leading-relaxed">${escapeHtml(mf.description)}</p>` : ''}
                     </td>
-                    <td class="py-3 px-4 align-top">
-                        <span class="inline-flex items-center px-2.5 py-1 rounded text-[13px] font-mono font-medium bg-gray-100 text-gray-700 border border-gray-200">
-                            ${escapeHtml(mf.type)}
+                    <td class="py-3.5 px-4 align-top">
+                        <span class="inline-flex items-center px-2.5 py-1 rounded text-[12px] font-mono font-medium bg-gray-100 text-gray-700 border border-gray-200">
+                            ${escapeHtml(mf.type || 'single_line_text_field')}
                         </span>
                     </td>
-                    <td class="py-3 px-4 align-top font-mono text-[11px] text-gray-800 break-all">
+                    <td class="py-3.5 px-4 align-top font-mono text-[11px] text-gray-800 break-all">
+                        ${hasVal ? `
                         <div class="flex items-start justify-between gap-2">
                             <div class="max-h-24 overflow-y-auto whitespace-pre-wrap flex-1 bg-gray-50 p-2.5 rounded-lg border border-gray-200 text-gray-700 leading-relaxed font-sans text-xs select-all">
                                 ${escapeHtml(mf.value || '')}
                             </div>
                             <div class="flex flex-col gap-1.5 flex-shrink-0">
-                        <button type="button" onclick="copyMetafieldValue(${idx}, this)" class="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-gray-200 rounded-lg transition-colors cursor-pointer inline-flex items-center justify-center shadow-2xs" title="Sao chép giá trị">
+                                <button type="button" onclick="copyMetafieldValue(${idx}, this)" class="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-gray-200 rounded-lg transition-colors cursor-pointer inline-flex items-center justify-center shadow-2xs" title="Sao chép giá trị">
                                     <iconify-icon icon="mdi:content-copy" class="text-sm"></iconify-icon>
                                 </button>
                                 ${isUrl ? `
@@ -1314,15 +1361,33 @@
                                 </a>` : ''}
                             </div>
                         </div>
-                    </td>
-                    <td class="py-3 px-4 align-top text-right whitespace-nowrap">
-                        <div class="inline-flex items-center gap-1.5">
-                            <button type="button" onclick="openEditMetafieldModal('${CURRENT_LOADED_PRODUCT.numeric_id}', '${escapeHtml(mf.namespace)}', '${escapeHtml(mf.key)}', '${escapeHtml(mf.type)}', '${escapeHtml(mf.description || '')}')" class="p-1.5 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer inline-flex items-center justify-center" title="Chỉnh sửa Metafield này">
-                                <iconify-icon icon="mdi:pencil-outline" class="text-base"></iconify-icon>
+                        ` : `
+                        <div class="flex items-center justify-between gap-3 bg-amber-50/50 border border-dashed border-amber-200 rounded-lg p-2.5">
+                            <div class="flex items-center gap-1.5 text-amber-700 font-sans text-xs italic">
+                                <iconify-icon icon="mdi:alert-circle-outline" class="text-sm text-amber-500 flex-shrink-0"></iconify-icon>
+                                <span>Chưa có giá trị (Đang trống)</span>
+                            </div>
+                            <button type="button" onclick="openEditMetafieldModal('${CURRENT_LOADED_PRODUCT.numeric_id}', '${escapeHtml(mf.namespace)}', '${escapeHtml(mf.key)}', '${escapeHtml(mf.type || 'single_line_text_field')}', '${escapeHtml(mf.description || '')}')" class="inline-flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-indigo-50 text-indigo-600 hover:text-indigo-700 text-xs font-semibold rounded-md border border-indigo-200 shadow-2xs transition-all cursor-pointer">
+                                <iconify-icon icon="mdi:plus-circle" class="text-xs"></iconify-icon>
+                                <span>+ Thêm giá trị</span>
                             </button>
-                            <button type="button" onclick="openDeleteMetafieldModal('${CURRENT_LOADED_PRODUCT.numeric_id}', '${escapeHtml(mf.namespace)}', '${escapeHtml(mf.key)}')" class="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer inline-flex items-center justify-center" title="Xóa Metafield này">
+                        </div>
+                        `}
+                    </td>
+                    <td class="py-3.5 px-4 align-top text-right whitespace-nowrap">
+                        <div class="inline-flex items-center gap-1.5">
+                            <button type="button" onclick="openEditMetafieldModal('${CURRENT_LOADED_PRODUCT.numeric_id}', '${escapeHtml(mf.namespace)}', '${escapeHtml(mf.key)}', '${escapeHtml(mf.type || 'single_line_text_field')}', '${escapeHtml(mf.description || '')}')" class="p-1.5 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer inline-flex items-center justify-center" title="${hasVal ? 'Chỉnh sửa giá trị Metafield' : 'Thiết lập giá trị cho Metafield'}">
+                                <iconify-icon icon="${hasVal ? 'mdi:pencil-outline' : 'mdi:plus'}" class="text-base"></iconify-icon>
+                            </button>
+                            ${hasVal ? `
+                            <button type="button" onclick="openDeleteMetafieldModal('${CURRENT_LOADED_PRODUCT.numeric_id}', '${escapeHtml(mf.namespace)}', '${escapeHtml(mf.key)}')" class="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer inline-flex items-center justify-center" title="Xóa Metafield này khỏi sản phẩm">
                                 <iconify-icon icon="mdi:trash-can-outline" class="text-base"></iconify-icon>
                             </button>
+                            ` : `
+                            <span class="p-1.5 text-gray-300 inline-flex items-center justify-center cursor-not-allowed" title="Trường này chưa có trên sản phẩm nên không cần xóa">
+                                <iconify-icon icon="mdi:trash-can-outline" class="text-base"></iconify-icon>
+                            </span>
+                            `}
                         </div>
                     </td>
                 `;
@@ -1330,8 +1395,8 @@
             });
         }
 
-        // 8. Lọc Metafields theo Namespace (Tab tra cứu)
-        function filterFoundMetafieldsByNamespace(ns, btnEl) {
+        // 8. Lọc Metafields theo Tiêu chí (Tất cả, Đã gán, Đang trống, hoặc Namespace)
+        function filterFoundMetafieldsByCriteria(criteria, btnEl) {
             document.querySelectorAll('.found-ns-pill').forEach(btn => {
                 btn.className = 'found-ns-pill whitespace-nowrap flex-shrink-0 px-3 py-1 text-xs font-medium rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200 transition-colors cursor-pointer';
             });
@@ -1341,7 +1406,15 @@
 
             document.querySelectorAll('.found-metafield-row').forEach(row => {
                 const rowNs = row.getAttribute('data-namespace');
-                if (ns === 'ALL' || rowNs === ns) {
+                const hasVal = row.getAttribute('data-has-value') === 'true';
+
+                if (criteria === 'ALL') {
+                    row.style.display = '';
+                } else if (criteria === 'ASSIGNED') {
+                    row.style.display = hasVal ? '' : 'none';
+                } else if (criteria === 'EMPTY') {
+                    row.style.display = !hasVal ? '' : 'none';
+                } else if (rowNs === criteria) {
                     row.style.display = '';
                 } else {
                     row.style.display = 'none';
@@ -1364,7 +1437,6 @@
             });
         }
 
-        
         // Copy giá trị Metafield an toàn theo index
         function copyMetafieldValue(idx, triggerEl) {
             if (!CURRENT_LOADED_PRODUCT || !CURRENT_LOADED_PRODUCT.metafields_list) return;
@@ -1391,37 +1463,40 @@
             });
         }
 
-        // 11. Toast Notification Handler
+        // 11. Toast Notification Handler (Hiển thị ở góc dưới bottom-6 right-6)
         function showToast(msg, type = 'success') {
             const toast = document.getElementById('toastNotification');
             const toastIcon = document.getElementById('toastIcon');
             const toastMsg = document.getElementById('toastMessage');
 
             toastMsg.textContent = msg;
+            const baseClass = 'fixed bottom-6 right-6 z-50 transform transition-all duration-300 translate-y-0 opacity-100 pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-2xl border text-xs font-semibold';
             if (type === 'success') {
-                toast.className = 'fixed top-5 right-5 z-50 transform transition-all duration-300 translate-y-0 opacity-100 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg border text-xs font-semibold bg-emerald-50 text-emerald-800 border-emerald-200';
+                toast.className = `${baseClass} bg-emerald-50 text-emerald-800 border-emerald-200`;
                 toastIcon.className = 'text-lg text-emerald-600';
                 toastIcon.setAttribute('icon', 'mdi:check-circle');
             } else if (type === 'error') {
-                toast.className = 'fixed top-5 right-5 z-50 transform transition-all duration-300 translate-y-0 opacity-100 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg border text-xs font-semibold bg-red-50 text-red-800 border-red-200';
+                toast.className = `${baseClass} bg-red-50 text-red-800 border-red-200`;
                 toastIcon.className = 'text-lg text-red-600';
                 toastIcon.setAttribute('icon', 'mdi:alert-circle');
             } else {
-                toast.className = 'fixed top-5 right-5 z-50 transform transition-all duration-300 translate-y-0 opacity-100 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg border text-xs font-semibold bg-indigo-50 text-indigo-800 border-indigo-200';
+                toast.className = `${baseClass} bg-indigo-50 text-indigo-800 border-indigo-200`;
                 toastIcon.className = 'text-lg text-indigo-600';
                 toastIcon.setAttribute('icon', 'mdi:information');
             }
 
-            setTimeout(() => {
-                toast.classList.replace('translate-y-0', 'translate-y-[-150%]');
+            if (window._toastTimeout) clearTimeout(window._toastTimeout);
+            window._toastTimeout = setTimeout(() => {
+                toast.classList.replace('translate-y-0', 'translate-y-12');
                 toast.classList.replace('opacity-100', 'opacity-0');
+                toast.classList.add('pointer-events-none');
             }, 3500);
         }
 
         // Reload lại dữ liệu sản phẩm đang xem sau khi thêm/sửa/xóa
         function reloadCurrentProduct() {
-            if (CURRENT_LOADED_PRODUCT && (CURRENT_LOADED_PRODUCT.numeric_id || CURRENT_LOADED_PRODUCT.handle)) {
-                doLookupProduct(CURRENT_LOADED_PRODUCT.numeric_id);
+            if (CURRENT_LOADED_PRODUCT && (CURRENT_LOADED_PRODUCT.handle || CURRENT_LOADED_PRODUCT.numeric_id)) {
+                doLookupProduct(CURRENT_LOADED_PRODUCT.handle || CURRENT_LOADED_PRODUCT.numeric_id);
             }
         }
 

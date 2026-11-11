@@ -5,7 +5,7 @@ import paramiko
 sys.stdout.reconfigure(encoding='utf-8')
 
 # Thông tin VPS mới
-host = '20.222.21.81'
+host = '20.89.43.225'
 user = 'azureuser'
 ssh_alias = 'wrydeco-vps'
 
@@ -41,7 +41,7 @@ try:
     print("Kết nối thành công. Đang tải code lên...")
     
     app_dir = f"/home/{user}/shopify-admin-app"
-    ssh.exec_command(f"mkdir -p {app_dir}/templates {app_dir}/static {app_dir}/assets {app_dir}/backups")
+    ssh.exec_command(f"mkdir -p {app_dir}/templates {app_dir}/static {app_dir}/assets {app_dir}/backups {app_dir}/data")
     
     sftp = ssh.open_sftp()
     
@@ -55,6 +55,31 @@ try:
     # Upload proxy_manager.py
     if os.path.exists("proxy_manager.py"):
         upload_file("proxy_manager.py", f"{app_dir}/proxy_manager.py")
+
+    # Upload product_create_service.py
+    if os.path.exists("product_create_service.py"):
+        upload_file("product_create_service.py", f"{app_dir}/product_create_service.py")
+
+    # Upload bulk product creation services & worker
+    if os.path.exists("bulk_product_job_store.py"):
+        upload_file("bulk_product_job_store.py", f"{app_dir}/bulk_product_job_store.py")
+
+    if os.path.exists("bulk_product_job_service.py"):
+        upload_file("bulk_product_job_service.py", f"{app_dir}/bulk_product_job_service.py")
+
+    if os.path.exists("bulk_product_worker.py"):
+        upload_file("bulk_product_worker.py", f"{app_dir}/bulk_product_worker.py")
+
+    if os.path.exists("run_bulk_worker.py"):
+        upload_file("run_bulk_worker.py", f"{app_dir}/run_bulk_worker.py")
+
+    # Upload variant_manager_service.py
+    if os.path.exists("variant_manager_service.py"):
+        upload_file("variant_manager_service.py", f"{app_dir}/variant_manager_service.py")
+
+    # Upload discount_manager_service.py
+    if os.path.exists("discount_manager_service.py"):
+        upload_file("discount_manager_service.py", f"{app_dir}/discount_manager_service.py")
     
     # Upload requirements.txt
     if os.path.exists("requirements.txt"):
@@ -105,17 +130,46 @@ try:
 
     sftp.close()
     print("Đã upload xong code.")
-    
-    # Khởi động lại dịch vụ
-    print("Đang khởi động lại dịch vụ (dùng sudo không cần mật khẩu cho azureuser)...")
-    stdin, stdout, stderr = ssh.exec_command(f"sudo systemctl restart shopify-admin-app.service")
-    exit_status = stdout.channel.recv_exit_status()
-    
-    if exit_status == 0:
-        print("Đã khởi động lại ứng dụng thành công!")
-    else:
-        err_msg = stderr.read().decode('utf-8')
-        print(f"Lỗi khởi động dịch vụ: {err_msg}")
+
+    # Cấu hình systemd unit cho bulk worker daemon
+    worker_service_unit = """[Unit]
+Description=WRYDECO Shopify Bulk Product Creation Worker Daemon
+After=network.target shopify-admin-app.service
+
+[Service]
+Type=simple
+User=azureuser
+WorkingDirectory=/home/azureuser/shopify-admin-app
+ExecStart=/home/azureuser/shopify-admin-app/venv/bin/python3 /home/azureuser/shopify-admin-app/run_bulk_worker.py --daemon
+Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
+"""
+    print("Đang cấu hình shopify-bulk-product-worker.service...")
+    setup_cmd = f"""
+cat << 'EOF' | sudo tee /etc/systemd/system/shopify-bulk-product-worker.service > /dev/null
+{worker_service_unit}
+EOF
+sudo systemctl daemon-reload
+sudo systemctl enable shopify-bulk-product-worker.service
+sudo systemctl restart shopify-admin-app.service
+sudo systemctl restart shopify-bulk-product-worker.service
+"""
+    stdin, stdout, stderr = ssh.exec_command(setup_cmd)
+    stdout.channel.recv_exit_status()
+
+    # Kiểm tra trạng thái worker service
+    stdin, stdout, stderr = ssh.exec_command("systemctl is-active shopify-bulk-product-worker.service")
+    worker_status = stdout.read().decode('utf-8').strip()
+    print(f"Trạng thái shopify-bulk-product-worker.service: {worker_status}")
+
+    # Khởi động lại dịch vụ chính
+    stdin, stdout, stderr = ssh.exec_command("systemctl is-active shopify-admin-app.service")
+    app_status = stdout.read().decode('utf-8').strip()
+    print(f"Trạng thái shopify-admin-app.service: {app_status}")
         
     ssh.close()
 

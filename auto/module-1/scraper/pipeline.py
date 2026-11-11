@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import html
+import json
 from decimal import Decimal
 from typing import Any
 
 from .errors import PriceValidationError
-from .manifest import ProductJob
+from .manifest import PRODUCT_CLASSIFICATIONS, ProductJob
 from .pricing import infer_wood_finish_deltas, money, normalize_name
 from .variant_options import clean_variant_values
 
@@ -28,7 +29,8 @@ def _product_settings(job: ProductJob) -> dict[str, Any]:
 
 def _metafields_for_product(snapshot: dict[str, Any], content: dict[str, str], job: ProductJob,
                             settings: dict[str, Any], definitions: dict[tuple[str, str], str] | None = None,
-                            rich_description: str = "") -> list[dict[str, str]]:
+                            rich_description: str = "", *,
+                            batch_metadata: dict[str, str] | None = None) -> list[dict[str, str]]:
     existing = {(item.get("namespace"), item.get("key")): item
                 for item in (snapshot.get("metafields") or {}).get("nodes", [])}
     generated: dict[tuple[str, str], dict[str, str]] = {}
@@ -39,6 +41,8 @@ def _metafields_for_product(snapshot: dict[str, Any], content: dict[str, str], j
     }
     for key, default_type in (("author_info", "metaobject_reference"), ("product_material", "single_line_text_field"),
                               ("wood_type", "single_line_text_field"), ("bought_amount", "number_integer")):
+        if batch_metadata and key in batch_metadata:
+            continue
         if settings.get(key) is not None:
             values[key] = (settings[key], default_type)
     for key, (value, default_type) in values.items():
@@ -57,6 +61,17 @@ def _metafields_for_product(snapshot: dict[str, Any], content: dict[str, str], j
         normalized = dict(item)
         normalized.setdefault("namespace", "custom")
         generated[(normalized["namespace"], normalized["key"])] = normalized
+    for key in PRODUCT_CLASSIFICATIONS:
+        if key in job.overrides:
+            generated[("custom", key)] = {
+                "namespace": "custom", "key": key, "type": "list.single_line_text_field",
+                "value": json.dumps(job.overrides[key], ensure_ascii=False),
+            }
+    if batch_metadata:
+        for key, default_type in (("author_info", "metaobject_reference"), ("wood_type", "single_line_text_field")):
+            identity = ("custom", key)
+            field_type = (existing.get(identity) or {}).get("type") or (definitions or {}).get(identity) or default_type
+            generated[identity] = {"namespace": "custom", "key": key, "type": field_type, "value": batch_metadata[key]}
     return list(generated.values())
 
 

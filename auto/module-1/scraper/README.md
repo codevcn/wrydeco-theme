@@ -7,7 +7,7 @@ The system has four independent parts:
 3. Flask owns one long-lived Antigravity control conversation plus one isolated content conversation per product.
 4. One Shopify worker applies ready products sequentially from idempotent checkpoints.
 
-Flask starts Antigravity and verifies its workspace MCP connection in the background. Manifest editing and crawler runs are available immediately; queued content waits for a successful Agent bootstrap, while Shopify consumes only already-validated `content.json` tasks.
+Flask starts the content queue watcher with the Dashboard. Antigravity starts when the watcher finds a queued SEO/AEO task, including one recovered from a previous run, or when you click **Kiểm tra kết nối**. Manifest editing and crawler runs are available immediately. Queued content waits for successful MCP bootstrap, and Shopify consumes validated `content.json` tasks.
 
 ## Install
 
@@ -25,7 +25,7 @@ Add Shopify credentials to `scraper/.env`. Antigravity uses the existing local `
 python -m scraper serve --host 127.0.0.1 --port 5000
 ```
 
-After the port is bound successfully, the server automatically opens `http://127.0.0.1:5000` in the default browser. The process runs the Dashboard, a single crawler, one long-lived Antigravity control conversation, isolated product content workers, and a single Shopify dispatcher. The crawler and Shopify dispatcher are driven by their durable queues rather than the Agent readiness gate, so Antigravity cold-start latency never blocks manifest work or new crawl runs.
+After the port is bound successfully, the server automatically opens `http://127.0.0.1:5000` in the default browser. The process runs the Dashboard, a single crawler, an on-demand Antigravity supervisor, and a single Shopify dispatcher. The crawler and Shopify dispatcher use their own durable queues, so manifest work and new crawl runs can begin while Antigravity is waiting or starting.
 
 On Windows, `run-server.cmd` resolves its own project folder and starts the same command above.
 In that server console, press **Q** (no Enter needed) or **Ctrl+C** to stop. Both stop accepting
@@ -47,7 +47,7 @@ python -m scraper worker
 
 The repository contains a workspace-local MCP definition, a restricted `wrydeco-content` Agent, and an Antigravity model configuration file (`scraper/antigravity_config.json`, defaulting to `"Gemini 3.8 Flash (High)"`). Every Antigravity invocation across the tool—the long-lived control conversation, isolated per-product content conversations, and the TUI cleanup terminal—passes `--model <configured_model>` from `scraper/antigravity_config.json`. You can also view and update the model directly from the **Antigravity Runtime** card on the Dashboard UI (`GET/PUT /api/agent/config`), which atomically writes `scraper/antigravity_config.json` and restarts the control conversation when idle.
 
-`python -m scraper serve` launches a control `agy` process in stream-json mode, sends a minimal bootstrap prompt that calls `queue_status`, and keeps that process/conversation until the server stops. The control conversation only handles bootstrap, readiness, and health checks; it never receives product data. The API exposes `process_ready` after the CLI has supplied a valid conversation ID and MCP tool bridge, while `ready` becomes true only after the bootstrap result and marker are verified.
+On first demand, the supervisor launches a control `agy` process in stream-json mode, sends a minimal bootstrap prompt that calls `queue_status`, and keeps the conversation until the server stops or the runtime is restarted. The control conversation handles bootstrap, readiness, and health checks. The API shows `waiting` before launch, `process_ready` after the CLI supplies a conversation ID and MCP tool bridge, and `ready` after the bootstrap result and marker are verified. **Kiểm tra kết nối** can start the runtime from `waiting` and runs the same check used on an existing conversation.
 
 For every queued product, the server launches a separate Antigravity process/conversation restricted by `WRYDECO_EXPECTED_TASK_ID`. Retries for that product stay inside the same isolated conversation, and the process exits immediately after finalization or terminal failure. This prevents facts and copy from an earlier product leaking into later content. Finished content conversations are recorded as `pending_cleanup` in **Quản lý conversations**.
 
@@ -57,7 +57,7 @@ Content validation is fail-closed. Storefront copy must use the approved visual 
 
 If startup reports an authentication error, run `agy` once from this project directory, complete login, exit it, then use **Khởi động lại Agent**. A later process failure is fail-closed and is never restarted automatically.
 
-Each successful server lifecycle creates a fresh Antigravity conversation. When a newer conversation becomes active, older scraper-owned conversations are marked `pending_cleanup`. Open **Quản lý conversations** in the Antigravity Runtime card, choose **Mở TUI để xóa**, then use `/resume` and `Ctrl+Delete` in Antigravity to confirm deletion of the displayed ID. After Antigravity has deleted it, click **Đã xóa trong Antigravity** to remove that session, its turns, and associated Agent events from the scraper database. The Dashboard never simulates deletion keystrokes and never edits Antigravity's `.gemini` storage.
+Each runtime launch creates a fresh Antigravity conversation. When a newer conversation becomes active, older scraper-owned conversations are marked `pending_cleanup`. Open **Quản lý conversations** in the Antigravity Runtime card, choose **Mở TUI để xóa**, then use `/resume` and `Ctrl+Delete` in Antigravity to confirm deletion of the displayed ID. After Antigravity has deleted it, click **Đã xóa trong Antigravity** to remove that session, its turns, and associated Agent events from the scraper database. The Dashboard never simulates deletion keystrokes and never edits Antigravity's `.gemini` storage.
 
 ## CLI
 

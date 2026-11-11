@@ -3,46 +3,125 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tạo sản phẩm mới - Wrydeco Admin Manager</title>
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="/static/favicon-96x96.png" sizes="96x96" />
     <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
     <link rel="shortcut icon" href="/static/favicon.ico" />
     <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png" />
     <link rel="manifest" href="/static/site.webmanifest" />
-    <title>Admin - Tạo sản phẩm</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
     <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        body { font-family: 'Inter', sans-serif; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        .req-star { color: #ef4444; font-size: 14px; font-weight: 700; margin-left: 2px; }
+        .info-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 22px;
+            height: 22px;
+            min-width: 22px;
+            min-height: 22px;
+            border-radius: 9999px;
+            background-color: #eff6ff;
+            color: #2563eb;
+            border: 1.5px solid #bfdbfe;
+            font-size: 14px;
+            font-weight: 800;
+            line-height: 1;
+            cursor: help;
+            transition: all 0.15s ease-in-out;
+            margin-left: 6px;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        }
+        .info-icon:hover {
+            background-color: #2563eb;
+            color: #ffffff;
+            border-color: #1d4ed8;
+            transform: scale(1.12);
+        }
+        /* Tag pills & Remove Button (22x22px) */
+        .tag-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 3px 4px 3px 12px;
+            background-color: #f3f4f6;
+            color: #1f2937;
+            border: 1px solid #d1d5db;
+            border-radius: 9999px;
+            font-size: 14px;
+            font-weight: 500;
+            line-height: 1.4;
+        }
+        .tag-pill button,
+        .tag-pill .btn-remove-tag {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 22px !important;
+            height: 22px !important;
+            min-width: 22px !important;
+            min-height: 22px !important;
+            border-radius: 9999px !important;
+            background-color: #e5e7eb;
+            color: #4b5563;
+            border: none;
+            padding: 0;
+            margin: 0;
+            cursor: pointer;
+            transition: all 0.15s ease-in-out;
+            outline: none;
+            flex-shrink: 0;
+        }
+        .tag-pill button:hover,
+        .tag-pill .btn-remove-tag:hover {
+            background-color: #ef4444 !important;
+            color: #ffffff !important;
+            transform: scale(1.08);
+        }
+        .tag-pill button svg,
+        .tag-pill .btn-remove-tag svg {
+            width: 14px;
+            height: 14px;
+            stroke-width: 2.5;
+            display: block;
+            pointer-events: none;
+        }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-900 min-h-screen">
-    <!-- Header -->
+<body class="bg-gray-50 text-gray-900 min-h-screen pb-24">
+
+    <!-- Global Header -->
     <header class="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
         <div class="mx-auto px-4 sm:px-8">
             <div class="flex items-center justify-between h-16">
-                <!-- Logo -->
+                <!-- Logo & Store Link -->
                 <div class="flex-shrink-0 flex items-center gap-3">
-                    <a target="_blank" rel="noopener noreferrer" href="/" class="flex items-center gap-2 text-indigo-600 font-bold text-xl hover:text-indigo-700 transition-colors">
+                    <a target="_blank" rel="noopener noreferrer" href="/?store_type={{ store_type }}" class="flex items-center gap-2 text-indigo-600 font-bold text-xl hover:text-indigo-700 transition-colors">
                         <img src="/static/favicon.svg" alt="Logo" class="w-8 h-8 object-contain rounded-lg" onerror="this.src='/static/favicon-96x96.png'">
                         <span>Shopify Admin Manager</span>
                     </a>
-                    <a target="_blank" rel="noopener noreferrer" href="https://admin.shopify.com/store/wrydeco" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-black hover:bg-neutral-800 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors" title="Mở Shopify Admin Store">
+                    <a target="_blank" rel="noopener noreferrer" href="https://admin.shopify.com/store/{% if store_type == 'custom' %}wrydeco{% else %}{{ active_shop or 'wrydeco' }}{% endif %}" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-black hover:bg-neutral-800 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors" title="Mở Shopify Admin Store">
                         <span>Shopify Store</span>
                         <svg class="w-3.5 h-3.5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
                     </a>
                 </div>
-                <!-- Nav Links -->
+
+                <!-- Nav Menu -->
                 <nav class="flex items-center gap-6">
-                    <a target="_blank" rel="noopener noreferrer" href="/" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Sản phẩm</a>
-                    <a target="_blank" rel="noopener noreferrer" href="/collections" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Collections</a>
-                    <a target="_blank" rel="noopener noreferrer" href="/metaobjects" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">MetaObjects</a>
-                    <a target="_blank" rel="noopener noreferrer" href="/product-metafields" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Metafield SP</a>
-                    <a target="_blank" rel="noopener noreferrer" href="/create" class="text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 pb-0.5">Tạo sản phẩm</a>
-                    <a target="_blank" rel="noopener noreferrer" href="/edit-variants" class="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">Sửa hàng loạt</a>
-                    <a target="_blank" rel="noopener noreferrer" href="/blogs" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path></svg>Blog</a>
-                    <a target="_blank" rel="noopener noreferrer" href="/policies" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>Policy</a>
-                    <button id="drawer-toggle-btn" type="button" onclick="toggleDrawer()" class="p-1.5 text-gray-600 hover:text-indigo-600 hover:bg-gray-100 rounded-lg transition-colors flex items-center justify-center focus:outline-none" title="Menu tiện ích">
+                    <a target="_blank" rel="noopener noreferrer" href="/?store_type={{ store_type }}" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Sản phẩm</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/collections?store_type={{ store_type }}" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Collections</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/metaobjects?store_type={{ store_type }}" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">MetaObjects</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/product-metafields?store_type={{ store_type }}" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Metafield SP</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/create?store_type={{ store_type }}" class="text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 pb-0.5">Tạo sản phẩm mới</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/edit-variants?store_type={{ store_type }}" class="text-sm font-medium text-red-600 hover:text-red-700 transition-colors">Sửa hàng loạt</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/blogs?store_type={{ store_type }}" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1">Blog</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/policies?store_type={{ store_type }}" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1">Policy</a>
+                    <button id="drawer-toggle-btn" type="button" onclick="toggleDrawer()" class="p-1.5 text-gray-600 hover:text-indigo-600 hover:bg-gray-100 rounded-lg transition-colors focus:outline-none" title="Menu tiện ích">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                         </svg>
@@ -51,82 +130,880 @@
             </div>
         </div>
     </header>
+
     {% include 'drawer.html' %}
 
-    <main class="max-w-3xl mx-auto p-4 sm:p-8">
-        <div class="mb-8">
-            <h1 class="text-3xl font-bold text-gray-800 tracking-tight">Tạo sản phẩm hàng loạt</h1>
-            <p class="text-gray-500 mt-2">Điền thông tin bên dưới để tạo nhiều sản phẩm với cùng Tên và Mô tả.</p>
-        </div>
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-32">
+        
+        <!-- Breadcrumb & Page Title -->
+        <div class="mb-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div>
+                <div class="flex items-center gap-2 text-sm font-medium text-gray-500 mb-1">
+                    <a target="_blank" rel="noopener noreferrer" href="/?store_type={{ store_type }}" class="hover:text-indigo-600">Sản phẩm</a>
+                    <span>/</span>
+                    <span class="text-gray-800 font-semibold">Tạo mới</span>
+                </div>
+                <h1 class="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">Tạo sản phẩm mới</h1>
+                <p class="text-sm text-gray-500 mt-1">Đầy đủ thông tin chuẩn SEO, đa biến thể giá riêng, liên kết tác giả và danh mục taxonomy.</p>
+            </div>
 
-        {% if error %}
-        <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-r-md shadow-sm">
-            <p class="text-sm text-red-700 font-medium">Lỗi! {{ error }}</p>
-        </div>
-        {% endif %}
+            <!-- Action Area: Store Switcher + Validation Status -->
+            <div class="flex items-center gap-3 flex-wrap">
+                <!-- Nút Switch Store Mặc định ⟷ Store Riêng (qua Proxy) -->
+                <div class="inline-flex items-center gap-3 bg-white px-3.5 py-2 rounded-2xl border border-gray-200 shadow-2xs">
+                    <div class="flex items-center gap-1.5 text-sm font-bold text-gray-500 uppercase tracking-wider">
+                        <iconify-icon icon="{% if store_type == 'custom' %}mdi:store-cog{% else %}mdi:store{% endif %}" class="text-base {% if store_type == 'custom' %}text-indigo-600{% else %}text-gray-500{% endif %}"></iconify-icon>
+                        <span class="hidden sm:inline">Cửa hàng:</span>
+                    </div>
 
-        {% if success_message %}
-        <div class="bg-green-50 border-l-4 border-green-500 p-4 mb-6 rounded-r-md shadow-sm">
-            <p class="text-sm text-green-700 font-medium">{{ success_message }}</p>
-        </div>
-        {% endif %}
+                    <!-- Switch Toggle -->
+                    <label class="relative inline-flex items-center cursor-pointer select-none" title="Bấm để chuyển đổi giữa Store Mặc định và Store Riêng">
+                        <input type="checkbox" id="storeSwitchToggle" class="sr-only peer" {% if store_type == 'custom' %}checked{% endif %} onchange="handleStoreSwitch(this.checked)">
+                        <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                        <span id="storeSwitchLabel" class="ml-2.5 text-sm font-bold {% if store_type == 'custom' %}text-indigo-600{% else %}text-gray-700{% endif %}">
+                            {% set full_domain = active_shop_domain or (active_shop ~ '.myshopify.com') if (active_shop and '.' not in active_shop) else (active_shop_domain or 'wrydeco.myshopify.com') %}
+                            {% if store_type == 'custom' %}
+                                Store Riêng <span class="font-mono text-sm font-semibold text-indigo-500">({{ full_domain }})</span>
+                            {% else %}
+                                Store Mặc định <span class="font-mono text-sm font-semibold text-gray-500">({{ full_domain }})</span>
+                            {% endif %}
+                        </span>
+                    </label>
 
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sm:p-8">
-            <form action="/create" method="POST" class="space-y-6">
-                <div>
-                    <label for="title" class="block text-sm font-medium text-gray-700 mb-1">Tên sản phẩm *</label>
-                    <input type="text" id="title" name="title" value="aaa" required class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5 outline-none transition-colors">
+                    <!-- Proxy Badge -->
+                    {% if store_type == 'custom' %}
+                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-sm font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200" title="Bắt buộc kết nối qua Proxy US">
+                        <span>🛡️</span>
+                        <span>Proxy US</span>
+                    </span>
+                    {% else %}
+                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-sm font-semibold bg-gray-100 text-gray-600 border border-gray-200" title="Kết nối trực tiếp Store Mặc định">
+                        <span class="text-amber-500">⚡</span>
+                        <span>Direct VPS</span>
+                    </span>
+                    {% endif %}
                 </div>
 
-                <div>
-                    <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Mô tả sản phẩm</label>
-                    <textarea id="description" name="description" rows="5" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5 outline-none transition-colors">aaa</textarea>
+                <!-- Nút Import từ file CSV -->
+                <button type="button" onclick="triggerCsvImport()" class="inline-flex items-center gap-2 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-2xl shadow-2xs hover:shadow transition-all cursor-pointer" title="Import dữ liệu sản phẩm từ file CSV chuẩn Shopify">
+                    <iconify-icon icon="mdi:file-excel" class="text-base"></iconify-icon>
+                    <span>Import từ CSV</span>
+                </button>
+                <input type="file" id="csv-file-input" accept=".csv, text/csv" class="hidden" onchange="handleCsvFileSelected(event)">
+
+                <!-- Top Quick Status -->
+                <div id="form-validation-badge" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl text-sm font-semibold bg-amber-50 text-amber-800 border border-amber-200 shadow-2xs">
+                    <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                    <span>Đã hoàn thành 2/16 trường bắt buộc</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================================================================== -->
+        <!-- SECTION: CREATE NEW PRODUCT ERROR (Đặc biệt dành riêng để hiển thị lỗi) -->
+        <!-- ===================================================================== -->
+        <div id="create-error-section" class="hidden mb-8 rounded-xl border border-red-300 bg-red-50 p-5 shadow-sm transition-all duration-200 scroll-mt-28">
+            <div class="flex items-start justify-between gap-3">
+                <div class="flex items-start gap-3">
+                    <div class="p-2 bg-red-100 text-red-600 rounded-lg flex-shrink-0">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h3 class="text-base font-bold text-red-900">Create New Product Error</h3>
+                            <span id="error-phase-badge" class="px-2 py-0.5 text-sm font-semibold uppercase rounded bg-red-200 text-red-800"></span>
+                        </div>
+                        <p class="text-sm text-red-700 mt-1">Quá trình khởi tạo sản phẩm trên Shopify Store đã gặp các sự cố sau. Vui lòng kiểm tra và sửa lỗi trước khi thử lại:</p>
+                        <ul id="error-items-list" class="mt-3 space-y-1.5 list-disc list-inside text-sm text-red-800 font-medium">
+                            <!-- Render dynamically -->
+                        </ul>
+                    </div>
+                </div>
+                <button type="button" onclick="dismissErrorSection()" class="w-9 h-9 flex items-center justify-center text-red-400 hover:text-red-700 rounded-xl hover:bg-red-100 transition-colors cursor-pointer" title="Đóng thông báo">
+                    <svg class="w-[22px] h-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- ===================================================================== -->
+        <!-- FORM CONTAINER: MAIN BODY -->
+        <!-- ===================================================================== -->
+        
+        <!-- ===================================================================== -->
+        <!-- SECTION: KẾT QUẢ TẠO SẢN PHẨM THÀNH CÔNG & DANH SÁCH 5 NÚT ACTION -->
+        <!-- ===================================================================== -->
+        <div id="create-success-actions-section" class="hidden mb-8 rounded-2xl border-2 border-emerald-500 bg-gradient-to-br from-emerald-50 via-teal-50/40 to-white p-6 sm:p-8 shadow-xl transition-all duration-300">
+            <!-- Header chúc mừng -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-emerald-200">
+                <div class="flex items-start sm:items-center gap-3.5">
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center flex-shrink-0 shadow-lg shadow-emerald-500/30">
+                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="px-2.5 py-0.5 rounded-full text-sm font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300">Tạo thành công</span>
+                            <span id="created-store-badge" class="px-2.5 py-0.5 rounded-full text-sm font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">Store Mặc định</span>
+                        </div>
+                        <h3 id="created-product-title-display" class="text-xl sm:text-2xl font-black text-gray-900 mt-1">Sản phẩm vừa tạo</h3>
+                        <p class="text-sm text-gray-600 mt-0.5 flex items-center gap-2 flex-wrap">
+                            <span>Handle: <strong id="created-product-handle-display" class="font-mono text-emerald-950 font-bold bg-white px-2 py-0.5 rounded border border-emerald-200">sample-handle</strong></span>
+                            <span>&bull;</span>
+                            <span>ID: <strong id="created-product-id-display" class="font-mono text-gray-800 font-bold bg-white px-2 py-0.5 rounded border border-gray-200">123456789</strong></span>
+                        </p>
+                    </div>
                 </div>
 
-                <div>
-                    <label for="quantity" class="block text-sm font-medium text-gray-700 mb-1">Số lượng cần tạo *</label>
-                    <input type="number" id="quantity" name="quantity" min="1" max="50" value="1" required class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5 outline-none transition-colors">
-                    <p class="mt-1 text-xs text-gray-500">Giới hạn tối đa 50 sản phẩm mỗi lần thao tác.</p>
-                </div>
-
-                <div class="pt-4">
-                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg text-sm px-5 py-3 text-center transition-colors shadow-sm focus:ring-4 focus:ring-indigo-300">
-                        Tạo sản phẩm
+                <div class="flex items-center gap-2 shrink-0">
+                    <button type="button" onclick="resetFormForNewProduct()" class="inline-flex items-center gap-1.5 px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 text-sm font-bold rounded-xl border border-gray-300 shadow-xs transition-colors cursor-pointer" title="Làm mới form để tạo tiếp sản phẩm khác">
+                        <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        <span>Tạo thêm sản phẩm khác</span>
                     </button>
                 </div>
-            </form>
+            </div>
+
+            <!-- Section 5 Nút Action -->
+            <div class="mt-6">
+                <p class="text-sm font-bold uppercase tracking-wider text-gray-500 mb-3.5 flex items-center gap-1.5">
+                    <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    <span>Chọn nơi bạn muốn đi đến ngay bây giờ:</span>
+                </p>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
+                    <!-- Nút 1: Đi đến trang sản phẩm trong tool này -->
+                    <button type="button" 
+                            id="btn-action-tool" 
+                            onclick="handleSuccessAction('tool')" 
+                            class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-3 rounded-xl font-bold text-sm text-white bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] transition-all shadow-md shadow-indigo-600/25 cursor-pointer text-center group"
+                            title="Mở trang chi tiết sản phẩm trong Shopify Admin Manager">
+                        <img src="/static/favicon.svg" alt="Tool" class="w-5 h-5 object-contain shrink-0 group-hover:scale-110 transition-transform" onerror="this.src='/static/favicon-96x96.png'">
+                        <span>Đi đến trong tool này</span>
+                    </button>
+
+                    <!-- Nút 2: Đi đến trang sản phẩm trên Amazon -->
+                    <button type="button" 
+                            id="btn-action-amazon" 
+                            onclick="handleSuccessAction('amazon')" 
+                            class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-3 rounded-xl font-bold text-sm text-gray-900 bg-amber-400 hover:bg-amber-500 active:scale-[0.98] transition-all shadow-md shadow-amber-400/30 cursor-pointer text-center group"
+                            title="Mở trang sản phẩm trên Amazon (từ link custom.amazon_link)">
+                        <span class="btn-icon flex items-center group-hover:scale-110 transition-transform">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0 text-gray-900" viewBox="0 0 1024 1024" fill="none"><path fill="currentColor" d="M485 467.5c-11.6 4.9-20.9 12.2-27.8 22s-10.4 21.6-10.4 35.5c0 17.8 7.5 31.5 22.4 41.2c14.1 9.1 28.9 11.4 44.4 6.8c17.9-5.2 30-17.9 36.4-38.1c3-9.3 4.5-19.7 4.5-31.3v-50.2c-12.6.4-24.4 1.6-35.5 3.7s-22.4 5.6-34 10.4M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448s448-200.6 448-448S759.4 64 512 64m35.8 262.7c-7.2-10.9-20.1-16.4-38.7-16.4c-1.3 0-3 .1-5.3.3c-2.2.2-6.6 1.5-12.9 3.7a79.4 79.4 0 0 0-17.9 9.1c-5.5 3.8-11.5 10-18 18.4c-6.4 8.5-11.5 18.4-15.3 29.8l-94-8.4c0-12.4 2.4-24.7 7-36.9c4.7-12.2 11.8-23.9 21.4-35q14.4-16.8 34.5-29.4c13.4-8.5 29.6-15.2 48.4-20.3c18.9-5.1 39.1-7.6 60.9-7.6c21.3 0 40.6 2.6 57.8 7.7c17.2 5.2 31.1 11.5 41.4 19.1a117 117 0 0 1 25.9 25.7q10.35 14.4 14.4 26.7c2.7 8.2 4 15.7 4 22.8v182.5c0 6.4 1.4 13 4.3 19.8q4.35 10.2 10.2 18c3.9 5.2 7.9 9.9 12 14.3c4.1 4.3 7.6 7.7 10.6 9.9l4.1 3.4l-72.5 69.4c-8.5-7.7-16.9-15.4-25.2-23.4s-14.5-14-18.5-18.1l-6.1-6.2c-2.4-2.3-5-5.7-8-10.2c-8.1 12.2-18.5 22.8-31.1 31.8c-12.7 9-26.3 15.6-40.7 19.7c-14.5 4.1-29.4 6.5-44.7 7.1s-30-1.5-43.9-6.5s-26.5-11.7-37.6-20.3s-19.9-20.2-26.5-35s-9.9-31.5-9.9-50.4c0-17.4 3-33.3 8.9-47.7c6-14.5 13.6-26.5 23-36.1s20.7-18.2 34-25.7s26.4-13.4 39.2-17.7c12.8-4.2 26.6-7.8 41.5-10.7s27.6-4.8 38.2-5.7s21.2-1.6 31.8-2v-39.4c0-13.5-2.3-23.5-6.7-30.1m180.5 379.6q-4.2 4.95-14.1 13.5c-9.9 8.55-16.8 12.7-30.5 21.1s-28.8 16-45 22.9c-16.3 6.9-36.3 12.9-60.1 18c-23.7 5.1-48.2 7.6-73.3 7.6c-25.4 0-50.7-3.2-76.1-9.6s-47.6-14.3-66.8-23.7c-19.1-9.4-37.6-20.2-55.1-32.2c-17.6-12.1-31.7-22.9-42.4-32.5c-10.6-9.6-19.6-18.7-26.8-27.1c-1.7-1.9-2.8-3.6-3.2-5.1s-.3-2.8.3-3.7s1.5-1.6 2.6-2.2a7.42 7.42 0 0 1 7.4.8c40.9 24.2 72.9 41.3 95.9 51.4q124.35 54.6 255.3 27.9c40.5-8.3 82.1-22.2 124.9-41.8c3.2-1.2 6-1.5 8.3-.9s3.5 2.4 3.5 5.4c0 2.8-1.6 6.3-4.8 10.2m59.9-29c-1.8 11.1-4.9 21.6-9.1 31.8c-7.2 17.1-16.3 30-27.1 38.4c-3.6 2.9-6.4 3.8-8.3 2.8s-1.9-3.5 0-7.4c4.5-9.3 9.2-21.8 14.2-37.7c5-15.8 5.7-26 2.1-30.5c-1.1-1.5-2.7-2.6-5-3.6c-2.2-.9-5.1-1.5-8.6-1.9s-6.7-.6-9.4-.8c-2.8-.2-6.5-.2-11.2 0s-8 .4-10.1.6a874 874 0 0 1-17.1 1.5c-1.3.2-2.7.4-4.1.5c-1.5.1-2.7.2-3.5.3l-2.7.3c-1 .1-1.7.2-2.2.2h-3.2l-1-.2l-.6-.5l-.5-.9c-1.3-3.3 3.7-7.4 15-12.4s22.3-8.1 32.9-9.3c9.8-1.5 21.3-1.5 34.5-.3s21.3 3.7 24.3 7.4c2.3 3.5 2.5 10.7.7 21.7" /></svg>
+                        </span>
+                        <span class="btn-text">Đi đến trên Amazon</span>
+                    </button>
+
+                    <!-- Nút 3: Đi đến trong Shopify Admin -->
+                    <button type="button" 
+                            id="btn-action-shopify" 
+                            onclick="handleSuccessAction('shopify')" 
+                            class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-3 rounded-xl font-bold text-sm text-white bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] transition-all shadow-md shadow-emerald-600/25 cursor-pointer text-center group"
+                            title="Mở trang sản phẩm trong Shopify Admin">
+                        <span class="btn-icon flex items-center group-hover:scale-110 transition-transform">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0 text-white" viewBox="0 0 24 24" fill="none"><path fill="currentColor" d="m14.49 20.937l5.381-1.166S17.93 6.633 17.914 6.546s-.086-.144-.158-.144s-1.439-.101-1.439-.101s-.949-.949-1.064-1.05c-.027-.029-.057-.043-.086-.058zm.446-15.772c-.016 0-.043.014-.057.014c-.016 0-.217.059-.533.158c-.318-.919-.879-1.768-1.871-1.768h-.086c-.289-.361-.633-.519-.936-.519c-2.316 0-3.426 2.892-3.77 4.359c-.892.275-1.538.476-1.613.505c-.504.158-.517.172-.574.648c-.057.344-1.367 10.489-1.367 10.489l10.117 1.899zm-2.635.704v.102c-.559.173-1.178.36-1.783.547c.346-1.323.992-1.972 1.553-2.217c.146.375.23.878.23 1.568m-.92-2.2c.1 0 .201.028.303.102c-.732.344-1.539 1.222-1.871 2.978a59 59 0 0 1-1.411.432c.389-1.339 1.325-3.512 2.979-3.512m.402 7.812s-.604-.315-1.322-.315c-1.08 0-1.123.676-1.123.849c0 .921 2.418 1.28 2.418 3.453c0 1.712-1.08 2.806-2.547 2.806c-1.756 0-2.648-1.094-2.648-1.094l.475-1.554s.922.792 1.697.792a.693.693 0 0 0 .721-.69c0-1.209-1.986-1.268-1.986-3.252c0-1.669 1.195-3.295 3.627-3.295c.936 0 1.395.272 1.395.272zm.922-7.281c.518.06.85.648 1.064 1.311c-.258.087-.547.173-.863.273v-.187c0-.561-.072-1.022-.201-1.397" /></svg>
+                        </span>
+                        <span class="btn-text">Đi đến Shopify Admin</span>
+                    </button>
+
+                    <!-- Nút 4: Đi đến trên Wrydeco store website (store mặc định) -->
+                    <button type="button" 
+                            id="btn-action-wrydeco-default" 
+                            onclick="handleSuccessAction('default-store')" 
+                            class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-3 rounded-xl font-bold text-sm text-white bg-neutral-900 hover:bg-black active:scale-[0.98] transition-all shadow-md shadow-neutral-900/25 cursor-pointer text-center group"
+                            title="Mở sản phẩm trên website Storefront Wrydeco Mặc định (wrydeco.com)">
+                        <span class="btn-icon flex items-center group-hover:scale-110 transition-transform">
+                            <img src="/static/wrydeco_store-logo-white-trans-cropped.png" alt="Wrydeco" class="w-5 h-5 object-contain shrink-0" onerror="this.src='/static/wrydeco-logo.png'">
+                        </span>
+                        <span class="btn-text">Đi đến Store Mặc định (Web)</span>
+                    </button>
+
+                    <!-- Nút 5: Đi đến trên Wrydeco store website (store riêng) -->
+                    <button type="button" 
+                            id="btn-action-wrydeco-custom" 
+                            onclick="handleSuccessAction('custom-store')" 
+                            class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-3 rounded-xl font-bold text-sm text-white bg-teal-700 hover:bg-teal-800 active:scale-[0.98] transition-all shadow-md shadow-teal-700/25 cursor-pointer text-center group"
+                            title="Mở sản phẩm trên website Storefront Wrydeco Riêng">
+                        <span class="btn-icon flex items-center group-hover:scale-110 transition-transform">
+                            <iconify-icon icon="mdi:store-outline" class="text-xl text-teal-200"></iconify-icon>
+                        </span>
+                        <span class="btn-text">Đi đến Store Riêng (Web)</span>
+                    </button>
+                </div>
+            </div>
         </div>
+
+        <form id="create-product-form" onsubmit="event.preventDefault(); handleFormSubmit();" class="space-y-8">
+            
+            <!-- 1. SECTION: MEDIA -->
+            <div class="bg-white rounded-2xl shadow-xs border border-gray-200 p-6 sm:p-7">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center">
+                        <h2 class="text-lg font-bold text-gray-900">1. Phương tiện (Media)</h2>
+                        <span class="req-star">*</span>
+                        <span class="info-icon" title="Hình ảnh đại diện và chi tiết sản phẩm. Bắt buộc có ít nhất 1 ảnh chất lượng cao để hiển thị trên storefront WRYDECO, Google Shopping và Catalog.">!</span>
+                    </div>
+                    <span id="media-count-badge" class="text-sm font-semibold text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full">0 ảnh</span>
+                </div>
+
+                <!-- Media Upload Controls -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <!-- Dropzone Local Upload -->
+                    <div class="border-2 border-dashed border-gray-300 hover:border-indigo-500 rounded-xl p-6 text-center cursor-pointer transition-colors bg-gray-50/50 hover:bg-indigo-50/30 flex flex-col items-center justify-center" onclick="document.getElementById('device-file-input').click()">
+                        <input type="file" id="device-file-input" multiple accept="image/*" class="hidden" onchange="handleDeviceFileSelect(event)">
+                        <div class="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mb-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                        </div>
+                        <p class="text-sm font-semibold text-gray-800">Tải ảnh từ thiết bị</p>
+                        <p class="text-sm text-gray-500 mt-1">Hỗ trợ PNG, JPG, WEBP (Kéo & thả hoặc bấm để chọn)</p>
+                    </div>
+
+                    <!-- Add from URL Link -->
+                    <div class="border border-gray-200 rounded-xl p-5 bg-white flex flex-col justify-center">
+                        <label class="block text-sm font-bold text-gray-700 uppercase tracking-wider mb-2">Thêm ảnh từ URL trực tuyến</label>
+                        <div class="flex gap-2">
+                            <input type="url" id="image-url-input" placeholder="https://cdn.shopify.com/.../image.jpg" class="flex-1 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500">
+                            <button type="button" onclick="handleAddMediaUrl()" class="px-4 py-2 bg-gray-900 hover:bg-black text-white text-sm font-bold rounded-lg transition-colors shadow-xs">Thêm URL</button>
+                        </div>
+                        <p class="text-sm text-gray-400 mt-2">Dán URL ảnh CDN Shopify hoặc link ảnh công khai có hỗ trợ CORS.</p>
+                    </div>
+                </div>
+
+                <!-- Media Gallery Preview -->
+                <div id="media-gallery" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3 min-h-[100px] p-3 bg-gray-50 rounded-xl border border-gray-100">
+                    <div id="media-empty-placeholder" class="col-span-full py-8 text-center text-gray-400 text-sm font-medium">
+                        Chưa có hình ảnh nào được thêm. Vui lòng tải từ máy hoặc dán link URL.
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. SECTION: THÔNG TIN CƠ BẢN -->
+            <div class="bg-white rounded-2xl shadow-xs border border-gray-200 p-6 sm:p-7 space-y-6">
+                <div class="border-b border-gray-100 pb-3">
+                    <h2 class="text-lg font-bold text-gray-900">2. Thông tin chung sản phẩm</h2>
+                </div>
+
+                <!-- Title -->
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <div class="flex items-center">
+                            <label for="product-title" class="text-sm font-bold text-gray-800">Tiêu đề sản phẩm (Title)</label>
+                            <span class="req-star">*</span>
+                            <span class="info-icon" title="Tên sản phẩm hiển thị trên toàn bộ store, giỏ hàng, hóa đơn và kết quả tìm kiếm SEO.">!</span>
+                        </div>
+                        <span id="title-char-count" class="text-sm text-gray-400">0 ký tự</span>
+                    </div>
+                    <input type="text" id="product-title" oninput="handleTitleInput(this.value)" placeholder="Ví dụ: Rustic Handcrafted Solid Oak Floating Shelf..." class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm font-semibold rounded-lg px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
+                </div>
+
+                <!-- Description -->
+                <div>
+                    <div class="flex items-center mb-1.5">
+                        <label for="product-desc" class="text-sm font-bold text-gray-800">Mô tả sản phẩm (Description HTML)</label>
+                        <span class="req-star">*</span>
+                        <span class="info-icon" title="Mô tả chi tiết tính năng, kích thước, công năng sản phẩm giúp khách hàng hiểu rõ giá trị trước khi mua.">!</span>
+                    </div>
+                    <textarea id="product-desc" rows="5" oninput="updateValidationState()" placeholder="<p>Mô tả chi tiết đặc điểm cấu tạo, chất liệu gỗ, lớp phủ hoàn thiện và cam kết chất lượng của sản phẩm...</p>" class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg p-3 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white font-mono text-sm transition-all"></textarea>
+                </div>
+
+                <!-- Product Type & Status & Vendor -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <!-- Product Type -->
+                    <div>
+                        <div class="flex items-center mb-1.5">
+                            <label for="product-type" class="text-sm font-bold text-gray-800">Loại sản phẩm (Type)</label>
+                            <span class="req-star">*</span>
+                            <span class="info-icon" title="Loại sản phẩm (ví dụ: Floating Shelf, Wall Decor, Table...) dùng để phân loại danh mục nội bộ và bộ lọc sản phẩm trên store Wrydeco.">!</span>
+                        </div>
+                        <input type="text" id="product-type" oninput="updateValidationState()" placeholder="Ví dụ: Wall Shelf, Floating Shelf..." class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
+                    </div>
+
+                    <!-- Category (Taxonomy) -->
+                    <div>
+                        <div class="flex items-center mb-1.5">
+                            <label class="text-sm font-bold text-gray-800">Danh mục (Category)</label>
+                            <span class="req-star">*</span>
+                            <span class="info-icon" title="Danh mục chuẩn Shopify Standard Product Taxonomy giúp đồng bộ chính xác lên Google Merchant Center, Meta Catalog và tối ưu tìm kiếm.">!</span>
+                        </div>
+                        <div class="flex gap-2">
+                            <input type="text" id="selected-category-name" readonly placeholder="Chưa chọn danh mục..." class="w-full bg-gray-100 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg px-3 py-2.5 outline-none cursor-pointer" onclick="openCategoryModal()">
+                            <input type="hidden" id="selected-category-id">
+                            <button type="button" onclick="openCategoryModal()" class="px-3.5 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-sm font-bold rounded-lg border border-indigo-200 transition-colors flex-shrink-0">Chọn</button>
+                        </div>
+                    </div>
+
+                    <!-- Status -->
+                    <div>
+                        <div class="flex items-center mb-1.5">
+                            <label for="product-status" class="text-sm font-bold text-gray-800">Trạng thái (Status)</label>
+                            <span class="req-star">*</span>
+                            <span class="info-icon" title="Trạng thái hiển thị sản phẩm: Active (hiển thị bán ngay) hoặc Draft (lưu nháp để kiểm tra trước khi công khai).">!</span>
+                        </div>
+                        <select id="product-status" onchange="updateValidationState()" class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all font-semibold">
+                            <option value="DRAFT" selected>Draft (Bản nháp)</option>
+                            <option value="ACTIVE">Active (Đang hoạt động)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Vendor & Tags -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <!-- Vendor -->
+                    <div>
+                        <div class="flex items-center mb-1.5">
+                            <label for="product-vendor" class="text-sm font-bold text-gray-800">Nhà cung cấp (Vendor)</label>
+                            <span class="req-star">*</span>
+                            <span class="info-icon" title="Thương hiệu / Nhà sản xuất của sản phẩm. Store WRYDECO phân phối độc quyền thương hiệu chính hãng 'Wrydeco'.">!</span>
+                        </div>
+                        <select id="product-vendor" onchange="updateValidationState()" class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all font-semibold">
+                            {% for v in vendors %}
+                            <option value="{{ v }}" selected>{{ v }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Tags -->
+                    <div class="md:col-span-2">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <div class="flex items-center">
+                                <label class="text-sm font-bold text-gray-800">Thẻ sản phẩm (Tags)</label>
+                                <span class="req-star">*</span>
+                                <span class="info-icon" title="Thẻ từ khóa giúp gắn nhãn tìm kiếm nội bộ, tạo Automated Collections và lọc sản phẩm trên website WRYDECO.">!</span>
+                            </div>
+                            <span class="text-sm text-gray-400">Nhấn Enter hoặc phẩy để thêm tag</span>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2 p-2 bg-gray-50 border border-gray-300 rounded-lg min-h-[44px]">
+                            <div id="tags-container" class="flex flex-wrap items-center gap-1.5"></div>
+                            <input type="text" id="tag-input" onkeydown="handleTagKeydown(event)" placeholder="Nhập tag..." class="bg-transparent border-none text-sm text-gray-900 outline-none flex-1 min-w-[120px]">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. SECTION: VARIATION (Chuẩn UI Shopify Admin) -->
+            <div class="bg-white rounded-2xl shadow-xs border border-gray-200 p-6 sm:p-7 space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-gray-100 pb-3 gap-2">
+                    <div class="flex items-center">
+                        <h2 class="text-lg font-bold text-gray-900">3. Biến thể sản phẩm (Variation)</h2>
+                        <span class="req-star">*</span>
+                        <span class="info-icon" title="Các tùy chọn biến thể (Màu sắc, Kích thước...). Mỗi biến thể có giá bán riêng (Price), giá so sánh (Compare-at price), mã SKU quản lý kho riêng và mã vạch Barcode riêng.">!</span>
+                    </div>
+                    <span id="variant-matrix-summary" class="text-sm font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100 px-3 py-1 rounded-full">1 tùy chọn • 1 biến thể</span>
+                </div>
+
+                <p class="text-sm text-gray-500">Tổ chức tùy chọn biến thể theo giao diện Shopify Admin. Bạn có thể thêm tối đa 3 tùy chọn (như Color, Size, Material). Hệ thống sẽ tự động sinh ma trận biến thể đầy đủ để bạn cấu hình Giá bán, Giá so sánh, SKU và Barcode riêng biệt cho từng biến thể.</p>
+
+                <!-- Option Cards List -->
+                <div id="options-list-container" class="space-y-4">
+                    <!-- Render options dynamically -->
+                </div>
+
+                <!-- Add Option Button -->
+                <div id="add-option-btn-container" class="pt-2">
+                    <button type="button" id="btn-add-option" onclick="handleAddOption()" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                        <span>Thêm tùy chọn khác (Tối đa 3)</span>
+                    </button>
+                </div>
+
+                <!-- VARIANT MATRIX TABLE -->
+                <div class="mt-8 border-t border-gray-100 pt-6">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                        <div>
+                            <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider">Bảng Ma trận Biến thể (Variant Matrix)</h3>
+                            <p class="text-sm text-gray-500">Mỗi dòng biến thể bắt buộc phải có đầy đủ: Price, Compare-at price, SKU và Barcode riêng.</p>
+                        </div>
+                        <!-- Bulk Price Helper -->
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="promptBulkPricing()" class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-800 text-sm font-semibold rounded-lg border border-gray-200 transition-colors flex items-center gap-1.5">
+                                <svg class="w-3.5 h-3.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                                <span>⚡ Điền nhanh giá & mã tự động</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Matrix Table Element -->
+                    <div class="overflow-x-auto border border-gray-200 rounded-xl bg-white shadow-xs">
+                        <table class="min-w-full divide-y divide-gray-200 text-left text-sm">
+                            <thead class="bg-gray-50 font-bold text-gray-700">
+                                <tr>
+                                    <th class="px-4 py-3 min-w-[180px]">TỔ HỢP BIẾN THỂ</th>
+                                    <th class="px-3 py-3 min-w-[130px]">
+                                        <span>GIÁ BÁN ($)</span>
+                                        <span class="req-star">*</span>
+                                    </th>
+                                    <th class="px-3 py-3 min-w-[140px]">
+                                        <span>GIÁ SO SÁNH ($)</span>
+                                        <span class="req-star">*</span>
+                                    </th>
+                                    <th class="px-3 py-3 min-w-[150px]">
+                                        <span>MÃ SKU</span>
+                                        <span class="req-star">*</span>
+                                    </th>
+                                    <th class="px-3 py-3 min-w-[150px]">
+                                        <span>BARCODE</span>
+                                        <span class="req-star">*</span>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="variant-matrix-tbody" class="divide-y divide-gray-100">
+                                <!-- Render rows dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. SECTION: PHONG CÁCH & KHÔNG GIAN (Interior Style & Room Type) -->
+            <div class="bg-white rounded-2xl shadow-xs border border-gray-200 p-6 sm:p-7 space-y-6">
+                <div class="border-b border-gray-100 pb-3">
+                    <h2 class="text-lg font-bold text-gray-900">4. Phong cách thiết kế & Không gian phòng</h2>
+                </div>
+
+                <!-- Interior Style -->
+                <div>
+                    <div class="flex items-center mb-2">
+                        <label class="text-sm font-bold text-gray-800">Phong cách nội thất (Interior Style)</label>
+                        <span class="req-star">*</span>
+                        <span class="info-icon" title="Phong cách thiết kế nội thất của sản phẩm (Rustic, Japandi, Mid-Century, Organic Modern) dùng cho bộ lọc style và tư vấn phối cảnh.">!</span>
+                        <span class="text-sm text-gray-400 ml-2 font-normal">(Chọn ít nhất 1 phong cách)</span>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        {% for style in interior_styles %}
+                        <label class="relative flex items-center p-3 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors">
+                            <input type="checkbox" name="interior_style" value="{{ style }}" onchange="updateValidationState()" class="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500">
+                            <span class="ml-2.5 text-sm font-bold text-gray-800">{{ style }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Room Type -->
+                <div>
+                    <div class="flex items-center mb-2">
+                        <label class="text-sm font-bold text-gray-800">Không gian phòng (Room Type)</label>
+                        <span class="req-star">*</span>
+                        <span class="info-icon" title="Không gian phòng phù hợp (Living Room, Bedroom, Kitchen...) giúp khách hàng dễ dàng tìm kiếm đồ nội thất theo từng phòng.">!</span>
+                        <span class="text-sm text-gray-400 ml-2 font-normal">(Chọn ít nhất 1 không gian)</span>
+                    </div>
+                    <div id="room-type-container" class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        {% for room in room_types %}
+                        <label class="relative flex items-center p-3 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors">
+                            <input type="checkbox" name="room_type" value="{{ room }}" onchange="updateValidationState()" class="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500">
+                            <span class="ml-2.5 text-sm font-semibold text-gray-800">{{ room }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. SECTION: TÁC GIẢ & METADATA NÂNG CAO (Author, Rich Desc, AEO) -->
+            <div class="bg-white rounded-2xl shadow-xs border border-gray-200 p-6 sm:p-7 space-y-6">
+                <div class="border-b border-gray-100 pb-3">
+                    <h2 class="text-lg font-bold text-gray-900">5. Tác giả & Dữ liệu chuyên sâu WRYDECO</h2>
+                </div>
+
+                <!-- Inline Author Selector -->
+                <div>
+                    <div class="flex items-center justify-between mb-2.5">
+                        <div class="flex items-center">
+                            <label class="text-sm font-bold text-gray-800">Tác giả thiết kế (Author)</label>
+                            <span class="req-star">*</span>
+                            <span class="info-icon" title="Nghệ nhân / Kiến trúc sư thiết kế mẫu sản phẩm, liên kết trực tiếp tới Metaobject product_author để tăng tính xác thực E-E-A-T và độ tin cậy thương hiệu.">!</span>
+                        </div>
+                        <span id="author-count-badge" class="text-sm font-semibold text-gray-500">Đang tải...</span>
+                    </div>
+
+                    <!-- Spinner Indicator khi đang fetch từ Store -->
+                    <div id="author-loading-indicator" class="flex items-center justify-center gap-3 p-8 bg-gray-50 border border-dashed border-gray-300 rounded-2xl">
+                        <svg class="animate-spin h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span class="text-sm font-semibold text-gray-600">Đang tải danh sách tác giả từ {% if store_type == 'custom' %}Store Riêng (qua Proxy US){% else %}Store Mặc định{% endif %}...</span>
+                    </div>
+
+                    <!-- Container hiển thị tất cả các author có sẵn lên inline -->
+                    <div id="inline-authors-container" class="hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                        <!-- Render author cards dynamically -->
+                    </div>
+
+                    <!-- Empty State nếu không có author -->
+                    <div id="author-empty-state" class="hidden p-4 bg-amber-50 border border-amber-200 rounded-xl text-center">
+                        <p class="text-sm font-semibold text-amber-800">Không tìm thấy tác giả nào trong định nghĩa Metaobject product_author của Store này.</p>
+                    </div>
+
+                    <!-- Hidden input lưu ID tác giả được chọn -->
+                    <input type="hidden" id="selected-author-id" name="author_id">
+                </div>
+
+                <!-- Rich Description -->
+                <div>
+                    <div class="flex items-center mb-1.5">
+                        <label for="rich-description" class="text-sm font-bold text-gray-800">Mô tả mở rộng (Rich Description)</label>
+                        <span class="req-star">*</span>
+                        <span class="info-icon" title="Nội dung câu chuyện thiết kế, xuất xứ chất liệu và hướng dẫn bảo quản nâng cao (metafield custom.rich_description).">!</span>
+                    </div>
+                    <textarea id="rich-description" rows="3" oninput="updateValidationState()" placeholder="Câu chuyện về nghệ nhân chế tác, nguồn gốc nguyên liệu gỗ và thông số kỹ thuật chi tiết..." class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg p-3 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"></textarea>
+                </div>
+
+                <!-- AEO (Answer Engine Optimization) -->
+                <div>
+                    <div class="flex items-center mb-1.5">
+                        <label for="aeo-html" class="text-sm font-bold text-gray-800">Nội dung AEO (Answer Engine Optimization)</label>
+                        <span class="req-star">*</span>
+                        <span class="info-icon" title="Nội dung tối ưu hóa cho AI Search (Perplexity, ChatGPT, Google AI Overviews) qua metafield custom.aeo_html.">!</span>
+                    </div>
+                    <textarea id="aeo-html" rows="3" oninput="updateValidationState()" placeholder="<div>Tóm tắt trả lời ngắn gọn dành cho các công cụ AI tìm kiếm: Sản phẩm kệ gỗ WRYDECO được làm từ gỗ sồi tự nhiên...</div>" class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg p-3 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white font-mono text-sm transition-all"></textarea>
+                </div>
+            </div>
+
+            <!-- 6. SECTION: TỐI ƯU HÓA TÌM KIẾM (SEO) -->
+            <div class="bg-white rounded-2xl shadow-xs border border-gray-200 p-6 sm:p-7 space-y-6">
+                <div class="border-b border-gray-100 pb-3">
+                    <h2 class="text-lg font-bold text-gray-900">6. Tối ưu hóa công cụ tìm kiếm (SEO)</h2>
+                </div>
+
+                <!-- SEO Title -->
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <div class="flex items-center">
+                            <label for="seo-title" class="text-sm font-bold text-gray-800">Tiêu đề trang (SEO Title)</label>
+                            <span class="req-star">*</span>
+                            <span class="info-icon" title="Tiêu đề trang khi hiển thị trên công cụ tìm kiếm Google / Bing, giúp thu hút lượt nhấp tự nhiên từ khách hàng tiềm năng.">!</span>
+                        </div>
+                        <span id="seo-title-count" class="text-sm text-gray-400">0 / 70 ký tự</span>
+                    </div>
+                    <input type="text" id="seo-title" oninput="handleSeoTitleInput(this.value)" placeholder="Ví dụ: Rustic Solid Oak Shelf | Handcrafted Floating Shelf - Wrydeco" class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
+                </div>
+
+                <!-- SEO Description -->
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <div class="flex items-center">
+                            <label for="seo-desc" class="text-sm font-bold text-gray-800">Mô tả trang (SEO Description)</label>
+                            <span class="req-star">*</span>
+                            <span class="info-icon" title="Đoạn trích mô tả tóm tắt hiển thị dưới tiêu đề trên Google Search, tăng tỷ lệ chuyển đổi click CTR.">!</span>
+                        </div>
+                        <span id="seo-desc-count" class="text-sm text-gray-400">0 / 160 ký tự</span>
+                    </div>
+                    <textarea id="seo-desc" rows="3" oninput="handleSeoDescInput(this.value)" placeholder="Ví dụ: Shop the premium handcrafted solid oak floating shelf at Wrydeco. Elegant rustic and japandi design, durable natural wood finish with easy installation..." class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg p-3 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm"></textarea>
+                </div>
+
+                                <!-- URL Handle -->
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <div class="flex items-center">
+                            <label for="product-handle" class="text-sm font-bold text-gray-800">Đường dẫn URL (URL Handle)</label>
+                            <span class="info-icon" title="Đường dẫn duy nhất của sản phẩm trên website (URL slug). Mặc định tự động sinh từ tiêu đề, hoặc bạn có thể chỉnh sửa tự do theo ý muốn.">!</span>
+                        </div>
+                        <button type="button" id="btn-reset-handle" onclick="resetHandleFromTitle()" class="hidden text-sm text-indigo-600 hover:text-indigo-800 font-semibold flex items-center gap-1 transition-colors cursor-pointer">
+                            <iconify-icon icon="mdi:refresh" class="text-base"></iconify-icon>
+                            <span>Tạo lại từ tiêu đề</span>
+                        </button>
+                    </div>
+                    <div class="relative flex items-center rounded-lg border border-gray-300 bg-gray-50 focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-indigo-500 focus-within:bg-white transition-all overflow-hidden">
+                        <span class="inline-flex items-center px-3.5 py-2.5 bg-gray-100 text-gray-500 text-sm font-medium border-r border-gray-300 select-none">
+                            https://wrydeco.com/products/
+                        </span>
+                        <input type="text" id="product-handle" oninput="handleCustomHandleInput(this.value)" placeholder="rustic-handcrafted-solid-oak-floating-shelf" class="w-full bg-transparent text-gray-900 text-sm font-mono px-3.5 py-2.5 outline-none">
+                    </div>
+                    <p class="text-sm text-gray-500 mt-1">Đường dẫn thân thiện (slug) chuẩn SEO. Tự động cập nhật theo tên sản phẩm nếu chưa chỉnh sửa thủ công.</p>
+                </div>
+
+                <!-- SEO Preview Card -->
+                <div class="p-4 bg-gray-50 rounded-xl border border-gray-200">
+                    <p class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-2">Xem trước kết quả tìm kiếm Google</p>
+                    <p id="seo-preview-title" class="text-base text-blue-800 font-medium hover:underline cursor-pointer truncate">Tiêu đề sản phẩm</p>
+                    <p class="text-sm text-emerald-800 mt-0.5">https://wrydeco.com/products/<span id="seo-preview-handle">sample-product</span></p>
+                    <p id="seo-preview-desc" class="text-sm text-gray-600 mt-1 line-clamp-2">Mô tả sản phẩm sẽ hiển thị tại đây...</p>
+                </div>
+            </div>
+
+            </div>
+        </form>
     </main>
-    <!-- Scroll Buttons -->
-    <div class="fixed bottom-8 right-8 flex flex-col gap-3 z-50">
-        <button id="scrollToTopBtn" onclick="window.scrollTo({top: 0, behavior: 'instant'})" class="bg-indigo-600 text-white p-3 rounded-full shadow-lg hover:bg-indigo-700 transition-all opacity-0 pointer-events-none" title="Cuộn lên đầu trang">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
+
+    <!-- ===================================================================== -->
+        <!-- ===================================================================== -->
+    <!-- FLOATING QUICK SCROLL CONTROLS (GÓC DƯỚI PHẢI, TRÊN THANH ACTION BAR) -->
+    <!-- ===================================================================== -->
+    <div id="quick-scroll-controls" class="fixed bottom-[88px] right-6 z-40 flex flex-col gap-2.5 items-center select-none">
+        <!-- Nút Lên đầu trang -->
+        <button type="button" 
+                id="btn-scroll-top" 
+                onclick="window.scrollTo({ top: 0, behavior: 'instant' })" 
+                class="w-11 h-11 rounded-full bg-white/95 backdrop-blur-md border border-gray-300 text-gray-700 hover:text-indigo-600 hover:border-indigo-400 hover:bg-white shadow-md hover:shadow-xl transition-all duration-200 flex items-center justify-center cursor-pointer active:scale-95 group" 
+                title="Lên đầu trang">
+            <svg class="w-5 h-5 transition-transform duration-200 group-hover:-translate-y-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 10l7-7m0 0l7 7m-7-7v18"></path>
+            </svg>
         </button>
-        <button id="scrollToBottomBtn" onclick="window.scrollTo({top: document.body.scrollHeight, behavior: 'instant'})" class="bg-indigo-600 text-white p-3 rounded-full shadow-lg hover:bg-indigo-700 transition-all opacity-0 pointer-events-none" title="Cuộn xuống cuối trang">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        <!-- Nút Xuống cuối trang -->
+        <button type="button" 
+                id="btn-scroll-bottom" 
+                onclick="window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' })" 
+                class="w-11 h-11 rounded-full bg-white/95 backdrop-blur-md border border-gray-300 text-gray-700 hover:text-indigo-600 hover:border-indigo-400 hover:bg-white shadow-md hover:shadow-xl transition-all duration-200 flex items-center justify-center cursor-pointer active:scale-95 group" 
+                title="Xuống cuối trang">
+            <svg class="w-5 h-5 transition-transform duration-200 group-hover:translate-y-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+            </svg>
         </button>
     </div>
 
-    <script>
-        const scrollToTopBtn = document.getElementById('scrollToTopBtn');
-        const scrollToBottomBtn = document.getElementById('scrollToBottomBtn');
-        
-        function toggleScrollButtons() {
-            if (window.scrollY > 300) {
-                scrollToTopBtn.classList.remove('opacity-0', 'pointer-events-none');
-            } else {
-                scrollToTopBtn.classList.add('opacity-0', 'pointer-events-none');
-            }
-            
-            if (window.scrollY + window.innerHeight < document.body.scrollHeight - 300) {
-                scrollToBottomBtn.classList.remove('opacity-0', 'pointer-events-none');
-            } else {
-                scrollToBottomBtn.classList.add('opacity-0', 'pointer-events-none');
-            }
-        }
+    <!-- SUBMIT ACTION BAR (FULL-WIDTH GẦN FULL VIEWPORT) -->
+    <!-- ===================================================================== -->
+    <div class="fixed bottom-3 inset-x-0 mx-auto w-[calc(100vw-32px)] max-w-[1850px] z-30 py-2.5 px-6 bg-white/95 backdrop-blur-md border border-gray-300 rounded-2xl shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div class="flex items-center gap-2.5">
+            <span id="submit-hint-icon" class="text-amber-500 flex-shrink-0">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </span>
+            <span id="submit-hint-text" class="text-[16px] text-gray-700 font-medium">Vui lòng hoàn thành tất cả 16 trường có dấu * (2/16) để kích hoạt nút tạo sản phẩm.</span>
+        </div>
 
-        window.addEventListener('scroll', toggleScrollButtons);
-        window.addEventListener('load', toggleScrollButtons);
+        <!-- SUBMIT BUTTON -->
+        <button type="button" onclick="handleFormSubmit()" id="btn-submit-product" class="w-full sm:w-auto min-w-[260px] px-8 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold text-base rounded-xl cursor-pointer shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2.5">
+            <span id="submit-spinner" class="hidden">
+                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+            </span>
+            <span id="submit-btn-icon" class="inline-flex items-center text-xl">
+                <iconify-icon icon="mdi:rocket-launch" class="text-xl"></iconify-icon>
+            </span>
+            <span id="submit-btn-text">Tiến hành tạo 1 sản phẩm</span>
+        </button>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- MODAL: CHỌN DANH MỤC TAXONOMY -->
+    <!-- ===================================================================== -->
+    <div id="category-modal" onmousedown="handleCatBackdropMouseDown(event)" onclick="handleCatBackdropClick(event)" class="hidden fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 cursor-pointer">
+        <div onclick="event.stopPropagation()" onmousedown="event.stopPropagation()" class="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-gray-100 cursor-default">
+            <div class="flex items-center justify-between mb-4 border-b border-gray-100 pb-3">
+                <h3 class="text-lg font-bold text-gray-900">Chọn danh mục chuẩn Shopify</h3>
+                <button type="button" onclick="closeCategoryModal()" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer" title="Đóng popup">
+                    <svg class="w-[22px] h-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="mb-4">
+                <input type="text" id="category-search-input" oninput="handleCategorySearch(this.value)" placeholder="Tìm danh mục (ví dụ: Shelf, Furniture, Home Decor...)" class="w-full bg-gray-50 border border-gray-300 text-sm rounded-lg px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div id="category-search-results" class="max-h-72 overflow-y-auto divide-y divide-gray-100 border border-gray-200 rounded-xl p-2 bg-gray-50/50">
+                <p class="text-sm text-gray-400 text-center py-6">Đang tải danh mục...</p>
+            </div>
+            <div class="mt-4 flex justify-end">
+                <button type="button" onclick="closeCategoryModal()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm font-bold rounded-lg">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ===================================================================== -->
+    <!-- MODAL: CHỌN SẢN PHẨM TỪ FILE CSV -->
+    <!-- ===================================================================== -->
+    <div id="csvProductSelectModal" onmousedown="handleCsvBackdropMouseDown(event)" onclick="handleCsvBackdropClick(event)" class="hidden fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 cursor-pointer">
+        <div onclick="event.stopPropagation()" onmousedown="event.stopPropagation()" class="bg-white rounded-2xl max-w-7xl w-full p-6 shadow-2xl border border-gray-200 flex flex-col max-h-[90vh] cursor-default">
+            <div class="flex items-center justify-between mb-4 border-b border-gray-100 pb-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 shrink-0">
+                        <iconify-icon icon="mdi:file-excel" class="text-2xl"></iconify-icon>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900">Chọn sản phẩm từ file CSV để điền vào form</h3>
+                        <p id="csv-modal-subtitle" class="text-sm text-gray-500 mt-0.5">Tìm thấy danh sách sản phẩm trong file CSV</p>
+                        <div class="flex items-center gap-2.5 mt-2 flex-wrap">
+                            <span class="text-sm font-bold px-3 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg shrink-0" id="csv-selection-badge">Đã chọn: 0 SP</span>
+                            <button type="button" id="btn-toggle-select-all-csv" onclick="toggleSelectAllCsvProducts()" class="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-lg transition-colors border border-gray-300 cursor-pointer inline-flex items-center gap-1.5 shrink-0">
+                                <iconify-icon id="toggle-select-all-icon" icon="mdi:checkbox-multiple-marked" class="text-base text-gray-600"></iconify-icon>
+                                <span id="toggle-select-all-text">Chọn tất cả</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" onclick="closeCsvProductSelectModal()" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer" title="Đóng popup">
+                    <iconify-icon icon="mdi:close" style="font-size: 22px; width: 22px; height: 22px;"></iconify-icon>
+                </button>
+            </div>
+
+            <!-- Danh sách sản phẩm -->
+            <div id="csv-products-list" class="overflow-y-auto divide-y divide-gray-100 border border-gray-200 rounded-xl bg-gray-50/50 flex-1 p-2 space-y-2">
+                <!-- Render các card sản phẩm dynamically -->
+            </div>
+
+            <div class="mt-4 pt-3 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <span class="text-sm text-gray-500">Tích chọn 1 hoặc nhiều sản phẩm rồi bấm "Chọn & Điền vào form" để chuẩn bị tạo hàng loạt.</span>
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="closeCsvProductSelectModal()" class="px-5 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm font-bold rounded-xl transition-colors cursor-pointer">
+                        Đóng
+                    </button>
+                    <button type="button" id="btn-confirm-csv-selection" onclick="confirmCsvSelection()" class="inline-flex items-center gap-1.5 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl shadow-xs hover:shadow transition-all cursor-pointer">
+                        <iconify-icon icon="mdi:check-all" class="text-lg"></iconify-icon>
+                        <span>Chọn & Điền vào form (<span id="csv-confirm-btn-count">0</span> SP)</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toastNotification" class="fixed bottom-6 right-6 z-[110] hidden transition-all duration-300">
+        <div id="toastBox" class="flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-xl text-sm font-bold border border-gray-200 bg-white text-gray-800">
+            <iconify-icon id="toastIcon" class="text-2xl" icon="mdi:check-circle"></iconify-icon>
+            <span id="toastMessage">Thông báo</span>
+        </div>
+    </div>
+
+    <!-- JavaScript Configuration & Module -->
+    <script>
+        const CURRENT_STORE_TYPE = "{{ store_type or 'default' }}";
+        function handleStoreSwitch(isChecked) {
+            const newStore = isChecked ? 'custom' : 'default';
+            window.location.href = `/create?store_type=${newStore}`;
+        }
     </script>
+    <script src="/static/create-product.js?v=20261110_bulk_creation_v5"></script>
+
+    <!-- ===================================================================== -->
+    <!-- NÚT NEO GÓC TRÊN BÊN PHẢI: QUẢN LÝ SẢN PHẨM HÀNG LOẠT (BULK BADGE)     -->
+    <!-- ===================================================================== -->
+    <div id="floating-bulk-container" class="fixed top-20 right-6 z-40 hidden select-none">
+        <button type="button" 
+                id="btn-floating-bulk-badge" 
+                onclick="openBulkOverviewModal()" 
+                class="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-white/95 backdrop-blur-md border border-indigo-300 text-gray-800 shadow-md hover:shadow-lg hover:border-indigo-500 hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                title="Bấm để xem danh sách sản phẩm hàng loạt đã chọn">
+            <span class="w-8 h-8 rounded-full bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 shrink-0">
+                <iconify-icon icon="mdi:package-variant-closed" style="font-size: 20px; width: 20px; height: 20px;"></iconify-icon>
+            </span>
+            <div class="text-left">
+                <span class="block text-sm font-bold text-gray-800 leading-tight">Hàng loạt đã chọn</span>
+                <span class="block text-sm text-indigo-600 font-semibold leading-tight"><span id="bulk-anchor-count">0</span> sản phẩm</span>
+            </div>
+            <span class="flex h-2.5 w-2.5 relative ml-1">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-indigo-600"></span>
+            </span>
+        </button>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- MODAL: DANH SÁCH TỔNG QUAN SẢN PHẨM HÀNG LOẠT ĐÃ CHỌN                   -->
+    <!-- ===================================================================== -->
+    <div id="bulkProductsOverviewModal" onmousedown="handleBulkOverviewBackdropMouseDown(event)" onclick="handleBulkOverviewBackdropClick(event)" class="hidden fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 cursor-pointer">
+        <div onclick="event.stopPropagation()" onmousedown="event.stopPropagation()" class="bg-white rounded-2xl max-w-5xl w-full p-6 shadow-2xl border border-gray-200 flex flex-col h-[96vh] max-h-[96vh] cursor-default">
+            <!-- Header -->
+            <div class="flex items-center justify-between mb-4 border-b border-gray-100 pb-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 shrink-0">
+                        <iconify-icon icon="mdi:package-variant-closed" class="text-2xl"></iconify-icon>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900">Danh sách sản phẩm hàng loạt đã chọn (<span id="bulk-overview-count">0</span> sản phẩm)</h3>
+                        <p class="text-sm text-gray-500 mt-0.5">Xem nhanh, gỡ bỏ hoặc chuyển đổi sản phẩm đang hiển thị trên form trước khi tạo hàng loạt.</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeBulkOverviewModal()" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer" title="Đóng popup">
+                    <iconify-icon icon="mdi:close" style="font-size: 22px; width: 22px; height: 22px;"></iconify-icon>
+                </button>
+            </div>
+
+            <!-- Table Container -->
+            <div class="overflow-x-auto overflow-y-auto border border-gray-200 rounded-xl bg-gray-50/50 flex-1 min-h-0">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-gray-100/80 sticky top-0 z-10 text-gray-700 text-sm font-bold uppercase tracking-wider border-b border-gray-200">
+                        <tr>
+                            <th class="py-3 px-3 text-center w-12">#</th>
+                            <th class="py-3 px-4 min-w-[140px]">Hành động</th>
+                            <th class="py-3 px-4 min-w-[160px]">Handle</th>
+                            <th class="py-3 px-4 min-w-[220px]">Tiêu đề</th>
+                            <th class="py-3 px-4 min-w-[200px]">Mô tả tóm tắt</th>
+                            <th class="py-3 px-4 min-w-[180px]">SEO Title</th>
+                            <th class="py-3 px-4 min-w-[100px] text-center">Biến thể</th>
+                            <th class="py-3 px-4 min-w-[120px] text-center">Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bulk-overview-table-body" class="divide-y divide-gray-200 bg-white text-sm">
+                        <!-- Rows dynamically rendered -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Footer -->
+            <div class="mt-4 pt-3 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <span class="text-sm text-gray-500">Mẹo: Bấm "Xem trên form" để chỉnh sửa chi tiết sản phẩm bất kỳ trước khi tạo.</span>
+                <div class="flex items-center gap-3">
+                    <button type="button" onclick="closeBulkOverviewModal()" class="px-5 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm font-bold rounded-xl transition-colors cursor-pointer">
+                        Đóng
+                    </button>
+                    <button type="button" id="btn-start-bulk-creation" onclick="startBulkCreationWorkflow()" class="inline-flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer">
+                        <iconify-icon icon="mdi:rocket-launch" class="text-lg"></iconify-icon>
+                        <span>Tiến hành tạo hàng loạt (<span id="bulk-start-btn-count">0</span> SP)</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- MODAL: TIẾN TRÌNH & KẾT QUẢ TẠO HÀNG LOẠT (REAL-TIME PROGRESS)        -->
+    <!-- ===================================================================== -->
+    <div id="bulkProgressModal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5">
+        <div class="bg-white rounded-2xl max-w-4xl w-full p-6 shadow-2xl border border-gray-200 flex flex-col max-h-[92vh]">
+            <!-- Header -->
+            <div class="flex items-center justify-between mb-4 border-b border-gray-100 pb-3">
+                <div class="flex items-center gap-3">
+                    <div id="bulk-progress-icon-box" class="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 shrink-0">
+                        <iconify-icon icon="mdi:sync" class="text-2xl animate-spin"></iconify-icon>
+                    </div>
+                    <div>
+                        <h3 id="bulk-progress-title" class="text-lg font-bold text-gray-900">Đang tiến hành tạo sản phẩm hàng loạt...</h3>
+                        <p id="bulk-progress-subtitle" class="text-sm text-gray-500 mt-0.5">Hệ thống đang gọi Shopify GraphQL API có kiểm soát tốc độ an toàn.</p>
+                    </div>
+                </div>
+                <button type="button" id="btn-close-progress-modal" onclick="closeBulkProgressModal()" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer" title="Đóng">
+                    <iconify-icon icon="mdi:close" style="font-size: 22px; width: 22px; height: 22px;"></iconify-icon>
+                </button>
+            </div>
+
+            <!-- Progress Bar Section -->
+            <div class="mb-5 bg-gray-50 border border-gray-200 rounded-xl p-4">
+                <div class="flex items-center justify-between text-sm font-semibold mb-2">
+                    <span id="bulk-progress-stats" class="text-gray-700">Đã xử lý: 0 / 0 (0 thành công, 0 lỗi)</span>
+                    <span id="bulk-progress-percent" class="text-indigo-600 font-bold text-base">0%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                    <div id="bulk-progress-bar-fill" class="bg-indigo-600 h-3 rounded-full transition-all duration-300" style="width: 0%;"></div>
+                </div>
+            </div>
+
+            <!-- Execution Real-Time Table -->
+            <div class="overflow-x-auto overflow-y-auto border border-gray-200 rounded-xl bg-gray-50/50 flex-1 max-h-[50vh]">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-gray-100/80 sticky top-0 z-10 text-gray-700 text-sm font-bold uppercase tracking-wider border-b border-gray-200">
+                        <tr>
+                            <th class="py-2.5 px-3 text-center w-12">#</th>
+                            <th class="py-2.5 px-4 min-w-[150px]">Handle</th>
+                            <th class="py-2.5 px-4 min-w-[200px]">Tiêu đề</th>
+                            <th class="py-2.5 px-4 min-w-[120px] text-center">Trạng thái</th>
+                            <th class="py-2.5 px-4 min-w-[240px]">Kết quả & Liên kết</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bulk-progress-table-body" class="divide-y divide-gray-200 bg-white text-sm">
+                        <!-- Rows dynamically updated via SSE -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Footer -->
+            <div class="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
+                <span id="bulk-progress-footer-note" class="text-sm text-gray-500">Đang lắng nghe sự kiện từ máy chủ theo thời gian thực...</span>
+                <button type="button" id="btn-progress-done" onclick="closeBulkProgressModal()" class="px-6 py-2.5 bg-gray-900 hover:bg-black text-white text-sm font-bold rounded-xl transition-colors cursor-pointer hidden">
+                    Hoàn tất & Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import secrets
 import shutil
 import subprocess
@@ -15,13 +16,14 @@ from typing import Any
 
 from flask import Flask, Response, jsonify, render_template, request, stream_with_context
 from markdown_it import MarkdownIt
+from requests import RequestException
 from werkzeug.serving import make_server
 
 from .antigravity import read_antigravity_config, save_antigravity_config
 from .config import PACKAGE_ROOT
 from .errors import ContentValidationError, ManifestError, ShopifyError
 from .io_utils import atomic_write_json, atomic_write_text, load_json
-from .manifest import parse_manifest_payload
+from .manifest import PRODUCT_CLASSIFICATIONS, parse_manifest_payload
 from .orchestrator import RunCoordinator
 from .server_control import ServerStopController, register_server_process, unregister_server_process
 from .shopify import ShopifyClient, ShopifyConfig
@@ -213,13 +215,25 @@ def validate_run_options(payload: Any) -> dict[str, Any]:
     postal = str(raw.get("amazon_postal_code", "10001")).strip()
     if not postal.isdigit() or len(postal) not in {5, 9}:
         raise ValueError("amazon_postal_code must contain 5 or 9 digits.")
-    return {
+    options = {
         "headless": bool(raw.get("headless", True)),
         "dry_run": bool(raw.get("dry_run", False)),
         "max_combinations": maximum,
         "amazon_postal_code": postal,
         "aeo_version": 1,
     }
+    if "product_metadata" in raw:
+        metadata = raw["product_metadata"]
+        if not isinstance(metadata, dict):
+            raise ValueError("product_metadata must be an object.")
+        wood_type = metadata.get("wood_type")
+        author_info = metadata.get("author_info")
+        if not isinstance(wood_type, str) or not wood_type.strip() or len(wood_type.splitlines()) != 1:
+            raise ValueError("Wood Type must be a nonempty single line of text.")
+        if not isinstance(author_info, str) or not re.fullmatch(r"gid://shopify/Metaobject/[0-9]+", author_info):
+            raise ValueError("Author Info must be a Shopify metaobject ID.")
+        options["product_metadata"] = {"wood_type": wood_type.strip(), "author_info": author_info}
+    return options
 
 
 def _manifest_payload(body: Any) -> dict[str, Any]:
@@ -271,13 +285,13 @@ def create_app(
     manifest_path = package_root / "input" / "products.json"
     docs_root = package_root / "docs"
     csrf_token = secrets.token_urlsafe(32)
+    shopify_client = shopify_client_factory or (
+        lambda: ShopifyClient(ShopifyConfig.from_env(package_root / ".env"))
+    )
 
     def preflight_shopify_products(payload: dict[str, Any]) -> dict[str, Any]:
         manifest = parse_manifest_payload(payload, manifest_path)
-        factory = shopify_client_factory or (
-            lambda: ShopifyClient(ShopifyConfig.from_env(package_root / ".env"))
-        )
-        matches_by_asin = factory().products_by_amazon_asins({item.asin for item in manifest.products})
+        matches_by_asin = shopify_client().products_by_amazon_asins({item.asin for item in manifest.products})
         products = []
         for index, item in enumerate(manifest.products):
             matches = matches_by_asin.get(item.asin, [])
@@ -331,7 +345,7 @@ def create_app(
 
     @app.get("/")
     def index():
-        return render_template("index.html")
+        return render_template("index.html", classifications=PRODUCT_CLASSIFICATIONS)
 
     @app.get("/favicon.ico")
     def favicon_ico():
@@ -597,6 +611,13 @@ def create_app(
         atomic_write_json(manifest_path, payload)
         return jsonify(saved=True, manifest=payload)
 
+    @app.get("/api/shopify/product-authors")
+    def product_authors():
+        try:
+            return jsonify(authors=shopify_client().product_authors())
+        except (ShopifyError, RequestException):
+            return jsonify(error="Không thể tải danh sách tác giả từ Shopify."), 502
+
     @app.post("/api/shopify/preflight-products")
     def preflight_products():
         payload = _manifest_payload(request.get_json(silent=False))
@@ -607,7 +628,9 @@ def create_app(
         body = request.get_json(silent=False) or {}
         payload = _manifest_payload(body)
         options = validate_run_options(body.get("options"))
-        manifest = parse_manifest_payload(payload, manifest_path)
+        manifest = parse_manifest_payload(
+            payload, manifest_path, require_classification=body.get("require_classification") is True,
+        )
         if body.get("skip_existing_store_products") is True:
             preflight = preflight_shopify_products(payload)
             skipped_indexes = {
@@ -756,7 +779,7 @@ def serve(host: str = "127.0.0.1", port: int = 5000) -> None:
         cleanup.callback(readiness_gate.clear)
         try:
             backfill.recover()
-            for start in (backfill.start, coordinator.start, agent.start):
+            for start in (coordinator.start, agent.start, backfill.start):
                 if shutdown.requested():
                     break
                 start()

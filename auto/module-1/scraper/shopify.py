@@ -142,6 +142,36 @@ class ShopifyClient:
             if item.get("namespace") and item.get("key") and (item.get("type") or {}).get("name")
         }
 
+    def product_authors(self) -> list[dict[str, str]]:
+        query = """query ProductAuthors($after: String) {
+          metaobjects(type: "product_author", first: 100, after: $after) {
+            nodes {
+              id handle displayName
+              fields { key value }
+            }
+            pageInfo { hasNextPage endCursor }
+          }
+        }"""
+        authors: list[dict[str, str]] = []
+        cursor: str | None = None
+        while True:
+            page = self.graphql(query, {"after": cursor})["metaobjects"]
+            for node in page["nodes"]:
+                fields = {field["key"]: field["value"] for field in node["fields"]}
+                authors.append({
+                    "id": node["id"],
+                    "name": fields.get("author_name") or node["displayName"] or node["handle"],
+                    "role": fields.get("role") or "",
+                    "years": fields.get("exp_years") or "",
+                    "image_url": fields.get("author_image_url") or "",
+                })
+            if not page["pageInfo"]["hasNextPage"]:
+                return authors
+            next_cursor = page["pageInfo"]["endCursor"]
+            if not next_cursor or next_cursor == cursor:
+                raise ShopifyError("Shopify author pagination did not advance.")
+            cursor = next_cursor
+
     def products_by_amazon_asins(self, asins: set[str]) -> dict[str, list[dict[str, str]]]:
         """Return Shopify products whose custom.amazon_link contains a requested ASIN.
 

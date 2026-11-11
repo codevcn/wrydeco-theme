@@ -2,6 +2,9 @@ const $ = (selector) => document.querySelector(selector);
 const state = { csrf: "", manifest: { products: [] }, runs: [], currentRun: null, currentTask: null, refreshTimer: null, agent: null, agentReady: false, antigravityConfig: { model: "Gemini 3.8 Flash (High)", available_models: [], source: "antigravity_config.json" }, agentSessions: [], documents: [], currentDocument: null, prompts: null, productTypes: [], productTypeTarget: null, eventLines: [], pendingEvents: [], eventFlushTimer: null, eventCursor: 0, eventSource: null };
 const INITIAL_EVENT_LOG_LIMIT = 250;
 const MAX_EVENT_LOG_LINES = 500;
+const rowOverrides = new WeakMap();
+const classificationFields = ["interior_style", "room_type"];
+let classificationRow = null;
 
 const labels = {
   pending: "Chờ crawl", crawling: "Đang crawl", crawled: "Đã crawl", price_verified: "Giá hợp lệ",
@@ -10,6 +13,7 @@ const labels = {
   failed: "Thất bại", needs_attention: "Cần chú ý", cancelled: "Đã đóng",
 };
 const agentStatusHelp = {
+  waiting: "Chờ task SEO/AEO hoặc yêu cầu kiểm tra kết nối.",
   ready: "Tiến trình Antigravity còn sống, bootstrap thành công và server đang giữ conversation.",
   busy: "Conversation còn sống và đang xử lý một prompt.",
   starting: "Antigravity đang khởi động.",
@@ -365,9 +369,33 @@ function handleMultiValuePaste(event, fieldName, startRow) {
   notify(`Đã tự động điền ${items.length} giá trị vào các dòng.`);
 }
 
+function updateClassificationSummary(row) {
+  const { interior_style: styles = [], room_type: rooms = [] } = rowOverrides.get(row);
+  const summary = row.querySelector('[data-role="classification-summary"]');
+  summary.textContent = styles.length || rooms.length ? `${styles.length} phong cách · ${rooms.length} phòng` : "Chưa chọn";
+  row.querySelector('[data-action="classify"]').title = [...styles, ...rooms].join(", ");
+}
+
+function openClassificationPicker(row) {
+  classificationRow = row;
+  const overrides = rowOverrides.get(row);
+  $("#product-classification-row").textContent = `Sản phẩm · Dòng ${row.querySelector(".row-index").textContent}`;
+  $("#product-classification-error").hidden = true;
+  $("#product-classification-form").querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
+    checkbox.checked = overrides[checkbox.name]?.includes(checkbox.value) ?? false;
+  });
+  $("#product-classification-dialog").showModal();
+}
+
 function addRow(product = {}) {
   const row = $("#product-row-template").content.firstElementChild.cloneNode(true);
-  const overrides = product.overrides || {};
+  const overrides = { ...product.overrides };
+  for (const key of classificationFields) {
+    if (!Array.isArray(overrides[key])) delete overrides[key];
+  }
+  rowOverrides.set(row, overrides);
+  updateClassificationSummary(row);
+  row.querySelector('[data-action="classify"]').addEventListener("click", () => openClassificationPicker(row));
   const values = {
     amazon_url: product.amazon_url || "", shopify_product_id: product.shopify_product_id || "", mode: product.mode || "auto",
     furniture_type: product.preset?.furniture_type || "", price_tier: product.preset?.price_tier || "",
@@ -430,7 +458,7 @@ function renderShopifyPreflight(preflight) {
 function readRow(row) {
   const get = (name) => row.querySelector(`[data-field="${name}"]`).value.trim();
   const mode = get("mode");
-  const overrides = { product_type: get("product_type"), tags: get("tags").split(",").map((x) => x.trim()).filter(Boolean), status: get("status") };
+  const overrides = { ...rowOverrides.get(row), product_type: get("product_type"), tags: get("tags").split(",").map((x) => x.trim()).filter(Boolean), status: get("status") };
   const item = { amazon_url: get("amazon_url"), shopify_product_id: get("shopify_product_id"), mode, overrides };
   if (mode === "preset") item.preset = { furniture_type: get("furniture_type"), price_tier: get("price_tier") };
   return item;
@@ -448,18 +476,32 @@ function manifestRows() {
     });
 }
 
-function updateRowIndices() {
+function hasCompleteProductData(product) {
+  if (!/^[0-9]+$/.test(product.shopify_product_id)) return false;
+  if (classificationFields.some((key) => !product.overrides[key]?.length)) return false;
+  if (product.mode === "preset" && (!product.preset.furniture_type || !product.preset.price_tier)) return false;
+  try {
+    const url = new URL(product.amazon_url);
+    return ["http:", "https:"].includes(url.protocol)
+      && (url.hostname === "amazon.com" || url.hostname.endsWith(".amazon.com"))
+      && /\/(?:dp|gp\/product)\/[a-z0-9]{10}(?:\/|$)/i.test(url.pathname);
+  } catch {
+    return false;
+  }
+}
+
+function updateRowIndicators() {
   const rows = document.querySelectorAll("#products-body .product-row");
   rows.forEach((row, index) => {
-    const badge = row.querySelector(".row-index");
-    if (badge) {
-      badge.textContent = String(index + 1);
-    }
+    row.querySelector(".row-index").textContent = String(index + 1);
+    const complete = hasCompleteProductData(readRow(row));
+    row.querySelector('[data-role="row-complete"]').hidden = !complete;
+    row.querySelector('[data-role="row-incomplete"]').hidden = complete;
   });
 }
 
 function updatePreview() {
-  updateRowIndices();
+  updateRowIndicators();
   state.manifest = collectManifest();
   $("#manifest-preview").textContent = JSON.stringify(state.manifest, null, 2);
   $("#hero-product-count").textContent = state.manifest.products.length;
@@ -470,7 +512,64 @@ function updatePreview() {
 }
 
 function optionsPayload() {
-  return { headless: $("#headless").checked, dry_run: $("#dry-run").checked, max_combinations: Number($("#max-combinations").value), amazon_postal_code: $("#postal-code").value.trim() };
+  return {
+    headless: $("#headless").checked,
+    dry_run: $("#dry-run").checked,
+    max_combinations: Number($("#max-combinations").value),
+    amazon_postal_code: $("#postal-code").value.trim(),
+    product_metadata: {
+      wood_type: $("#batch-wood-type").value.trim(),
+      author_info: $('input[name="batch-author"]:checked').value,
+    },
+  };
+}
+
+function updateBatchMetadataGate() {
+  const ready = Boolean($("#batch-wood-type").value.trim() && $('input[name="batch-author"]:checked'));
+  for (const id of ["#run-batch", "#run-batch-floating"]) {
+    const button = $(id);
+    button.disabled = !ready || button.classList.contains("is-loading");
+  }
+}
+
+async function loadBatchAuthors() {
+  const loadingIndicator = $("#batch-authors-loading");
+  const status = $("#batch-authors-status");
+  const retry = $("#batch-authors-retry");
+  const options = $("#batch-author-options");
+  loadingIndicator.hidden = false;
+  retry.hidden = true;
+  status.textContent = "";
+  try {
+    const { authors } = await api("/api/shopify/product-authors");
+    if (!authors.length) throw new Error("Shopify chưa có tác giả để chọn.");
+    const defaultAuthorIndex = Math.floor(Math.random() * authors.length);
+    const cards = authors.map((author, index) => {
+      const card = $("#batch-author-template").content.firstElementChild.cloneNode(true);
+      card.querySelector("strong").textContent = author.name;
+      card.querySelector(".batch-author-details span").textContent = author.role;
+      card.querySelector("small").textContent = author.years ? `${author.years} năm kinh nghiệm` : "";
+      card.querySelector(".batch-author-avatar span").textContent = author.name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("");
+      if (author.image_url.startsWith("https://")) {
+        const image = card.querySelector("img");
+        image.addEventListener("error", () => { image.hidden = true; }, { once: true });
+        image.hidden = false;
+        image.src = author.image_url;
+      }
+      const radio = card.querySelector("input");
+      radio.value = author.id;
+      radio.checked = index === defaultAuthorIndex;
+      return card;
+    });
+    options.replaceChildren(...cards);
+    status.textContent = `${authors.length} tác giả có sẵn`;
+  } catch (error) {
+    status.textContent = error.message;
+    retry.hidden = false;
+  } finally {
+    loadingIndicator.hidden = true;
+    updateBatchMetadataGate();
+  }
 }
 
 function tone(status) {
@@ -499,6 +598,9 @@ function updateBatchFlowIndicator() {
 }
 
 function applyAgentGate() {
+  updateBatchMetadataGate();
+  const checkAgent = $("#check-agent");
+  checkAgent.disabled = !["waiting", "ready"].includes(state.agent?.status) || checkAgent.classList.contains("is-loading");
   if (state.currentTask) {
     const taskLocked = state.currentTask.state === "claimed" || state.currentTask.is_final;
     Object.values(fieldIds).forEach((id) => { $("#" + id).disabled = taskLocked; });
@@ -514,7 +616,7 @@ function applyAgentGate() {
 function updateAgentStartupToast(agent) {
   const toast = $("#agent-startup-toast");
   const status = agent?.status || "starting";
-  if (state.agentReady) {
+  if (state.agentReady || status === "waiting") {
     toast.hidden = true;
     toast.classList.remove("error");
     return;
@@ -585,7 +687,6 @@ function updateAgent(agent) {
   $("#agent-current-task").textContent = agent?.current_asin || (agent?.current_product_id ? String(agent.current_product_id).slice(0, 10) : "—");
   $("#agent-last-activity").textContent = agent?.last_activity_at ? new Date(agent.last_activity_at).toLocaleTimeString("vi-VN") : "—";
   $("#restart-agent").hidden = !["failed", "stopped", "interrupted"].includes(status);
-  $("#check-agent").disabled = status !== "ready";
   updateAgentStartupToast(agent);
   applyAgentGate();
 }
@@ -833,12 +934,46 @@ $("#clear-all-products").addEventListener("click", () => {
   notify("Đã xóa tất cả row trong danh sách sản phẩm.");
 });
 $("#save-manifest").addEventListener("click", (event) => action(event.currentTarget, async () => { await api("/api/manifest", { method: "PUT", body: JSON.stringify(collectManifest()) }); notify("Đã lưu products.json atomically."); }));
+for (const id of ["#close-product-classification", "#cancel-product-classification"]) {
+  $(id).addEventListener("click", () => $("#product-classification-dialog").close());
+}
+$("#product-classification-dialog").addEventListener("close", (event) => {
+  if (!event.currentTarget.open) classificationRow = null;
+});
+$("#product-classification-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const data = new FormData(event.currentTarget);
+  const classification = Object.fromEntries(classificationFields.map((key) => [key, data.getAll(key)]));
+  const missing = classificationFields.find((key) => !classification[key].length);
+  if (missing) {
+    const error = $("#product-classification-error");
+    const label = missing === "interior_style" ? "phong cách thiết kế" : "không gian phòng";
+    error.textContent = `Chọn ít nhất một ${label}.`;
+    error.hidden = false;
+    event.currentTarget.elements.namedItem(missing)[0].focus();
+    return;
+  }
+  Object.assign(rowOverrides.get(classificationRow), classification);
+  updateClassificationSummary(classificationRow);
+  updatePreview();
+  $("#product-classification-dialog").close();
+});
+$("#batch-wood-type").addEventListener("input", updateBatchMetadataGate);
+$("#batch-author-options").addEventListener("change", updateBatchMetadataGate);
+$("#batch-authors-retry").addEventListener("click", loadBatchAuthors);
 $("#run-batch").addEventListener("click", (event) => action(event.currentTarget, async () => {
+  const missing = manifestRows().find((row) => classificationFields.some((key) => !rowOverrides.get(row)[key]?.length));
+  if (missing) {
+    missing.querySelector('[data-action="classify"]').click();
+    notify("Mỗi sản phẩm cần ít nhất một phong cách thiết kế và một không gian phòng.", true);
+    return;
+  }
   const manifest = collectManifest();
   const result = await api("/api/runs", { method: "POST", body: JSON.stringify({
     manifest,
     options: optionsPayload(),
     skip_existing_store_products: true,
+    require_classification: true,
   }) });
   renderShopifyPreflight(result.preflight);
   if (!result.run) {
@@ -856,7 +991,10 @@ $("#run-batch-floating").addEventListener("click", () => {
   if (!button.disabled) button.click();
 });
 $("#resume-crawl").addEventListener("click", (event) => action(event.currentTarget, async () => { renderRun(await api(`/api/runs/${state.currentRun.id}/resume-crawl`, { method: "POST", body: "{}" })); notify("Crawler đã được đưa lại vào queue."); }));
-$("#restart-agent").addEventListener("click", (event) => action(event.currentTarget, async () => { updateAgent(await api("/api/agent/restart", { method: "POST", body: "{}" })); notify("Đang khởi động một Antigravity conversation mới."); }));
+$("#restart-agent").addEventListener("click", (event) => action(event.currentTarget, async () => {
+  updateAgent(await api("/api/agent/restart", { method: "POST", body: "{}" }));
+  notify("Đã khởi động lại bộ điều phối Antigravity.");
+}));
 $("#check-agent").addEventListener("click", (event) => action(event.currentTarget, async () => {
   const result = await api("/api/agent/health-check", { method: "POST", body: "{}" });
   updateAgent(result.agent);
@@ -984,7 +1122,10 @@ new ResizeObserver(updateFloatingBatchPosition).observe($(".topbar"));
 updateFloatingBatchPosition();
 applyAgentGate();
 updatePageScrollControls();
-bootstrap();
+const dashboardLoaded = document.readyState === "complete"
+  ? Promise.resolve()
+  : new Promise((resolve) => window.addEventListener("load", resolve, { once: true }));
+Promise.all([bootstrap(), dashboardLoaded]).then(loadBatchAuthors);
 window.setInterval(() => {
   renderHistory();
   if (!$("#agent-sessions-modal").hidden) renderAgentSessions();

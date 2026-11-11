@@ -58,11 +58,11 @@
     <div class="connection"><span class="pulse"></span><span>Local · port 5000</span></div>
   </header>
 
-  <button id="run-batch-floating" class="button primary floating-run-batch" type="button" title="Chạy batch từ danh sách sản phẩm">
+  <button id="run-batch-floating" class="button primary floating-run-batch" type="button" title="Chạy batch từ danh sách sản phẩm" disabled>
     <span class="button-icon" aria-hidden="true">▶</span><span class="button-label">Chạy batch</span>
   </button>
 
-  <div id="agent-startup-toast" class="agent-startup-toast" role="status" aria-live="polite" aria-atomic="true">
+  <div id="agent-startup-toast" class="agent-startup-toast" role="status" aria-live="polite" aria-atomic="true" hidden>
     <span class="agent-startup-spinner" aria-hidden="true"></span>
     <div>
       <strong id="agent-startup-title">Đang khởi động Antigravity</strong>
@@ -75,7 +75,7 @@
       <div>
         <p class="eyebrow">QUEUE PIPELINE</p>
         <h2>Một control conversation. Content context riêng cho từng sản phẩm.</h2>
-        <p>Crawler và Shopify chạy theo queue độc lập; Antigravity bootstrap nền trước khi xử lý content.</p>
+        <p>Crawler và Shopify chạy theo hàng đợi riêng. Antigravity khởi động khi có task SEO/AEO.</p>
       </div>
       <div class="hero-stat"><span id="hero-job-state" class="status-pill neutral">Sẵn sàng</span><strong id="hero-product-count">0</strong><small>sản phẩm trong manifest</small></div>
     </section>
@@ -90,8 +90,8 @@
             <span class="button-icon" aria-hidden="true">◫</span><span class="button-label">Quản lý conversations</span><span id="agent-cleanup-count" class="button-count" hidden>0</span>
           </button>
           <span class="agent-status-badge-wrap">
-            <span id="agent-status" class="status-pill neutral" tabindex="0" aria-describedby="agent-status-tooltip">STOPPED</span>
-            <span id="agent-status-tooltip" class="agent-status-tooltip" role="tooltip">Không còn giữ được conversation; content queue sẽ chờ Agent hoạt động lại.</span>
+            <span id="agent-status" class="status-pill neutral" tabindex="0" aria-describedby="agent-status-tooltip">WAITING</span>
+            <span id="agent-status-tooltip" class="agent-status-tooltip" role="tooltip">Chờ task SEO/AEO hoặc yêu cầu kiểm tra kết nối.</span>
           </span>
           <button id="check-agent" class="button secondary compact" type="button" disabled><span class="button-icon" aria-hidden="true">♥</span><span class="button-label">Kiểm tra kết nối</span></button>
           <button id="restart-agent" class="button warning" type="button" hidden><span class="button-icon">↻</span><span class="button-label">Khởi động lại Agent</span></button>
@@ -211,10 +211,34 @@
       <div class="safety-note"><strong>Fail closed</strong><p>Giá không chắc chắn, CAPTCHA hoặc mutation lỗi sẽ dừng riêng sản phẩm và giữ evidence.</p></div>
     </section>
 
+    <section class="panel settings-panel batch-metadata" aria-labelledby="batch-metadata-title">
+      <div class="panel-heading compact">
+        <div>
+          <p class="eyebrow">03 · PRODUCT METAFIELDS</p>
+          <h3 id="batch-metadata-title">Cấu hình chung cho lô</h3>
+          <p class="muted">Các thiết lập ở đây áp dụng cho mọi sản phẩm trong lần chạy này.</p>
+        </div>
+      </div>
+      <label class="field batch-wood-type">
+        <span>Wood Type</span>
+        <input id="batch-wood-type" type="text" value="wood" required>
+      </label>
+      <fieldset class="batch-author-fieldset">
+        <legend>Author Info · Tác giả thiết kế</legend>
+        <div id="batch-authors-loading" class="batch-authors-status" role="status" hidden>
+          <span class="agent-startup-spinner" aria-hidden="true"></span>
+          Đang tải danh sách tác giả từ Shopify…
+        </div>
+        <p id="batch-authors-status" class="muted" role="status"></p>
+        <button id="batch-authors-retry" type="button" class="button secondary" hidden>Tải lại danh sách tác giả</button>
+        <div id="batch-author-options" class="batch-author-options"></div>
+      </fieldset>
+    </section>
+
     <section class="action-bar">
       <div>
         <button id="save-manifest" class="button secondary" type="button"><span class="button-icon">▣</span><span class="button-label">Lưu manifest</span></button>
-        <button id="run-batch" class="button primary" type="button"><span class="button-icon">▶</span><span class="button-label">Chạy batch</span></button>
+        <button id="run-batch" class="button primary" type="button" disabled><span class="button-icon">▶</span><span class="button-label">Chạy batch</span></button>
         <button id="resume-crawl" class="button warning" type="button" hidden><span class="button-icon">↻</span><span class="button-label">Resume crawl</span></button>
       </div>
       <p id="run-hint">Một crawler và một Shopify worker; các run đang chờ content không khóa crawler.</p>
@@ -323,6 +347,36 @@
     </div>
   </div>
 
+  <dialog id="product-classification-dialog" class="product-classification-dialog" aria-labelledby="product-classification-title">
+    <form id="product-classification-form" method="dialog">
+      <header class="docs-header">
+        <div class="docs-header-content">
+          <p id="product-classification-row" class="eyebrow"></p>
+          <h2 id="product-classification-title">Phong cách thiết kế &amp; Không gian phòng</h2>
+        </div>
+        <button id="close-product-classification" class="docs-close" type="button" aria-label="Đóng phân loại sản phẩm">×</button>
+      </header>
+      <div class="product-classification-body">
+        {% for key, choices in classifications.items() %}
+          <fieldset>
+            <legend>{{ 'Phong cách thiết kế' if key == 'interior_style' else 'Không gian phòng' }}</legend>
+            <p class="muted">Chọn ít nhất một mục.</p>
+            <div class="product-classification-choices">
+              {% for choice in choices %}
+                <label><input type="checkbox" name="{{ key }}" value="{{ choice }}"> {{ choice }}</label>
+              {% endfor %}
+            </div>
+          </fieldset>
+        {% endfor %}
+        <p id="product-classification-error" class="product-classification-error" role="alert" hidden></p>
+      </div>
+      <footer class="product-type-footer">
+        <button id="cancel-product-classification" class="button secondary" type="button">Hủy</button>
+        <button class="button primary" type="submit">Áp dụng</button>
+      </footer>
+    </form>
+  </dialog>
+
   <div id="docs-modal" class="docs-modal" role="dialog" aria-modal="true" aria-labelledby="docs-title" hidden>
     <div class="docs-dialog">
       <header class="docs-header">
@@ -421,9 +475,41 @@
       <td class="col-amazon-url"><label class="mobile-label">Amazon URL</label><input data-field="amazon_url" type="url" placeholder="https://www.amazon.com/dp/ASIN"><div class="store-existence-status" data-role="store-existence" hidden></div></td>
       <td class="col-shopify-id"><label class="mobile-label">Shopify product ID</label><input data-field="shopify_product_id" inputmode="numeric" placeholder="103…"></td>
       <td class="col-mode"><label class="mobile-label">Mode</label><select data-field="mode"><option value="auto">auto</option><option value="dynamic">dynamic</option><option value="preset">preset</option></select></td>
-      <td class="details-cell"><div class="preset-fields" hidden><input data-field="furniture_type" placeholder="furniture type"><input data-field="price_tier" placeholder="price tier"></div><div class="override-fields"><input data-field="product_type" class="product-type-picker" placeholder="Chọn product type" readonly aria-haspopup="dialog"><input data-field="tags" placeholder="tags, separated, by comma"><select data-field="status"><option value="ACTIVE">ACTIVE</option><option value="DRAFT">DRAFT</option><option value="UNLISTED">UNLISTED</option></select></div></td>
-      <td class="row-actions"><button data-action="duplicate" class="icon-button" type="button" title="Duplicate">⧉</button><button data-action="remove" class="icon-button danger" type="button" title="Remove">×</button></td>
+      <td class="details-cell">
+        <div class="preset-fields" hidden><input data-field="furniture_type" placeholder="furniture type"><input data-field="price_tier" placeholder="price tier"></div>
+        <div class="override-fields"><input data-field="product_type" class="product-type-picker" placeholder="Chọn product type" readonly aria-haspopup="dialog"><input data-field="tags" placeholder="tags, separated, by comma"><select data-field="status"><option value="ACTIVE">ACTIVE</option><option value="DRAFT">DRAFT</option><option value="UNLISTED">UNLISTED</option></select></div>
+        <button class="button secondary product-classification-button" data-action="classify" type="button" aria-haspopup="dialog" aria-controls="product-classification-dialog">
+          Phong cách &amp; phòng <span class="muted" data-role="classification-summary">Chưa chọn</span>
+        </button>
+      </td>
+      <td class="row-actions">
+        <div class="row-actions-controls">
+          <button data-action="duplicate" class="icon-button" type="button" title="Duplicate">⧉</button>
+          <button data-action="remove" class="icon-button danger" type="button" title="Remove">×</button>
+          <span class="row-data-status" data-role="row-complete" role="img" aria-label="Đã điền đủ dữ liệu" title="Đã điền đủ dữ liệu" hidden>
+            <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M0 0h24v24H0z" fill="none" />
+              <path fill="currentColor" fill-rule="evenodd" d="M12 1C5.925 1 1 5.925 1 12s4.925 11 11 11s11-4.925 11-11S18.075 1 12 1m4.768 9.14a1 1 0 1 0-1.536-1.28l-4.3 5.159l-2.225-2.226a1 1 0 0 0-1.414 1.414l3 3a1 1 0 0 0 1.475-.067z" clip-rule="evenodd" />
+            </svg>
+          </span>
+          <span class="row-data-status row-data-incomplete" data-role="row-incomplete" role="img" aria-label="Thiếu dữ liệu" title="Thiếu dữ liệu">
+            <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true">
+              <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 8v4m0 4h.01"/>
+              </g>
+            </svg>
+          </span>
+        </div>
+      </td>
     </tr>
+  </template>
+  <template id="batch-author-template">
+    <label class="batch-author-card">
+      <span class="batch-author-avatar" aria-hidden="true"><span></span><img alt="" hidden></span>
+      <span class="batch-author-details"><strong></strong><span class="muted"></span><small class="muted"></small></span>
+      <input type="radio" name="batch-author" required>
+    </label>
   </template>
   <script src="{{ url_for('static', filename='dashboard.js') }}" defer></script>
   <script src="{{ url_for('static', filename='aeo-backfill.js') }}" defer></script>

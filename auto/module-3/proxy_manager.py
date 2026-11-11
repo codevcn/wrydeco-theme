@@ -67,7 +67,7 @@ def get_env_admin_token() -> str:
     return (os.getenv("SHOPIFY_ADMIN_TOKEN") or "").strip().strip('"').strip("'")
 
 def get_env_api_version() -> str:
-    return (os.getenv("SHOPIFY_API_VERSION") or "2024-04").strip().strip('"').strip("'")
+    return (os.getenv("SHOPIFY_API_VERSION") or "2026-10").strip().strip('"').strip("'")
 
 def load_proxy_config() -> dict:
     with _proxy_lock:

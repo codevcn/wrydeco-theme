@@ -226,7 +226,8 @@ class ShopifyApplyService:
         )
         rich_description = _build_rich_description(uploaded_rich, content["title"])
         product_settings["metafields"] = _metafields_for_product(
-            snapshot, content, job, product_settings, client.product_metafield_definitions(), rich_description
+            snapshot, content, job, product_settings, client.product_metafield_definitions(), rich_description,
+            batch_metadata=options.get("product_metadata"),
         )
         final_config = {
             "job": asdict(job), "content": content, "pricing": pricing,

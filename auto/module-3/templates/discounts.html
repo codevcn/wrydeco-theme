@@ -1,0 +1,1493 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Discount - Shopify Admin Manager</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/static/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+    <link rel="shortcut icon" href="/static/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png" />
+    <link rel="manifest" href="/static/site.webmanifest" />
+    <!-- Tailwind CSS & DaisyUI -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.7.2/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com">
+        function updateStatusToggleButtonsUI(status) {
+            const isActive = (status === "ACTIVE");
+            const btnHeader = document.getElementById("btnHeaderToggleStatus");
+            const btnFooter = document.getElementById("btnFooterToggleStatus");
+            const textHeader = document.getElementById("headerToggleStatusText");
+            const textFooter = document.getElementById("footerToggleStatusText");
+            const iconHeader = document.getElementById("headerToggleStatusIcon");
+            const iconFooter = document.getElementById("footerToggleStatusIcon");
+
+            if (!btnHeader || !btnFooter) return;
+
+            const activeClass = "bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 hover:border-rose-300";
+            const inactiveClass = "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300";
+
+            if (isActive) {
+                // Đang ACTIVE -> Nút cho phép Vô hiệu hóa
+                btnHeader.className = `btn btn-sm h-9 px-3.5 rounded-xl font-bold text-sm flex items-center gap-1.5 transition-all shadow-sm ${activeClass}`;
+                btnFooter.className = `btn btn-sm h-11 px-4 rounded-xl font-bold text-sm flex items-center gap-2 transition-all shadow-sm ${activeClass}`;
+                
+                textHeader.textContent = "Vô hiệu hóa";
+                textFooter.textContent = "Vô hiệu hóa mã";
+                
+                iconHeader.setAttribute("data-icon", "mdi:pause-circle-outline");
+                iconFooter.setAttribute("data-icon", "mdi:pause-circle-outline");
+            } else {
+                // Đang EXPIRED / DEACTIVATED -> Nút cho phép Kích hoạt
+                btnHeader.className = `btn btn-sm h-9 px-3.5 rounded-xl font-bold text-sm flex items-center gap-1.5 transition-all shadow-sm ${inactiveClass}`;
+                btnFooter.className = `btn btn-sm h-11 px-4 rounded-xl font-bold text-sm flex items-center gap-2 transition-all shadow-sm ${inactiveClass}`;
+                
+                textHeader.textContent = "Kích hoạt";
+                textFooter.textContent = "Kích hoạt mã";
+                
+                iconHeader.setAttribute("data-icon", "mdi:play-circle-outline");
+                iconFooter.setAttribute("data-icon", "mdi:play-circle-outline");
+            }
+        }
+
+        async function toggleDiscountStatusAction() {
+            if (!activeDiscount) return;
+
+            const currentStatus = activeDiscount.status;
+            const targetAction = (currentStatus === "ACTIVE") ? "deactivate" : "activate";
+            const actionLabel = (targetAction === "activate") ? "kích hoạt" : "vô hiệu hóa";
+
+            const btnHeader = document.getElementById("btnHeaderToggleStatus");
+            const btnFooter = document.getElementById("btnFooterToggleStatus");
+            const spinnerHeader = document.getElementById("headerToggleStatusSpinner");
+            const spinnerFooter = document.getElementById("footerToggleStatusSpinner");
+            const textHeader = document.getElementById("headerToggleStatusText");
+            const textFooter = document.getElementById("footerToggleStatusText");
+
+            // Bật loading
+            btnHeader.disabled = true;
+            btnFooter.disabled = true;
+            spinnerHeader.classList.remove("hidden");
+            spinnerFooter.classList.remove("hidden");
+            textHeader.textContent = "Đang xử lý...";
+            textFooter.textContent = "Đang xử lý...";
+
+            try {
+                const res = await fetch("/api/discounts/status", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        store_type: currentStoreType,
+                        discount_node_id: activeDiscount.id,
+                        action: targetAction
+                    })
+                });
+
+                const result = await res.json();
+
+                btnHeader.disabled = false;
+                btnFooter.disabled = false;
+                spinnerHeader.classList.add("hidden");
+                spinnerFooter.classList.add("hidden");
+
+                if (!res.ok || !result.success) {
+                    updateStatusToggleButtonsUI(activeDiscount.status);
+                    showToast(result.message || `Lỗi khi ${actionLabel} discount`, false);
+                    return;
+                }
+
+                const newStatus = result.new_status || (targetAction === "activate" ? "ACTIVE" : "EXPIRED");
+                activeDiscount.status = newStatus;
+
+                // Cập nhật Badge Status ở Header Modal
+                const statusBadge = document.getElementById("modalDiscountStatusBadge");
+                statusBadge.textContent = newStatus;
+                if (newStatus === "ACTIVE") {
+                    statusBadge.className = "px-2.5 py-0.5 rounded-full text-sm font-bold bg-emerald-100 text-emerald-800";
+                } else if (newStatus === "SCHEDULED") {
+                    statusBadge.className = "px-2.5 py-0.5 rounded-full text-sm font-bold bg-blue-100 text-blue-800";
+                } else {
+                    statusBadge.className = "px-2.5 py-0.5 rounded-full text-sm font-bold bg-amber-100 text-amber-800";
+                }
+
+                // Cập nhật giao diện nút Toggle
+                updateStatusToggleButtonsUI(newStatus);
+
+                // Cập nhật mảng danh sách ngoài bảng chính và re-render
+                const idx = discountsList.findIndex(d => d.id === activeDiscount.id);
+                if (idx !== -1) {
+                    discountsList[idx].status = newStatus;
+                    renderDiscountsTable(discountsList);
+                }
+
+                showToast(result.message || `Đã ${actionLabel} discount thành công!`, true);
+            } catch (err) {
+                btnHeader.disabled = false;
+                btnFooter.disabled = false;
+                spinnerHeader.classList.add("hidden");
+                spinnerFooter.classList.add("hidden");
+                updateStatusToggleButtonsUI(activeDiscount.status);
+                showToast("Lỗi kết nối khi đổi trạng thái: " + err.message, false);
+            }
+        }
+
+    </script>
+    <script src="https://code.iconify.design/3/3.1.0/iconify.min.js">
+        function updateStatusToggleButtonsUI(status) {
+            const isActive = (status === "ACTIVE");
+            const btnHeader = document.getElementById("btnHeaderToggleStatus");
+            const btnFooter = document.getElementById("btnFooterToggleStatus");
+            const textHeader = document.getElementById("headerToggleStatusText");
+            const textFooter = document.getElementById("footerToggleStatusText");
+            const iconHeader = document.getElementById("headerToggleStatusIcon");
+            const iconFooter = document.getElementById("footerToggleStatusIcon");
+
+            if (!btnHeader || !btnFooter) return;
+
+            const activeClass = "bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 hover:border-rose-300";
+            const inactiveClass = "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300";
+
+            if (isActive) {
+                // Đang ACTIVE -> Nút cho phép Vô hiệu hóa
+                btnHeader.className = `btn btn-sm h-9 px-3.5 rounded-xl font-bold text-sm flex items-center gap-1.5 transition-all shadow-sm ${activeClass}`;
+                btnFooter.className = `btn btn-sm h-11 px-4 rounded-xl font-bold text-sm flex items-center gap-2 transition-all shadow-sm ${activeClass}`;
+                
+                textHeader.textContent = "Vô hiệu hóa";
+                textFooter.textContent = "Vô hiệu hóa mã";
+                
+                iconHeader.setAttribute("data-icon", "mdi:pause-circle-outline");
+                iconFooter.setAttribute("data-icon", "mdi:pause-circle-outline");
+            } else {
+                // Đang EXPIRED / DEACTIVATED -> Nút cho phép Kích hoạt
+                btnHeader.className = `btn btn-sm h-9 px-3.5 rounded-xl font-bold text-sm flex items-center gap-1.5 transition-all shadow-sm ${inactiveClass}`;
+                btnFooter.className = `btn btn-sm h-11 px-4 rounded-xl font-bold text-sm flex items-center gap-2 transition-all shadow-sm ${inactiveClass}`;
+                
+                textHeader.textContent = "Kích hoạt";
+                textFooter.textContent = "Kích hoạt mã";
+                
+                iconHeader.setAttribute("data-icon", "mdi:play-circle-outline");
+                iconFooter.setAttribute("data-icon", "mdi:play-circle-outline");
+            }
+        }
+
+        async function toggleDiscountStatusAction() {
+            if (!activeDiscount) return;
+
+            const currentStatus = activeDiscount.status;
+            const targetAction = (currentStatus === "ACTIVE") ? "deactivate" : "activate";
+            const actionLabel = (targetAction === "activate") ? "kích hoạt" : "vô hiệu hóa";
+
+            const btnHeader = document.getElementById("btnHeaderToggleStatus");
+            const btnFooter = document.getElementById("btnFooterToggleStatus");
+            const spinnerHeader = document.getElementById("headerToggleStatusSpinner");
+            const spinnerFooter = document.getElementById("footerToggleStatusSpinner");
+            const textHeader = document.getElementById("headerToggleStatusText");
+            const textFooter = document.getElementById("footerToggleStatusText");
+
+            // Bật loading
+            btnHeader.disabled = true;
+            btnFooter.disabled = true;
+            spinnerHeader.classList.remove("hidden");
+            spinnerFooter.classList.remove("hidden");
+            textHeader.textContent = "Đang xử lý...";
+            textFooter.textContent = "Đang xử lý...";
+
+            try {
+                const res = await fetch("/api/discounts/status", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        store_type: currentStoreType,
+                        discount_node_id: activeDiscount.id,
+                        action: targetAction
+                    })
+                });
+
+                const result = await res.json();
+
+                btnHeader.disabled = false;
+                btnFooter.disabled = false;
+                spinnerHeader.classList.add("hidden");
+                spinnerFooter.classList.add("hidden");
+
+                if (!res.ok || !result.success) {
+                    updateStatusToggleButtonsUI(activeDiscount.status);
+                    showToast(result.message || `Lỗi khi ${actionLabel} discount`, false);
+                    return;
+                }
+
+                const newStatus = result.new_status || (targetAction === "activate" ? "ACTIVE" : "EXPIRED");
+                activeDiscount.status = newStatus;
+
+                // Cập nhật Badge Status ở Header Modal
+                const statusBadge = document.getElementById("modalDiscountStatusBadge");
+                statusBadge.textContent = newStatus;
+                if (newStatus === "ACTIVE") {
+                    statusBadge.className = "px-2.5 py-0.5 rounded-full text-sm font-bold bg-emerald-100 text-emerald-800";
+                } else if (newStatus === "SCHEDULED") {
+                    statusBadge.className = "px-2.5 py-0.5 rounded-full text-sm font-bold bg-blue-100 text-blue-800";
+                } else {
+                    statusBadge.className = "px-2.5 py-0.5 rounded-full text-sm font-bold bg-amber-100 text-amber-800";
+                }
+
+                // Cập nhật giao diện nút Toggle
+                updateStatusToggleButtonsUI(newStatus);
+
+                // Cập nhật mảng danh sách ngoài bảng chính và re-render
+                const idx = discountsList.findIndex(d => d.id === activeDiscount.id);
+                if (idx !== -1) {
+                    discountsList[idx].status = newStatus;
+                    renderDiscountsTable(discountsList);
+                }
+
+                showToast(result.message || `Đã ${actionLabel} discount thành công!`, true);
+            } catch (err) {
+                btnHeader.disabled = false;
+                btnFooter.disabled = false;
+                spinnerHeader.classList.add("hidden");
+                spinnerFooter.classList.add("hidden");
+                updateStatusToggleButtonsUI(activeDiscount.status);
+                showToast("Lỗi kết nối khi đổi trạng thái: " + err.message, false);
+            }
+        }
+
+    </script>
+    <style>
+        /* Quy định bắt buộc: Mọi văn bản font-size tối thiểu 14px */
+        body, button, input, select, textarea, table, th, td, span, div, p, a, label {
+            font-size: 14px;
+        }
+        .text-min-14 {
+            font-size: 14px !important;
+        }
+        /* Đảm bảo nút Làm mới luôn giữ text và icon màu đen khi hover */
+        .btn-refresh-discount, 
+        .btn-refresh-discount:hover, 
+        .btn-refresh-discount:active,
+        .btn-refresh-discount:focus,
+        .btn-refresh-discount *,
+        .btn-refresh-discount:hover * {
+            color: #000000 !important;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen text-gray-800 antialiased font-sans pb-16">
+        <!-- Standard Header -->
+    <header class="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
+        <div class="mx-auto px-4 sm:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo -->
+                <div class="flex-shrink-0 flex items-center gap-3">
+                    <a target="_blank" rel="noopener noreferrer" href="/?store_type={{ store_type or 'default' }}" class="flex items-center gap-2 text-indigo-600 font-bold text-xl hover:text-indigo-700 transition-colors">
+                        <img src="/static/favicon.svg" alt="Logo" class="w-8 h-8 object-contain rounded-lg" onerror="this.src='/static/favicon-96x96.png'">
+                        <span>Shopify Admin Manager</span>
+                    </a>
+                    <a target="_blank" rel="noopener noreferrer" href="https://admin.shopify.com" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-black hover:bg-neutral-800 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors" title="Mở Shopify Admin Store">
+                        <span>Shopify Store</span>
+                        <svg class="w-3.5 h-3.5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                    </a>
+                </div>
+                <!-- Nav Links -->
+                <nav class="flex items-center gap-6">
+                    <a target="_blank" rel="noopener noreferrer" href="/?store_type={{ store_type or 'default' }}" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Sản phẩm</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/collections?store_type={{ store_type or 'default' }}" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Collections</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/metaobjects?store_type={{ store_type or 'default' }}" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">MetaObjects</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/product-metafields?store_type={{ store_type or 'default' }}" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Metafield SP</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/create?store_type={{ store_type or 'default' }}" class="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">Tạo sản phẩm mới</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/edit-variants?store_type={{ store_type or 'default' }}" class="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">Sửa hàng loạt</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/blogs?store_type={{ store_type or 'default' }}" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path></svg>Blog</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/policies?store_type={{ store_type or 'default' }}" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>Policy</a>
+
+                    <button id="drawer-toggle-btn" type="button" onclick="toggleDrawer()" class="p-1.5 text-gray-600 hover:text-indigo-600 hover:bg-gray-100 rounded-lg transition-colors flex items-center justify-center focus:outline-none" title="Menu tiện ích">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </header>
+    {% include 'drawer.html' %}
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+        <!-- Breadcrumb & Top Bar -->
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+            <div class="flex items-center gap-3">
+                <div class="p-2.5 bg-indigo-600 text-white rounded-xl shadow-md">
+                    <span class="iconify text-2xl" data-icon="mdi:ticket-percent-outline"></span>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Quản lý Discount</h1>
+                    <p class="text-sm text-gray-500">Quản lý và điều chỉnh mã giảm giá trên Shopify Store</p>
+                </div>
+            </div>
+
+            <!-- Switch Chuyển đổi Store Mặc định / Riêng -->
+            <div class="flex items-center gap-3 bg-white p-2 rounded-2xl shadow-sm border border-gray-200">
+                <span class="text-sm font-semibold text-gray-700 flex items-center gap-1.5 pl-2">
+                    <span class="iconify text-lg text-indigo-600" data-icon="mdi:storefront-outline"></span>
+                    <span>Gian hàng:</span>
+                </span>
+                
+                <div class="flex items-center bg-gray-100 p-1 rounded-xl">
+                    <button type="button" id="btnStoreDefault" onclick="switchStore('default')"
+                        class="px-3.5 py-1.5 rounded-lg text-sm font-bold transition-all flex items-center gap-1.5 shadow-sm {% if store_type != 'custom' %}bg-white text-indigo-700 shadow{% else %}text-gray-600 hover:text-gray-900{% endif %}">
+                        <span class="iconify text-base" data-icon="mdi:lightning-bolt"></span>
+                        <span>Mặc định</span>
+                    </button>
+                    <button type="button" id="btnStoreCustom" onclick="switchStore('custom')"
+                        class="px-3.5 py-1.5 rounded-lg text-sm font-bold transition-all flex items-center gap-1.5 {% if store_type == 'custom' %}bg-white text-emerald-700 shadow{% else %}text-gray-600 hover:text-gray-900{% endif %}">
+                        <span class="iconify text-base" data-icon="mdi:shield-check"></span>
+                        <span>Store Riêng</span>
+                        <span class="px-1.5 py-0.2 text-[14px] bg-emerald-100 text-emerald-800 rounded font-semibold">Proxy US</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter & Search Bar -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div class="relative flex-1 max-w-md">
+                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                    <span class="iconify text-xl" data-icon="mdi:magnify"></span>
+                </span>
+                <input type="text" id="searchInput" onkeyup="handleSearchKeyup(event)" placeholder="Tìm kiếm theo mã, tiêu đề discount..." 
+                    class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm bg-gray-50 focus:bg-white transition-colors" />
+            </div>
+
+            <div class="flex items-center gap-3">
+                <button type="button" id="btnRefreshDiscount" onclick="loadDiscounts(true)" class="btn-refresh-discount inline-flex items-center gap-2 h-10 px-4 rounded-xl text-sm font-bold text-black hover:text-black bg-white hover:bg-gray-100 border border-gray-300 hover:border-gray-400 shadow-sm transition-colors cursor-pointer" style="color: #000000 !important;">
+                    <span class="iconify text-lg text-black" data-icon="mdi:refresh" style="color: #000000 !important;"></span>
+                    <span class="text-black font-bold" style="color: #000000 !important;">Làm mới</span>
+                </button>
+                <div id="activeStoreBadge" class="px-3 py-2 rounded-xl text-sm font-bold flex items-center gap-2 border {% if store_type == 'custom' %}bg-emerald-50 text-emerald-800 border-emerald-200{% else %}bg-indigo-50 text-indigo-800 border-indigo-200{% endif %}">
+                    <span class="w-2.5 h-2.5 rounded-full {% if store_type == 'custom' %}bg-emerald-500{% else %}bg-indigo-500{% endif %} animate-pulse"></span>
+                    <span id="storeStatusText">{% if store_type == 'custom' %}Store Riêng (Qua US Proxy Safe Gate){% else %}Store Mặc định (Direct VPS){% endif %}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingIndicator" class="hidden bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center my-6">
+            <div class="inline-block animate-spin rounded-full h-10 w-10 border-4 border-indigo-500 border-t-transparent mb-3"></div>
+            <p class="text-base font-semibold text-gray-700">Đang tải danh sách discount từ Shopify...</p>
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="hidden bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center my-6">
+            <div class="inline-flex p-4 bg-gray-100 text-gray-500 rounded-full mb-4">
+                <span class="iconify text-4xl" data-icon="mdi:ticket-percent-outline"></span>
+            </div>
+            <h3 class="text-lg font-bold text-gray-900 mb-1">Không tìm thấy mã discount nào</h3>
+            <p class="text-sm text-gray-500">Thử tìm kiếm với từ khóa khác hoặc chuyển đổi store.</p>
+        </div>
+
+        <!-- Bảng danh sách Discounts -->
+        <div id="discountsTableContainer" class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-50 border-b border-gray-200 text-sm font-bold text-gray-700">
+                            <th class="py-4 px-5">Title</th>
+                            <th class="py-4 px-4">Status</th>
+                            <th class="py-4 px-4">Method</th>
+                            <th class="py-4 px-4">Eligibility</th>
+                            <th class="py-4 px-4">Type</th>
+                            <th class="py-4 px-4">Combinations</th>
+                            <th class="py-4 px-5 text-right">Used</th>
+                        </tr>
+                    </thead>
+                    <tbody id="discountsTableBody" class="divide-y divide-gray-100">
+                        <!-- Danh sách discount render bằng Javascript -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Footer phân trang -->
+            <div class="p-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+                <span id="paginationInfo" class="text-sm text-gray-600 font-medium">Đang hiển thị 0 discounts</span>
+                <button type="button" id="btnLoadMore" onclick="loadMoreDiscounts()" class="hidden btn btn-sm h-10 px-5 rounded-xl bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 text-sm font-bold shadow-sm">
+                    <span>Tải thêm discounts</span>
+                    <span class="iconify text-lg ml-1" data-icon="mdi:chevron-down"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- POPUP MODAL CHỈNH SỬA CHI TIẾT DISCOUNT -->
+    <!-- ========================================================================= -->
+    <div id="discountModal" onmousedown="handleBackdropMouseDown(event)" onclick="handleBackdropClick(event)" class="fixed inset-0 bg-black/60 z-[80] hidden flex items-center justify-center p-3 sm:p-5 overflow-y-auto cursor-pointer">
+        <div onclick="event.stopPropagation()" onmousedown="event.stopPropagation()" class="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[96vh] flex flex-col overflow-hidden border border-gray-200 animate-in fade-in zoom-in-95 duration-150 cursor-default">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
+                <div class="flex items-center gap-3">
+                    <div class="p-2 bg-indigo-100 text-indigo-700 rounded-xl">
+                        <span class="iconify text-2xl" data-icon="mdi:ticket-percent"></span>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h2 id="modalDiscountTitle" class="text-xl font-bold text-gray-900">Chi tiết Discount</h2>
+                            <span id="modalDiscountStatusBadge" class="px-2.5 py-0.5 rounded-full text-sm font-bold bg-green-100 text-green-800">Active</span>
+                        </div>
+                        <p id="modalDiscountSubtitle" class="text-sm text-gray-500 font-medium">Cập nhật thông số mã giảm giá</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <!-- Nút cập nhật trạng thái discount ở Header -->
+                    <button type="button" id="btnHeaderToggleStatus" onclick="toggleDiscountStatusAction()" class="btn btn-sm h-9 px-3.5 rounded-xl font-bold text-sm flex items-center gap-1.5 transition-all shadow-sm bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 hover:border-rose-300">
+                        <span id="headerToggleStatusSpinner" class="hidden inline-block animate-spin rounded-full h-3.5 w-3.5 border-2 border-current border-t-transparent"></span>
+                        <span id="headerToggleStatusIcon" class="iconify text-lg" data-icon="mdi:pause-circle-outline"></span>
+                        <span id="headerToggleStatusText">Vô hiệu hóa</span>
+                    </button>
+                    <button type="button" onclick="closeDiscountModal()" class="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-200 rounded-xl transition-colors">
+                        <span class="iconify text-2xl" data-icon="mdi:close"></span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal Read-only Banner (nếu có) -->
+            <div id="modalReadonlyNotice" class="hidden px-6 py-3 bg-amber-50 border-b border-amber-200 flex items-center gap-3 text-amber-800 text-sm font-medium">
+                <span class="iconify text-2xl text-amber-600 shrink-0" data-icon="mdi:information-outline"></span>
+                <span id="modalReadonlyReasonText">Mã discount này chỉ hỗ trợ chế độ xem.</span>
+            </div>
+
+            <!-- Modal Body (Scrollable) -->
+            <div class="p-6 overflow-y-auto space-y-6 flex-1">
+                <!-- Section 1: Code & Title -->
+                <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-4">
+                    <h3 class="text-base font-bold text-gray-900 flex items-center gap-2">
+                        <span class="iconify text-indigo-600 text-xl" data-icon="mdi:card-text-outline"></span>
+                        <span>Thông tin mã discount</span>
+                    </h3>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div id="modalCodeContainer">
+                            <label class="block text-sm font-bold text-gray-700 mb-1.5">Mã Discount (Code)</label>
+                            <input type="text" id="modalInputCode" class="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm font-semibold uppercase" />
+                            <p class="text-sm text-gray-500 mt-1">Khách hàng nhập mã này khi thanh toán.</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-1.5">Tiêu đề (Title) <span class="text-red-500">*</span></label>
+                            <input type="text" id="modalInputTitle" class="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm font-semibold" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Discount Value (Chỉ hiện khi editable value) -->
+                <div id="modalValueSection" class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-4">
+                    <h3 class="text-base font-bold text-gray-900 flex items-center gap-2">
+                        <span class="iconify text-indigo-600 text-xl" data-icon="mdi:cash-multiple"></span>
+                        <span>Giá trị giảm giá (Discount value)</span>
+                    </h3>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-1.5">Loại giảm giá</label>
+                            <select id="modalSelectValueType" onchange="handleValueTypeChange()" class="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm font-semibold bg-white">
+                                <option value="FIXED_AMOUNT">Số tiền cố định (Fixed amount $)</option>
+                                <option value="PERCENTAGE">Phần trăm (Percentage %)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label id="modalValueAmountLabel" class="block text-sm font-bold text-gray-700 mb-1.5">Số tiền giảm ($)</label>
+                            <div class="relative">
+                                <span id="modalValuePrefix" class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-500 font-bold text-sm">$</span>
+                                <input type="number" step="0.01" min="0.01" id="modalInputValueAmount" class="w-full pl-8 pr-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm font-semibold" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Eligibility -->
+                <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-3">
+                    <h3 class="text-base font-bold text-gray-900 flex items-center gap-2">
+                        <span class="iconify text-indigo-600 text-xl" data-icon="mdi:account-group-outline"></span>
+                        <span>Đối tượng áp dụng (Eligibility)</span>
+                    </h3>
+                    <div class="p-3 bg-gray-50 rounded-xl border border-gray-200 flex items-center gap-2.5 text-gray-800 text-sm font-medium">
+                        <span class="iconify text-xl text-indigo-600" data-icon="mdi:check-circle"></span>
+                        <span id="modalEligibilityText">Tất cả khách hàng (All customers)</span>
+                    </div>
+                </div>
+
+                <!-- Section 4: Minimum purchase requirements -->
+                <div id="modalMinReqSection" class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-4">
+                    <h3 class="text-base font-bold text-gray-900 flex items-center gap-2">
+                        <span class="iconify text-indigo-600 text-xl" data-icon="mdi:cart-outline"></span>
+                        <span>Điều kiện đơn hàng tối thiểu (Minimum purchase requirements)</span>
+                    </h3>
+
+                    <div class="space-y-3">
+                        <label class="flex items-center gap-3 p-3 rounded-xl border border-gray-200 hover:bg-gray-50 cursor-pointer">
+                            <input type="radio" name="modalMinReq" value="NONE" onchange="handleMinReqChange()" class="radio radio-primary radio-sm" />
+                            <span class="text-sm font-bold text-gray-800">Không có điều kiện tối thiểu (No minimum requirements)</span>
+                        </label>
+
+                        <label class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl border border-gray-200 hover:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center gap-3">
+                                <input type="radio" name="modalMinReq" value="MINIMUM_SUBTOTAL" onchange="handleMinReqChange()" class="radio radio-primary radio-sm" />
+                                <span class="text-sm font-bold text-gray-800">Giá trị đơn hàng tối thiểu (Minimum purchase amount $)</span>
+                            </div>
+                            <div id="minSubtotalInputWrap" class="hidden sm:w-44">
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 font-bold text-sm">$</span>
+                                    <input type="number" step="0.01" min="0.01" id="modalInputMinSubtotal" class="w-full pl-7 pr-3 py-1.5 rounded-lg border border-gray-300 text-sm font-bold" />
+                                </div>
+                            </div>
+                        </label>
+
+                        <label class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl border border-gray-200 hover:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center gap-3">
+                                <input type="radio" name="modalMinReq" value="MINIMUM_QUANTITY" onchange="handleMinReqChange()" class="radio radio-primary radio-sm" />
+                                <span class="text-sm font-bold text-gray-800">Số lượng sản phẩm tối thiểu (Minimum quantity of items)</span>
+                            </div>
+                            <div id="minQtyInputWrap" class="hidden sm:w-44">
+                                <input type="number" step="1" min="1" id="modalInputMinQty" placeholder="Số món" class="w-full px-3 py-1.5 rounded-lg border border-gray-300 text-sm font-bold" />
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Section 5: Maximum discount uses (Usage limit) -->
+                <div id="modalUsageSection" class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-4">
+                    <h3 class="text-base font-bold text-gray-900 flex items-center gap-2">
+                        <span class="iconify text-indigo-600 text-xl" data-icon="mdi:counter"></span>
+                        <span>Giới hạn số lần sử dụng (Maximum discount uses)</span>
+                    </h3>
+
+                    <div class="space-y-3">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl border border-gray-200">
+                            <label class="flex items-center gap-3 cursor-pointer">
+                                <input type="checkbox" id="modalChkLimitTotal" onchange="handleLimitTotalChange()" class="checkbox checkbox-primary checkbox-sm rounded" />
+                                <span class="text-sm font-bold text-gray-800">Giới hạn tổng số lần mã này có thể được dùng</span>
+                            </label>
+                            <div id="limitTotalInputWrap" class="hidden sm:w-44">
+                                <input type="number" step="1" min="1" id="modalInputLimitTotal" placeholder="Số lần tối đa" class="w-full px-3 py-1.5 rounded-lg border border-gray-300 text-sm font-bold" />
+                            </div>
+                        </div>
+
+                        <label class="flex items-center gap-3 p-3 rounded-xl border border-gray-200 cursor-pointer hover:bg-gray-50">
+                            <input type="checkbox" id="modalChkOncePerCustomer" class="checkbox checkbox-primary checkbox-sm rounded" />
+                            <span class="text-sm font-bold text-gray-800">Giới hạn mỗi khách hàng chỉ được dùng 1 lần (Limit to one use per customer)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Section 6: Combinations -->
+                <div id="modalCombinationsSection" class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-4">
+                    <h3 class="text-base font-bold text-gray-900 flex items-center gap-2">
+                        <span class="iconify text-indigo-600 text-xl" data-icon="mdi:merge"></span>
+                        <span>Khả năng kết hợp (Combinations)</span>
+                    </h3>
+                    <p class="text-sm text-gray-500 font-medium">Mã này có thể áp dụng đồng thời với các loại giảm giá nào khác trong giỏ hàng:</p>
+
+                    <div class="space-y-3">
+                        <label class="flex items-center gap-3 p-3 rounded-xl border border-gray-200 cursor-pointer hover:bg-gray-50">
+                            <input type="checkbox" id="modalCombOrder" class="checkbox checkbox-primary checkbox-sm rounded" />
+                            <div>
+                                <span class="text-sm font-bold text-gray-800 block">Giảm giá theo đơn hàng (Order discounts)</span>
+                                <span class="text-sm text-gray-500 font-normal">Có thể kết hợp với các mã giảm giá toàn bộ đơn hàng khác</span>
+                            </div>
+                        </label>
+
+                        <label class="flex items-center gap-3 p-3 rounded-xl border border-gray-200 cursor-pointer hover:bg-gray-50">
+                            <input type="checkbox" id="modalCombProduct" class="checkbox checkbox-primary checkbox-sm rounded" />
+                            <div>
+                                <span class="text-sm font-bold text-gray-800 block">Giảm giá theo sản phẩm (Product discounts)</span>
+                                <span class="text-sm text-gray-500 font-normal">Có thể kết hợp với các mã giảm giá cho sản phẩm cụ thể</span>
+                            </div>
+                        </label>
+
+                        <label class="flex items-center gap-3 p-3 rounded-xl border border-gray-200 cursor-pointer hover:bg-gray-50">
+                            <input type="checkbox" id="modalCombShipping" class="checkbox checkbox-primary checkbox-sm rounded" />
+                            <div>
+                                <span class="text-sm font-bold text-gray-800 block">Giảm giá vận chuyển (Shipping discounts)</span>
+                                <span class="text-sm text-gray-500 font-normal">Có thể kết hợp với miễn phí hoặc giảm phí vận chuyển</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Section 7: Schedule -->
+                <div id="modalScheduleSection" class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-4">
+                    <h3 class="text-base font-bold text-gray-900 flex items-center gap-2">
+                        <span class="iconify text-indigo-600 text-xl" data-icon="mdi:calendar-clock"></span>
+                        <span>Thời gian áp dụng (Schedule)</span>
+                    </h3>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-1.5">Ngày & giờ bắt đầu <span class="text-red-500">*</span></label>
+                            <input type="datetime-local" id="modalInputStartsAt" class="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm font-semibold" />
+                        </div>
+                        <div>
+                            <div class="flex items-center justify-between mb-1.5">
+                                <label class="text-sm font-bold text-gray-700">Ngày & giờ kết thúc</label>
+                                <label class="flex items-center gap-1.5 cursor-pointer text-sm text-indigo-600 font-bold">
+                                    <input type="checkbox" id="modalChkHasEndDate" onchange="handleEndDateToggle()" class="checkbox checkbox-primary checkbox-xs rounded" />
+                                    <span>Đặt ngày kết thúc</span>
+                                </label>
+                            </div>
+                            <input type="datetime-local" id="modalInputEndsAt" disabled class="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm font-semibold disabled:bg-gray-100 disabled:text-gray-400" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
+                <button type="button" onclick="closeDiscountModal()" class="btn btn-sm h-11 px-5 rounded-xl bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold text-sm">
+                    Đóng
+                </button>
+
+                <div class="flex items-center gap-3">
+                    <!-- Nút cập nhật trạng thái discount ở Footer -->
+                    <button type="button" id="btnFooterToggleStatus" onclick="toggleDiscountStatusAction()" class="btn btn-sm h-11 px-4 rounded-xl font-bold text-sm flex items-center gap-2 transition-all shadow-sm bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 hover:border-rose-300">
+                        <span id="footerToggleStatusSpinner" class="hidden inline-block animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent"></span>
+                        <span id="footerToggleStatusIcon" class="iconify text-lg" data-icon="mdi:pause-circle-outline"></span>
+                        <span id="footerToggleStatusText">Vô hiệu hóa mã</span>
+                    </button>
+
+                    <button type="button" id="btnSaveDiscount" onclick="saveDiscountChanges()" class="btn btn-sm h-11 px-6 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-md flex items-center gap-2">
+                        <span id="saveSpinner" class="hidden inline-block animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></span>
+                        <span id="saveBtnText">Lưu thay đổi</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toastNotification" class="fixed bottom-6 right-6 z-[90] hidden transition-all duration-300">
+        <div id="toastBox" class="flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-xl text-sm font-bold border">
+            <span id="toastIcon" class="iconify text-2xl"></span>
+            <span id="toastMessage">Thông báo</span>
+        </div>
+    </div>
+
+    <!-- Script Logic Javascript -->
+    <script>
+        let currentStoreType = "{{ store_type or 'default' }}";
+        let discountsList = [];
+        let pageInfo = { has_next_page: false, end_cursor: null };
+        let activeDiscount = null;
+        let searchTimeout = null;
+
+        document.addEventListener("DOMContentLoaded", function() {
+            loadDiscounts(true);
+        });
+
+        function showToast(message, isSuccess = true) {
+            const toast = document.getElementById("toastNotification");
+            const box = document.getElementById("toastBox");
+            const icon = document.getElementById("toastIcon");
+            const msg = document.getElementById("toastMessage");
+
+            msg.textContent = message;
+            if (isSuccess) {
+                box.className = "flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-xl text-sm font-bold border bg-emerald-50 text-emerald-900 border-emerald-300";
+                icon.setAttribute("data-icon", "mdi:check-circle");
+                icon.className = "iconify text-2xl text-emerald-600";
+            } else {
+                box.className = "flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-xl text-sm font-bold border bg-red-50 text-red-900 border-red-300";
+                icon.setAttribute("data-icon", "mdi:alert-circle");
+                icon.className = "iconify text-2xl text-red-600";
+            }
+
+            toast.classList.remove("hidden");
+            setTimeout(() => {
+                toast.classList.add("hidden");
+            }, 4000);
+        }
+
+        function switchStore(targetStore) {
+            if (targetStore === currentStoreType) return;
+            currentStoreType = targetStore;
+
+            // Cập nhật URL mà không reload trang
+            const url = new URL(window.location);
+            url.searchParams.set("store_type", targetStore);
+            window.history.pushState({}, "", url);
+
+            // Cập nhật UI button
+            const btnDef = document.getElementById("btnStoreDefault");
+            const btnCust = document.getElementById("btnStoreCustom");
+            const badge = document.getElementById("activeStoreBadge");
+            const statusTxt = document.getElementById("storeStatusText");
+
+            if (targetStore === "custom") {
+                btnDef.className = "px-3.5 py-1.5 rounded-lg text-sm font-bold transition-all flex items-center gap-1.5 text-gray-600 hover:text-gray-900";
+                btnCust.className = "px-3.5 py-1.5 rounded-lg text-sm font-bold transition-all flex items-center gap-1.5 bg-white text-emerald-700 shadow";
+                badge.className = "px-3 py-2 rounded-xl text-sm font-bold flex items-center gap-2 border bg-emerald-50 text-emerald-800 border-emerald-200";
+                statusTxt.textContent = "Store Riêng (Qua US Proxy Safe Gate)";
+            } else {
+                btnDef.className = "px-3.5 py-1.5 rounded-lg text-sm font-bold transition-all flex items-center gap-1.5 shadow-sm bg-white text-indigo-700 shadow";
+                btnCust.className = "px-3.5 py-1.5 rounded-lg text-sm font-bold transition-all flex items-center gap-1.5 text-gray-600 hover:text-gray-900";
+                badge.className = "px-3 py-2 rounded-xl text-sm font-bold flex items-center gap-2 border bg-indigo-50 text-indigo-800 border-indigo-200";
+                statusTxt.textContent = "Store Mặc định (Direct VPS)";
+            }
+
+            loadDiscounts(true);
+        }
+
+        function handleSearchKeyup(e) {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                loadDiscounts(true);
+            }, 350);
+        }
+
+        async function loadDiscounts(reset = false) {
+            const tableBody = document.getElementById("discountsTableBody");
+            const loading = document.getElementById("loadingIndicator");
+            const emptyState = document.getElementById("emptyState");
+            const btnLoadMore = document.getElementById("btnLoadMore");
+            const paginationInfo = document.getElementById("paginationInfo");
+            const searchVal = document.getElementById("searchInput").value.trim();
+
+            if (reset) {
+                discountsList = [];
+                tableBody.innerHTML = "";
+                pageInfo = { has_next_page: false, end_cursor: null };
+            }
+
+            loading.classList.remove("hidden");
+            emptyState.classList.add("hidden");
+
+            try {
+                let url = `/api/discounts?store_type=${encodeURIComponent(currentStoreType)}&first=50`;
+                if (!reset && pageInfo.end_cursor) {
+                    url += `&after=${encodeURIComponent(pageInfo.end_cursor)}`;
+                }
+                if (searchVal) {
+                    url += `&query=${encodeURIComponent(searchVal)}`;
+                }
+
+                const res = await fetch(url);
+                const result = await res.json();
+
+                loading.classList.add("hidden");
+
+                if (!res.ok || !result.success) {
+                    showToast(result.message || "Lỗi khi tải danh sách discount", false);
+                    return;
+                }
+
+                const data = result.data || {};
+                const newItems = data.items || [];
+                pageInfo = data.page_info || { has_next_page: false, end_cursor: null };
+
+                if (reset) {
+                    discountsList = newItems;
+                } else {
+                    discountsList = discountsList.concat(newItems);
+                }
+
+                if (discountsList.length === 0) {
+                    emptyState.classList.remove("hidden");
+                } else {
+                    renderDiscountsTable(discountsList);
+                }
+
+                paginationInfo.textContent = `Đang hiển thị ${discountsList.length} discounts`;
+                if (pageInfo.has_next_page) {
+                    btnLoadMore.classList.remove("hidden");
+                } else {
+                    btnLoadMore.classList.add("hidden");
+                }
+            } catch (err) {
+                loading.classList.add("hidden");
+                showToast("Lỗi kết nối khi tải dữ liệu: " + err.message, false);
+            }
+        }
+
+        function loadMoreDiscounts() {
+            if (pageInfo.has_next_page) {
+                loadDiscounts(false);
+            }
+        }
+
+        function renderDiscountsTable(items) {
+            const tableBody = document.getElementById("discountsTableBody");
+            tableBody.innerHTML = "";
+
+            items.forEach((item, index) => {
+                const tr = document.createElement("tr");
+                tr.className = "hover:bg-indigo-50/40 transition-colors cursor-pointer border-b border-gray-100";
+                tr.onclick = () => openDiscountDetail(item.id);
+
+                // Status Badge
+                let statusBadgeClass = "bg-gray-100 text-gray-700";
+                if (item.status === "ACTIVE") statusBadgeClass = "bg-emerald-100 text-emerald-800";
+                else if (item.status === "SCHEDULED") statusBadgeClass = "bg-blue-100 text-blue-800";
+                else if (item.status === "EXPIRED") statusBadgeClass = "bg-amber-100 text-amber-800";
+
+                // Method Text (Canonical separation: Code • N codes vs Automatic)
+                const isCodeMethod = (item.method === "CODE");
+                const count = item.code_count || 1;
+                const methodText = isCodeMethod 
+                    ? `Code • ${count} ${count > 1 ? 'codes' : 'code'}` 
+                    : "Automatic";
+
+                // Combinations explicit state (never blank)
+                let combHtml = '';
+                const activeList = item.combinations?.active_list || [];
+                if (activeList.length > 0) {
+                    combHtml = activeList.map(c => 
+                        `<span class="px-2 py-0.5 rounded text-sm font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">${escapeHtml(c)}</span>`
+                    ).join(' ');
+                } else {
+                    combHtml = `<span class="px-2 py-0.5 rounded text-sm font-semibold bg-gray-100 text-gray-500">Không kết hợp</span>`;
+                }
+
+                tr.innerHTML = `
+                    <td class="py-4 px-5">
+                        <div class="font-bold text-gray-900 text-sm hover:text-indigo-600 transition-colors flex items-center gap-1.5">
+                            <span>${escapeHtml(item.title || "Không có tiêu đề")}</span>
+                            ${item.method === 'CODE' && item.primary_code ? `<span class="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded font-mono text-sm border">${escapeHtml(item.primary_code)}</span>` : ''}
+                        </div>
+                        <div class="text-sm text-gray-500 font-normal mt-0.5 line-clamp-1">${escapeHtml(item.summary || "")}</div>
+                    </td>
+                    <td class="py-4 px-4 whitespace-nowrap">
+                        <span class="px-2.5 py-1 rounded-full font-bold text-sm inline-flex items-center gap-1 ${statusBadgeClass}">
+                            <span class="w-1.5 h-1.5 rounded-full ${item.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-gray-400'}"></span>
+                            ${escapeHtml(item.status)}
+                        </span>
+                    </td>
+                    <td class="py-4 px-4 whitespace-nowrap text-sm font-semibold text-gray-700">
+                        <span class="inline-flex items-center gap-1.5">
+                            <span class="iconify text-base ${isCodeMethod ? 'text-purple-600' : 'text-blue-600'}" data-icon="${isCodeMethod ? 'mdi:ticket-outline' : 'mdi:flash-outline'}"></span>
+                            <span>${escapeHtml(methodText)}</span>
+                        </span>
+                    </td>
+                    <td class="py-4 px-4 whitespace-nowrap text-sm text-gray-700">
+                        <div class="flex items-center gap-1.5">
+                            <span class="iconify text-base text-gray-400" data-icon="mdi:account-outline"></span>
+                            <span>${escapeHtml(item.eligibility?.label || "All customers")}</span>
+                        </div>
+                    </td>
+                    <td class="py-4 px-4 whitespace-nowrap">
+                        <span class="font-bold text-gray-800 text-sm">${escapeHtml(item.discount_type_label || item.discount_type)}</span>
+                        ${item.value_formatted ? `<span class="block text-sm text-indigo-600 font-bold">${escapeHtml(item.value_formatted)}</span>` : ''}
+                    </td>
+                    <td class="py-4 px-4 whitespace-nowrap">
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            ${combHtml}
+                        </div>
+                    </td>
+                    <td class="py-4 px-5 whitespace-nowrap text-right text-sm font-bold text-gray-900">
+                        ${item.usage_count || 0}
+                    </td>
+                `;
+                tableBody.appendChild(tr);
+            });
+        }
+
+        async function openDiscountDetail(discountId) {
+            // Chống ghost click / click-through / double-click reopen khi vừa đóng modal
+            if (Date.now() - lastModalClosedAt < 400) {
+                return;
+            }
+            const modal = document.getElementById("discountModal");
+            const saveBtn = document.getElementById("btnSaveDiscount");
+            
+            // Đánh dấu ID discount đang được mở hiện tại
+            currentOpeningDiscountId = discountId;
+
+            // Tìm trong cache trước để mở tức thì
+            activeDiscount = discountsList.find(d => d.id === discountId) || null;
+            if (activeDiscount) {
+                populateModal(activeDiscount);
+                modal.classList.remove("hidden");
+            }
+
+            // Gọi API canonical detail để lấy fresh state + updatedAt mới nhất
+            try {
+                const res = await fetch(`/api/discounts/detail?store_type=${encodeURIComponent(currentStoreType)}&id=${encodeURIComponent(discountId)}`);
+                const result = await res.json();
+                
+                // NGUYÊN TẮC QUAN TRỌNG: Kiểm tra xem người dùng ĐÃ ĐÓNG MODAL trong lúc fetch chưa!
+                // Nếu currentOpeningDiscountId đã bị reset về null (do người dùng bấm đóng/backdrop),
+                // hoặc modal đã bị thêm class "hidden", TUYỆT ĐỐI KHÔNG ĐƯỢC TỰ Ý MỞ LẠI MODAL!
+                const isStillOpen = modal && !modal.classList.contains("hidden");
+                if (currentOpeningDiscountId !== discountId || !isStillOpen) {
+                    return;
+                }
+
+                if (result.success && result.discount) {
+                    activeDiscount = result.discount;
+                    populateModal(activeDiscount);
+                }
+            } catch (err) {
+                console.error("Error fetching detail:", err);
+            }
+        }
+
+        let initialModalSnapshot = null;
+
+        function populateModal(discount) {
+            document.getElementById("modalDiscountTitle").textContent = discount.title || "Chi tiết Discount";
+            document.getElementById("modalDiscountSubtitle").textContent = `${discount.resource_type} • ID: ${discount.id.split('/').pop()}`;
+            
+            // Status badge & Nút cập nhật trạng thái
+            const statusBadge = document.getElementById("modalDiscountStatusBadge");
+            statusBadge.textContent = discount.status;
+            statusBadge.className = `px-2.5 py-0.5 rounded-full text-sm font-bold ${discount.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-700'}`;
+            updateStatusToggleButtonsUI(discount.status);
+
+            const caps = discount.capabilities || {};
+            const isEditable = caps.editable;
+
+            // Readonly notice & Save button gating
+            const noticeBox = document.getElementById("modalReadonlyNotice");
+            const noticeTxt = document.getElementById("modalReadonlyReasonText");
+            const saveBtn = document.getElementById("btnSaveDiscount");
+
+            if (!isEditable) {
+                noticeBox.classList.remove("hidden");
+                noticeTxt.textContent = caps.readonly_reason || "Discount này chỉ hỗ trợ xem thông tin.";
+                saveBtn.classList.add("hidden");
+            } else {
+                noticeBox.classList.add("hidden");
+                saveBtn.classList.remove("hidden");
+            }
+
+            // Section 1: Code & Title
+            document.getElementById("modalInputTitle").value = discount.title || "";
+            document.getElementById("modalInputTitle").disabled = !isEditable || !caps.can_edit_title;
+
+            const codeContainer = document.getElementById("modalCodeContainer");
+            const codeInput = document.getElementById("modalInputCode");
+            if (caps.is_automatic) {
+                codeContainer.classList.add("hidden");
+            } else {
+                codeContainer.classList.remove("hidden");
+                codeInput.value = discount.primary_code || "";
+                codeInput.disabled = !isEditable || !caps.can_edit_code;
+            }
+
+            // Section 2: Value (Canonical hydration: Fixed amount to 2 decimal places, Percentage to clean string)
+            const valSection = document.getElementById("modalValueSection");
+            const valTypeSelect = document.getElementById("modalSelectValueType");
+            const valInput = document.getElementById("modalInputValueAmount");
+
+            if (caps.can_edit_discount_value) {
+                valSection.classList.remove("hidden");
+                const isPercentage = (discount.value_type === "PERCENTAGE");
+                valTypeSelect.value = isPercentage ? "PERCENTAGE" : "FIXED_AMOUNT";
+                if (typeof discount.value_number === 'number' && !isNaN(discount.value_number)) {
+                    valInput.value = isPercentage ? discount.value_number.toString() : discount.value_number.toFixed(2);
+                } else {
+                    valInput.value = "";
+                }
+                handleValueTypeChange();
+                valTypeSelect.disabled = !isEditable;
+                valInput.disabled = !isEditable;
+            } else {
+                valSection.classList.add("hidden");
+            }
+
+            // Section 3: Eligibility (Context-based)
+            document.getElementById("modalEligibilityText").textContent = discount.eligibility?.label || "Tất cả khách hàng (All customers)";
+
+            // Section 4: Minimum requirements
+            const minReq = discount.minimum_requirement || { type: "NONE" };
+            const radios = document.querySelectorAll('input[name="modalMinReq"]');
+            radios.forEach(r => {
+                r.checked = (r.value === minReq.type);
+                r.disabled = !isEditable || !caps.can_edit_minimum_requirement;
+            });
+            document.getElementById("modalInputMinSubtotal").value = (minReq.type === "MINIMUM_SUBTOTAL" && minReq.value) ? minReq.value.toFixed(2) : "";
+            document.getElementById("modalInputMinQty").value = (minReq.type === "MINIMUM_QUANTITY" && minReq.value) ? minReq.value : "";
+            handleMinReqChange();
+
+            // Section 5: Usage limit (Explicit rule: usageLimit != null -> checked + N; usageLimit == null -> unchecked + '')
+            const usageSection = document.getElementById("modalUsageSection");
+            if (caps.can_edit_usage_limit) {
+                usageSection.classList.remove("hidden");
+                const chkLimit = document.getElementById("modalChkLimitTotal");
+                const inputLimit = document.getElementById("modalInputLimitTotal");
+                const limitWrap = document.getElementById("limitTotalInputWrap");
+                const hasUsageLimit = (discount.usage_limit !== null && discount.usage_limit !== undefined && discount.usage_limit !== "");
+                
+                chkLimit.checked = hasUsageLimit;
+                inputLimit.value = hasUsageLimit ? discount.usage_limit : "";
+                if (hasUsageLimit) {
+                    limitWrap.classList.remove("hidden");
+                } else {
+                    limitWrap.classList.add("hidden");
+                }
+                chkLimit.disabled = !isEditable;
+                inputLimit.disabled = !isEditable;
+
+                const chkOnce = document.getElementById("modalChkOncePerCustomer");
+                chkOnce.checked = !!discount.applies_once_per_customer;
+                chkOnce.disabled = !isEditable;
+            } else {
+                usageSection.classList.add("hidden");
+            }
+
+            // Section 6: Combinations
+            const combs = discount.combinations || {};
+            document.getElementById("modalCombOrder").checked = !!combs.order_discounts;
+            document.getElementById("modalCombProduct").checked = !!combs.product_discounts;
+            document.getElementById("modalCombShipping").checked = !!combs.shipping_discounts;
+            document.getElementById("modalCombOrder").disabled = !isEditable || !caps.can_edit_combinations;
+            document.getElementById("modalCombProduct").disabled = !isEditable || !caps.can_edit_combinations;
+            document.getElementById("modalCombShipping").disabled = !isEditable || !caps.can_edit_combinations;
+
+            // Section 7: Schedule
+            document.getElementById("modalInputStartsAt").value = formatDatetimeLocal(discount.starts_at);
+            document.getElementById("modalInputStartsAt").disabled = !isEditable || !caps.can_edit_schedule;
+
+            const chkEnd = document.getElementById("modalChkHasEndDate");
+            const inputEnd = document.getElementById("modalInputEndsAt");
+            if (discount.ends_at) {
+                chkEnd.checked = true;
+                inputEnd.value = formatDatetimeLocal(discount.ends_at);
+                inputEnd.disabled = !isEditable;
+            } else {
+                chkEnd.checked = false;
+                inputEnd.value = "";
+                inputEnd.disabled = true;
+            }
+
+            // Snapshot để kiểm tra Dirty Fields & No-Op Save
+            initialModalSnapshot = {
+                title: discount.title || "",
+                code: discount.primary_code || "",
+                value_type: discount.value_type === "PERCENTAGE" ? "PERCENTAGE" : "FIXED_AMOUNT",
+                value_amount: document.getElementById("modalInputValueAmount").value,
+                min_req_type: discount.minimum_requirement?.type || "NONE",
+                min_req_subtotal: document.getElementById("modalInputMinSubtotal").value,
+                min_req_qty: document.getElementById("modalInputMinQty").value,
+                limit_total_checked: document.getElementById("modalChkLimitTotal").checked,
+                usage_limit: document.getElementById("modalInputLimitTotal").value,
+                once_per_customer: document.getElementById("modalChkOncePerCustomer").checked,
+                comb_order: document.getElementById("modalCombOrder").checked,
+                comb_product: document.getElementById("modalCombProduct").checked,
+                comb_shipping: document.getElementById("modalCombShipping").checked,
+                starts_at: document.getElementById("modalInputStartsAt").value,
+                has_end: chkEnd.checked,
+                ends_at: inputEnd.value
+            };
+        }
+
+        function handleValueTypeChange() {
+            const vType = document.getElementById("modalSelectValueType").value;
+            const prefix = document.getElementById("modalValuePrefix");
+            const label = document.getElementById("modalValueAmountLabel");
+            if (vType === "PERCENTAGE") {
+                prefix.textContent = "%";
+                label.textContent = "Phần trăm giảm (%)";
+            } else {
+                prefix.textContent = "$";
+                label.textContent = "Số tiền giảm ($)";
+            }
+        }
+
+        function handleMinReqChange() {
+            const selected = document.querySelector('input[name="modalMinReq"]:checked')?.value || "NONE";
+            const subWrap = document.getElementById("minSubtotalInputWrap");
+            const qtyWrap = document.getElementById("minQtyInputWrap");
+
+            if (selected === "MINIMUM_SUBTOTAL") {
+                subWrap.classList.remove("hidden");
+                qtyWrap.classList.add("hidden");
+            } else if (selected === "MINIMUM_QUANTITY") {
+                subWrap.classList.add("hidden");
+                qtyWrap.classList.remove("hidden");
+            } else {
+                subWrap.classList.add("hidden");
+                qtyWrap.classList.add("hidden");
+            }
+        }
+
+        function handleLimitTotalChange() {
+            const isChecked = document.getElementById("modalChkLimitTotal").checked;
+            const wrap = document.getElementById("limitTotalInputWrap");
+            if (isChecked) {
+                wrap.classList.remove("hidden");
+            } else {
+                wrap.classList.add("hidden");
+            }
+        }
+
+        function handleEndDateToggle() {
+            const isChecked = document.getElementById("modalChkHasEndDate").checked;
+            const input = document.getElementById("modalInputEndsAt");
+            input.disabled = !isChecked;
+            if (!isChecked) input.value = "";
+        }
+
+        let lastModalClosedAt = 0;
+        let currentOpeningDiscountId = null;
+        let isBackdropMousedown = false;
+
+        function handleBackdropMouseDown(e) {
+            isBackdropMousedown = (e.target === e.currentTarget);
+        }
+
+        function handleBackdropClick(e) {
+            if (isBackdropMousedown && e.target === e.currentTarget) {
+                closeDiscountModal(e);
+            }
+            isBackdropMousedown = false;
+        }
+
+        // Đóng modal khi bấm phím Escape
+        document.addEventListener("keydown", function(e) {
+            if (e.key === "Escape") {
+                const modal = document.getElementById("discountModal");
+                if (modal && !modal.classList.contains("hidden")) {
+                    closeDiscountModal(e);
+                }
+            }
+        });
+
+        function closeDiscountModal(e) {
+            if (e && e.stopPropagation) {
+                e.stopPropagation();
+            }
+            lastModalClosedAt = Date.now();
+            currentOpeningDiscountId = null; // HỦY BỎ bất kỳ fetch detail bất đồng bộ nào đang chạy dở
+            const modal = document.getElementById("discountModal");
+            if (modal) {
+                modal.classList.add("hidden");
+            }
+            activeDiscount = null;
+        }
+
+        function formatDatetimeLocal(isoStr) {
+            if (!isoStr) return "";
+            try {
+                const d = new Date(isoStr);
+                const pad = num => String(num).padStart(2, "0");
+                return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+            } catch (e) {
+                return "";
+            }
+        }
+
+        async function saveDiscountChanges() {
+            if (!activeDiscount) return;
+
+            const caps = activeDiscount.capabilities || {};
+            if (!caps.editable) return;
+
+            const dirtyFields = new Set();
+            const changes = {};
+
+            const title = document.getElementById("modalInputTitle").value.trim();
+            if (!title) {
+                showToast("Vui lòng nhập tiêu đề discount", false);
+                return;
+            }
+            if (!initialModalSnapshot || title !== initialModalSnapshot.title) {
+                dirtyFields.add("title");
+                changes.title = title;
+            }
+
+            // Code
+            if (caps.can_edit_code && !caps.is_automatic) {
+                const code = document.getElementById("modalInputCode").value.trim();
+                if (!code) {
+                    showToast("Vui lòng nhập mã discount (Code)", false);
+                    return;
+                }
+                if (!initialModalSnapshot || code !== initialModalSnapshot.code) {
+                    dirtyFields.add("code");
+                    changes.code = code;
+                }
+            }
+
+            // Value
+            if (caps.can_edit_discount_value) {
+                const vType = document.getElementById("modalSelectValueType").value;
+                const rawVal = document.getElementById("modalInputValueAmount").value;
+                const vAmount = parseFloat(rawVal);
+                if (isNaN(vAmount) || vAmount <= 0) {
+                    showToast("Vui lòng nhập giá trị giảm giá hợp lệ lớn hơn 0", false);
+                    return;
+                }
+                if (vType === "PERCENTAGE" && vAmount > 100) {
+                    showToast("Phần trăm giảm giá không thể vượt quá 100%", false);
+                    return;
+                }
+                if (!initialModalSnapshot || vType !== initialModalSnapshot.value_type || rawVal !== initialModalSnapshot.value_amount) {
+                    dirtyFields.add("discount_value");
+                    changes.discount_value = {
+                        type: vType,
+                        amount: vAmount
+                    };
+                }
+            }
+
+            // Minimum requirement
+            if (caps.can_edit_minimum_requirement) {
+                const mrType = document.querySelector('input[name="modalMinReq"]:checked')?.value || "NONE";
+                if (mrType === "NONE") {
+                    changes.minimum_requirement = { type: "NONE" };
+                } else if (mrType === "MINIMUM_SUBTOTAL") {
+                    const subtotal = parseFloat(document.getElementById("modalInputMinSubtotal").value);
+                    if (isNaN(subtotal) || subtotal <= 0) {
+                        showToast("Vui lòng nhập số tiền đơn hàng tối thiểu hợp lệ", false);
+                        return;
+                    }
+                    changes.minimum_requirement = { type: "MINIMUM_SUBTOTAL", amount: subtotal };
+                } else if (mrType === "MINIMUM_QUANTITY") {
+                    const qty = parseInt(document.getElementById("modalInputMinQty").value);
+                    if (isNaN(qty) || qty < 1) {
+                        showToast("Vui lòng nhập số lượng sản phẩm tối thiểu hợp lệ", false);
+                        return;
+                    }
+                    changes.minimum_requirement = { type: "MINIMUM_QUANTITY", quantity: qty };
+                }
+            }
+
+            // Usage limits
+            if (caps.can_edit_usage_limit) {
+                const limitTotalChecked = document.getElementById("modalChkLimitTotal").checked;
+                if (limitTotalChecked) {
+                    const limitVal = parseInt(document.getElementById("modalInputLimitTotal").value);
+                    if (isNaN(limitVal) || limitVal < 1) {
+                        showToast("Vui lòng nhập tổng số lần sử dụng hợp lệ", false);
+                        return;
+                    }
+                    changes.usage_limit = limitVal;
+                } else {
+                    changes.usage_limit = null;
+                }
+
+                changes.applies_once_per_customer = document.getElementById("modalChkOncePerCustomer").checked;
+            }
+
+            // Combinations
+            if (caps.can_edit_combinations) {
+                changes.combinations = {
+                    order_discounts: document.getElementById("modalCombOrder").checked,
+                    product_discounts: document.getElementById("modalCombProduct").checked,
+                    shipping_discounts: document.getElementById("modalCombShipping").checked
+                };
+            }
+
+            // Schedule
+            if (caps.can_edit_schedule) {
+                const startsLocal = document.getElementById("modalInputStartsAt").value;
+                if (!startsLocal) {
+                    showToast("Vui lòng chọn ngày giờ bắt đầu", false);
+                    return;
+                }
+                const startsIso = new Date(startsLocal).toISOString();
+                
+                let endsIso = null;
+                const hasEnd = document.getElementById("modalChkHasEndDate").checked;
+                if (hasEnd) {
+                    const endsLocal = document.getElementById("modalInputEndsAt").value;
+                    if (!endsLocal) {
+                        showToast("Vui lòng chọn ngày giờ kết thúc", false);
+                        return;
+                    }
+                    endsIso = new Date(endsLocal).toISOString();
+                    if (new Date(endsIso) <= new Date(startsIso)) {
+                        showToast("Ngày kết thúc phải diễn ra sau ngày bắt đầu", false);
+                        return;
+                    }
+                }
+
+                changes.schedule = {
+                    starts_at: startsIso,
+                    ends_at: endsIso
+                };
+            }
+
+            // No-Op Save Regression: nếu không có trường nào thay đổi, thông báo và đóng modal ngay
+            if (Object.keys(changes).length === 0) {
+                showToast("Dữ liệu không thay đổi (No-op save).");
+                closeDiscountModal();
+                return;
+            }
+
+            // Submit payload với patch semantics
+            const payload = {
+                store_type: currentStoreType,
+                discount_node_id: activeDiscount.id,
+                loaded_updated_at: activeDiscount.updated_at,
+                changes: changes
+            };
+
+            const saveBtn = document.getElementById("btnSaveDiscount");
+            const spinner = document.getElementById("saveSpinner");
+            const btnText = document.getElementById("saveBtnText");
+
+            saveBtn.disabled = true;
+            spinner.classList.remove("hidden");
+            btnText.textContent = "Đang lưu...";
+
+            try {
+                const res = await fetch("/api/discounts/update", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+                const result = await res.json();
+
+                saveBtn.disabled = false;
+                spinner.classList.add("hidden");
+                btnText.textContent = "Lưu thay đổi";
+
+                if (res.status === 409) {
+                    // Stale concurrency mismatch
+                    showToast(result.message || "Dữ liệu đã cũ, đang tải lại...", false);
+                    openDiscountDetail(activeDiscount.id);
+                    return;
+                }
+
+                if (!res.ok || !result.success) {
+                    showToast(result.message || "Lỗi khi lưu thay đổi", false);
+                    return;
+                }
+
+                showToast("Đã lưu thay đổi discount thành công!", true);
+                closeDiscountModal();
+                loadDiscounts(true);
+            } catch (err) {
+                saveBtn.disabled = false;
+                spinner.classList.add("hidden");
+                btnText.textContent = "Lưu thay đổi";
+                showToast("Lỗi kết nối khi lưu: " + err.message, false);
+            }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return "";
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+    
+        function updateStatusToggleButtonsUI(status) {
+            const isActive = (status === "ACTIVE");
+            const btnHeader = document.getElementById("btnHeaderToggleStatus");
+            const btnFooter = document.getElementById("btnFooterToggleStatus");
+            const textHeader = document.getElementById("headerToggleStatusText");
+            const textFooter = document.getElementById("footerToggleStatusText");
+            const iconHeader = document.getElementById("headerToggleStatusIcon");
+            const iconFooter = document.getElementById("footerToggleStatusIcon");
+
+            if (!btnHeader || !btnFooter) return;
+
+            const activeClass = "bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 hover:border-rose-300";
+            const inactiveClass = "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300";
+
+            if (isActive) {
+                // Đang ACTIVE -> Nút cho phép Vô hiệu hóa
+                btnHeader.className = `btn btn-sm h-9 px-3.5 rounded-xl font-bold text-sm flex items-center gap-1.5 transition-all shadow-sm ${activeClass}`;
+                btnFooter.className = `btn btn-sm h-11 px-4 rounded-xl font-bold text-sm flex items-center gap-2 transition-all shadow-sm ${activeClass}`;
+                
+                textHeader.textContent = "Vô hiệu hóa";
+                textFooter.textContent = "Vô hiệu hóa mã";
+                
+                iconHeader.setAttribute("data-icon", "mdi:pause-circle-outline");
+                iconFooter.setAttribute("data-icon", "mdi:pause-circle-outline");
+            } else {
+                // Đang EXPIRED / DEACTIVATED -> Nút cho phép Kích hoạt
+                btnHeader.className = `btn btn-sm h-9 px-3.5 rounded-xl font-bold text-sm flex items-center gap-1.5 transition-all shadow-sm ${inactiveClass}`;
+                btnFooter.className = `btn btn-sm h-11 px-4 rounded-xl font-bold text-sm flex items-center gap-2 transition-all shadow-sm ${inactiveClass}`;
+                
+                textHeader.textContent = "Kích hoạt";
+                textFooter.textContent = "Kích hoạt mã";
+                
+                iconHeader.setAttribute("data-icon", "mdi:play-circle-outline");
+                iconFooter.setAttribute("data-icon", "mdi:play-circle-outline");
+            }
+        }
+
+        async function toggleDiscountStatusAction() {
+            if (!activeDiscount) return;
+
+            const currentStatus = activeDiscount.status;
+            const targetAction = (currentStatus === "ACTIVE") ? "deactivate" : "activate";
+            const actionLabel = (targetAction === "activate") ? "kích hoạt" : "vô hiệu hóa";
+
+            const btnHeader = document.getElementById("btnHeaderToggleStatus");
+            const btnFooter = document.getElementById("btnFooterToggleStatus");
+            const spinnerHeader = document.getElementById("headerToggleStatusSpinner");
+            const spinnerFooter = document.getElementById("footerToggleStatusSpinner");
+            const textHeader = document.getElementById("headerToggleStatusText");
+            const textFooter = document.getElementById("footerToggleStatusText");
+
+            // Bật loading
+            btnHeader.disabled = true;
+            btnFooter.disabled = true;
+            spinnerHeader.classList.remove("hidden");
+            spinnerFooter.classList.remove("hidden");
+            textHeader.textContent = "Đang xử lý...";
+            textFooter.textContent = "Đang xử lý...";
+
+            try {
+                const res = await fetch("/api/discounts/status", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        store_type: currentStoreType,
+                        discount_node_id: activeDiscount.id,
+                        action: targetAction
+                    })
+                });
+
+                const result = await res.json();
+
+                btnHeader.disabled = false;
+                btnFooter.disabled = false;
+                spinnerHeader.classList.add("hidden");
+                spinnerFooter.classList.add("hidden");
+
+                if (!res.ok || !result.success) {
+                    updateStatusToggleButtonsUI(activeDiscount.status);
+                    showToast(result.message || `Lỗi khi ${actionLabel} discount`, false);
+                    return;
+                }
+
+                const newStatus = result.new_status || (targetAction === "activate" ? "ACTIVE" : "EXPIRED");
+                activeDiscount.status = newStatus;
+
+                // Cập nhật Badge Status ở Header Modal
+                const statusBadge = document.getElementById("modalDiscountStatusBadge");
+                statusBadge.textContent = newStatus;
+                if (newStatus === "ACTIVE") {
+                    statusBadge.className = "px-2.5 py-0.5 rounded-full text-sm font-bold bg-emerald-100 text-emerald-800";
+                } else if (newStatus === "SCHEDULED") {
+                    statusBadge.className = "px-2.5 py-0.5 rounded-full text-sm font-bold bg-blue-100 text-blue-800";
+                } else {
+                    statusBadge.className = "px-2.5 py-0.5 rounded-full text-sm font-bold bg-amber-100 text-amber-800";
+                }
+
+                // Cập nhật giao diện nút Toggle
+                updateStatusToggleButtonsUI(newStatus);
+
+                // Cập nhật mảng danh sách ngoài bảng chính và re-render
+                const idx = discountsList.findIndex(d => d.id === activeDiscount.id);
+                if (idx !== -1) {
+                    discountsList[idx].status = newStatus;
+                    renderDiscountsTable(discountsList);
+                }
+
+                showToast(result.message || `Đã ${actionLabel} discount thành công!`, true);
+            } catch (err) {
+                btnHeader.disabled = false;
+                btnFooter.disabled = false;
+                spinnerHeader.classList.add("hidden");
+                spinnerFooter.classList.add("hidden");
+                updateStatusToggleButtonsUI(activeDiscount.status);
+                showToast("Lỗi kết nối khi đổi trạng thái: " + err.message, false);
+            }
+        }
+
+    </script>
+</body>
+</html>

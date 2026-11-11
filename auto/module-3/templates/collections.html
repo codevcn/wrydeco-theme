@@ -39,7 +39,7 @@
                     <a target="_blank" rel="noopener noreferrer" href="/collections" class="text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 pb-0.5">Collections</a>
                     <a target="_blank" rel="noopener noreferrer" href="/metaobjects" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">MetaObjects</a>
                     <a target="_blank" rel="noopener noreferrer" href="/product-metafields" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Metafield SP</a>
-                    <a target="_blank" rel="noopener noreferrer" href="/create" class="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">Tạo sản phẩm</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/create" class="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">Tạo sản phẩm mới</a>
                     <a target="_blank" rel="noopener noreferrer" href="/edit-variants" class="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">Sửa hàng loạt</a>
                     <a target="_blank" rel="noopener noreferrer" href="/blogs" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path></svg>Blog</a>
                     <a target="_blank" rel="noopener noreferrer" href="/policies" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>Policy</a>
@@ -128,6 +128,8 @@
                         <option value="empty" {% if filter_mode == 'empty' %}selected{% endif %}>Trống (0 SP)</option>
                         <option value="published" {% if filter_mode == 'published' %}selected{% endif %}>Đã publish lên Online Store</option>
                         <option value="unpublished" {% if filter_mode == 'unpublished' %}selected{% endif %}>Chưa publish lên Online Store</option>
+                        <option value="has_buying_guide" {% if filter_mode == 'has_buying_guide' %}selected{% endif %}>Đã set Buying Guide</option>
+                        <option value="has_related_collections" {% if filter_mode == 'has_related_collections' %}selected{% endif %}>Đã set Related Collections</option>
                     </select>
                 </div>
                 <a href="/collections?store_type={{ store_type }}" class="whitespace-nowrap px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors border border-red-600 flex items-center justify-center">
@@ -170,6 +172,13 @@
                     </div>
                     {% endif %}
                     
+                    <div class="absolute top-3 left-3 flex flex-col gap-1 items-start">
+                        <span id="pub-badge-{{ collection.id }}" class="{% if collection.published_online %}bg-emerald-600/90 text-white{% else %}bg-gray-800/80 text-gray-200{% endif %} text-[11px] font-bold px-2.5 py-0.5 rounded-full shadow-xs backdrop-blur-xs flex items-center gap-1">
+                            <span class="w-1.5 h-1.5 rounded-full {% if collection.published_online %}bg-white animate-pulse{% else %}bg-gray-400{% endif %}"></span>
+                            <span class="pub-status-text">{% if collection.published_online %}Online{% else %}Ẩn{% endif %}</span>
+                        </span>
+                    </div>
+
                     <div class="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2.5 py-1 rounded-full text-xs font-bold text-gray-700 shadow-sm flex items-center gap-1">
                         <svg class="w-3.5 h-3.5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
                         {{ collection.products_count }} SP
@@ -195,21 +204,61 @@
                         <span class="text-xs font-mono text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded inline-block truncate max-w-full" title="{{ collection.handle }}">{{ collection.handle }}</span>
                     </div>
                     
-                    <div class="text-sm text-gray-600 line-clamp-3 mb-4 prose prose-sm flex-grow">
-                        {{ collection.description | safe if collection.description else '<span class="italic text-gray-400">Không có mô tả</span>'|safe }}
+                    {% if collection.has_buying_guide or collection.has_related_collections %}
+                    <div class="flex items-center gap-1.5 mb-3 flex-wrap">
+                        {% if collection.has_buying_guide %}
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200" title="Đã cấu hình Buying Guide">
+                            <iconify-icon icon="mdi:book-open-page-variant-outline" class="text-xs"></iconify-icon>
+                            <span>Buying Guide</span>
+                        </span>
+                        {% endif %}
+                        {% if collection.has_related_collections %}
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-teal-50 text-teal-700 border border-teal-200" title="Đã cấu hình Related Collections">
+                            <iconify-icon icon="mdi:link-variant" class="text-xs"></iconify-icon>
+                            <span>Related Collections</span>
+                        </span>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    
+                    <div class="text-sm text-gray-600 line-clamp-3 mb-4 flex-grow leading-relaxed">
+                        {{ collection.description | striptags if collection.description else '<span class="italic text-gray-400">Không có mô tả</span>'|safe }}
                     </div>
                     
                     <div class="flex flex-col gap-2 mt-auto border-t border-gray-100 pt-3">
-                        <a href="https://admin.shopify.com/store/{{ active_shop or 'wrydeco' }}/collections/{{ collection.id }}" target="_blank" rel="noopener noreferrer" class="text-xs font-medium text-center text-gray-700 bg-gray-100 hover:bg-gray-200 py-1.5 rounded transition-colors">
-                            Admin Shopify
+                        <a href="https://admin.shopify.com/store/{{ active_shop or 'wrydeco' }}/collections/{{ collection.id }}" target="_blank" rel="noopener noreferrer" class="text-xs font-semibold text-center text-gray-700 bg-gray-100 hover:bg-gray-200 py-1.5 rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-2xs">
+                            <iconify-icon icon="mdi:shopify" class="text-sm"></iconify-icon>
+                            <span>Shopify Admin</span>
                         </a>
                         <div class="grid grid-cols-2 gap-2">
-                            <a href="https://{{ active_shop_domain or 'wrydeco.myshopify.com' }}/collections/{{ collection.handle }}" target="_blank" rel="noopener noreferrer" class="text-xs font-medium text-center text-blue-700 bg-blue-50 hover:bg-blue-100 py-1.5 rounded transition-colors">
+                            <a href="https://{{ active_shop_domain or 'wrydeco.myshopify.com' }}/collections/{{ collection.handle }}" target="_blank" rel="noopener noreferrer" class="text-xs font-medium text-center text-blue-700 bg-blue-50 hover:bg-blue-100 py-1.5 rounded-lg transition-colors">
                                 Store Dev
                             </a>
-                            <a href="https://{{ active_brand_domain or 'wrydeco.com' }}/collections/{{ collection.handle }}" target="_blank" rel="noopener noreferrer" class="text-xs font-medium text-center text-green-700 bg-green-50 hover:bg-green-100 py-1.5 rounded transition-colors">
+                            <a href="https://{{ active_brand_domain or 'wrydeco.com' }}/collections/{{ collection.handle }}" target="_blank" rel="noopener noreferrer" class="text-xs font-medium text-center text-green-700 bg-green-50 hover:bg-green-100 py-1.5 rounded-lg transition-colors">
                                 Store Real
                             </a>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100">
+                            <button type="button" 
+                                    id="btn-pub-{{ collection.id }}"
+                                    data-col-id="{{ collection.id }}"
+                                    data-col-title="{{ collection.title }}"
+                                    onclick="handleCollectionPublication('{{ collection.id }}', 'publish_all', this)" 
+                                    class="pub-btn-publish inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200 border border-emerald-200 rounded-lg transition-all shadow-2xs cursor-pointer focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                                    title="Đăng collection lên tất cả sales channel (Online Store, Point Of Sale, Inbox, Wrydeco Headless)">
+                                <iconify-icon icon="mdi:earth" class="text-sm text-emerald-600"></iconify-icon>
+                                <span class="btn-text">Public lên store</span>
+                            </button>
+                            <button type="button" 
+                                    id="btn-unpub-{{ collection.id }}"
+                                    data-col-id="{{ collection.id }}"
+                                    data-col-title="{{ collection.title }}"
+                                    onclick="handleCollectionPublication('{{ collection.id }}', 'unpublish_all', this)" 
+                                    class="pub-btn-unpublish inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 active:bg-rose-200 border border-rose-200 rounded-lg transition-all shadow-2xs cursor-pointer focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                                    title="Ẩn collection khỏi tất cả sales channel">
+                                <iconify-icon icon="mdi:eye-off-outline" class="text-sm text-rose-600"></iconify-icon>
+                                <span class="btn-text">Ẩn khỏi store</span>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -221,6 +270,83 @@
             {% endfor %}
         </div>
     </main>
+
+    
+    <!-- Modal Chọn Related Collections khi Tạo Collection Mới -->
+    <div id="createRelatedCollectionsModal" class="fixed inset-0 z-[115] flex items-center justify-center hidden" onclick="if(event.target === this) closeCreateRelatedCollectionsModal()">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-xs"></div>
+        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden mx-4 z-10 border border-gray-200">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gray-50/80">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center font-bold">
+                        <iconify-icon icon="mdi:link-variant" class="text-xl"></iconify-icon>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-gray-900">Chọn Related Collections</h3>
+                        <p class="text-xs text-gray-500">Chọn các collection liên quan từ danh sách trên Store</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeCreateRelatedCollectionsModal()" class="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <!-- Modal Search & Actions Toolbar -->
+            <div class="px-6 py-3 border-b border-gray-100 bg-white flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+                <div class="relative flex-grow">
+                    <input type="text" 
+                           id="createRelatedSearchInput" 
+                           oninput="filterCreateRelatedCollectionsList()"
+                           placeholder="Tìm kiếm collection theo tên hoặc handle..." 
+                           class="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all">
+                    <svg class="w-4 h-4 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </div>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                    <button type="button" onclick="toggleSelectAllCreateRelated(true)" class="px-2.5 py-1.5 text-xs font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 rounded-lg transition-colors border border-teal-200">
+                        Chọn tất cả
+                    </button>
+                    <button type="button" onclick="toggleSelectAllCreateRelated(false)" class="px-2.5 py-1.5 text-xs font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors border border-gray-200">
+                        Bỏ chọn
+                    </button>
+                    <span id="createRelatedModalCounter" class="text-xs font-bold text-teal-700 bg-teal-100 px-2.5 py-1.5 rounded-lg border border-teal-200 whitespace-nowrap">
+                        0 đã chọn
+                    </span>
+                </div>
+            </div>
+
+            <!-- Modal Body: Danh sách Collection -->
+            <div class="p-6 overflow-y-auto max-h-[50vh] flex-grow bg-gray-50/50" id="createRelatedListContainer">
+                <div id="createRelatedLoadingSpinner" class="flex flex-col items-center justify-center py-12 text-gray-400 gap-3">
+                    <svg class="animate-spin w-8 h-8 text-teal-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                    </svg>
+                    <span class="text-xs font-medium text-gray-600">Đang tải danh sách collection từ Store...</span>
+                </div>
+                <div id="createRelatedGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3 hidden">
+                    <!-- Dynamic rendering via JS -->
+                </div>
+                <div id="createRelatedEmptyState" class="hidden text-center py-10 text-gray-400 text-xs italic">
+                    Không tìm thấy collection nào phù hợp.
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-4 border-t border-gray-200 bg-white flex items-center justify-between gap-3">
+                <span class="text-xs text-gray-500">Mẹo: Nhấn ESC hoặc click vùng ngoài để đóng.</span>
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="closeCreateRelatedCollectionsModal()" class="px-4 py-2 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors">
+                        Hủy
+                    </button>
+                    <button type="button" id="confirmCreateRelatedBtn" onclick="confirmCreateRelatedCollections()" class="px-5 py-2 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer">
+                        <iconify-icon icon="mdi:check-bold"></iconify-icon>
+                        <span>Xác nhận chọn</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Scroll Buttons -->
     <div class="fixed bottom-8 right-8 flex flex-col gap-3 z-50">
@@ -252,7 +378,126 @@
 
         window.addEventListener('scroll', toggleScrollButtons);
         window.addEventListener('load', toggleScrollButtons);
+
+        function showToast(type, title, message) {
+            const container = document.getElementById('toastNotificationContainer');
+            if (!container) return;
+            
+            const toast = document.createElement('div');
+            const isSuccess = type === 'success';
+            toast.className = `pointer-events-auto flex items-start gap-3 p-4 rounded-xl shadow-xl border backdrop-blur-md transition-all duration-300 transform translate-x-full opacity-0 ${
+                isSuccess 
+                    ? 'bg-emerald-50/95 border-emerald-300 text-emerald-900' 
+                    : 'bg-rose-50/95 border-rose-300 text-rose-900'
+            }`;
+            
+            const icon = isSuccess 
+                ? '<svg class="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>'
+                : '<svg class="w-5 h-5 text-rose-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
+            
+            toast.innerHTML = `
+                ${icon}
+                <div class="flex-grow">
+                    <h4 class="text-sm font-bold">${title}</h4>
+                    <p class="text-xs mt-0.5 leading-relaxed opacity-90">${message}</p>
+                </div>
+                <button type="button" onclick="this.parentElement.remove()" class="text-gray-400 hover:text-gray-600 p-1 rounded-lg">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            `;
+            
+            container.appendChild(toast);
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-x-full', 'opacity-0');
+                toast.classList.add('translate-x-0', 'opacity-100');
+            });
+            
+            setTimeout(() => {
+                toast.classList.remove('translate-x-0', 'opacity-100');
+                toast.classList.add('translate-x-full', 'opacity-0');
+                setTimeout(() => toast.remove(), 350);
+            }, 5000);
+        }
+
+        async function handleCollectionPublication(collectionId, action, btn) {
+            const pubBtn = document.getElementById('btn-pub-' + collectionId);
+            const unpubBtn = document.getElementById('btn-unpub-' + collectionId);
+            const colTitle = btn.getAttribute('data-col-title') || 'Collection';
+            
+            if (pubBtn) pubBtn.disabled = true;
+            if (unpubBtn) unpubBtn.disabled = true;
+            
+            const origHTML = btn.innerHTML;
+            const isPublish = (action === 'publish_all');
+            
+            btn.innerHTML = `
+                <svg class="animate-spin w-3.5 h-3.5 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                </svg>
+                <span>${isPublish ? 'Đang đăng...' : 'Đang ẩn...'}</span>
+            `;
+            
+            const urlParams = new URLSearchParams(window.location.search);
+            const storeType = urlParams.get('store_type') || (document.getElementById('storeSwitchToggle') && document.getElementById('storeSwitchToggle').checked ? 'custom' : 'default');
+            
+            try {
+                const res = await fetch(`/api/collections/${collectionId}/publications`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: action,
+                        store_type: storeType
+                    })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    btn.innerHTML = `
+                        <svg class="w-3.5 h-3.5 text-current" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                        <span>${isPublish ? 'Đã public!' : 'Đã ẩn!'}</span>
+                    `;
+                    
+                    // Cập nhật badge trạng thái trên ảnh
+                    const badge = document.getElementById('pub-badge-' + collectionId);
+                    if (badge) {
+                        if (isPublish) {
+                            badge.className = 'bg-emerald-600/90 text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full shadow-xs backdrop-blur-xs flex items-center gap-1';
+                            badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span><span class="pub-status-text">Online</span>';
+                        } else {
+                            badge.className = 'bg-gray-800/80 text-gray-200 text-[11px] font-medium px-2.5 py-0.5 rounded-full shadow-xs backdrop-blur-xs flex items-center gap-1';
+                            badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span><span class="pub-status-text">Ẩn</span>';
+                        }
+                    }
+                    
+                    showToast(
+                        'success',
+                        isPublish ? 'Public lên Store thành công!' : 'Ẩn khỏi Store thành công!',
+                        isPublish 
+                            ? `Đã đăng "${colTitle}" lên tất cả sales channel (Online Store, Point Of Sale, Inbox, Wrydeco Headless).`
+                            : `Đã ẩn "${colTitle}" khỏi tất cả sales channel.`
+                    );
+                    
+                    setTimeout(() => {
+                        btn.innerHTML = origHTML;
+                        if (pubBtn) pubBtn.disabled = false;
+                        if (unpubBtn) unpubBtn.disabled = false;
+                    }, 2500);
+                } else {
+                    btn.innerHTML = origHTML;
+                    if (pubBtn) pubBtn.disabled = false;
+                    if (unpubBtn) unpubBtn.disabled = false;
+                    showToast('error', 'Thao tác thất bại!', data.message || 'Không thể cập nhật trạng thái sales channels.');
+                }
+            } catch (err) {
+                btn.innerHTML = origHTML;
+                if (pubBtn) pubBtn.disabled = false;
+                if (unpubBtn) unpubBtn.disabled = false;
+                showToast('error', 'Lỗi kết nối!', err.message || 'Vui lòng kiểm tra lại kết nối mạng hoặc proxy.');
+            }
+        }
     </script>
+
 
     
     <!-- Lightbox Modal -->
@@ -338,22 +583,75 @@
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-1">Ảnh đại diện (Cover Photo)</label>
-                        <input type="file" name="image" accept="image/*" id="collectionCoverInput" onchange="previewCollectionCover(event)" class="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg p-2">
-                        <div id="collectionCoverPreviewContainer" class="hidden mt-3">
+                        <label class="block text-sm font-semibold text-gray-700 mb-1.5 flex items-center gap-1.5">
+                            <iconify-icon icon="mdi:image-outline" class="text-indigo-600 text-base"></iconify-icon>
+                            <span>Ảnh đại diện (Cover Photo)</span>
+                        </label>
+                        <div class="relative">
+                            <input type="file" name="image" accept="image/*" id="collectionCoverInput" onchange="previewCollectionCover(event)" 
+                                   class="block w-full text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-xl cursor-pointer focus:outline-none file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 file:cursor-pointer transition-colors shadow-2xs">
+                        </div>
+                        <div id="collectionCoverPreviewContainer" class="hidden mt-3 p-3 bg-gray-50 rounded-xl border border-gray-200">
                             <img id="collectionCoverPreview" src="" alt="Preview" class="max-w-full h-auto max-h-48 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity shadow-sm" onclick="openLightbox(this.src)">
-                            <button type="button" onclick="clearCollectionCover()" class="mt-2 text-xs font-medium text-red-600 hover:text-red-800">Xóa ảnh</button>
+                            <div class="mt-2 flex items-center">
+                                <button type="button" onclick="clearCollectionCover()" class="inline-flex items-center gap-1.5 text-sm font-semibold text-red-600 hover:text-red-700 hover:underline cursor-pointer transition-colors">
+                                    <iconify-icon icon="mdi:trash-can-outline" class="text-base"></iconify-icon>
+                                    <span>Xóa ảnh</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Metafield: Buying Guide -->
+                    <div class="bg-indigo-50/40 p-4 rounded-xl border border-indigo-100/80">
+                        <div class="flex items-center justify-between mb-1.5 flex-wrap gap-2">
+                            <label class="block text-sm font-semibold text-gray-800 flex items-center gap-1.5">
+                                <iconify-icon icon="mdi:book-open-page-variant-outline" class="text-indigo-600 text-base"></iconify-icon>
+                                <span>Buying Guide (HTML / Text)</span>
+                            </label>
+                            <button type="button" onclick="convertCreateBuyingGuideToSingleLine()" class="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg transition-colors cursor-pointer shadow-2xs" title="Chuyển toàn bộ nội dung thành 1 dòng liên tục (xóa xuống dòng, gộp khoảng trắng)">
+                                <iconify-icon icon="mdi:arrow-collapse-horizontal" class="text-amber-700"></iconify-icon>
+                                <span>Chuyển thành 1 dòng đơn</span>
+                            </button>
+                        </div>
+                        <textarea name="buying_guide" id="createBuyingGuideInput" rows="3" placeholder="Dán nội dung HTML hoặc text Buying Guide vào đây..." class="w-full bg-white border border-gray-200 text-gray-900 text-sm font-mono rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5"></textarea>
+                        <div id="createBuyingGuideBanner" class="hidden mt-1.5 text-xs font-medium text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-md flex items-center gap-1">
+                            <iconify-icon icon="mdi:check-circle" class="text-amber-600"></iconify-icon>
+                            <span>Đã chuyển đổi thành 1 dòng đơn thành công.</span>
+                        </div>
+                    </div>
+
+                    <!-- Metafield: Related Collections -->
+                    <div class="bg-teal-50/40 p-4 rounded-xl border border-teal-100/80">
+                        <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
+                            <div class="flex items-center gap-2">
+                                <label class="block text-sm font-semibold text-gray-800 flex items-center gap-1.5">
+                                    <iconify-icon icon="mdi:link-variant" class="text-teal-600 text-base"></iconify-icon>
+                                    <span>Related Collections</span>
+                                </label>
+                                <span id="createSelectedCountBadge" class="text-xs font-bold text-teal-700 bg-teal-100 px-2 py-0.5 rounded-full">0 đã chọn</span>
+                            </div>
+                            <button type="button" onclick="openCreateRelatedCollectionsModal()" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-teal-800 bg-teal-100 hover:bg-teal-200 border border-teal-300 rounded-lg transition-colors cursor-pointer shadow-2xs">
+                                <iconify-icon icon="mdi:format-list-checks" class="text-teal-700 text-sm"></iconify-icon>
+                                <span>Chọn Collections</span>
+                            </button>
+                        </div>
+                        <input type="hidden" name="related_collections" id="createRelatedCollectionsInput" value="[]">
+                        
+                        <!-- Container hiển thị các collection đã chọn -->
+                        <div id="createSelectedCollectionsPreview" class="min-h-[46px] bg-white border border-gray-200 rounded-lg p-2.5 flex flex-wrap gap-1.5 items-center">
+                            <span class="text-xs text-gray-400 italic">Chưa chọn collection nào. Bấm "Chọn Collections" để chọn.</span>
                         </div>
                     </div>
                     
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-1">SEO Title</label>
-                            <input type="text" name="seo_title" class="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg p-2.5">
+                            <input type="text" name="seo_title" placeholder="Tiêu đề SEO của collection..." class="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg p-2.5">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-1">SEO Description</label>
-                            <input type="text" name="seo_description" class="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg p-2.5">
+                            <textarea name="seo_description" rows="3" placeholder="Mô tả SEO của collection..." class="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg p-2.5"></textarea>
                         </div>
                     </div>
                     
@@ -546,6 +844,247 @@ function copyCollectionTitle(btn) {
             }
         }
 
+    
+        // ==========================================
+        // CREATE COLLECTION: BUYING GUIDE & RELATED
+        // ==========================================
+        function convertCreateBuyingGuideToSingleLine() {
+            const textarea = document.getElementById('createBuyingGuideInput');
+            const banner = document.getElementById('createBuyingGuideBanner');
+            if (!textarea) return;
+            let val = textarea.value;
+            if (!val.trim()) return;
+            val = val.replace(/[\r\n]+/g, ' ').replace(/\s{2,}/g, ' ').trim();
+            textarea.value = val;
+            if (banner) {
+                banner.classList.remove('hidden');
+                setTimeout(() => banner.classList.add('hidden'), 3500);
+            }
+        }
+
+        let createStoreCollectionsCache = null;
+        let createTempSelectedGIDs = new Set();
+        let createConfirmedGIDs = [];
+
+        function openCreateRelatedCollectionsModal() {
+            const modal = document.getElementById('createRelatedCollectionsModal');
+            if (!modal) return;
+            modal.classList.remove('hidden');
+            
+            // Đồng bộ temp selection từ confirmed selection
+            createTempSelectedGIDs = new Set(createConfirmedGIDs);
+            updateCreateRelatedModalCounter();
+            
+            const searchInput = document.getElementById('createRelatedSearchInput');
+            if (searchInput) searchInput.value = '';
+
+            if (!createStoreCollectionsCache) {
+                loadCollectionsForCreateModal();
+            } else {
+                renderCreateCollectionsGrid();
+            }
+        }
+
+        function closeCreateRelatedCollectionsModal() {
+            const modal = document.getElementById('createRelatedCollectionsModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        async function loadCollectionsForCreateModal() {
+            const spinner = document.getElementById('createRelatedLoadingSpinner');
+            const grid = document.getElementById('createRelatedGrid');
+            const empty = document.getElementById('createRelatedEmptyState');
+            if (spinner) spinner.classList.remove('hidden');
+            if (grid) grid.classList.add('hidden');
+            if (empty) empty.classList.add('hidden');
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const storeType = urlParams.get('store_type') || (document.getElementById('storeSwitchToggle') && document.getElementById('storeSwitchToggle').checked ? 'custom' : 'default');
+
+            try {
+                const res = await fetch(`/api/all-collections-summary?store_type=${storeType}`);
+                const data = await res.json();
+                if (data.success && Array.isArray(data.collections)) {
+                    createStoreCollectionsCache = data.collections;
+                    renderCreateCollectionsGrid();
+                } else {
+                    if (spinner) spinner.innerHTML = `<span class="text-xs text-red-600 font-medium">${data.message || 'Lỗi tải danh sách collection'}</span>`;
+                }
+            } catch (err) {
+                if (spinner) spinner.innerHTML = `<span class="text-xs text-red-600 font-medium">Lỗi kết nối máy chủ: ${err.message}</span>`;
+            }
+        }
+
+        function renderCreateCollectionsGrid(filterText = '') {
+            const spinner = document.getElementById('createRelatedLoadingSpinner');
+            const grid = document.getElementById('createRelatedGrid');
+            const empty = document.getElementById('createRelatedEmptyState');
+            if (!grid) return;
+
+            if (spinner) spinner.classList.add('hidden');
+
+            const term = (filterText || '').trim().toLowerCase();
+            const list = createStoreCollectionsCache || [];
+            const filtered = term 
+                ? list.filter(c => (c.title || '').toLowerCase().includes(term) || (c.handle || '').toLowerCase().includes(term))
+                : list;
+
+            if (filtered.length === 0) {
+                grid.classList.add('hidden');
+                if (empty) empty.classList.remove('hidden');
+                return;
+            }
+
+            if (empty) empty.classList.add('hidden');
+            grid.classList.remove('hidden');
+
+            grid.innerHTML = filtered.map(col => {
+                const gid = col.gid || `gid://shopify/Collection/${col.id}`;
+                const isChecked = createTempSelectedGIDs.has(gid);
+                const imgTag = col.image 
+                    ? `<img src="${col.image}" class="w-10 h-10 rounded-lg object-cover flex-shrink-0 border border-gray-100" alt="">`
+                    : `<div class="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400 flex-shrink-0"><iconify-icon icon="mdi:folder-outline" class="text-lg"></iconify-icon></div>`;
+
+                return `
+                    <label class="flex items-center gap-3 p-2.5 rounded-xl border transition-all cursor-pointer select-none ${
+                        isChecked 
+                            ? 'bg-teal-50/80 border-teal-300 shadow-2xs' 
+                            : 'bg-white border-gray-200 hover:border-teal-200 hover:bg-gray-50/60'
+                    }">
+                        <input type="checkbox" 
+                               class="create-rel-checkbox rounded border-gray-300 text-teal-600 focus:ring-teal-500 w-4 h-4 cursor-pointer"
+                               data-gid="${gid}"
+                               data-title="${(col.title || '').replace(/"/g, '&quot;')}"
+                               data-handle="${(col.handle || '').replace(/"/g, '&quot;')}"
+                               data-image="${col.image || ''}"
+                               ${isChecked ? 'checked' : ''}
+                               onchange="handleCreateRelatedCheckboxChange(this)">
+                        ${imgTag}
+                        <div class="flex-grow min-w-0">
+                            <h4 class="text-xs font-bold text-gray-800 truncate">${col.title}</h4>
+                            <div class="flex items-center gap-1.5 mt-0.5">
+                                <span class="text-[10px] font-mono text-gray-500 truncate max-w-[120px]">${col.handle}</span>
+                                <span class="text-[10px] text-gray-400">• ${col.products_count || 0} SP</span>
+                            </div>
+                        </div>
+                    </label>
+                `;
+            }).join('');
+
+            updateCreateRelatedModalCounter();
+        }
+
+        function handleCreateRelatedCheckboxChange(cb) {
+            const gid = cb.getAttribute('data-gid');
+            if (cb.checked) {
+                createTempSelectedGIDs.add(gid);
+            } else {
+                createTempSelectedGIDs.delete(gid);
+            }
+            // Update wrapper background
+            const label = cb.closest('label');
+            if (label) {
+                if (cb.checked) {
+                    label.className = 'flex items-center gap-3 p-2.5 rounded-xl border transition-all cursor-pointer select-none bg-teal-50/80 border-teal-300 shadow-2xs';
+                } else {
+                    label.className = 'flex items-center gap-3 p-2.5 rounded-xl border transition-all cursor-pointer select-none bg-white border-gray-200 hover:border-teal-200 hover:bg-gray-50/60';
+                }
+            }
+            updateCreateRelatedModalCounter();
+        }
+
+        function filterCreateRelatedCollectionsList() {
+            const input = document.getElementById('createRelatedSearchInput');
+            renderCreateCollectionsGrid(input ? input.value : '');
+        }
+
+        function toggleSelectAllCreateRelated(selectAll) {
+            const list = createStoreCollectionsCache || [];
+            if (selectAll) {
+                list.forEach(c => {
+                    const gid = c.gid || `gid://shopify/Collection/${c.id}`;
+                    createTempSelectedGIDs.add(gid);
+                });
+            } else {
+                createTempSelectedGIDs.clear();
+            }
+            const input = document.getElementById('createRelatedSearchInput');
+            renderCreateCollectionsGrid(input ? input.value : '');
+        }
+
+        function updateCreateRelatedModalCounter() {
+            const counter = document.getElementById('createRelatedModalCounter');
+            if (counter) {
+                counter.innerText = `${createTempSelectedGIDs.size} đã chọn`;
+            }
+        }
+
+        function confirmCreateRelatedCollections() {
+            createConfirmedGIDs = Array.from(createTempSelectedGIDs);
+            
+            // Cập nhật hidden input
+            const hiddenInput = document.getElementById('createRelatedCollectionsInput');
+            if (hiddenInput) {
+                hiddenInput.value = JSON.stringify(createConfirmedGIDs);
+            }
+            
+            // Cập nhật badge số lượng
+            const countBadge = document.getElementById('createSelectedCountBadge');
+            if (countBadge) {
+                countBadge.innerText = `${createConfirmedGIDs.length} đã chọn`;
+            }
+            
+            // Cập nhật giao diện chip preview
+            renderCreateSelectedPreview();
+            closeCreateRelatedCollectionsModal();
+        }
+
+        function renderCreateSelectedPreview() {
+            const preview = document.getElementById('createSelectedCollectionsPreview');
+            if (!preview) return;
+            
+            if (createConfirmedGIDs.length === 0) {
+                preview.innerHTML = '<span class="text-xs text-gray-400 italic">Chưa chọn collection nào. Bấm "Chọn Collections" để chọn.</span>';
+                return;
+            }
+            
+            const mapById = {};
+            (createStoreCollectionsCache || []).forEach(c => {
+                const gid = c.gid || `gid://shopify/Collection/${c.id}`;
+                mapById[gid] = c;
+            });
+
+            preview.innerHTML = createConfirmedGIDs.map(gid => {
+                const col = mapById[gid] || { title: gid.split('/').pop(), handle: '' };
+                return `
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-teal-50 border border-teal-200 text-teal-800 text-xs font-medium rounded-lg shadow-2xs">
+                        <iconify-icon icon="mdi:folder-outline" class="text-teal-600 text-sm"></iconify-icon>
+                        <span class="max-w-[150px] truncate" title="${col.title}">${col.title}</span>
+                        <button type="button" onclick="removeCreateSelectedCollection('${gid}')" class="text-teal-500 hover:text-teal-700 p-0.5 rounded-full hover:bg-teal-100 transition-colors cursor-pointer" title="Bỏ chọn">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </span>
+                `;
+            }).join('');
+        }
+
+        function removeCreateSelectedCollection(gid) {
+            createConfirmedGIDs = createConfirmedGIDs.filter(id => id !== gid);
+            createTempSelectedGIDs.delete(gid);
+            const hiddenInput = document.getElementById('createRelatedCollectionsInput');
+            if (hiddenInput) {
+                hiddenInput.value = JSON.stringify(createConfirmedGIDs);
+            }
+            const countBadge = document.getElementById('createSelectedCountBadge');
+            if (countBadge) {
+                countBadge.innerText = `${createConfirmedGIDs.length} đã chọn`;
+            }
+            renderCreateSelectedPreview();
+        }
+
     </script>
+    <!-- Toast Notification Container -->
+    <div id="toastNotificationContainer" class="fixed top-20 right-6 z-[120] flex flex-col gap-3 pointer-events-none max-w-md w-full"></div>
+
 </body>
 </html>

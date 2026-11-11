@@ -1,3 +1,7 @@
+import bulk_product_job_store
+import bulk_product_job_service
+import bulk_product_worker
+
 import os
 import asyncio
 import re
@@ -8,6 +12,7 @@ import io
 import json
 import base64
 import secrets
+from typing import Optional, List, Dict, Any, Tuple
 from datetime import datetime, timezone, timedelta
 from fastapi import FastAPI, Request, Form, File, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse, Response
@@ -35,7 +40,7 @@ templates = Jinja2Templates(directory="templates")
 
 SHOPIFY_SHOP = (os.getenv("SHOPIFY_SHOP") or "").strip().strip('"').strip("'")
 SHOPIFY_ADMIN_TOKEN = (os.getenv("SHOPIFY_ADMIN_TOKEN") or "").strip().strip('"').strip("'")
-SHOPIFY_API_VERSION = (os.getenv("SHOPIFY_API_VERSION") or "2024-04").strip().strip('"').strip("'")
+SHOPIFY_API_VERSION = (os.getenv("SHOPIFY_API_VERSION") or "2026-10").strip().strip('"').strip("'")
 
 GRAPHQL_URL = f"https://{SHOPIFY_SHOP}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/graphql.json"
 HEADERS = {
@@ -47,6 +52,7 @@ HEADERS = {
 # PROXY GATEWAY & SHOPIFY CLIENT CONFIGURATION (DELEGATED TO proxy_manager)
 # =====================================================================
 import proxy_manager as _pm
+import product_create_service
 from proxy_manager import (
     ProxySafetyException,
     PROXY_CONFIG_FILE,
@@ -137,7 +143,7 @@ def get_shopify_client(
     )
 
 
-def get_products(first=50, after=None, before=None, last=None, filter_query=None, sort_key="CREATED_AT", reverse=True):
+def get_products(first=50, after=None, before=None, last=None, filter_query=None, sort_key="CREATED_AT", reverse=True, store_type: str = "default"):
     query = """
     query getProducts($first: Int, $last: Int, $after: String, $before: String, $query: String, $sortKey: ProductSortKeys, $reverse: Boolean) {
       productsCount(query: $query) {
@@ -229,19 +235,16 @@ def get_products(first=50, after=None, before=None, last=None, filter_query=None
     if filter_query:
         variables["query"] = filter_query
 
-    response = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=HEADERS)
-    if response.status_code == 401:
-        ok, msg, new_tok = request_default_store_access_token()
-        if ok and new_tok:
-            response = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=HEADERS)
-    response.raise_for_status()
-    data = response.json()
-    if "errors" in data:
-        print("GraphQL Errors:", data["errors"])
+    norm_store = "custom" if str(store_type or "").strip().lower() == "custom" else "default"
+    client_info = get_shopify_client(store_type=norm_store)
+    data = execute_shopify_graphql(client_info, query, variables=variables)
+    if not data or "errors" in data or "data" not in data:
+        if data and "errors" in data:
+            print("GraphQL Errors:", data["errors"])
         return {"products": {"edges": [], "pageInfo": {}}, "productsCount": {"count": 0}}
     return data["data"]
 
-def get_products_sorted_by_price(first=50, after=None, before=None, filter_query=None, sort_by="price_asc", price_from=None, price_to=None):
+def get_products_sorted_by_price(first=50, after=None, before=None, filter_query=None, sort_by="price_asc", price_from=None, price_to=None, store_type: str = "default"):
     """
     Shopify GraphQL Admin API không hỗ trợ ProductSortKeys là PRICE (chỉ có CREATED_AT, TITLE, v.v.).
     Hàm này lấy tất cả các sản phẩm phù hợp filter_query, sắp xếp theo giá minVariantPrice trong Python,
@@ -320,6 +323,8 @@ def get_products_sorted_by_price(first=50, after=None, before=None, filter_query
       }
     }
     """
+    norm_store = "custom" if str(store_type or "").strip().lower() == "custom" else "default"
+    client_info = get_shopify_client(store_type=norm_store)
     all_edges = []
     has_next = True
     cursor = None
@@ -328,11 +333,9 @@ def get_products_sorted_by_price(first=50, after=None, before=None, filter_query
         if filter_query:
             variables["query"] = filter_query
         try:
-            res = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=HEADERS, timeout=30)
-            res.raise_for_status()
-            data = res.json()
-            if "errors" in data or "data" not in data:
-                print("GraphQL Errors in get_products_sorted_by_price:", data.get("errors"))
+            data = execute_shopify_graphql(client_info, query, variables=variables)
+            if not data or "errors" in data or "data" not in data:
+                print("GraphQL Errors in get_products_sorted_by_price:", (data or {}).get("errors"))
                 break
             products_data = data["data"]["products"]
             for edge in products_data.get("edges", []):
@@ -500,6 +503,132 @@ def get_products_by_metafield_amazon_link_list(keywords_str, sort_by="created_de
                 if any(k in mf_val for k in keyword_list):
                     all_matched_edges.append(edge)
                 
+        page_info = products_data.get("pageInfo", {})
+        has_next = page_info.get("hasNextPage", False)
+        cursor = page_info.get("endCursor")
+        
+    def get_sort_key(edge):
+        if sort_by in ["price_asc", "price_desc"]:
+            price_data = edge["node"].get("priceRangeV2")
+            if price_data and price_data.get("minVariantPrice"):
+                return float(price_data["minVariantPrice"].get("amount", 0))
+            return 0.0
+        return edge["node"].get("createdAt", "")
+        
+    reverse_sort = sort_by in ["created_desc", "price_desc"]
+    all_matched_edges.sort(key=get_sort_key, reverse=reverse_sort)
+        
+    return {
+        "products": {
+            "edges": all_matched_edges,
+            "pageInfo": {"hasNextPage": False, "hasPreviousPage": False}
+        },
+        "productsCount": {"count": len(all_matched_edges)}
+    }
+
+
+def get_products_by_any_filter_value(keywords_str: str, sort_by="created_desc", store_type="default"):
+    """
+    Lọc danh sách sản phẩm theo metafield custom.any_filter_value (khớp case-insensitive).
+    Hỗ trợ đa gian hàng (default / custom) qua execute_shopify_graphql và US Proxy Safety Gate.
+    """
+    query = """
+    query getProducts($after: String) {
+      products(first: 50, after: $after) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        edges {
+          node {
+            id
+            handle
+            title
+            descriptionHtml
+            createdAt
+            productType
+            category {
+              name
+            }
+            priceRangeV2 {
+              minVariantPrice {
+                amount
+              }
+            }
+            options {
+              name
+            }
+            collections(first: 20) {
+              edges {
+                node {
+                  title
+                }
+              }
+            }
+            any_filter_value: metafield(namespace: "custom", key: "any_filter_value") {
+              value
+            }
+            amazon_link: metafield(namespace: "custom", key: "amazon_link") {
+              value
+            }
+            aeo_html: metafield(namespace: "custom", key: "aeo_html") {
+              value
+            }
+            author_info: metafield(namespace: "custom", key: "author_info") {
+              value
+            }
+            media(first: 50) {
+              edges {
+                node {
+                  ... on MediaImage {
+                    id
+                    image {
+                      url
+                    }
+                  }
+                  ... on Video {
+                    id
+                    preview {
+                      image {
+                        url
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    """
+    norm_store = "custom" if str(store_type or "").strip().lower() == "custom" else "default"
+    client_info = get_shopify_client(store_type=norm_store)
+    
+    all_matched_edges = []
+    has_next = True
+    cursor = None
+    kw = str(keywords_str or "").strip().lower()
+    
+    while has_next:
+        variables = {}
+        if cursor:
+            variables["after"] = cursor
+            
+        data = execute_shopify_graphql(client_info, query, variables=variables)
+        if not data or "errors" in data:
+            print("GraphQL Errors in get_products_by_any_filter_value:", (data or {}).get("errors"))
+            break
+            
+        products_data = (data.get("data") or {}).get("products") or {}
+        for edge in products_data.get("edges", []):
+            node = edge.get("node", {})
+            mf = node.get("any_filter_value")
+            if mf and mf.get("value"):
+                mf_val = str(mf["value"]).lower()
+                if kw in mf_val:
+                    all_matched_edges.append(edge)
+                    
         page_info = products_data.get("pageInfo", {})
         has_next = page_info.get("hasNextPage", False)
         cursor = page_info.get("endCursor")
@@ -2249,7 +2378,8 @@ async def read_root(
     sort_by: str = "created_desc", 
     special_filter: str = "",
     price_from: str = None,
-    price_to: str = None
+    price_to: str = None,
+    store_type: str = "default"
 ):
     try:
         filter_query = None
@@ -2301,6 +2431,9 @@ async def read_root(
             data = get_products_by_aeo_status(special_filter == "has_aeo", sort_by=sort_by)
         elif special_filter and special_filter in ["has_author", "missing_author"]:
             data = get_products_by_author_status(special_filter == "has_author", sort_by=sort_by)
+        elif filter_value and filter_type in ["any_filter_value", "metafield_any_filter_value"]:
+            norm_store = "custom" if str(store_type or "").strip().lower() == "custom" else "default"
+            data = get_products_by_any_filter_value(filter_value, sort_by=sort_by, store_type=norm_store)
         elif filter_value and filter_type in ["metafield_amazon_link", "metafield_amazon_link_list"]:
             data = get_products_by_metafield_amazon_link_list(filter_value, sort_by=sort_by)
         elif filter_value and filter_type == "metafield_rich_description":
@@ -2353,6 +2486,7 @@ async def read_root(
 
             # Kiểm tra sort_by hoặc có lọc khoảng giá: nếu sort theo giá HOẶC có lọc khoảng giá (price_from/price_to):
             # Dùng get_products_sorted_by_price để lọc triệt để theo minVariantPrice trong Python và phân trang chuẩn xác
+            norm_store = "custom" if str(store_type or "").strip().lower() == "custom" else "default"
             if sort_by in ["price_asc", "price_desc"] or price_from_val is not None or price_to_val is not None:
                 data = get_products_sorted_by_price(
                     first=50, 
@@ -2361,12 +2495,13 @@ async def read_root(
                     filter_query=filter_query, 
                     sort_by=sort_by,
                     price_from=price_from_val,
-                    price_to=price_to_val
+                    price_to=price_to_val,
+                    store_type=norm_store
                 )
             else:
                 reverse = (sort_by == "created_desc")
                 sort_key_graphql = "CREATED_AT"
-                data = get_products(first=50, after=after, before=before, filter_query=filter_query, sort_key=sort_key_graphql, reverse=reverse)
+                data = get_products(first=50, after=after, before=before, filter_query=filter_query, sort_key=sort_key_graphql, reverse=reverse, store_type=norm_store)
 
         # Lọc thêm khoảng giá triệt để theo minVariantPrice cho tất cả các trường hợp
         if (price_from_val is not None or price_to_val is not None):
@@ -2469,6 +2604,16 @@ async def read_root(
             
         page_info = products_data.get("pageInfo", {})
         
+        norm_store = "custom" if str(store_type or "").strip().lower() == "custom" else "default"
+        try:
+            client_info = get_shopify_client(store_type=norm_store)
+            active_shop = client_info.get("shop")
+            raw_domain = client_info.get("shop_domain") or client_info.get("display_domain") or active_shop or SHOPIFY_SHOP
+            active_shop_domain = f"{raw_domain}.myshopify.com" if (raw_domain and "." not in str(raw_domain)) else str(raw_domain or "")
+        except Exception:
+            active_shop = SHOPIFY_SHOP or "wrydeco"
+            active_shop_domain = f"{active_shop}.myshopify.com" if (active_shop and "." not in str(active_shop)) else str(active_shop or "")
+
         return templates.TemplateResponse(request=request, name="index.html", context={
             "request": request, 
             "products": products,
@@ -2480,9 +2625,13 @@ async def read_root(
             "special_filter": special_filter,
             "price_from": price_from_str,
             "price_to": price_to_str,
+            "store_type": norm_store,
+            "active_shop": active_shop,
+            "active_shop_domain": active_shop_domain,
             "error": None
         })
     except Exception as e:
+        norm_store = "custom" if str(store_type or "").strip().lower() == "custom" else "default"
         return templates.TemplateResponse(request=request, name="index.html", context={
             "request": request,
             "products": [],
@@ -2494,30 +2643,44 @@ async def read_root(
             "special_filter": special_filter,
             "price_from": price_from_str if 'price_from_str' in locals() else "",
             "price_to": price_to_str if 'price_to_str' in locals() else "",
+            "store_type": norm_store,
+            "active_shop": "wrydeco",
+            "active_shop_domain": "wrydeco.myshopify.com",
             "error": str(e)
         })
 
-def get_product_by_handle(handle: str):
-    query = """
+def get_product_by_handle(handle, store_type: str = "default"):
+    """
+    Truy vấn dữ liệu chi tiết sản phẩm và các metafield definitions theo handle hoặc id.
+    Tuân thủ phân định store_type (Store Mặc định hoặc Store Riêng qua Proxy US).
+    """
+    norm_store = "custom" if str(store_type or "").strip().lower() == "custom" else "default"
+    clean_handle = (handle or "").strip()
+    if not clean_handle:
+        return None
+
+    query_handle = """
     query getProductByHandle($handle: String!) {
       productByHandle(handle: $handle) {
         id
         title
         handle
+        status
         createdAt
         productType
-        status
-        tags
         category {
           name
         }
+        tags
         descriptionHtml
         seo {
           title
           description
         }
         options {
+          id
           name
+          position
           values
         }
         media(first: 50) {
@@ -2540,9 +2703,10 @@ def get_product_by_handle(handle: str):
             }
           }
         }
-        metafields(first: 50) {
+        metafields(first: 100) {
           edges {
             node {
+              id
               namespace
               key
               value
@@ -2551,6 +2715,13 @@ def get_product_by_handle(handle: str):
           }
         }
         aeoMetafield: metafield(namespace: "custom", key: "aeo_html") {
+          id
+          namespace
+          key
+          value
+          type
+        }
+        richDescMetafield: metafield(namespace: "custom", key: "rich_description") {
           id
           namespace
           key
@@ -2615,26 +2786,207 @@ def get_product_by_handle(handle: str):
           }
         }
       }
+      metafieldDefinitions(ownerType: PRODUCT, first: 100) {
+        edges {
+          node {
+            id
+            name
+            namespace
+            key
+            type {
+              name
+            }
+            description
+          }
+        }
+      }
     }
     """
-    
-    variables = {"handle": handle}
-    response = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=HEADERS, timeout=15)
-    if response.status_code == 401:
-        ok, msg, new_tok = request_default_store_access_token()
-        if ok and new_tok:
-            response = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=HEADERS, timeout=15)
-    response.raise_for_status()
-    data = response.json()
-    if "errors" in data:
-        print("GraphQL Errors in get_product_by_handle:", data["errors"])
+
+    query_id = """
+    query getProductById($id: ID!) {
+      product(id: $id) {
+        id
+        title
+        handle
+        status
+        createdAt
+        productType
+        category {
+          name
+        }
+        tags
+        descriptionHtml
+        seo {
+          title
+          description
+        }
+        options {
+          id
+          name
+          position
+          values
+        }
+        media(first: 50) {
+          edges {
+            node {
+              ... on MediaImage {
+                id
+                image {
+                  url
+                }
+              }
+              ... on Video {
+                id
+                preview {
+                  image {
+                    url
+                  }
+                }
+              }
+            }
+          }
+        }
+        metafields(first: 100) {
+          edges {
+            node {
+              id
+              namespace
+              key
+              value
+              type
+            }
+          }
+        }
+        aeoMetafield: metafield(namespace: "custom", key: "aeo_html") {
+          id
+          namespace
+          key
+          value
+          type
+        }
+        richDescMetafield: metafield(namespace: "custom", key: "rich_description") {
+          id
+          namespace
+          key
+          value
+          type
+        }
+        authorMetafield: metafield(namespace: "custom", key: "author_info") {
+          id
+          namespace
+          key
+          value
+          type
+          reference {
+            ... on Metaobject {
+              id
+              handle
+              displayName
+              fields {
+                key
+                value
+              }
+            }
+          }
+        }
+        variants(first: 250) {
+          edges {
+            node {
+              id
+              title
+              price
+              compareAtPrice
+              sku
+              barcode
+              image {
+                url
+              }
+              selectedOptions {
+                name
+                value
+              }
+            }
+          }
+        }
+        productPublications(first: 20) {
+          edges {
+            node {
+              channel {
+                id
+                name
+              }
+              isPublished
+            }
+          }
+        }
+        collections(first: 50) {
+          edges {
+            node {
+              id
+              title
+              handle
+            }
+          }
+        }
+      }
+      metafieldDefinitions(ownerType: PRODUCT, first: 100) {
+        edges {
+          node {
+            id
+            name
+            namespace
+            key
+            type {
+              name
+            }
+            description
+          }
+        }
+      }
+    }
+    """
+
+    try:
+        client_info = get_shopify_client(store_type=norm_store)
+        is_id = clean_handle.isdigit() or clean_handle.startswith("gid://shopify/Product/")
+        if is_id:
+            num_id = clean_handle.split("/")[-1]
+            gid = f"gid://shopify/Product/{num_id}"
+            data = execute_shopify_graphql(client_info, query_id, variables={"id": gid})
+            prod = (data or {}).get("data", {}).get("product")
+        else:
+            data = execute_shopify_graphql(client_info, query_handle, variables={"handle": clean_handle})
+            prod = (data or {}).get("data", {}).get("productByHandle")
+            if not prod and clean_handle.isdigit():
+                gid = f"gid://shopify/Product/{clean_handle}"
+                data_id = execute_shopify_graphql(client_info, query_id, variables={"id": gid})
+                prod = (data_id or {}).get("data", {}).get("product")
+
+        if prod:
+            prod["_definitions"] = (data or {}).get("data", {}).get("metafieldDefinitions", {}).get("edges", [])
+        return prod
+    except Exception as e:
+        print(f"Lỗi truy vấn sản phẩm ({clean_handle}) trên {norm_store}: {e}")
         return None
-    return data.get("data", {}).get("productByHandle")
+
 
 @app.get("/products/{product_handle}", response_class=HTMLResponse)
-async def read_product(request: Request, product_handle: str):
+async def read_product(request: Request, product_handle: str, store_type: str = "default"):
+    norm_store_type = "custom" if str(store_type or "").strip().lower() == "custom" else "default"
+    proxy_cfg = load_proxy_config()
+    
     try:
-        product_data = get_product_by_handle(product_handle)
+        client_info = get_shopify_client(store_type=norm_store_type)
+        active_shop = client_info.get("shop")
+        raw_domain = client_info.get("shop_domain") or client_info.get("display_domain") or active_shop or SHOPIFY_SHOP
+        active_shop_domain = f"{raw_domain}.myshopify.com" if (raw_domain and "." not in str(raw_domain)) else str(raw_domain or "")
+    except Exception:
+        active_shop = SHOPIFY_SHOP or "wrydeco"
+        active_shop_domain = f"{active_shop}.myshopify.com" if not active_shop.endswith(".myshopify.com") else active_shop
+
+    try:
+        product_data = get_product_by_handle(product_handle, store_type=norm_store_type)
         
         if not product_data:
             clean_str = product_handle.strip()
@@ -2649,12 +3001,10 @@ async def read_product(request: Request, product_handle: str):
                       }
                     }
                     """
-                    proxies = get_shopify_request_proxies()
-                    res = requests.post(GRAPHQL_URL, json={"query": id_query, "variables": {"id": gid}}, headers=HEADERS, proxies=proxies, timeout=15)
-                    if res.ok:
-                        prod_node = res.json().get("data", {}).get("product")
-                        if prod_node and prod_node.get("handle"):
-                            return RedirectResponse(url=f"/products/{prod_node['handle']}", status_code=307)
+                    res = execute_shopify_graphql(client_info, id_query, variables={"id": gid})
+                    prod_node = (res or {}).get("data", {}).get("product")
+                    if prod_node and prod_node.get("handle"):
+                        return RedirectResponse(url=f"/products/{prod_node['handle']}?store_type={norm_store_type}", status_code=307)
                 except Exception:
                     pass
             return templates.TemplateResponse(request=request, name="404.html", context={"request": request}, status_code=404)
@@ -2722,6 +3072,17 @@ async def read_product(request: Request, product_handle: str):
                     aeo_html_val = mf.get("value")
                     break
 
+        # Extract rich_description metafield if available
+        rich_mf_node = product_data.get("richDescMetafield")
+        rich_desc_val = rich_mf_node.get("value") if rich_mf_node else None
+        rich_desc_type = rich_mf_node.get("type", "multi_line_text_field") if rich_mf_node else "multi_line_text_field"
+        if not rich_desc_val:
+            for mf in metafields:
+                if mf.get("namespace") == "custom" and mf.get("key") == "rich_description":
+                    rich_desc_val = mf.get("value")
+                    rich_desc_type = mf.get("type", "multi_line_text_field")
+                    break
+
         # Extract author_info metafield if available
         author_mf_node = product_data.get("authorMetafield")
         author_info = None
@@ -2767,6 +3128,108 @@ async def read_product(request: Request, product_handle: str):
                     }
                     break
 
+        # Tổng hợp toàn bộ Metafield của sản phẩm (bao gồm cả các định nghĩa chưa có giá trị)
+        raw_mfs = [mf_edge["node"] for mf_edge in product_data.get("metafields", {}).get("edges", [])]
+        defs_edges = product_data.get("_definitions", [])
+        all_mfs_map = {}
+
+        # 1. Nạp từ definitions trước (hỗ trợ cả các metafield đang trống value)
+        for d_edge in defs_edges:
+            df = d_edge.get("node", {})
+            if not df:
+                continue
+            ns = df.get("namespace", "")
+            k = df.get("key", "")
+            t_obj = df.get("type", {})
+            t_name = t_obj.get("name") if isinstance(t_obj, dict) else str(t_obj or "single_line_text_field")
+            all_mfs_map[(ns, k)] = {
+                "id": "",
+                "definition_id": df.get("id", ""),
+                "namespace": ns,
+                "key": k,
+                "name": df.get("name") or f"{ns}.{k}",
+                "type": t_name,
+                "value": "",
+                "has_value": False,
+                "description": df.get("description") or ""
+            }
+
+        # 2. Cập nhật dữ liệu metafields thực tế của sản phẩm
+        for mf in raw_mfs:
+            ns = mf.get("namespace", "")
+            k = mf.get("key", "")
+            val = mf.get("value")
+            val_str = str(val) if val is not None else ""
+            t = mf.get("type", "")
+            mf_id = mf.get("id", "")
+
+            if (ns, k) in all_mfs_map:
+                all_mfs_map[(ns, k)]["value"] = val_str
+                all_mfs_map[(ns, k)]["has_value"] = bool(val_str.strip())
+                all_mfs_map[(ns, k)]["id"] = mf_id
+                if t:
+                    all_mfs_map[(ns, k)]["type"] = t
+            else:
+                all_mfs_map[(ns, k)] = {
+                    "id": mf_id,
+                    "definition_id": "",
+                    "namespace": ns,
+                    "key": k,
+                    "name": f"{ns}.{k}",
+                    "type": t or "single_line_text_field",
+                    "value": val_str,
+                    "has_value": bool(val_str.strip()),
+                    "description": ""
+                }
+
+        all_metafields = list(all_mfs_map.values())
+        # Sắp xếp: metafield có giá trị lên đầu, sau đó theo namespace, key
+        all_metafields.sort(key=lambda x: (0 if x["has_value"] else 1, x["namespace"], x["key"]))
+
+        # 3. Trích xuất thông tin cụ thể cho các fields hiển thị trước
+        room_type_data = all_mfs_map.get(("custom", "room_type")) or {
+            "namespace": "custom", "key": "room_type", "type": "list.single_line_text_field", "value": "", "has_value": False, "name": "Room Type"
+        }
+        room_types_current = []
+        if room_type_data.get("value"):
+            try:
+                parsed = json.loads(room_type_data["value"])
+                if isinstance(parsed, list):
+                    room_types_current = parsed
+                elif isinstance(parsed, str):
+                    room_types_current = [parsed]
+            except Exception:
+                room_types_current = [s.strip() for s in room_type_data["value"].split(",") if s.strip()]
+        room_type_data["parsed_list"] = room_types_current
+
+        interior_style_data = all_mfs_map.get(("custom", "interior_style")) or {
+            "namespace": "custom", "key": "interior_style", "type": "list.single_line_text_field", "value": "", "has_value": False, "name": "Interior Style"
+        }
+        interior_styles_current = []
+        if interior_style_data.get("value"):
+            try:
+                parsed = json.loads(interior_style_data["value"])
+                if isinstance(parsed, list):
+                    interior_styles_current = parsed
+                elif isinstance(parsed, str):
+                    interior_styles_current = [parsed]
+            except Exception:
+                interior_styles_current = [s.strip() for s in interior_style_data["value"].split(",") if s.strip()]
+        interior_style_data["parsed_list"] = interior_styles_current
+
+        product_material_data = all_mfs_map.get(("custom", "product_material")) or {
+            "namespace": "custom", "key": "product_material", "type": "single_line_text_field", "value": "", "has_value": False, "name": "Product Material"
+        }
+
+        product_video_media_data = all_mfs_map.get(("custom", "product_video_media")) or {
+            "namespace": "custom", "key": "product_video_media", "type": "single_line_text_field", "value": "", "has_value": False, "name": "product_video_media"
+        }
+
+        # Any Filter Value (Trường hiển thị trước mới)
+        any_filter_value_data = all_mfs_map.get(("custom", "any_filter_value")) or {
+            "namespace": "custom", "key": "any_filter_value", "type": "single_line_text_field", "value": "", "has_value": False, "name": "Any Filter Value", "description": "Dùng để lọc, nhóm hoặc tìm kiếm nội bộ"
+        }
+
         product = {
             "id": product_data["id"].split("/")[-1],
             "title": product_data["title"],
@@ -2784,14 +3247,38 @@ async def read_product(request: Request, product_handle: str):
             "prices": sorted_prices,
             "metafields": metafields,
             "aeo_html": aeo_html_val,
+            "rich_description": rich_desc_val,
+            "rich_description_type": rich_desc_type or "multi_line_text_field",
             "author_info": author_info,
             "publications": publications,
-            "collections": product_data.get("collections", {})
+            "collections": product_data.get("collections", {}),
+            "all_metafields": all_metafields,
+            "room_type_data": room_type_data,
+            "interior_style_data": interior_style_data,
+            "product_material_data": product_material_data,
+            "product_video_media_data": product_video_media_data,
+            "any_filter_value_data": any_filter_value_data
         }
         
         return templates.TemplateResponse(request=request, name="product.html", context={
             "request": request, 
             "product": product,
+            "all_metafields": all_metafields,
+            "all_metafields_count": len(all_metafields),
+            "room_type_data": room_type_data,
+            "interior_style_data": interior_style_data,
+            "product_material_data": product_material_data,
+            "product_video_media_data": product_video_media_data,
+            "any_filter_value_data": any_filter_value_data,
+            "room_types_whitelist": product_create_service.WHITELIST_ROOM_TYPES,
+            "interior_styles_whitelist": product_create_service.WHITELIST_INTERIOR_STYLES,
+            "store_type": norm_store_type,
+            "is_custom": norm_store_type == "custom",
+            "active_shop": active_shop,
+            "active_shop_domain": active_shop_domain,
+            "shopify_shop": active_shop or SHOPIFY_SHOP,
+            "proxy_cfg": proxy_cfg,
+            "current_author_id": author_info.get("id") if author_info else "",
             "error": None
         })
     except Exception as e:
@@ -2800,6 +3287,89 @@ async def read_product(request: Request, product_handle: str):
             "request": request,
             "error": str(e)
         }, status_code=404)
+
+
+
+# ==============================================================================
+# VARIANT MANAGER SERVICE APIS (QUẢN LÝ CHI TIẾT CÁC BIẾN THỂ)
+# ==============================================================================
+
+@app.get("/api/products/{product_id}/variant-matrix")
+async def api_get_product_variant_matrix(product_id: str, store_type: str = "default"):
+    """
+    API lấy toàn bộ cấu trúc Options và Ma trận Biến thể đầy đủ của sản phẩm.
+    Hỗ trợ phân trang đầy đủ không giới hạn biến thể.
+    """
+    try:
+        from variant_manager_service import get_variant_matrix
+        result = get_variant_matrix(product_id, store_type=store_type)
+        status_code = 200 if result.get("success") else 400
+        return JSONResponse(result, status_code=status_code)
+    except ProxySafetyException as pse:
+        return JSONResponse({"success": False, "message": str(pse)}, status_code=503)
+    except Exception as e:
+        return JSONResponse({"success": False, "message": f"Lỗi hệ thống: {str(e)}"}, status_code=500)
+
+
+@app.post("/api/products/{product_id}/variants/{variant_id}/save")
+async def api_save_variant_row(product_id: str, variant_id: str, request: Request):
+    """
+    API cập nhật 1 dòng biến thể (Option Name global, Option Value row-specific, Price, Compare-at Price).
+    """
+    try:
+        from variant_manager_service import update_variant_row
+        data = await request.json()
+        store_type = data.get("store_type", "default")
+        option_name_changes = data.get("option_name_changes")
+        option_value_changes = data.get("option_value_changes")
+        price = data.get("price")
+        compare_at_price = data.get("compare_at_price")
+
+        result = update_variant_row(
+            product_id=product_id,
+            variant_id=variant_id,
+            option_name_changes=option_name_changes,
+            option_value_changes=option_value_changes,
+            price=price,
+            compare_at_price=compare_at_price,
+            store_type=store_type
+        )
+        if not result.get("success"):
+            code = 409 if result.get("code") == "VARIANT_COMBINATION_EXISTS" else 400
+            return JSONResponse(result, status_code=code)
+        return JSONResponse(result, status_code=200)
+    except ProxySafetyException as pse:
+        return JSONResponse({"success": False, "message": str(pse)}, status_code=503)
+    except Exception as e:
+        return JSONResponse({"success": False, "message": f"Lỗi hệ thống: {str(e)}"}, status_code=500)
+
+
+@app.post("/api/products/{product_id}/variant-options/add")
+async def api_add_variant_option(product_id: str, request: Request):
+    """
+    API thêm một bộ biến thể mới: Option Name, Option Value và Option Base Price (Price Delta).
+    """
+    try:
+        from variant_manager_service import add_variant_option_or_value
+        data = await request.json()
+        store_type = data.get("store_type", "default")
+        option_name = data.get("option_name")
+        option_value = data.get("option_value")
+        base_price = data.get("base_price", "0")
+
+        result = add_variant_option_or_value(
+            product_id=product_id,
+            option_name=option_name,
+            option_value=option_value,
+            base_price=base_price,
+            store_type=store_type
+        )
+        status_code = 200 if result.get("success") else 400
+        return JSONResponse(result, status_code=status_code)
+    except ProxySafetyException as pse:
+        return JSONResponse({"success": False, "message": str(pse)}, status_code=503)
+    except Exception as e:
+        return JSONResponse({"success": False, "message": f"Lỗi hệ thống: {str(e)}"}, status_code=500)
 
 @app.get("/api/products/{product_handle}/variants")
 async def get_product_variants_api(product_handle: str):
@@ -3149,10 +3719,10 @@ async def api_get_product_detail(product_id: str):
 
 
 @app.get("/api/products/resolve-links")
-async def api_resolve_product_links(query: str):
+async def api_resolve_product_links(query: str, store_type: str = "default"):
     """
     Truy vấn thông tin sản phẩm và phân giải đầy đủ URL điều hướng đến các nền tảng:
-    - Tool này (/products/{handle})
+    - Tool này (/products/{handle}?store_type=...)
     - Amazon (metafield custom.amazon_link)
     - Shopify Admin (https://admin.shopify.com/store/{shop}/products/{id})
     - Website Wrydeco Storefront (https://wrydeco.com/products/{handle})
@@ -3162,6 +3732,12 @@ async def api_resolve_product_links(query: str):
         if not raw_val:
             return JSONResponse({"success": False, "error": "Vui lòng nhập Handle hoặc ID sản phẩm."}, status_code=400)
             
+        norm_store = "custom" if str(store_type or "").strip().lower() == "custom" else "default"
+        client_info = get_shopify_client(store_type=norm_store)
+        graphql_url = client_info.get("graphql_url") or GRAPHQL_URL
+        headers = client_info.get("headers") or HEADERS
+        proxies = client_info.get("proxies") or get_shopify_request_proxies()
+
         clean_val = raw_val
         # Phân tích nếu là URL hoặc chứa đường dẫn sản phẩm /products/...
         from urllib.parse import urlparse, unquote
@@ -3190,7 +3766,6 @@ async def api_resolve_product_links(query: str):
             clean_val = clean_val.split("#")[0].strip()
             
         is_id = clean_val.isdigit()
-        proxies = get_shopify_request_proxies()
         
         prod = None
         if is_id:
@@ -3207,7 +3782,7 @@ async def api_resolve_product_links(query: str):
               }
             }
             """
-            res = requests.post(GRAPHQL_URL, json={"query": gql, "variables": {"id": gid}}, headers=HEADERS, proxies=proxies, timeout=20)
+            res = requests.post(graphql_url, json={"query": gql, "variables": {"id": gid}}, headers=headers, proxies=proxies, timeout=20)
             res.raise_for_status()
             prod = res.json().get("data", {}).get("product")
         else:
@@ -3224,7 +3799,7 @@ async def api_resolve_product_links(query: str):
               }
             }
             """
-            res = requests.post(GRAPHQL_URL, json={"query": gql, "variables": {"handle": handle}}, headers=HEADERS, proxies=proxies, timeout=20)
+            res = requests.post(graphql_url, json={"query": gql, "variables": {"handle": handle}}, headers=headers, proxies=proxies, timeout=20)
             res.raise_for_status()
             prod = res.json().get("data", {}).get("productByHandle")
             
@@ -3246,7 +3821,7 @@ async def api_resolve_product_links(query: str):
                   }
                 }
                 """
-                res2 = requests.post(GRAPHQL_URL, json={"query": gql_search, "variables": {"q": clean_val}}, headers=HEADERS, proxies=proxies, timeout=20)
+                res2 = requests.post(graphql_url, json={"query": gql_search, "variables": {"q": clean_val}}, headers=headers, proxies=proxies, timeout=20)
                 if res2.ok:
                     edges = res2.json().get("data", {}).get("products", {}).get("edges", [])
                     if edges:
@@ -3261,7 +3836,7 @@ async def api_resolve_product_links(query: str):
         amz_node = prod.get("amazon_link")
         amazon_link = str(amz_node.get("value")).strip() if amz_node and amz_node.get("value") else ""
         
-        shop_domain = clean_shopify_domain(SHOPIFY_SHOP)
+        shop_domain = client_info.get("shop_domain") or clean_shopify_domain(SHOPIFY_SHOP)
         shop_name = shop_domain.replace(".myshopify.com", "") if shop_domain else "wrydeco"
         
         return JSONResponse({
@@ -3273,7 +3848,7 @@ async def api_resolve_product_links(query: str):
                 "amazon_link": amazon_link,
                 "shopify_admin_url": f"https://admin.shopify.com/store/{shop_name}/products/{num_id}",
                 "website_url": f"https://wrydeco.com/products/{prod_handle}",
-                "tool_url": f"/products/{prod_handle}"
+                "tool_url": f"/products/{prod_handle}?store_type={norm_store}"
             }
         })
     except Exception as e:
@@ -3333,6 +3908,12 @@ def get_all_collections(store_type: str = "default", client_info: dict = None):
             productsCount {
               count
             }
+            buying_guide: metafield(namespace: "custom", key: "buying_guide") {
+              value
+            }
+            related_collections: metafield(namespace: "custom", key: "related_collections") {
+              value
+            }
             resourcePublications(first: 10) {
               edges {
                 node {
@@ -3375,6 +3956,20 @@ def get_all_collections(store_type: str = "default", client_info: dict = None):
                     is_published = True
                     break
                     
+            bg_node = node.get("buying_guide")
+            has_buying_guide = False
+            if bg_node and isinstance(bg_node, dict):
+                bg_val = bg_node.get("value")
+                if bg_val and str(bg_val).strip():
+                    has_buying_guide = True
+
+            rel_node = node.get("related_collections")
+            has_related_collections = False
+            if rel_node and isinstance(rel_node, dict):
+                rel_val = rel_node.get("value")
+                if rel_val and str(rel_val).strip() and str(rel_val).strip() != "[]":
+                    has_related_collections = True
+
             all_collections.append({
                 "id": node["id"].split("/")[-1],
                 "handle": node.get("handle", ""),
@@ -3383,6 +3978,8 @@ def get_all_collections(store_type: str = "default", client_info: dict = None):
                 "image": node.get("image", {}).get("url") if node.get("image") else None,
                 "products_count": node.get("productsCount", {}).get("count", 0) if node.get("productsCount") else 0,
                 "published_online": is_published,
+                "has_buying_guide": has_buying_guide,
+                "has_related_collections": has_related_collections,
                 "created_at": node.get("createdAt", "")
             })
             
@@ -3575,8 +4172,19 @@ async def api_collection_publications(collection_id: str, request: Request):
         norm_store_type = "custom" if str(store_type or "").strip().lower() == "custom" else "default"
         client_info = get_shopify_client(store_type=norm_store_type)
 
+        action = data.get("action") # "publish_all" or "unpublish_all"
         publish_ids = data.get("publish_ids", [])
         unpublish_ids = data.get("unpublish_ids", [])
+        if action in ["publish_all", "unpublish_all"]:
+            pub_map = get_publications_map(store_type=norm_store_type, client_info=client_info)
+            all_pub_ids = list(pub_map.values())
+            if action == "publish_all":
+                publish_ids = all_pub_ids
+                unpublish_ids = []
+            elif action == "unpublish_all":
+                unpublish_ids = all_pub_ids
+                publish_ids = []
+
         clean_id = collection_id.strip().split('/')[-1]
         full_collection_id = f"gid://shopify/Collection/{clean_id}"
         
@@ -3619,7 +4227,7 @@ async def api_collection_publications(collection_id: str, request: Request):
         if errors:
             return JSONResponse({"success": False, "message": " | ".join(errors)}, status_code=400)
             
-        return JSONResponse({"success": True})
+        return JSONResponse({"success": True, "action": action, "count": len(publish_ids if action == "publish_all" else unpublish_ids)})
     except ProxySafetyException as pe:
         return JSONResponse({"success": False, "message": str(pe), "is_proxy_error": True}, status_code=503)
     except Exception as e:
@@ -3934,6 +4542,162 @@ async def update_collection(collection_id: str, data: CollectionUpdate):
     except Exception as e:
         return JSONResponse(status_code=500, content={"success": False, "message": str(e)})
 
+@app.get("/api/all-collections-summary")
+async def get_all_collections_summary(store_type: str = "default"):
+    try:
+        norm_store_type = "custom" if str(store_type or "").strip().lower() == "custom" else "default"
+        client_info = get_shopify_client(store_type=norm_store_type)
+        cols = get_all_collections(store_type=norm_store_type, client_info=client_info)
+        summary = []
+        for c in cols:
+            raw_id = str(c.get("id", ""))
+            clean_num_id = raw_id.split("/")[-1]
+            img_val = c.get("image")
+            img_url = img_val.get("url") if isinstance(img_val, dict) else img_val
+            p_count = c.get("productsCount", {}).get("count", 0) if isinstance(c.get("productsCount"), dict) else (c.get("products_count") or 0)
+            summary.append({
+                "id": clean_num_id,
+                "gid": raw_id if raw_id.startswith("gid://shopify/Collection/") else f"gid://shopify/Collection/{clean_num_id}",
+                "title": c.get("title", ""),
+                "handle": c.get("handle", ""),
+                "image": img_url,
+                "products_count": p_count
+            })
+        return JSONResponse({"success": True, "collections": summary, "count": len(summary)})
+    except ProxySafetyException as pe:
+        return JSONResponse({"success": False, "message": str(pe), "is_proxy_error": True}, status_code=503)
+    except Exception as e:
+        return JSONResponse({"success": False, "message": str(e)}, status_code=500)
+
+
+@app.post("/api/collections/{collection_id}/metafield")
+async def update_collection_metafield(collection_id: str, request: Request):
+    try:
+        body = await request.json()
+        key = str(body.get("key") or "").strip()
+        value = body.get("value")
+        store_type = str(body.get("store_type") or "default").strip()
+        norm_store_type = "custom" if store_type.lower() == "custom" else "default"
+        
+        client_info = get_shopify_client(store_type=norm_store_type)
+        clean_id = str(collection_id or "").strip().split("/")[-1]
+        owner_id = f"gid://shopify/Collection/{clean_id}"
+        
+        if key == "buying_guide":
+            mf_type = "multi_line_text_field"
+            val_str = str(value or "")
+            if not val_str.strip():
+                # Xóa metafield nếu rỗng
+                del_query = """
+                mutation metafieldsDelete($metafields: [MetafieldIdentifierInput!]!) {
+                  metafieldsDelete(metafields: $metafields) {
+                    deletedMetafields { key namespace ownerId }
+                    userErrors { field message }
+                  }
+                }
+                """
+                res = execute_shopify_graphql(client_info, del_query, {
+                    "metafields": [{"ownerId": owner_id, "namespace": "custom", "key": "buying_guide"}]
+                })
+                return JSONResponse({"success": True, "message": "Đã xóa Buying Guide"})
+            else:
+                set_query = """
+                mutation metafieldsSet($metafields: [MetafieldsSetInput!]!) {
+                  metafieldsSet(metafields: $metafields) {
+                    metafields { id namespace key value }
+                    userErrors { field message code }
+                  }
+                }
+                """
+                metafield_input = {
+                    "ownerId": owner_id,
+                    "namespace": "custom",
+                    "key": "buying_guide",
+                    "type": mf_type,
+                    "value": val_str
+                }
+                res = execute_shopify_graphql(client_info, set_query, {"metafields": [metafield_input]})
+                if not res or "errors" in res:
+                    return JSONResponse({"success": False, "message": str(res.get("errors") if res else "Lỗi GraphQL")}, status_code=400)
+                user_errs = res.get("data", {}).get("metafieldsSet", {}).get("userErrors", [])
+                if user_errs:
+                    return JSONResponse({"success": False, "message": "; ".join([u.get("message", "") for u in user_errs])}, status_code=400)
+                return JSONResponse({"success": True, "message": "Đã lưu Collection Buying Guide thành công"})
+                
+        elif key == "related_collections":
+            mf_type = "list.collection_reference"
+            list_ids = []
+            if isinstance(value, list):
+                list_ids = value
+            elif isinstance(value, str) and value.strip():
+                try:
+                    list_ids = json.loads(value)
+                except Exception:
+                    list_ids = [v.strip() for v in value.split(",") if v.strip()]
+                    
+            # Chuẩn hóa GID
+            gids = []
+            for item in list_ids:
+                item_str = str(item).strip()
+                if not item_str:
+                    continue
+                num_id = item_str.split("/")[-1]
+                if num_id and num_id != clean_id:  # Loại trừ chính collection này
+                    gids.append(f"gid://shopify/Collection/{num_id}")
+            
+            # Khử trùng lặp
+            seen = set()
+            unique_gids = []
+            for g in gids:
+                if g not in seen:
+                    seen.add(g)
+                    unique_gids.append(g)
+                    
+            if not unique_gids:
+                # Xóa metafield nếu không chọn collection nào
+                del_query = """
+                mutation metafieldsDelete($metafields: [MetafieldIdentifierInput!]!) {
+                  metafieldsDelete(metafields: $metafields) {
+                    deletedMetafields { key namespace ownerId }
+                    userErrors { field message }
+                  }
+                }
+                """
+                res = execute_shopify_graphql(client_info, del_query, {
+                    "metafields": [{"ownerId": owner_id, "namespace": "custom", "key": "related_collections"}]
+                })
+                return JSONResponse({"success": True, "message": "Đã xóa toàn bộ liên kết Related Collections"})
+            else:
+                set_query = """
+                mutation metafieldsSet($metafields: [MetafieldsSetInput!]!) {
+                  metafieldsSet(metafields: $metafields) {
+                    metafields { id namespace key value }
+                    userErrors { field message code }
+                  }
+                }
+                """
+                metafield_input = {
+                    "ownerId": owner_id,
+                    "namespace": "custom",
+                    "key": "related_collections",
+                    "type": mf_type,
+                    "value": json.dumps(unique_gids)
+                }
+                res = execute_shopify_graphql(client_info, set_query, {"metafields": [metafield_input]})
+                if not res or "errors" in res:
+                    return JSONResponse({"success": False, "message": str(res.get("errors") if res else "Lỗi GraphQL")}, status_code=400)
+                user_errs = res.get("data", {}).get("metafieldsSet", {}).get("userErrors", [])
+                if user_errs:
+                    return JSONResponse({"success": False, "message": "; ".join([u.get("message", "") for u in user_errs])}, status_code=400)
+                return JSONResponse({"success": True, "message": f"Đã lưu {len(unique_gids)} Related Collections thành công"})
+        else:
+            return JSONResponse({"success": False, "message": f"Không hỗ trợ key metafield: {key}"}, status_code=400)
+    except ProxySafetyException as pe:
+        return JSONResponse({"success": False, "message": str(pe), "is_proxy_error": True}, status_code=503)
+    except Exception as e:
+        return JSONResponse({"success": False, "message": str(e)}, status_code=500)
+
+
 @app.get("/collections/{collection_id}", response_class=HTMLResponse)
 async def collection_detail(request: Request, collection_id: str, store_type: str = "default", handle: str = None):
     norm_store_type = "custom" if str(store_type or "").strip().lower() == "custom" else "default"
@@ -4006,6 +4770,8 @@ async def create_collection(request: Request):
         description = form_data.get("description", "")
         seo_title = form_data.get("seo_title", "")
         seo_description = form_data.get("seo_description", "")
+        buying_guide = form_data.get("buying_guide", "")
+        related_collections = form_data.get("related_collections", "")
         
         rule_columns = form_data.getlist("rule_column[]")
         rule_relations = form_data.getlist("rule_relation[]")
@@ -4082,6 +4848,59 @@ async def create_collection(request: Request):
             except Exception as e:
                 print("Image upload error:", e)
                 
+        # Thiết lập Metafields nếu có
+        metafields_to_set = []
+        if buying_guide and str(buying_guide).strip():
+            metafields_to_set.append({
+                "ownerId": new_id_gid,
+                "namespace": "custom",
+                "key": "buying_guide",
+                "type": "multi_line_text_field",
+                "value": str(buying_guide).strip()
+            })
+            
+        if related_collections:
+            list_ids = []
+            if isinstance(related_collections, list):
+                list_ids = related_collections
+            elif isinstance(related_collections, str) and related_collections.strip():
+                try:
+                    import json
+                    list_ids = json.loads(related_collections)
+                except Exception:
+                    list_ids = [v.strip() for v in related_collections.split(",") if v.strip()]
+            gids = []
+            for item in list_ids:
+                it_str = str(item).strip()
+                if not it_str: continue
+                if it_str.startswith("gid://shopify/Collection/"):
+                    gids.append(it_str)
+                elif it_str.isdigit():
+                    gids.append(f"gid://shopify/Collection/{it_str}")
+            if gids:
+                import json
+                metafields_to_set.append({
+                    "ownerId": new_id_gid,
+                    "namespace": "custom",
+                    "key": "related_collections",
+                    "type": "list.collection_reference",
+                    "value": json.dumps(gids)
+                })
+
+        if metafields_to_set:
+            set_query = """
+            mutation metafieldsSet($metafields: [MetafieldsSetInput!]!) {
+              metafieldsSet(metafields: $metafields) {
+                metafields { id }
+                userErrors { field message code }
+              }
+            }
+            """
+            try:
+                execute_shopify_graphql(client_info, set_query, {"metafields": metafields_to_set})
+            except Exception as e:
+                print("Error setting metafields for new collection:", e)
+
         return JSONResponse(content={"success": True, "id": new_id})
     except ProxySafetyException as pe:
         return JSONResponse({"success": False, "message": str(pe), "is_proxy_error": True}, status_code=503)
@@ -4111,6 +4930,10 @@ async def read_collections(request: Request,
             collections = [c for c in collections if c.get("published_online")]
         elif filter_mode == "unpublished":
             collections = [c for c in collections if not c.get("published_online")]
+        elif filter_mode == "has_buying_guide":
+            collections = [c for c in collections if c.get("has_buying_guide")]
+        elif filter_mode == "has_related_collections":
+            collections = [c for c in collections if c.get("has_related_collections")]
             
         # 2. Sort (Sắp xếp)
         if sort_by == "title_asc":
@@ -5068,78 +5891,297 @@ async def api_calculate_storage(request: Request):
 
 
 @app.get("/create", response_class=HTMLResponse)
-async def create_product_form(request: Request):
+async def create_product_page(request: Request, store_type: str = "default"):
+    """
+    Trang tạo sản phẩm mới cho WRYDECO Store.
+    Cung cấp context đầy đủ: Interior Styles, Room Types, Vendors, cùng cấu hình chuyển đổi Store (Riêng/Mặc định).
+    """
+    norm_store_type = "custom" if str(store_type or "").strip().lower() == "custom" else "default"
+    proxy_cfg = load_proxy_config()
+    active_shop = None
+    active_shop_domain = None
+    try:
+        client_info = get_shopify_client(store_type=norm_store_type)
+        active_shop = client_info.get("shop")
+        raw_domain = client_info.get("shop_domain") or client_info.get("display_domain") or active_shop or SHOPIFY_SHOP
+        if raw_domain and "." not in str(raw_domain):
+            active_shop_domain = f"{raw_domain}.myshopify.com"
+        else:
+            active_shop_domain = str(raw_domain or "")
+    except Exception:
+        fallback_shop = SHOPIFY_SHOP or "wrydeco"
+        active_shop = fallback_shop
+        active_shop_domain = f"{fallback_shop}.myshopify.com" if not fallback_shop.endswith(".myshopify.com") else fallback_shop
+
     return templates.TemplateResponse(request=request, name="create_product.html", context={
         "request": request,
-        "error": None,
-        "success_message": None
+        "store_type": norm_store_type,
+        "is_custom": norm_store_type == "custom",
+        "active_shop": active_shop,
+        "active_shop_domain": active_shop_domain,
+        "shopify_shop": active_shop or SHOPIFY_SHOP,
+        "proxy_cfg": proxy_cfg,
+        "interior_styles": product_create_service.WHITELIST_INTERIOR_STYLES,
+        "room_types": product_create_service.WHITELIST_ROOM_TYPES,
+        "vendors": product_create_service.WHITELIST_VENDORS
     })
 
-@app.post("/create", response_class=HTMLResponse)
-async def create_product_submit(
+
+@app.post("/api/products/create")
+async def api_create_product(
     request: Request,
-    title: str = Form(...),
-    description: str = Form(""),
-    quantity: int = Form(1)
+    payload: Optional[str] = Form(None),
+    media_files: List[UploadFile] = File(default=[])
 ):
+    """
+    Endpoint chính tạo sản phẩm mới trên WRYDECO Store thông qua productSet mutation.
+    Hỗ trợ chuyển đổi giữa Store Riêng (qua Proxy US) và Store Mặc định (Direct VPS).
+    Hỗ trợ multipart/form-data (khi có file tải lên từ thiết bị) hoặc application/json.
+    Tuân thủ Proxy Safety Gate tuyệt đối.
+    """
     try:
-        if quantity < 1 or quantity > 50:
-            raise ValueError("Số lượng phải từ 1 đến 50.")
-            
-        success_count = 0
-        timestamp = int(time.time())
-        
-        for i in range(quantity):
-            random_uuid = str(uuid.uuid4())
-            handle = f"placeholder-handle-{timestamp}-{random_uuid}"
-            
-            mutation = """
-            mutation productCreate($input: ProductInput!) {
-              productCreate(input: $input) {
-                product {
-                  id
-                }
-                userErrors {
-                  field
-                  message
-                }
-              }
-            }
-            """
-            
-            variables = {
-                "input": {
-                    "title": title,
-                    "handle": handle,
-                    "descriptionHtml": description
-                }
-            }
-            
-            response = requests.post(GRAPHQL_URL, json={"query": mutation, "variables": variables}, headers=HEADERS)
-            response.raise_for_status()
-            data = response.json()
-            
-            if "errors" in data:
-                raise Exception(f"GraphQL Error: {data['errors']}")
-                
-            user_errors = data.get("data", {}).get("productCreate", {}).get("userErrors", [])
-            if user_errors:
-                raise Exception(f"Shopify Error: {user_errors[0]['message']}")
-                
-            success_count += 1
-            
-        return templates.TemplateResponse(request=request, name="create_product.html", context={
-            "request": request,
-            "error": None,
-            "success_message": f"Đã tạo thành công {success_count} sản phẩm!"
-        })
-        
+        # 1. Trích xuất payload dữ liệu
+        data_payload = {}
+        content_type = request.headers.get("content-type", "")
+
+        if "multipart/form-data" in content_type:
+            if not payload:
+                form = await request.form()
+                payload_str = form.get("payload")
+                if payload_str:
+                    data_payload = json.loads(payload_str)
+                else:
+                    return JSONResponse({
+                        "success": False,
+                        "phase": "validation",
+                        "errors": [{"field": "payload", "message": "Thiếu dữ liệu payload trong form.", "code": "MISSING_PAYLOAD"}]
+                    }, status_code=400)
+            else:
+                data_payload = json.loads(payload)
+        else:
+            # Direct JSON body
+            data_payload = await request.json()
+
+        # 2. Đọc các file nhị phân nếu có
+        file_tuples = []
+        if media_files:
+            for mf in media_files:
+                if mf.filename:
+                    content = await mf.read()
+                    file_tuples.append((mf.filename, content, mf.content_type))
+
+        # 3. Xác định Store Type (custom hoặc default)
+        target_store_type = data_payload.get("store_type") or request.query_params.get("store_type") or "custom"
+        norm_store_type = "custom" if str(target_store_type).strip().lower() == "custom" else "default"
+
+        # 4. Thực thi tạo sản phẩm
+        result = product_create_service.create_wrydeco_product(
+            payload=data_payload,
+            uploaded_file_tuples=file_tuples,
+            store_type=norm_store_type
+        )
+
+        if not result["success"]:
+            status_code = 400
+            if result.get("phase") == "proxy_safety":
+                status_code = 503
+            elif result.get("phase") in ["shopify_api_error", "client_init"]:
+                status_code = 502
+            return JSONResponse(result, status_code=status_code)
+
+        created_prod = result.get("product") or {}
+        handle = created_prod.get("handle") or ""
+        return JSONResponse({
+            "success": True,
+            "phase": "complete",
+            "errors": [],
+            "product": created_prod,
+            "redirect_url": f"/product/{handle}?store_type={norm_store_type}" if handle else f"/products?store_type={norm_store_type}",
+            "message": f"Sản phẩm đã được tạo thành công trên {'Store Riêng (qua Proxy US)' if norm_store_type == 'custom' else 'Store Mặc định'}!"
+        }, status_code=200)
+
+    except json.JSONDecodeError as jde:
+        return JSONResponse({
+            "success": False,
+            "phase": "validation",
+            "errors": [{"field": "payload", "message": f"Dữ liệu JSON không hợp lệ: {str(jde)}", "code": "INVALID_JSON"}]
+        }, status_code=400)
     except Exception as e:
-        return templates.TemplateResponse(request=request, name="create_product.html", context={
-            "request": request,
-            "error": str(e),
-            "success_message": None
+        return JSONResponse({
+            "success": False,
+            "phase": "server_error",
+            "errors": [{"field": "server", "message": f"Lỗi máy chủ nội bộ: {str(e)}", "code": "INTERNAL_ERROR"}]
+        }, status_code=500)
+
+
+
+# ==============================================================================
+# BULK PRODUCT CREATION API (Shopify GraphQL Admin API - Adaptive Throttling)
+# ==============================================================================
+
+@app.get("/api/products/bulk-worker/health")
+async def api_bulk_worker_health():
+    """
+    Endpoint kiểm tra trạng thái sức khỏe (Health Check) của Subsystem Worker tạo sản phẩm hàng loạt.
+    Đọc heartbeat thực tế từ database bền vững SQLite, phản ánh trạng thái worker độc lập.
+    """
+    health = bulk_product_job_store.get_worker_health()
+    return JSONResponse(status_code=200, content=health)
+
+
+@app.post("/api/products/bulk-jobs")
+async def api_prepare_bulk_job(request: Request):
+    """
+    Endpoint chuẩn bị và validate một Job tạo sản phẩm hàng loạt từ CSV.
+    - Quét phát hiện trùng lặp Handle nội bộ batch.
+    - Validate từng item qua Single Source of Truth validation.
+    - Phân loại QUEUED (hợp lệ) hoặc FAILED_VALIDATION (không hợp lệ).
+    - Lưu trữ bền vững vào SQLite.
+    """
+    try:
+        data = await request.json()
+    except Exception:
+        return JSONResponse(status_code=400, content={"success": False, "error": "Invalid JSON body"})
+
+    store_type = data.get("store_type") or "custom"
+    items = data.get("items") or data.get("products") or []
+
+    if not items or not isinstance(items, list):
+        return JSONResponse(status_code=400, content={
+            "success": False, 
+            "error": "Danh sách sản phẩm tải lên không hợp lệ hoặc đang trống."
         })
+
+    res = bulk_product_job_service.prepare_bulk_job(
+        store_type=store_type,
+        items=items,
+        metadata={"client_ip": request.client.host if request.client else "unknown"}
+    )
+    return JSONResponse(status_code=200 if res.get("success") else 400, content=res)
+
+
+@app.post("/api/products/bulk-jobs/{job_id}/start")
+async def api_start_bulk_job(job_id: str):
+    """
+    Bắt đầu thực thi xử lý một Bulk Job bằng Durable Background Worker.
+    - Idempotent: Nếu Job đang RUNNING thì trả về trạng thái hiện tại, không spawn duplicate worker.
+    - Chạy nền qua luồng độc lập, điều tiết tốc độ thích ứng qua GraphQL extensions.cost.
+    """
+    job = bulk_product_job_store.get_job(job_id)
+    if not job:
+        return JSONResponse(status_code=404, content={"success": False, "error": "Job không tồn tại"})
+
+    current_status = job.get("status")
+    if current_status == "RUNNING":
+        return JSONResponse(status_code=200, content={
+            "success": True, 
+            "status": "RUNNING", 
+            "message": "Job đang được xử lý trong nền"
+        })
+
+    if current_status in ("COMPLETED", "COMPLETED_WITH_ERRORS", "CANCELLED"):
+        return JSONResponse(status_code=400, content={
+            "success": False, 
+            "status": current_status, 
+            "error": f"Job đã kết thúc ở trạng thái {current_status}"
+        })
+
+    # Kích hoạt worker trong daemon thread
+    worker_thread = threading.Thread(
+        target=bulk_product_worker.run_bulk_job_worker,
+        args=(job_id,),
+        daemon=True,
+        name=f"worker-{job_id}"
+    )
+    worker_thread.start()
+
+    return JSONResponse(status_code=200, content={
+        "success": True,
+        "job_id": job_id,
+        "status": "RUNNING"
+    })
+
+
+@app.get("/api/products/bulk-jobs/{job_id}")
+async def api_get_bulk_job(job_id: str):
+    """
+    Lấy snapshot trạng thái tiến độ và danh sách sản phẩm của một Bulk Job.
+    """
+    job = bulk_product_job_store.get_job(job_id)
+    if not job:
+        return JSONResponse(status_code=404, content={"success": False, "error": "Job không tồn tại"})
+    return JSONResponse(status_code=200, content={"success": True, "job": job})
+
+
+@app.get("/api/products/bulk-jobs/{job_id}/events")
+async def api_get_bulk_job_events(job_id: str, request: Request, last_event_id: Optional[int] = None):
+    """
+    Server-Sent Events (SSE) stream theo dõi tiến trình tạo sản phẩm hàng loạt theo thời gian thực.
+    - Hỗ trợ Last-Event-ID header và query param last_event_id để tự động khôi phục sự kiện khi reconnect.
+    - Ngắt kết nối khi Job đạt trạng thái kết thúc (COMPLETED / COMPLETED_WITH_ERRORS / PAUSED_PROXY).
+    """
+    job = bulk_product_job_store.get_job(job_id)
+    if not job:
+        return JSONResponse(status_code=404, content={"success": False, "error": "Job không tồn tại"})
+
+    # Xác định initial last_event_id từ header hoặc query
+    header_last_id = request.headers.get("last-event-id")
+    if header_last_id and header_last_id.isdigit():
+        effective_last_id = int(header_last_id)
+    elif last_event_id is not None:
+        effective_last_id = int(last_event_id)
+    else:
+        effective_last_id = 0
+
+    async def event_generator():
+        current_id = effective_last_id
+        while True:
+            # Kiểm tra xem client đã ngắt kết nối chưa
+            if await request.is_disconnected():
+                break
+
+            events = bulk_product_job_store.get_events_after(job_id, last_event_id=current_id, limit=50)
+            for ev in events:
+                current_id = ev["event_id"]
+                ev_type = ev["event_type"]
+                ev_data = json.dumps(ev["data"], ensure_ascii=False)
+                yield f"id: {current_id}\nevent: {ev_type}\ndata: {ev_data}\n\n"
+
+            # Kiểm tra trạng thái Job
+            cur_job = bulk_product_job_store.get_job(job_id)
+            if not cur_job:
+                break
+
+            status = cur_job.get("status")
+            if status in ("COMPLETED", "COMPLETED_WITH_ERRORS", "CANCELLED", "PAUSED_PROXY"):
+                # Gửi nốt các events còn sót
+                remaining = bulk_product_job_store.get_events_after(job_id, last_event_id=current_id, limit=50)
+                for ev in remaining:
+                    current_id = ev["event_id"]
+                    ev_type = ev["event_type"]
+                    ev_data = json.dumps(ev["data"], ensure_ascii=False)
+                    yield f"id: {current_id}\nevent: {ev_type}\ndata: {ev_data}\n\n"
+                break
+
+            await asyncio.sleep(0.6)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
+
+
+@app.post("/create", response_class=HTMLResponse)
+async def create_product_submit_legacy(request: Request):
+    """
+    Deprecated: Redirect route POST /create cũ về GET /create để đồng nhất API endpoint.
+    """
+    return RedirectResponse(url="/create", status_code=303)
 
 def resolve_product_id(identifier: str, id_types: list) -> str:
     ident = identifier.strip()
@@ -6373,7 +7415,7 @@ async def internal_reorder_media(request: Request):
 
 
 @app.get("/api/product-authors")
-def get_product_authors():
+def get_product_authors(store_type: str = "custom"):
     query = """
     query {
       metaobjects(type: "product_author", first: 100) {
@@ -6392,14 +7434,18 @@ def get_product_authors():
     }
     """
     try:
-        proxies = get_shopify_request_proxies()
-        res = requests.post(GRAPHQL_URL, json={"query": query}, headers=HEADERS, proxies=proxies, timeout=15)
-        if res.status_code == 401:
-            ok, msg, new_tok = request_default_store_access_token()
-            if ok and new_tok:
-                res = requests.post(GRAPHQL_URL, json={"query": query}, headers=HEADERS, proxies=proxies, timeout=15)
-        res.raise_for_status()
-        data = res.json()
+        if store_type == "custom":
+            client_info = get_shopify_client(store_type="custom")
+            data = execute_shopify_graphql(client_info, query)
+        else:
+            proxies = get_shopify_request_proxies()
+            res = requests.post(GRAPHQL_URL, json={"query": query}, headers=HEADERS, proxies=proxies, timeout=15)
+            if res.status_code == 401:
+                ok, msg, new_tok = request_default_store_access_token()
+                if ok and new_tok:
+                    res = requests.post(GRAPHQL_URL, json={"query": query}, headers=HEADERS, proxies=proxies, timeout=15)
+            res.raise_for_status()
+            data = res.json()
         
         authors = []
         if "data" in data and "metaobjects" in data["data"]:
@@ -6434,12 +7480,18 @@ def get_product_authors():
 
 @app.post("/internal-edit-product")
 async def internal_edit_product(request: Request):
+    """
+    Cập nhật các trường thông tin sản phẩm và metafields trên Store.
+    Hỗ trợ chuyển đổi giữa Store Riêng (qua Proxy US) và Store Mặc Định (Direct VPS).
+    """
     try:
         import json
         form = await request.form()
         product_id = form.get("product_id")
         target_field = form.get("target_field")
         new_value = form.get("new_value")
+        store_type = form.get("store_type") or "default"
+        norm_store = "custom" if str(store_type or "").strip().lower() == "custom" else "default"
 
         if not product_id or not target_field:
             return HTMLResponse(content=json.dumps({"success": False, "message": "Thiếu dữ liệu"}), media_type="application/json")
@@ -6448,6 +7500,8 @@ async def internal_edit_product(request: Request):
             
         if not str(product_id).startswith("gid://"):
             product_id = f"gid://shopify/Product/{product_id}"
+
+        client_info = get_shopify_client(store_type=norm_store)
 
         if target_field == "status":
             mutation = '''
@@ -6683,14 +7737,14 @@ async def internal_edit_product(request: Request):
                         }
                     ]
                 }
-                res = requests.post(GRAPHQL_URL, json={"query": del_mutation, "variables": del_variables}, headers=HEADERS)
-                res.raise_for_status()
-                data = res.json()
+                data = execute_shopify_graphql(client_info, del_mutation, variables=del_variables)
+                if not data:
+                    return HTMLResponse(content=json.dumps({"success": False, "message": "Không nhận được phản hồi từ Shopify"}), media_type="application/json")
                 if "errors" in data:
-                    return HTMLResponse(content=json.dumps({"success": False, "message": f"GraphQL Error: {data['errors'][0]['message']}"}), media_type="application/json")
+                    return HTMLResponse(content=json.dumps({"success": False, "message": f"GraphQL Error: {data['errors'][0].get('message', 'Lỗi GraphQL')}"}), media_type="application/json")
                 user_errs = data.get("data", {}).get("metafieldsDelete", {}).get("userErrors", [])
                 if user_errs:
-                    return HTMLResponse(content=json.dumps({"success": False, "message": f"Lỗi từ Shopify: {user_errs[0]['message']}"}), media_type="application/json")
+                    return HTMLResponse(content=json.dumps({"success": False, "message": f"Lỗi từ Shopify: {user_errs[0].get('message', 'Không thể xóa')}"}), media_type="application/json")
                 return HTMLResponse(content=json.dumps({"success": True, "message": "Đã xóa metafield thành công"}), media_type="application/json")
 
             mutation = '''
@@ -6717,16 +7771,16 @@ async def internal_edit_product(request: Request):
         else:
             return HTMLResponse(content=json.dumps({"success": False, "message": f"Trường '{target_field}' chưa được hỗ trợ cập nhật"}), media_type="application/json")
 
-        res = requests.post(GRAPHQL_URL, json={"query": mutation, "variables": variables}, headers=HEADERS)
-        res.raise_for_status()
-        data = res.json()
+        data = execute_shopify_graphql(client_info, mutation, variables=variables)
+        if not data:
+            return HTMLResponse(content=json.dumps({"success": False, "message": "Không nhận được phản hồi từ Shopify"}), media_type="application/json")
         
         if "errors" in data:
-            return HTMLResponse(content=json.dumps({"success": False, "message": f"GraphQL Error: {data['errors'][0]['message']}"}), media_type="application/json")
+            return HTMLResponse(content=json.dumps({"success": False, "message": f"GraphQL Error: {data['errors'][0].get('message', 'Lỗi GraphQL')}"}), media_type="application/json")
         
         user_errs = data.get("data", {}).get("productUpdate", {}).get("userErrors", [])
         if user_errs:
-            return HTMLResponse(content=json.dumps({"success": False, "message": f"Lỗi từ Shopify: {user_errs[0]['message']}"}), media_type="application/json")
+            return HTMLResponse(content=json.dumps({"success": False, "message": f"Lỗi từ Shopify: {user_errs[0].get('message', 'Lỗi cập nhật')}"}), media_type="application/json")
             
         new_handle = data.get("data", {}).get("productUpdate", {}).get("product", {}).get("handle")
         return HTMLResponse(content=json.dumps({"success": True, "message": "Thành công", "newHandle": new_handle}), media_type="application/json")
@@ -6734,6 +7788,7 @@ async def internal_edit_product(request: Request):
     except Exception as e:
         import json
         return HTMLResponse(content=json.dumps({"success": False, "message": str(e)}), media_type="application/json")
+
 
 CONFIG_FILE = "config.json"
 _config_lock = threading.Lock()
@@ -7577,12 +8632,14 @@ async def api_product_publications(request: Request):
         product_id = data.get("product_id")
         publish_ids = data.get("publish_ids", [])
         unpublish_ids = data.get("unpublish_ids", [])
+        store_type = data.get("store_type", "default")
         
         if not product_id:
             return HTMLResponse(content=json.dumps({"success": False, "message": "Missing product ID"}), media_type="application/json")
             
         full_product_id = f"gid://shopify/Product/{product_id}" if not str(product_id).startswith("gid://") else product_id
         
+        client_info = get_shopify_client(store_type=store_type)
         errors = []
         
         # Publish
@@ -7599,10 +8656,10 @@ async def api_product_publications(request: Request):
             }
             '''
             variables = {"id": full_product_id, "input": publish_input}
-            res = requests.post(GRAPHQL_URL, json={"query": query_publish, "variables": variables}, headers=HEADERS)
-            res.raise_for_status()
-            res_data = res.json()
-            if "errors" in res_data:
+            res_data = execute_shopify_graphql(client_info, query_publish, variables=variables)
+            if not isinstance(res_data, dict):
+                errors.append("Invalid response from Shopify GraphQL API during publish")
+            elif "errors" in res_data:
                 errors.append(f"Publish errors: {res_data['errors']}")
             else:
                 user_errors = res_data.get("data", {}).get("publishablePublish", {}).get("userErrors", [])
@@ -7623,10 +8680,10 @@ async def api_product_publications(request: Request):
             }
             '''
             variables = {"id": full_product_id, "input": unpublish_input}
-            res = requests.post(GRAPHQL_URL, json={"query": query_unpublish, "variables": variables}, headers=HEADERS)
-            res.raise_for_status()
-            res_data = res.json()
-            if "errors" in res_data:
+            res_data = execute_shopify_graphql(client_info, query_unpublish, variables=variables)
+            if not isinstance(res_data, dict):
+                errors.append("Invalid response from Shopify GraphQL API during unpublish")
+            elif "errors" in res_data:
                 errors.append(f"Unpublish errors: {res_data['errors']}")
             else:
                 user_errors = res_data.get("data", {}).get("publishableUnpublish", {}).get("userErrors", [])
@@ -8969,7 +10026,12 @@ POLICY_DISPLAY_TITLES = {
     "CANCEL_ORDER": "Cancel Order"
 }
 
-def get_store_policies():
+def get_store_policies(store_type: str = "default"):
+    norm_store = "custom" if str(store_type or "").strip().lower() == "custom" else "default"
+    client_info = get_shopify_client(store_type=norm_store)
+    shop_domain = client_info.get("shop_domain") or clean_shopify_domain(SHOPIFY_SHOP)
+    shop_name = shop_domain.replace(".myshopify.com", "") if shop_domain else "wrydeco"
+
     query = """
     query {
       shop {
@@ -8985,15 +10047,12 @@ def get_store_policies():
       }
     }
     """
-    res = requests.post(GRAPHQL_URL, json={"query": query}, headers=HEADERS)
-    res.raise_for_status()
-    data = res.json()
-    raw_policies = data.get("data", {}).get("shop", {}).get("shopPolicies", [])
+    data = execute_shopify_graphql(client_info, query=query)
+    raw_policies = data.get("data", {}).get("shop", {}).get("shopPolicies", []) if data else []
 
-    rest_url = f"https://{SHOPIFY_SHOP}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/policies.json"
     rest_map = {}
     try:
-        r_rest = requests.get(rest_url, headers=HEADERS, timeout=10)
+        r_rest = execute_shopify_rest(client_info, method="GET", path_or_url="policies.json", timeout=15)
         if r_rest.status_code == 200:
             for p in r_rest.json().get("policies", []):
                 h = p.get("handle")
@@ -9015,7 +10074,7 @@ def get_store_policies():
         rest_info = rest_map.get(handle) or rest_map.get(raw_title.lower()) or {}
         storefront_url = rest_info.get("url")
         if not storefront_url and handle:
-            storefront_url = f"https://{SHOPIFY_SHOP}.myshopify.com/policies/{handle}"
+            storefront_url = f"https://{shop_domain}/policies/{handle}"
             
         actual_handle = rest_info.get("handle") or handle
 
@@ -9056,8 +10115,7 @@ def get_store_policies():
 
     # Bổ sung trang chính sách "Cancel Order" (/pages/modify-cancel-order)
     try:
-        page_url = f"https://{SHOPIFY_SHOP}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/pages.json?handle=modify-cancel-order"
-        r_page = requests.get(page_url, headers=HEADERS, timeout=10)
+        r_page = execute_shopify_rest(client_info, method="GET", path_or_url="pages.json", params={"handle": "modify-cancel-order"}, timeout=15)
         page_item = None
         if r_page.status_code == 200:
             pages = r_page.json().get("pages", [])
@@ -9099,8 +10157,8 @@ def get_store_policies():
             "body": body,
             "char_count": len(body),
             "word_count": len(body.split()),
-            "url": f"https://{SHOPIFY_SHOP}.myshopify.com/pages/{handle}",
-            "storefront_url": f"https://{SHOPIFY_SHOP}.myshopify.com/pages/{handle}",
+            "url": f"https://{shop_domain}/pages/{handle}",
+            "storefront_url": f"https://{shop_domain}/pages/{handle}",
             "created_at": created_at,
             "updated_at": updated_at,
             "formatted_updated_at": formatted_date,
@@ -9114,23 +10172,44 @@ def get_store_policies():
 
 
 @app.get("/policies", response_class=HTMLResponse)
-async def policies_page(request: Request):
+async def policies_page(request: Request, store_type: str = "default"):
+    norm_store = "custom" if str(store_type or "").strip().lower() == "custom" else "default"
     try:
-        policies = get_store_policies()
+        client_info = get_shopify_client(store_type=norm_store)
+        shop_domain = client_info.get("shop_domain") or clean_shopify_domain(SHOPIFY_SHOP)
+        shop_name = shop_domain.replace(".myshopify.com", "") if shop_domain else "wrydeco"
+        policies = get_store_policies(store_type=norm_store)
         return templates.TemplateResponse(request=request, name="policies.html", context={
             "request": request,
             "policies": policies,
-            "shop_name": SHOPIFY_SHOP
+            "shop_name": shop_name,
+            "shop_domain": shop_domain,
+            "active_shop": shop_name,
+            "active_shop_domain": shop_domain,
+            "store_type": norm_store
         })
+    except ProxySafetyException as pse:
+        return HTMLResponse(
+            f"""<div style="font-family:sans-serif;padding:30px;max-width:600px;margin:50px auto;border:2px solid #ef4444;border-radius:12px;background:#fef2f2;">
+                <h2 style="color:#b91c1c;margin-top:0;">🛡️ Chốt Chặn An Toàn Proxy Kích Hoạt</h2>
+                <p style="color:#7f1d1d;line-height:1.6;">{str(pse)}</p>
+                <div style="margin-top:20px;">
+                    <a href="/policies?store_type=default" style="display:inline-block;padding:8px 16px;background:#4f46e5;color:white;text-decoration:none;border-radius:8px;font-weight:bold;">Về Store Mặc định</a>
+                    <a href="/settings" style="display:inline-block;margin-left:10px;padding:8px 16px;background:#e5e7eb;color:#374151;text-decoration:none;border-radius:8px;font-weight:bold;">Mở Cài đặt Proxy</a>
+                </div>
+            </div>""",
+            status_code=503
+        )
     except Exception as e:
         return HTMLResponse(f"Lỗi tải danh sách chính sách (Policies): {str(e)}", status_code=500)
 
 
 @app.get("/api/policies")
-async def api_get_policies():
+async def api_get_policies(store_type: str = "default"):
+    norm_store = "custom" if str(store_type or "").strip().lower() == "custom" else "default"
     try:
-        policies = get_store_policies()
-        return JSONResponse({"success": True, "policies": policies})
+        policies = get_store_policies(store_type=norm_store)
+        return JSONResponse({"success": True, "policies": policies, "store_type": norm_store})
     except Exception as e:
         return JSONResponse({"success": False, "message": str(e)}, status_code=500)
 
@@ -9138,6 +10217,7 @@ async def api_get_policies():
 class PolicyUpdateRequest(BaseModel):
     type: str
     body: str
+    store_type: Optional[str] = "default"
 
 
 @app.post("/api/policies/update")
@@ -9145,6 +10225,8 @@ async def api_update_policy(payload: PolicyUpdateRequest):
     try:
         p_type = payload.type.strip()
         body = payload.body
+        norm_store = "custom" if str(payload.store_type or "").strip().lower() == "custom" else "default"
+        client_info = get_shopify_client(store_type=norm_store)
 
         if not p_type:
             return JSONResponse({"success": False, "message": "Mã loại chính sách (type) là bắt buộc."}, status_code=400)
@@ -9152,15 +10234,13 @@ async def api_update_policy(payload: PolicyUpdateRequest):
         # Xử lý cập nhật cho chính sách dạng Page như CANCEL_ORDER
         if p_type == "CANCEL_ORDER":
             page_id = 165869846585
-            page_url = f"https://{SHOPIFY_SHOP}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/pages/{page_id}.json"
-            put_res = requests.put(page_url, json={"page": {"id": page_id, "body_html": body}}, headers=HEADERS, timeout=15)
+            put_res = execute_shopify_rest(client_info, method="PUT", path_or_url=f"pages/{page_id}.json", json_data={"page": {"id": page_id, "body_html": body}}, timeout=15)
             if put_res.status_code not in (200, 201):
                 # Tìm lại ID qua handle nếu cần
-                search_url = f"https://{SHOPIFY_SHOP}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/pages.json?handle=modify-cancel-order"
-                s_res = requests.get(search_url, headers=HEADERS, timeout=10)
+                s_res = execute_shopify_rest(client_info, method="GET", path_or_url="pages.json", params={"handle": "modify-cancel-order"}, timeout=15)
                 if s_res.status_code == 200 and s_res.json().get("pages"):
                     found_id = s_res.json()["pages"][0]["id"]
-                    put_res = requests.put(f"https://{SHOPIFY_SHOP}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/pages/{found_id}.json", json={"page": {"id": found_id, "body_html": body}}, headers=HEADERS, timeout=15)
+                    put_res = execute_shopify_rest(client_info, method="PUT", path_or_url=f"pages/{found_id}.json", json_data={"page": {"id": found_id, "body_html": body}}, timeout=15)
 
             if put_res.status_code in (200, 201):
                 updated_page = put_res.json().get("page", {})
@@ -9197,19 +10277,18 @@ async def api_update_policy(payload: PolicyUpdateRequest):
         }
         """
 
-        res = requests.post(GRAPHQL_URL, json={
-            "query": mutation,
-            "variables": {
+        data = execute_shopify_graphql(
+            client_info,
+            query=mutation,
+            variables={
                 "shopPolicy": {
                     "type": p_type,
                     "body": body
                 }
             }
-        }, headers=HEADERS)
-        res.raise_for_status()
-        data = res.json()
+        )
 
-        if "errors" in data:
+        if "errors" in data and not data.get("data"):
             return JSONResponse({"success": False, "message": str(data["errors"])}, status_code=400)
 
         update_res = data.get("data", {}).get("shopPolicyUpdate", {})
@@ -9236,6 +10315,8 @@ async def api_update_policy(payload: PolicyUpdateRequest):
             "message": f"Đã lưu chính sách '{updated_policy.get('title') if updated_policy else ''}' thành công vào store!",
             "policy": updated_policy
         })
+    except ProxySafetyException as pse:
+        return JSONResponse({"success": False, "message": str(pse)}, status_code=503)
     except Exception as e:
         return JSONResponse({"success": False, "message": f"Lỗi hệ thống: {str(e)}"}, status_code=500)
 
@@ -12043,9 +13124,9 @@ def get_vps_public_ips():
         if not ipv4:
             try:
                 import socket
-                ipv4 = socket.gethostbyname("wrydeco.shopify.vnote.site")
+                ipv4 = socket.gethostbyname("wrydeco.b6-team.site")
             except Exception:
-                ipv4 = "20.222.21.81"
+                ipv4 = "20.89.43.225"
 
         # 2. Thử lấy IPv6
         try:
@@ -12057,11 +13138,11 @@ def get_vps_public_ips():
 
     else:
         # Chạy ở Local Development
-        ipv4 = "20.222.21.81"
+        ipv4 = "20.89.43.225"
         ipv6 = None
 
     if not ipv4:
-        ipv4 = "20.222.21.81"
+        ipv4 = "20.89.43.225"
 
     if not ipv6:
         ipv6 = "Không khả dụng (Chưa cấu hình)"
@@ -12345,8 +13426,8 @@ def get_vps_health_data(force_refresh: bool = False) -> dict:
         "running_services": [],
         "running_services_count": 0,
         "network": {
-            "public_domain": "wrydeco.shopify.vnote.site",
-            "public_ipv4": "20.222.21.81",
+            "public_domain": "wrydeco.b6-team.site",
+            "public_ipv4": "20.89.43.225",
             "public_ipv6": "Không khả dụng (Chưa cấu hình)",
             "fastapi_port": 8085,
             "proxy_gateway_enabled": False,
@@ -12495,7 +13576,7 @@ def get_vps_health_data(force_refresh: bool = False) -> dict:
         try:
             import paramiko
             cfg_file = os.path.expanduser("~/.ssh/config")
-            host, user, key = "20.222.21.81", "azureuser", None
+            host, user, key = "20.89.43.225", "azureuser", None
             if os.path.exists(cfg_file):
                 c = paramiko.SSHConfig()
                 with open(cfg_file, encoding="utf-8") as f:
@@ -15677,9 +16758,9 @@ async def api_lookup_product_metafields(
     store_type: str = "default"
 ):
     """
-    Tra cứu sản phẩm và toàn bộ Metafields theo Handle hoặc ID (tự động nhận diện).
-    Nếu là ID: dò tìm trên cả Store Mặc Định và Store Riêng.
-    Nếu là Handle: dò tìm trên Store hiện tại trước, nếu không có thì dò tiếp Store còn lại.
+    Tra cứu sản phẩm và toàn bộ Metafields (cả có giá trị và đang trống) theo Handle hoặc ID.
+    - Luôn ưu tiên tìm kiếm và hiển thị dữ liệu của Store hiện tại (store_type).
+    - Tự động map và đồng bộ định nghĩa metafieldDefinitions của Store để hiển thị 100% tất cả các trường.
     """
     import re
     raw_q = (query or "").strip()
@@ -15687,9 +16768,7 @@ async def api_lookup_product_metafields(
         return JSONResponse({"success": False, "message": "Vui lòng nhập ID hoặc Handle của sản phẩm!"}, status_code=400)
 
     # 1. Tự động nhận diện định dạng (URL, GID, Numeric ID, hay Handle)
-    # Admin URL: https://admin.shopify.com/store/wrydeco/products/10359521083449
     admin_match = re.search(r'/products/(\d+)', raw_q)
-    # Storefront URL: https://wrydeco.com/products/handle-name
     sf_match = re.search(r'/products/([^/?#]+)', raw_q)
 
     if 'admin.shopify.com' in raw_q and admin_match:
@@ -15710,9 +16789,8 @@ async def api_lookup_product_metafields(
 
     norm_current_store = "custom" if str(store_type or "").strip().lower() == "custom" else "default"
     other_store = "custom" if norm_current_store == "default" else "default"
-    stores_to_check = [norm_current_store, other_store]
 
-    # GraphQL queries
+    # GraphQL queries kèm definitions
     query_by_id = """
     query getProductById($id: ID!) {
       product(id: $id) {
@@ -15737,6 +16815,20 @@ async def api_lookup_product_metafields(
               updatedAt
               createdAt
             }
+          }
+        }
+      }
+      metafieldDefinitions(ownerType: PRODUCT, first: 100) {
+        edges {
+          node {
+            id
+            name
+            namespace
+            key
+            type {
+              name
+            }
+            description
           }
         }
       }
@@ -15770,25 +16862,102 @@ async def api_lookup_product_metafields(
           }
         }
       }
+      metafieldDefinitions(ownerType: PRODUCT, first: 100) {
+        edges {
+          node {
+            id
+            name
+            namespace
+            key
+            type {
+              name
+            }
+            description
+          }
+        }
+      }
     }
     """
 
-    def format_product_node(prod_node, found_store: str):
+    def format_product_node(prod_node, found_store: str, defs_edges: list = None):
         if not prod_node:
             return None
         p_id = prod_node.get("id", "")
         numeric_id = p_id.split("/")[-1] if p_id else ""
         prod_node["numeric_id"] = numeric_id
         
+        all_mfs_map = {}
+        # 1. Nạp từ definitions của Store (bao gồm cả các trường chưa có giá trị)
+        for d_edge in (defs_edges or []):
+            df = d_edge.get("node", {})
+            if not df:
+                continue
+            ns = df.get("namespace", "")
+            k = df.get("key", "")
+            t_obj = df.get("type", {})
+            t_name = t_obj.get("name") if isinstance(t_obj, dict) else str(t_obj or "single_line_text_field")
+            all_mfs_map[(ns, k)] = {
+                "id": "",
+                "numeric_id": "",
+                "definition_id": df.get("id", ""),
+                "namespace": ns,
+                "key": k,
+                "name": df.get("name") or f"{ns}.{k}",
+                "type": t_name,
+                "value": "",
+                "has_value": False,
+                "description": df.get("description") or "",
+                "updatedAt": "",
+                "createdAt": ""
+            }
+
+        # 2. Cập nhật các metafields thực tế của sản phẩm
         raw_mfs = prod_node.get("metafields", {}).get("edges", [])
-        mfs = []
         for mf_edge in raw_mfs:
             mf = mf_edge.get("node", {})
-            if mf:
-                mf["numeric_id"] = mf.get("id", "").split("/")[-1]
-                mfs.append(mf)
+            if not mf:
+                continue
+            ns = mf.get("namespace", "")
+            k = mf.get("key", "")
+            val = mf.get("value")
+            val_str = str(val) if val is not None else ""
+            t = mf.get("type", "")
+            mf_id = mf.get("id", "")
+            num_id = mf_id.split("/")[-1] if mf_id else ""
+
+            if (ns, k) in all_mfs_map:
+                all_mfs_map[(ns, k)]["value"] = val_str
+                all_mfs_map[(ns, k)]["has_value"] = bool(val_str.strip())
+                all_mfs_map[(ns, k)]["id"] = mf_id
+                all_mfs_map[(ns, k)]["numeric_id"] = num_id
+                all_mfs_map[(ns, k)]["updatedAt"] = mf.get("updatedAt", "")
+                all_mfs_map[(ns, k)]["createdAt"] = mf.get("createdAt", "")
+                if t:
+                    all_mfs_map[(ns, k)]["type"] = t
+            else:
+                all_mfs_map[(ns, k)] = {
+                    "id": mf_id,
+                    "numeric_id": num_id,
+                    "definition_id": "",
+                    "namespace": ns,
+                    "key": k,
+                    "name": f"{ns}.{k}",
+                    "type": t or "single_line_text_field",
+                    "value": val_str,
+                    "has_value": bool(val_str.strip()),
+                    "description": mf.get("description") or "",
+                    "updatedAt": mf.get("updatedAt", ""),
+                    "createdAt": mf.get("createdAt", "")
+                }
+
+        mfs = list(all_mfs_map.values())
+        # Sắp xếp: trường có value lên trước, sau đó theo namespace, key
+        mfs.sort(key=lambda x: (0 if x["has_value"] else 1, x["namespace"], x["key"]))
+        
         prod_node["metafields_list"] = mfs
         prod_node["metafields_count"] = len(mfs)
+        prod_node["assigned_count"] = sum(1 for m in mfs if m["has_value"])
+        prod_node["empty_count"] = sum(1 for m in mfs if not m["has_value"])
         prod_node["found_in_store"] = found_store
         
         c_info = get_shopify_client(store_type=found_store)
@@ -15797,90 +16966,115 @@ async def api_lookup_product_metafields(
         return prod_node
 
     try:
-        # Trường hợp tìm theo ID
-        if q_type == "id":
-            full_id = f"gid://shopify/Product/{val}"
-            for s_type in stores_to_check:
-                try:
-                    client = get_shopify_client(store_type=s_type)
-                    res = execute_shopify_graphql(client, query_by_id, variables={"id": full_id})
-                    prod = (res or {}).get("data", {}).get("product")
-                    if prod:
-                        formatted = format_product_node(prod, s_type)
-                        return JSONResponse({
-                            "success": True,
-                            "query_type": "id",
-                            "searched_value": val,
-                            "found_in_store": s_type,
-                            "product": formatted
-                        })
-                except Exception as ex_store:
-                    print(f"Lỗi khi tra cứu store {s_type} cho ID {val}: {ex_store}")
-                    continue
+        # TRƯỜNG HỢP 1: Tra cứu theo HANDLE (Ưu tiên tuyệt đối Store hiện tại)
+        if q_type == "handle":
+            # 1. Tìm trên store hiện tại trước
+            try:
+                client = get_shopify_client(store_type=norm_current_store)
+                res = execute_shopify_graphql(client, query_by_handle, variables={"handle": val})
+                prod = (res or {}).get("data", {}).get("productByHandle")
+                defs = (res or {}).get("data", {}).get("metafieldDefinitions", {}).get("edges", [])
+                if prod:
+                    formatted = format_product_node(prod, norm_current_store, defs)
+                    return JSONResponse({
+                        "success": True,
+                        "query_type": "handle",
+                        "searched_value": val,
+                        "found_in_store": norm_current_store,
+                        "product": formatted
+                    })
+            except Exception as e_cur:
+                print(f"Lỗi tìm kiếm handle trên {norm_current_store}: {e_cur}")
 
-            return JSONResponse({
-                "success": False,
-                "message": f"Không tìm thấy sản phẩm có ID '{val}' trên cả Store Mặc Định và Store Riêng."
-            }, status_code=404)
-
-        # Trường hợp tìm theo Handle
-        else:
-            for s_type in stores_to_check:
-                try:
-                    client = get_shopify_client(store_type=s_type)
-                    res = execute_shopify_graphql(client, query_by_handle, variables={"handle": val})
-                    prod = (res or {}).get("data", {}).get("productByHandle")
-                    if prod:
-                        formatted = format_product_node(prod, s_type)
-                        return JSONResponse({
-                            "success": True,
-                            "query_type": "handle",
-                            "searched_value": val,
-                            "found_in_store": s_type,
-                            "product": formatted
-                        })
-                    
-                    # Fallback query qua filter handle:val
-                    res_fb = execute_shopify_graphql(client, """
-                    query searchProdByHandleQuery($q: String!) {
-                      products(first: 1, query: $q) {
-                        edges {
-                          node {
-                            id
-                            title
-                            handle
-                            status
-                            totalVariants
-                            featuredImage { url altText }
-                            metafields(first: 100) {
-                              edges {
-                                node {
-                                  id namespace key value type description updatedAt createdAt
-                                }
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                    """, variables={"q": f"handle:{val}"})
-                    edges = (res_fb or {}).get("data", {}).get("products", {}).get("edges", [])
-                    if edges and edges[0].get("node"):
-                        formatted = format_product_node(edges[0]["node"], s_type)
-                        return JSONResponse({
-                            "success": True,
-                            "query_type": "handle",
-                            "searched_value": val,
-                            "found_in_store": s_type,
-                            "product": formatted
-                        })
-                except Exception as ex_store:
-                    print(f"Lỗi khi tra cứu store {s_type} cho Handle {val}: {ex_store}")
-                    continue
+            # 2. Nếu store hiện tại không có, mới dò store còn lại
+            try:
+                client_other = get_shopify_client(store_type=other_store)
+                res_other = execute_shopify_graphql(client_other, query_by_handle, variables={"handle": val})
+                prod_other = (res_other or {}).get("data", {}).get("productByHandle")
+                defs_other = (res_other or {}).get("data", {}).get("metafieldDefinitions", {}).get("edges", [])
+                if prod_other:
+                    formatted = format_product_node(prod_other, other_store, defs_other)
+                    return JSONResponse({
+                        "success": True,
+                        "query_type": "handle",
+                        "searched_value": val,
+                        "found_in_store": other_store,
+                        "product": formatted
+                    })
+            except Exception as e_oth:
+                print(f"Lỗi tìm kiếm handle trên {other_store}: {e_oth}")
 
             return JSONResponse({
                 "success": False,
                 "message": f"Không tìm thấy sản phẩm có Handle '{val}' trên cả Store Mặc Định và Store Riêng."
+            }, status_code=404)
+
+        # TRƯỜNG HỢP 2: Tra cứu theo ID
+        else:
+            full_id = f"gid://shopify/Product/{val}"
+            # 1. Tìm trước trên store hiện tại
+            try:
+                client = get_shopify_client(store_type=norm_current_store)
+                res = execute_shopify_graphql(client, query_by_id, variables={"id": full_id})
+                prod = (res or {}).get("data", {}).get("product")
+                defs = (res or {}).get("data", {}).get("metafieldDefinitions", {}).get("edges", [])
+                if prod:
+                    formatted = format_product_node(prod, norm_current_store, defs)
+                    return JSONResponse({
+                        "success": True,
+                        "query_type": "id",
+                        "searched_value": val,
+                        "found_in_store": norm_current_store,
+                        "product": formatted
+                    })
+            except Exception as e_cur_id:
+                print(f"Lỗi tìm kiếm ID trên {norm_current_store}: {e_cur_id}")
+
+            # 2. Nếu không có trên store hiện tại, kiểm tra store còn lại
+            try:
+                client_other = get_shopify_client(store_type=other_store)
+                res_other = execute_shopify_graphql(client_other, query_by_id, variables={"id": full_id})
+                prod_other = (res_other or {}).get("data", {}).get("product")
+                defs_other = (res_other or {}).get("data", {}).get("metafieldDefinitions", {}).get("edges", [])
+                
+                if prod_other:
+                    # Nếu tìm thấy ID ở store kia, nhưng store hiện tại có sản phẩm cùng handle:
+                    # Tự động map sang sản phẩm của store hiện tại để giữ đúng ngữ cảnh store người dùng chọn!
+                    p_handle = prod_other.get("handle")
+                    if p_handle:
+                        try:
+                            client_cur = get_shopify_client(store_type=norm_current_store)
+                            res_map = execute_shopify_graphql(client_cur, query_by_handle, variables={"handle": p_handle})
+                            prod_map = (res_map or {}).get("data", {}).get("productByHandle")
+                            defs_cur = (res_map or {}).get("data", {}).get("metafieldDefinitions", {}).get("edges", [])
+                            if prod_map:
+                                formatted_map = format_product_node(prod_map, norm_current_store, defs_cur)
+                                return JSONResponse({
+                                    "success": True,
+                                    "query_type": "id_mapped_to_current_store",
+                                    "searched_value": val,
+                                    "found_in_store": norm_current_store,
+                                    "product": formatted_map,
+                                    "message": f"ID {val} thuộc {('Store Riêng' if other_store == 'custom' else 'Store Mặc Định')}. Hệ thống đã tự động chuyển sang sản phẩm tương ứng trên {('Store Riêng' if norm_current_store == 'custom' else 'Store Mặc Định')} (Handle: {p_handle})."
+                                })
+                        except Exception:
+                            pass
+
+                    # Nếu store hiện tại không có cùng handle, trả về sản phẩm của store kia
+                    formatted = format_product_node(prod_other, other_store, defs_other)
+                    return JSONResponse({
+                        "success": True,
+                        "query_type": "id",
+                        "searched_value": val,
+                        "found_in_store": other_store,
+                        "product": formatted
+                    })
+            except Exception as e_oth_id:
+                print(f"Lỗi tìm kiếm ID trên {other_store}: {e_oth_id}")
+
+            return JSONResponse({
+                "success": False,
+                "message": f"Không tìm thấy sản phẩm có ID '{val}' trên cả Store Mặc Định và Store Riêng."
             }, status_code=404)
 
     except Exception as e:
@@ -15892,7 +17086,7 @@ async def api_get_product_metafields_detail(
     product_numeric_id: str,
     store_type: str = "default"
 ):
-    """Lấy dữ liệu chi tiết của 1 sản phẩm và toàn bộ metafields của nó"""
+    """Lấy dữ liệu chi tiết của 1 sản phẩm và toàn bộ metafields (cả có giá trị và đang trống)"""
     norm_store_type = "custom" if str(store_type or "").strip().lower() == "custom" else "default"
     try:
         client_info = get_shopify_client(store_type=norm_store_type)
@@ -15911,7 +17105,7 @@ async def api_get_product_metafields_detail(
               url
               altText
             }
-            metafields(first: 65) {
+            metafields(first: 100) {
               edges {
                 node {
                   id
@@ -15923,6 +17117,20 @@ async def api_get_product_metafields_detail(
                   updatedAt
                   createdAt
                 }
+              }
+            }
+          }
+          metafieldDefinitions(ownerType: PRODUCT, first: 100) {
+            edges {
+              node {
+                id
+                name
+                namespace
+                key
+                type {
+                  name
+                }
+                description
               }
             }
           }
@@ -15939,17 +17147,79 @@ async def api_get_product_metafields_detail(
             
         p_id = prod.get("id", "")
         prod["numeric_id"] = p_id.split("/")[-1] if p_id else ""
-        
+        defs_edges = data.get("data", {}).get("metafieldDefinitions", {}).get("edges", [])
+
+        # Tổng hợp toàn bộ definitions + product metafields
+        all_mfs_map = {}
+        for d_edge in defs_edges:
+            df = d_edge.get("node", {})
+            if not df:
+                continue
+            ns = df.get("namespace", "")
+            k = df.get("key", "")
+            t_obj = df.get("type", {})
+            t_name = t_obj.get("name") if isinstance(t_obj, dict) else str(t_obj or "single_line_text_field")
+            all_mfs_map[(ns, k)] = {
+                "id": "",
+                "numeric_id": "",
+                "definition_id": df.get("id", ""),
+                "namespace": ns,
+                "key": k,
+                "name": df.get("name") or f"{ns}.{k}",
+                "type": t_name,
+                "value": "",
+                "has_value": False,
+                "description": df.get("description") or "",
+                "updatedAt": "",
+                "createdAt": ""
+            }
+
         raw_mfs = prod.get("metafields", {}).get("edges", [])
-        mfs = []
         for mf_edge in raw_mfs:
             mf = mf_edge.get("node", {})
-            if mf:
-                mf["numeric_id"] = mf.get("id", "").split("/")[-1]
-                mfs.append(mf)
-                
+            if not mf:
+                continue
+            ns = mf.get("namespace", "")
+            k = mf.get("key", "")
+            val = mf.get("value")
+            val_str = str(val) if val is not None else ""
+            t = mf.get("type", "")
+            mf_id = mf.get("id", "")
+            num_id = mf_id.split("/")[-1] if mf_id else ""
+
+            if (ns, k) in all_mfs_map:
+                all_mfs_map[(ns, k)]["value"] = val_str
+                all_mfs_map[(ns, k)]["has_value"] = bool(val_str.strip())
+                all_mfs_map[(ns, k)]["id"] = mf_id
+                all_mfs_map[(ns, k)]["numeric_id"] = num_id
+                all_mfs_map[(ns, k)]["updatedAt"] = mf.get("updatedAt", "")
+                all_mfs_map[(ns, k)]["createdAt"] = mf.get("createdAt", "")
+                if t:
+                    all_mfs_map[(ns, k)]["type"] = t
+            else:
+                all_mfs_map[(ns, k)] = {
+                    "id": mf_id,
+                    "numeric_id": num_id,
+                    "definition_id": "",
+                    "namespace": ns,
+                    "key": k,
+                    "name": f"{ns}.{k}",
+                    "type": t or "single_line_text_field",
+                    "value": val_str,
+                    "has_value": bool(val_str.strip()),
+                    "description": mf.get("description") or "",
+                    "updatedAt": mf.get("updatedAt", ""),
+                    "createdAt": mf.get("createdAt", "")
+                }
+
+        mfs = list(all_mfs_map.values())
+        mfs.sort(key=lambda x: (0 if x["has_value"] else 1, x["namespace"], x["key"]))
+        
         prod["metafields_list"] = mfs
         prod["metafields_count"] = len(mfs)
+        prod["assigned_count"] = sum(1 for m in mfs if m["has_value"])
+        prod["empty_count"] = sum(1 for m in mfs if not m["has_value"])
+        prod["found_in_store"] = norm_store_type
         
         return JSONResponse({"success": True, "product": prod})
     except Exception as e:
@@ -16181,3 +17451,184 @@ async def api_update_metafield_definition(request: Request):
 
 
 
+
+
+# ==============================================================================
+# HỆ THỐNG QUẢN LÝ DISCOUNT (DISCOUNT MANAGEMENT SYSTEM)
+# ==============================================================================
+import discount_manager_service as discount_svc
+
+@app.get("/discounts", response_class=HTMLResponse)
+async def page_discounts(request: Request, store_type: str = "default"):
+    """Trang Quản lý Discount Shopify."""
+    store_type = "custom" if str(store_type).strip().lower() == "custom" else "default"
+    return templates.TemplateResponse(
+        request=request,
+        name="discounts.html",
+        context={
+            "request": request,
+            "store_type": store_type,
+            "page_title": "Quản lý Discount"
+        }
+    )
+
+# Logger cho Discount Service
+import logging
+logger = logging.getLogger("discount_api")
+
+@app.get("/api/discounts")
+async def api_get_discounts(
+    store_type: str = "default",
+    first: int = 50,
+    after: Optional[str] = None,
+    query: Optional[str] = None
+):
+    """API lấy danh sách discounts phân trang qua cursor."""
+    if store_type not in ("default", "custom"):
+        return JSONResponse({"success": False, "message": "store_type không hợp lệ (phải là default hoặc custom)"}, status_code=400)
+    try:
+        client_info = get_shopify_client(store_type)
+        res = discount_svc.get_discounts(execute_shopify_graphql, client_info, first=first, after=after, query=query)
+        return JSONResponse({"success": True, "data": res})
+    except ProxySafetyException as pe:
+        return JSONResponse({"success": False, "code": "PROXY_ERROR", "message": str(pe)}, status_code=503)
+    except discount_svc.DiscountException as de:
+        return JSONResponse({"success": False, "code": de.code, "phase": de.phase, "message": de.message, "errors": de.errors}, status_code=400)
+    except Exception as e:
+        logger.exception("Error in api_get_discounts")
+        return JSONResponse({"success": False, "code": "INTERNAL_ERROR", "message": f"Lỗi hệ thống: {str(e)}"}, status_code=500)
+
+@app.get("/api/discounts/detail")
+async def api_get_discount_detail(id: str, store_type: str = "default"):
+    """API lấy chi tiết canonical discount."""
+    if store_type not in ("default", "custom"):
+        return JSONResponse({"success": False, "message": "store_type không hợp lệ"}, status_code=400)
+    if not id or not id.startswith("gid://shopify/"):
+        return JSONResponse({"success": False, "message": "ID discount không hợp lệ"}, status_code=400)
+    try:
+        client_info = get_shopify_client(store_type)
+        detail = discount_svc.get_discount_detail(execute_shopify_graphql, client_info, id)
+        return JSONResponse({"success": True, "discount": detail})
+    except ProxySafetyException as pe:
+        return JSONResponse({"success": False, "code": "PROXY_ERROR", "message": str(pe)}, status_code=503)
+    except discount_svc.DiscountException as de:
+        status_code = 404 if de.code == "NOT_FOUND" else 400
+        return JSONResponse({"success": False, "code": de.code, "phase": de.phase, "message": de.message, "errors": de.errors}, status_code=status_code)
+    except Exception as e:
+        logger.exception("Error in api_get_discount_detail")
+        return JSONResponse({"success": False, "code": "INTERNAL_ERROR", "message": f"Lỗi hệ thống: {str(e)}"}, status_code=500)
+
+@app.post("/api/discounts/update")
+async def api_update_discount(request: Request):
+    """API cập nhật discount dạng patch-style với optimistic concurrency check."""
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"success": False, "message": "Payload JSON không hợp lệ"}, status_code=400)
+
+    store_type = body.get("store_type", "default")
+    if store_type not in ("default", "custom"):
+        return JSONResponse({"success": False, "message": "store_type không hợp lệ"}, status_code=400)
+
+    discount_node_id = body.get("discount_node_id")
+    loaded_updated_at = body.get("loaded_updated_at")
+    changes = body.get("changes")
+
+    if not discount_node_id:
+        return JSONResponse({"success": False, "message": "Thiếu discount_node_id"}, status_code=400)
+    if not isinstance(changes, dict):
+        return JSONResponse({"success": False, "message": "changes phải là một object"}, status_code=400)
+
+    try:
+        client_info = get_shopify_client(store_type)
+        res = discount_svc.update_discount(
+            execute_shopify_graphql,
+            client_info,
+            discount_node_id=discount_node_id,
+            loaded_updated_at=loaded_updated_at,
+            changes=changes
+        )
+        return JSONResponse(res)
+    except ProxySafetyException as pe:
+        return JSONResponse({"success": False, "code": "PROXY_ERROR", "message": str(pe)}, status_code=503)
+    except discount_svc.DiscountStaleException as se:
+        return JSONResponse({
+            "success": False,
+            "code": se.code,
+            "phase": se.phase,
+            "message": se.message,
+            "refresh_required": True,
+            "errors": se.errors
+        }, status_code=409)
+    except (discount_svc.DiscountValidationException, discount_svc.DiscountUnsupportedException) as ve:
+        return JSONResponse({
+            "success": False,
+            "code": ve.code,
+            "phase": ve.phase,
+            "message": ve.message,
+            "errors": ve.errors
+        }, status_code=422)
+    except discount_svc.DiscountException as de:
+        return JSONResponse({
+            "success": False,
+            "code": de.code,
+            "phase": de.phase,
+            "message": de.message,
+            "errors": de.errors
+        }, status_code=400)
+    except Exception as e:
+        logger.exception("Error in api_update_discount")
+        return JSONResponse({"success": False, "code": "INTERNAL_ERROR", "message": f"Lỗi hệ thống: {str(e)}"}, status_code=500)
+
+
+@app.post("/api/discounts/status")
+async def api_toggle_discount_status(request: Request):
+    """API kích hoạt hoặc vô hiệu hóa discount (Activate / Deactivate)."""
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"success": False, "message": "Payload JSON không hợp lệ"}, status_code=400)
+
+    store_type = body.get("store_type", "default")
+    if store_type not in ("default", "custom"):
+        return JSONResponse({"success": False, "message": "store_type không hợp lệ"}, status_code=400)
+
+    discount_node_id = body.get("discount_node_id")
+    action = body.get("action")
+
+    if not discount_node_id or not str(discount_node_id).startswith("gid://shopify/"):
+        return JSONResponse({"success": False, "message": "ID discount không hợp lệ"}, status_code=400)
+
+    if str(action).strip().lower() not in ("activate", "deactivate"):
+        return JSONResponse({"success": False, "message": "action không hợp lệ (phải là activate hoặc deactivate)"}, status_code=400)
+
+    try:
+        client_info = get_shopify_client(store_type)
+        res = discount_svc.toggle_discount_status(
+            execute_shopify_graphql,
+            client_info,
+            discount_node_id=discount_node_id,
+            action=action
+        )
+        return JSONResponse(res)
+    except ProxySafetyException as pe:
+        return JSONResponse({"success": False, "code": "PROXY_ERROR", "message": str(pe)}, status_code=503)
+    except discount_svc.DiscountValidationException as ve:
+        return JSONResponse({
+            "success": False,
+            "code": ve.code,
+            "phase": ve.phase,
+            "message": ve.message,
+            "errors": ve.errors
+        }, status_code=422)
+    except discount_svc.DiscountException as de:
+        return JSONResponse({
+            "success": False,
+            "code": de.code,
+            "phase": de.phase,
+            "message": de.message,
+            "errors": de.errors
+        }, status_code=400)
+    except Exception as e:
+        logger.exception("Error in api_toggle_discount_status")
+        return JSONResponse({"success": False, "code": "INTERNAL_ERROR", "message": f"Lỗi hệ thống: {str(e)}"}, status_code=500)

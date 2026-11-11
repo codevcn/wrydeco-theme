@@ -3,7 +3,8 @@ from pathlib import Path
 
 import pytest
 
-from scraper.manifest import parse_manifest_payload
+from scraper.manifest import load_manifest, parse_manifest_payload
+from scraper.pipeline import _metafields_for_product
 from scraper.server import _dashboard_url, _render_doc_content, create_app, validate_run_options
 from scraper.server_control import register_server_process, unregister_server_process
 from scraper.store import OrchestratorStore, QueueConflict
@@ -76,6 +77,38 @@ def test_bootstrap_exposes_agent_state_but_no_secret_or_manual_mcp_config(tmp_pa
     assert "top-secret" not in response.get_data(as_text=True)
     assert "ANTIGRAVITY_COMMAND_JSON" not in response.get_data(as_text=True)
     assert "prompt" not in payload
+
+
+def test_dashboard_classification_is_validated_and_persisted_per_product(tmp_path):
+    root = package_root(tmp_path)
+    store = OrchestratorStore(root)
+    client = create_app(root, store=store).test_client()
+    csrf = client.get("/api/bootstrap").get_json()["csrf_token"]
+    first = {**MANIFEST["products"][0], "overrides": {"interior_style": ["Rustic", "Japandi"]}}
+    second = {"amazon_url": "https://www.amazon.com/dp/B000000001", "shopify_product_id": "124"}
+    payload = {"manifest": {"products": [first, second]}, "require_classification": True}
+
+    response = client.post("/api/runs", json=payload, headers=headers(csrf))
+    assert response.status_code == 400
+    assert "Dòng 1" in response.get_json()["error"]
+    first["overrides"]["room_type"] = ["Living Room", "Home Office & Library"]
+    second["overrides"] = {"interior_style": ["unknown"], "room_type": ["Bedroom"]}
+    response = client.post("/api/runs", json=payload, headers=headers(csrf))
+    assert response.status_code == 400
+    assert "Dòng 2" in response.get_json()["error"]
+    second["overrides"]["interior_style"] = ["Organic Modern"]
+
+    response = client.post("/api/runs", json=payload, headers=headers(csrf))
+    assert response.status_code == 201
+    run = store.run_record(response.get_json()["id"])
+    manifest = load_manifest(Path(run["manifest_snapshot_path"]))
+    for job, source in zip(manifest.products, (first, second)):
+        fields = _metafields_for_product({}, {"seo_product_title": "title"}, job, {})
+        classifications = {
+            field["key"]: json.loads(field["value"])
+            for field in fields if field["namespace"] == "custom" and field["type"] == "list.single_line_text_field"
+        }
+        assert classifications == source["overrides"]
 
 
 def test_dashboard_has_agent_startup_toast_and_event_log_scroll_control():

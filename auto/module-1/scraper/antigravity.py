@@ -281,7 +281,9 @@ class AntigravitySupervisor:
         self._turn_lock = threading.RLock()
         self._shutdown = threading.Event()
         self._session_stop = threading.Event()
+        self._startup_finished = threading.Event()
         self._health_check_requested = threading.Event()
+        self._health_check_lock = threading.Lock()
         self._thread: threading.Thread | None = None
         self._process: subprocess.Popen[str] | None = None
         self._messages: queue.Queue[tuple[str, str | None]] = queue.Queue()
@@ -343,10 +345,20 @@ class AntigravitySupervisor:
 
     def start(self) -> dict[str, Any]:
         with self._lock:
-            if self._thread and self._thread.is_alive():
+            if self._shutdown.is_set() or (self._thread and self._thread.is_alive()):
                 return self.state()
-            self.store.interrupt_agent_sessions()
+            if self._thread is None:
+                self.store.interrupt_agent_sessions()
             self._session_stop = threading.Event()
+            self._startup_finished = threading.Event()
+            self._process = None
+            self._session_id = None
+            self._worker_id = None
+            self._set_status(
+                "waiting", "Antigravity is waiting for a queued SEO/AEO task.",
+                conversation_id=None, pid=None, num_turns=0, current_product_id=None,
+                current_asin=None, started_at=None, ready_at=None, process_ready=False, last_error=None,
+            )
             self._thread = threading.Thread(target=self._supervise, daemon=True, name="scraper-antigravity")
             self._thread.start()
             return self.state()
@@ -362,11 +374,22 @@ class AntigravitySupervisor:
         return self.start()
 
     def health_check(self) -> dict[str, Any]:
-        self._health_check_requested.set()
-        try:
-            return self._health_check_locked()
-        finally:
-            self._health_check_requested.clear()
+        with self._health_check_lock:
+            self._health_check_requested.set()
+            try:
+                with self._lock:
+                    if self._thread is None:
+                        self.start()
+                    starting = self._state["status"] in {"waiting", "starting", "initializing"}
+                    startup_finished = self._startup_finished
+                if starting:
+                    if not startup_finished.wait(self.init_timeout + 10):
+                        raise AntigravityProcessError("Timed out waiting for Antigravity to initialize.")
+                    if not self.is_ready():
+                        raise AntigravityProcessError(self.state()["message"])
+                return self._health_check_locked()
+            finally:
+                self._health_check_requested.clear()
 
     def _health_check_locked(self) -> dict[str, Any]:
         with self._turn_lock:
@@ -1106,6 +1129,14 @@ class AntigravitySupervisor:
 
     def _supervise(self) -> None:
         try:
+            while not self._shutdown.is_set() and not self._session_stop.is_set():
+                if self._health_check_requested.is_set() or self.store.next_queued_content():
+                    break
+                self.store.wait_for_change(0.5)
+            with self._lock:
+                if self._shutdown.is_set() or self._session_stop.is_set():
+                    return
+                self._set_status("starting", "Starting Antigravity.")
             self._launch()
             self._run_turn(
                 self.bootstrap_prompt, purpose="bootstrap", timeout=self.init_timeout, bootstrap=True,
@@ -1116,6 +1147,7 @@ class AntigravitySupervisor:
                 "ready", "Antigravity initialized and the pipeline is unlocked.",
                 ready_at=ready_at, last_error=None,
             )
+            self._startup_finished.set()
             self._dispatch_content()
         except Exception as exc:
             if self._shutdown.is_set() or self._session_stop.is_set():
@@ -1130,7 +1162,10 @@ class AntigravitySupervisor:
                     self.store.release_claims_for_worker(worker_id, "Antigravity process stopped before finalization.")
         finally:
             self.readiness_gate.clear()
-            self._terminate_process()
+            try:
+                self._terminate_process()
+            finally:
+                self._startup_finished.set()
 
     def _terminate_process(self) -> None:
         process = self._process
@@ -1158,5 +1193,5 @@ class AntigravitySupervisor:
         worker_id = self._worker_id
         if worker_id:
             self.store.release_claims_for_worker(worker_id, "Antigravity session stopped before finalization.")
-        if mark_stopped and self._session_id:
+        if mark_stopped:
             self._set_status("stopped", "Antigravity runtime stopped.", stopped_at=utc_now())

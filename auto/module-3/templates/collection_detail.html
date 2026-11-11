@@ -56,7 +56,7 @@
                     <a target="_blank" rel="noopener noreferrer" href="/collections?store_type={{ store_type }}" class="text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 pb-0.5">Collections</a>
                     <a target="_blank" rel="noopener noreferrer" href="/metaobjects?store_type={{ store_type }}" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">MetaObjects</a>
                     <a target="_blank" rel="noopener noreferrer" href="/product-metafields?store_type={{ store_type }}" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Metafield SP</a>
-                    <a target="_blank" rel="noopener noreferrer" href="/create" class="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">Tạo sản phẩm</a>
+                    <a target="_blank" rel="noopener noreferrer" href="/create" class="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">Tạo sản phẩm mới</a>
                     <a target="_blank" rel="noopener noreferrer" href="/edit-variants" class="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">Sửa hàng loạt</a>
                     <a target="_blank" rel="noopener noreferrer" href="/blogs" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path></svg>Blog</a>
                     <a target="_blank" rel="noopener noreferrer" href="/policies" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>Policy</a>
@@ -230,7 +230,7 @@
 
                     <!-- Description -->
                     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sm:p-8 relative group">
-                        <button type="button" data-desc="{{ collection.description | escape }}" onclick="openInternalEditor('descriptionHtml', this.getAttribute('data-desc'), 'Mô tả Collection')" class="absolute top-6 right-6 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-all z-10" title="Chỉnh sửa Mô tả Collection">
+                        <button type="button" data-desc="{{ collection.description | escape }}" onclick="openInternalEditor('descriptionHtml', this.getAttribute('data-desc'), 'Mô tả Collection')" class="absolute top-6 right-6 text-indigo-600 hover:text-indigo-800 bg-indigo-50/80 hover:bg-indigo-100 border border-indigo-200/80 p-2 rounded-lg transition-all z-10 shadow-2xs cursor-pointer" title="Chỉnh sửa Mô tả Collection">
                             <iconify-icon icon="mdi:pencil-outline" class="text-xl"></iconify-icon>
                         </button>
                         <h2 class="text-xl font-bold text-gray-800 mb-4 border-b border-gray-100 pb-3 flex items-center gap-2">
@@ -404,19 +404,28 @@
                                         </div>
                                         <span class="text-sm font-bold text-gray-800">Collection Buying Guide</span>
                                     </div>
-                                    {% if collection.metafields and collection.metafields.buying_guide.has_value %}
-                                    <span class="inline-flex items-center gap-1 text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80 px-2 py-0.5 rounded-full">
-                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                                        {{ collection.metafields.buying_guide.kb_size }} KB
-                                    </span>
-                                    {% else %}
-                                    <span class="text-[11px] font-medium bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
-                                        Chưa có dữ liệu
-                                    </span>
-                                    {% endif %}
+                                    <div class="flex items-center gap-2">
+                                        {% if collection.metafields and collection.metafields.buying_guide.has_value %}
+                                        <span class="inline-flex items-center gap-1 text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80 px-2 py-0.5 rounded-full">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                            {{ collection.metafields.buying_guide.kb_size }} KB
+                                        </span>
+                                        {% else %}
+                                        <span class="text-[11px] font-medium bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+                                            Chưa có dữ liệu
+                                        </span>
+                                        {% endif %}
+                                        <button type="button" onclick="openBuyingGuideEditorModal()" class="inline-flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-white hover:bg-indigo-50 border border-indigo-200 hover:border-indigo-300 px-2.5 py-1 rounded-lg transition-all shadow-2xs cursor-pointer" title="Chỉnh sửa nội dung Buying Guide">
+                                            <iconify-icon icon="mdi:pencil-outline" class="text-sm"></iconify-icon>
+                                            <span>Chỉnh sửa</span>
+                                        </button>
+                                    </div>
                                 </div>
-                                <div class="text-[11px] text-gray-400 font-mono mb-3 pl-9">
-                                    custom.buying_guide <span class="text-gray-300">•</span> multi_line_text_field
+                                <div class="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-indigo-700 bg-indigo-50/90 border border-indigo-200 px-2.5 py-1 rounded-lg mb-3 ml-9 shadow-2xs">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                                    <span>custom.buying_guide</span>
+                                    <span class="text-indigo-300">•</span>
+                                    <span class="text-indigo-900 font-semibold text-[11px]">multi_line_text_field</span>
                                 </div>
 
                                 {% if collection.metafields and collection.metafields.buying_guide.has_value %}
@@ -445,18 +454,27 @@
                                         </div>
                                         <span class="text-sm font-bold text-gray-800">Related Collection</span>
                                     </div>
-                                    {% if collection.metafields and collection.metafields.related_collections.has_value %}
-                                    <span class="inline-flex items-center gap-1 text-[11px] font-semibold bg-teal-50 text-teal-700 border border-teal-200/80 px-2 py-0.5 rounded-full">
-                                        {{ collection.metafields.related_collections.count }} collections
-                                    </span>
-                                    {% else %}
-                                    <span class="text-[11px] font-medium bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
-                                        0 collection
-                                    </span>
-                                    {% endif %}
+                                    <div class="flex items-center gap-2">
+                                        {% if collection.metafields and collection.metafields.related_collections.has_value %}
+                                        <span class="inline-flex items-center gap-1 text-[11px] font-semibold bg-teal-50 text-teal-700 border border-teal-200/80 px-2 py-0.5 rounded-full">
+                                            {{ collection.metafields.related_collections.count }} collections
+                                        </span>
+                                        {% else %}
+                                        <span class="text-[11px] font-medium bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+                                            0 collection
+                                        </span>
+                                        {% endif %}
+                                        <button type="button" onclick="openRelatedCollectionsModal()" class="inline-flex items-center gap-1 text-xs font-bold text-teal-600 hover:text-teal-800 bg-white hover:bg-teal-50 border border-teal-200 hover:border-teal-300 px-2.5 py-1 rounded-lg transition-all shadow-2xs cursor-pointer" title="Chỉnh sửa danh sách Related Collections">
+                                            <iconify-icon icon="mdi:pencil-outline" class="text-sm"></iconify-icon>
+                                            <span>Chỉnh sửa</span>
+                                        </button>
+                                    </div>
                                 </div>
-                                <div class="text-[11px] text-gray-400 font-mono mb-3 pl-9">
-                                    custom.related_collections <span class="text-gray-300">•</span> list.collection_reference
+                                <div class="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-teal-700 bg-teal-50/90 border border-teal-200 px-2.5 py-1 rounded-lg mb-3 ml-9 shadow-2xs">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-teal-500"></span>
+                                    <span>custom.related_collections</span>
+                                    <span class="text-teal-300">•</span>
+                                    <span class="text-teal-900 font-semibold text-[11px]">list.collection_reference</span>
                                 </div>
 
                                 {% if collection.metafields and collection.metafields.related_collections.has_value %}
@@ -1210,6 +1228,159 @@
         </div>
     </div>
 
+    <!-- Buying Guide Editor Modal (Chỉnh sửa nội dung Buying Guide & Nút Chuyển thành 1 hàng đơn) -->
+    <div id="buyingGuideEditorModal" class="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-6 hidden cursor-pointer" onclick="if(event.target === this) closeBuyingGuideEditorModal()">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl relative z-10 overflow-hidden flex flex-col border border-gray-100 cursor-default" style="max-height: 90vh;" onclick="event.stopPropagation()">
+            <!-- Header -->
+            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-gray-50 via-indigo-50/30 to-white">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-md">
+                        <iconify-icon icon="mdi:book-open-page-variant-outline" class="text-xl"></iconify-icon>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2.5">
+                            <h3 class="text-base sm:text-lg font-bold text-gray-900">Chỉnh sửa Collection Buying Guide</h3>
+                            <span class="text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-full">custom.buying_guide</span>
+                        </div>
+                        <p class="text-xs text-gray-500 font-medium mt-0.5">Nội dung cẩm nang mua hàng chuẩn SEO HTML render tại storefront</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeBuyingGuideEditorModal()" class="text-gray-400 hover:text-gray-700 hover:bg-gray-100 p-2 rounded-lg transition-colors cursor-pointer" title="Đóng">
+                    <iconify-icon icon="mdi:close" class="text-2xl"></iconify-icon>
+                </button>
+            </div>
+
+            <!-- Toolbar -->
+            <div class="px-6 py-3 bg-gray-50/80 border-b border-gray-200/80 flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-2">
+                    <!-- Nút Chuyển thành 1 hàng đơn -->
+                    <button type="button" 
+                            onclick="convertBuyingGuideToSingleLine()" 
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-lg text-xs font-bold transition-all shadow-2xs hover:shadow-xs cursor-pointer group"
+                            title="Xóa toàn bộ ký tự xuống dòng và gom các khoảng trắng liên tiếp thành 1 hàng text duy nhất">
+                        <iconify-icon icon="mdi:format-line-spacing" class="text-base text-amber-600 group-hover:scale-110 transition-transform"></iconify-icon>
+                        <span>Chuyển thành 1 hàng đơn</span>
+                    </button>
+
+                    <!-- Nút Copy -->
+                    <button type="button" 
+                            onclick="copyBuyingGuideEditorText()" 
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-lg text-xs font-semibold transition-all shadow-2xs cursor-pointer">
+                        <iconify-icon icon="mdi:content-copy" class="text-sm text-gray-500"></iconify-icon>
+                        <span id="copy-bg-editor-btn-text">Copy Text</span>
+                    </button>
+                </div>
+
+                <div class="flex items-center gap-3 text-xs text-gray-500 font-medium">
+                    <span>Số ký tự: <strong id="bg-editor-char-count" class="font-mono text-gray-800 font-bold">0</strong></span>
+                    <span>•</span>
+                    <span>Dung lượng: <strong id="bg-editor-kb-size" class="font-mono text-indigo-700 font-bold">0 KB</strong></span>
+                </div>
+            </div>
+
+            <!-- Modal Body: Textarea -->
+            <div class="flex-grow overflow-y-auto p-4 sm:p-6 bg-gray-50/30">
+                <div id="buying-guide-editor-alert" class="hidden mb-4 rounded-xl p-3.5 text-xs font-semibold border shadow-2xs"></div>
+
+                <textarea id="buyingGuideEditorTextarea" 
+                          oninput="updateBuyingGuideEditorStats()" 
+                          placeholder="Dán hoặc nhập nội dung HTML Buying Guide tại đây..." 
+                          class="w-full h-[48vh] p-4 text-xs font-mono bg-white border border-gray-300 rounded-xl leading-relaxed text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 shadow-inner resize-y"></textarea>
+            </div>
+
+            <!-- Footer -->
+            <div class="px-6 py-3.5 border-t border-gray-200 bg-white flex items-center justify-between">
+                <span class="text-xs text-gray-500 italic">Dữ liệu sẽ được lưu trực tiếp vào Shopify Store qua GraphQL API</span>
+                <div class="flex items-center gap-3">
+                    <button type="button" onclick="closeBuyingGuideEditorModal()" class="px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer">Hủy bỏ</button>
+                    <button type="button" id="saveBuyingGuideBtn" onclick="saveBuyingGuideContent()" class="inline-flex items-center gap-2 px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md transition-all cursor-pointer">
+                        <iconify-icon icon="mdi:content-save"></iconify-icon>
+                        <span id="save-bg-btn-text">Lưu thay đổi</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Related Collections Selector Modal (Checkbox danh sách all collections từ Store) -->
+    <div id="relatedCollectionsModal" class="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-6 hidden cursor-pointer" onclick="if(event.target === this) closeRelatedCollectionsModal()">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl relative z-10 overflow-hidden flex flex-col border border-gray-100 cursor-default" style="max-height: 90vh;" onclick="event.stopPropagation()">
+            <!-- Header -->
+            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-gray-50 via-teal-50/30 to-white">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-teal-600 flex items-center justify-center text-white shadow-md">
+                        <iconify-icon icon="mdi:link-variant" class="text-xl"></iconify-icon>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2.5">
+                            <h3 class="text-base sm:text-lg font-bold text-gray-900">Chọn Related Collections</h3>
+                            <span class="text-xs font-bold text-teal-700 bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded-full">custom.related_collections</span>
+                        </div>
+                        <p class="text-xs text-gray-500 font-medium mt-0.5">Chọn các bộ sưu tập liên quan trên Store để hiển thị slider cross-sell</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeRelatedCollectionsModal()" class="text-gray-400 hover:text-gray-700 hover:bg-gray-100 p-2 rounded-lg transition-colors cursor-pointer" title="Đóng">
+                    <iconify-icon icon="mdi:close" class="text-2xl"></iconify-icon>
+                </button>
+            </div>
+
+            <!-- Toolbar: Tìm kiếm & Chọn nhanh -->
+            <div class="px-6 py-3 bg-gray-50/80 border-b border-gray-200/80 flex flex-wrap items-center justify-between gap-3">
+                <div class="relative flex-1 min-w-[220px] max-w-md">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400">
+                        <iconify-icon icon="mdi:magnify" class="text-base"></iconify-icon>
+                    </span>
+                    <input type="text" id="relatedColSearchInput" oninput="filterRelatedCollectionsList()" placeholder="Tìm theo tên bộ sưu tập hoặc handle..." class="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 shadow-2xs">
+                </div>
+
+                <div class="flex items-center gap-3 text-xs font-semibold">
+                    <div class="flex items-center gap-2 text-gray-500">
+                        <span>Đã chọn: <strong id="related-selected-counter" class="text-teal-700 font-bold font-mono">0</strong> collections</span>
+                    </div>
+                    <div class="flex items-center gap-1.5 border-l border-gray-200 pl-3">
+                        <button type="button" onclick="toggleSelectAllRelated(true)" class="px-2.5 py-1 text-teal-700 hover:bg-teal-50 rounded-md transition-colors cursor-pointer">Chọn tất cả</button>
+                        <span class="text-gray-300">•</span>
+                        <button type="button" onclick="toggleSelectAllRelated(false)" class="px-2.5 py-1 text-gray-500 hover:bg-gray-100 rounded-md transition-colors cursor-pointer">Bỏ chọn</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Body: Danh sách collections checkbox -->
+            <div class="flex-grow overflow-y-auto p-4 sm:p-6 bg-gray-50/30">
+                <div id="related-collections-alert" class="hidden mb-4 rounded-xl p-3.5 text-xs font-semibold border shadow-2xs"></div>
+
+                <!-- Loading State -->
+                <div id="related-cols-loading" class="flex flex-col items-center justify-center py-16 text-center">
+                    <iconify-icon icon="mdi:loading" class="animate-spin text-3xl text-teal-600 mb-3"></iconify-icon>
+                    <p class="text-xs font-semibold text-gray-600">Đang tải danh sách collections từ store...</p>
+                    <p class="text-[11px] text-gray-400 mt-1">Đang đồng bộ dữ liệu theo store đang chọn</p>
+                </div>
+
+                <!-- Collections Grid / List -->
+                <div id="related-cols-grid" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <!-- Sẽ được render tự động qua JS -->
+                </div>
+
+                <!-- Empty Search Result -->
+                <div id="related-cols-empty" class="hidden text-center py-12 text-gray-400 text-xs italic">
+                    Không tìm thấy collection nào phù hợp với từ khóa tìm kiếm.
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="px-6 py-3.5 border-t border-gray-200 bg-white flex items-center justify-between">
+                <span class="text-xs text-gray-500 italic">Metafield lưu mảng GID list.collection_reference</span>
+                <div class="flex items-center gap-3">
+                    <button type="button" onclick="closeRelatedCollectionsModal()" class="px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer">Hủy bỏ</button>
+                    <button type="button" id="saveRelatedColsBtn" onclick="saveRelatedCollectionsSelection()" class="inline-flex items-center gap-2 px-5 py-2 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-md transition-all cursor-pointer">
+                        <iconify-icon icon="mdi:content-save"></iconify-icon>
+                        <span id="save-rel-btn-text">Lưu thay đổi</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Buying Guide Modal -->
     <div id="buyingGuideModal" class="fixed inset-0 z-[100] flex items-center justify-center hidden">
         <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" onclick="closeBuyingGuideModal()"></div>
@@ -1270,6 +1441,360 @@
     </div>
 
     <script>
+
+                // =========================================================================
+        // 1. BUYING GUIDE EDITOR MODAL LOGIC & SINGLE LINE CONVERTER
+        // =========================================================================
+        const currentBuyingGuideValue = {{ (collection.metafields.buying_guide.value if collection and collection.metafields and collection.metafields.buying_guide else "") | tojson }};
+
+        function openBuyingGuideEditorModal() {
+            const modal = document.getElementById('buyingGuideEditorModal');
+            const textarea = document.getElementById('buyingGuideEditorTextarea');
+            const alertBox = document.getElementById('buying-guide-editor-alert');
+            
+            if (alertBox) alertBox.className = 'hidden';
+            if (textarea) {
+                textarea.value = currentBuyingGuideValue || '';
+                updateBuyingGuideEditorStats();
+            }
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        function closeBuyingGuideEditorModal() {
+            const modal = document.getElementById('buyingGuideEditorModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function updateBuyingGuideEditorStats() {
+            const textarea = document.getElementById('buyingGuideEditorTextarea');
+            const charCountEl = document.getElementById('bg-editor-char-count');
+            const kbSizeEl = document.getElementById('bg-editor-kb-size');
+            if (!textarea) return;
+
+            const val = textarea.value || '';
+            const charCount = val.length;
+            const bytes = new Blob([val]).size;
+            const kbSize = (bytes / 1024).toFixed(1);
+
+            if (charCountEl) charCountEl.innerText = charCount.toLocaleString();
+            if (kbSizeEl) kbSizeEl.innerText = `${kbSize} KB`;
+        }
+
+        function convertBuyingGuideToSingleLine() {
+            const textarea = document.getElementById('buyingGuideEditorTextarea');
+            if (!textarea) return;
+            let val = textarea.value;
+            if (!val || !val.trim()) return;
+
+            // Xóa toàn bộ ký tự xuống dòng và khoảng trắng liên tiếp
+            val = val.replace(/[\r\n]+/g, ' ').replace(/\s{2,}/g, ' ').trim();
+            textarea.value = val;
+            updateBuyingGuideEditorStats();
+
+            // Hiệu ứng highlight thông báo thành công
+            textarea.classList.add('ring-2', 'ring-amber-400');
+            setTimeout(() => { textarea.classList.remove('ring-2', 'ring-amber-400'); }, 1200);
+
+            const alertBox = document.getElementById('buying-guide-editor-alert');
+            if (alertBox) {
+                alertBox.className = 'mb-4 rounded-xl p-3 text-xs font-semibold border bg-amber-50 text-amber-800 border-amber-200 flex items-center gap-2';
+                alertBox.innerHTML = '<iconify-icon icon="mdi:check-circle" class="text-base text-amber-600"></iconify-icon><span>Đã chuyển đổi toàn bộ nội dung thành 1 hàng đơn (Single-line)! Hãy nhấn "Lưu thay đổi" để áp dụng lên Store.</span>';
+                alertBox.classList.remove('hidden');
+            }
+        }
+
+        function copyBuyingGuideEditorText() {
+            const textarea = document.getElementById('buyingGuideEditorTextarea');
+            if (!textarea) return;
+            navigator.clipboard.writeText(textarea.value).then(() => {
+                const btnText = document.getElementById('copy-bg-editor-btn-text');
+                if (btnText) {
+                    const orig = btnText.innerText;
+                    btnText.innerText = 'Đã Copy!';
+                    setTimeout(() => { btnText.innerText = orig; }, 2000);
+                }
+            });
+        }
+
+        async function saveBuyingGuideContent() {
+            const textarea = document.getElementById('buyingGuideEditorTextarea');
+            const btn = document.getElementById('saveBuyingGuideBtn');
+            const btnText = document.getElementById('save-bg-btn-text');
+            const alertBox = document.getElementById('buying-guide-editor-alert');
+            if (!textarea) return;
+
+            const newVal = textarea.value;
+            btn.disabled = true;
+            btnText.innerText = 'Đang lưu...';
+
+            if (alertBox) {
+                alertBox.className = 'mb-4 rounded-xl p-3 text-xs font-semibold border bg-blue-50 text-blue-700 border-blue-200 flex items-center gap-2';
+                alertBox.innerHTML = '<iconify-icon icon="mdi:loading" class="animate-spin text-base"></iconify-icon><span>Đang lưu Buying Guide lên Shopify Store...</span>';
+                alertBox.classList.remove('hidden');
+            }
+
+            try {
+                const res = await fetch(`/api/collections/${collectionId}/metafield`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        key: 'buying_guide',
+                        value: newVal,
+                        store_type: currentStoreType
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    if (alertBox) {
+                        alertBox.className = 'mb-4 rounded-xl p-3 text-xs font-semibold border bg-emerald-50 text-emerald-700 border-emerald-200 flex items-center gap-2';
+                        alertBox.innerHTML = `<iconify-icon icon="mdi:check-circle" class="text-base text-emerald-600"></iconify-icon><span>${data.message || 'Đã lưu Buying Guide thành công! Đang tải lại trang...'}</span>`;
+                    }
+                    setTimeout(() => {
+                        window.location.href = `/collections/${collectionId}?store_type=${currentStoreType}`;
+                    }, 1200);
+                } else {
+                    btn.disabled = false;
+                    btnText.innerText = 'Lưu thay đổi';
+                    if (alertBox) {
+                        alertBox.className = 'mb-4 rounded-xl p-3 text-xs font-semibold border bg-red-50 text-red-700 border-red-200 flex items-center gap-2';
+                        alertBox.innerHTML = `<iconify-icon icon="mdi:alert-circle" class="text-base text-red-600"></iconify-icon><span>${data.message || 'Lỗi khi lưu dữ liệu'}</span>`;
+                    }
+                }
+            } catch (err) {
+                btn.disabled = false;
+                btnText.innerText = 'Lưu thay đổi';
+                if (alertBox) {
+                    alertBox.className = 'mb-4 rounded-xl p-3 text-xs font-semibold border bg-red-50 text-red-700 border-red-200 flex items-center gap-2';
+                    alertBox.innerHTML = `<iconify-icon icon="mdi:alert-circle" class="text-base text-red-600"></iconify-icon><span>Lỗi kết nối: ${err.message}</span>`;
+                }
+            }
+        }
+
+        // =========================================================================
+        // 2. RELATED COLLECTIONS SELECTOR MODAL LOGIC
+        // =========================================================================
+        let storeCollectionsCache = null;
+        let selectedRelatedIds = new Set([
+            {% if collection and collection.metafields and collection.metafields.related_collections and collection.metafields.related_collections.collections %}
+            {% for item in collection.metafields.related_collections.collections %}
+            "{{ item.id }}",
+            {% endfor %}
+            {% endif %}
+        ]);
+
+        async function openRelatedCollectionsModal() {
+            const modal = document.getElementById('relatedCollectionsModal');
+            if (modal) modal.classList.remove('hidden');
+
+            const alertBox = document.getElementById('related-collections-alert');
+            if (alertBox) alertBox.className = 'hidden';
+
+            // Nếu đã có cache thì render ngay, nếu chưa thì fetch
+            if (!storeCollectionsCache) {
+                await loadStoreCollectionsForModal();
+            } else {
+                renderRelatedCollectionsGrid();
+            }
+        }
+
+        function closeRelatedCollectionsModal() {
+            const modal = document.getElementById('relatedCollectionsModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        async function loadStoreCollectionsForModal() {
+            const loadingEl = document.getElementById('related-cols-loading');
+            const gridEl = document.getElementById('related-cols-grid');
+            if (loadingEl) loadingEl.classList.remove('hidden');
+            if (gridEl) gridEl.classList.add('hidden');
+
+            try {
+                const res = await fetch(`/api/all-collections-summary?store_type=${currentStoreType}`);
+                const data = await res.json();
+                if (data.success && Array.isArray(data.collections)) {
+                    storeCollectionsCache = data.collections;
+                    renderRelatedCollectionsGrid();
+                } else {
+                    showRelatedAlert('error', data.message || 'Không thể tải danh sách collections từ store');
+                }
+            } catch (err) {
+                showRelatedAlert('error', 'Lỗi kết nối khi tải collections: ' + err.message);
+            } finally {
+                if (loadingEl) loadingEl.classList.add('hidden');
+            }
+        }
+
+        function renderRelatedCollectionsGrid(filterText = '') {
+            const gridEl = document.getElementById('related-cols-grid');
+            const emptyEl = document.getElementById('related-cols-empty');
+            if (!gridEl || !storeCollectionsCache) return;
+
+            const q = (filterText || '').toLowerCase().trim();
+            const currentColId = String(collectionId).trim();
+
+            gridEl.innerHTML = '';
+            let matchCount = 0;
+
+            storeCollectionsCache.forEach(col => {
+                const colId = String(col.id).trim();
+                const title = col.title || '';
+                const handle = col.handle || '';
+                const isCurrent = (colId === currentColId);
+
+                if (q && !title.toLowerCase().includes(q) && !handle.toLowerCase().includes(q)) {
+                    return;
+                }
+                matchCount++;
+
+                const isChecked = selectedRelatedIds.has(colId);
+
+                const card = document.createElement('label');
+                card.className = `flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer select-none shadow-2xs ${
+                    isCurrent 
+                        ? 'bg-gray-100/80 border-gray-200 opacity-60 cursor-not-allowed' 
+                        : (isChecked ? 'bg-teal-50/50 border-teal-300 ring-1 ring-teal-300/50' : 'bg-white border-gray-200 hover:border-teal-300 hover:bg-gray-50/80')
+                }`;
+
+                card.innerHTML = `
+                    <input type="checkbox" 
+                           value="${colId}" 
+                           ${isChecked ? 'checked' : ''} 
+                           ${isCurrent ? 'disabled' : ''} 
+                           onchange="handleRelatedCheckboxChange(this)"
+                           class="w-4 h-4 text-teal-600 rounded border-gray-300 focus:ring-teal-500 cursor-pointer ${isCurrent ? 'opacity-50 cursor-not-allowed' : ''}">
+                    <div class="w-10 h-10 rounded-lg bg-gray-100 border border-gray-200 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                        ${col.image ? `<img src="${col.image}" alt="${title}" class="w-full h-full object-cover">` : `<iconify-icon icon="mdi:image-outline" class="text-gray-400 text-lg"></iconify-icon>`}
+                    </div>
+                    <div class="min-w-0 flex-grow">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-xs font-bold text-gray-800 truncate block">${title}</span>
+                            ${isCurrent ? '<span class="text-[10px] font-semibold bg-gray-200 text-gray-600 px-1.5 py-0.2 rounded font-sans">Hiện tại</span>' : ''}
+                        </div>
+                        <div class="flex items-center gap-1.5 text-[11px] text-gray-400 mt-0.5">
+                            <span class="font-mono text-gray-500 truncate">${handle}</span>
+                            <span>•</span>
+                            <span class="text-gray-600 font-medium">${col.products_count || 0} sp</span>
+                        </div>
+                    </div>
+                `;
+                gridEl.appendChild(card);
+            });
+
+            gridEl.classList.remove('hidden');
+            if (emptyEl) {
+                if (matchCount === 0) emptyEl.classList.remove('hidden');
+                else emptyEl.classList.add('hidden');
+            }
+
+            updateRelatedCounter();
+        }
+
+        function handleRelatedCheckboxChange(cb) {
+            const val = cb.value;
+            if (cb.checked) {
+                selectedRelatedIds.add(val);
+            } else {
+                selectedRelatedIds.delete(val);
+            }
+            updateRelatedCounter();
+
+            // Cập nhật viền card
+            const card = cb.closest('label');
+            if (card) {
+                if (cb.checked) {
+                    card.className = 'flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer select-none shadow-2xs bg-teal-50/50 border-teal-300 ring-1 ring-teal-300/50';
+                } else {
+                    card.className = 'flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer select-none shadow-2xs bg-white border-gray-200 hover:border-teal-300 hover:bg-gray-50/80';
+                }
+            }
+        }
+
+        function filterRelatedCollectionsList() {
+            const input = document.getElementById('relatedColSearchInput');
+            const q = input ? input.value : '';
+            renderRelatedCollectionsGrid(q);
+        }
+
+        function toggleSelectAllRelated(select) {
+            if (!storeCollectionsCache) return;
+            const currentIdStr = String(collectionId).trim();
+
+            storeCollectionsCache.forEach(col => {
+                const cId = String(col.id).trim();
+                if (cId !== currentIdStr) {
+                    if (select) {
+                        selectedRelatedIds.add(cId);
+                    } else {
+                        selectedRelatedIds.delete(cId);
+                    }
+                }
+            });
+
+            const input = document.getElementById('relatedColSearchInput');
+            renderRelatedCollectionsGrid(input ? input.value : '');
+        }
+
+        function updateRelatedCounter() {
+            const counterEl = document.getElementById('related-selected-counter');
+            if (counterEl) {
+                counterEl.innerText = selectedRelatedIds.size;
+            }
+        }
+
+        function showRelatedAlert(type, message) {
+            const alertBox = document.getElementById('related-collections-alert');
+            if (!alertBox) return;
+            const isErr = (type === 'error');
+            alertBox.className = `mb-4 rounded-xl p-3 text-xs font-semibold border flex items-center gap-2 ${
+                isErr ? 'bg-red-50 text-red-700 border-red-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+            }`;
+            alertBox.innerHTML = `<iconify-icon icon="${isErr ? 'mdi:alert-circle' : 'mdi:check-circle'}" class="text-base"></iconify-icon><span>${message}</span>`;
+            alertBox.classList.remove('hidden');
+        }
+
+        async function saveRelatedCollectionsSelection() {
+            const btn = document.getElementById('saveRelatedColsBtn');
+            const btnText = document.getElementById('save-rel-btn-text');
+            const alertBox = document.getElementById('related-collections-alert');
+
+            btn.disabled = true;
+            btnText.innerText = 'Đang lưu...';
+
+            if (alertBox) {
+                alertBox.className = 'mb-4 rounded-xl p-3 text-xs font-semibold border bg-blue-50 text-blue-700 border-blue-200 flex items-center gap-2';
+                alertBox.innerHTML = '<iconify-icon icon="mdi:loading" class="animate-spin text-base"></iconify-icon><span>Đang cập nhật Related Collections trên Shopify...</span>';
+                alertBox.classList.remove('hidden');
+            }
+
+            const chosenIds = Array.from(selectedRelatedIds);
+
+            try {
+                const res = await fetch(`/api/collections/${collectionId}/metafield`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        key: 'related_collections',
+                        value: chosenIds,
+                        store_type: currentStoreType
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showRelatedAlert('success', data.message || 'Đã lưu danh sách Related Collections thành công! Đang tải lại trang...');
+                    setTimeout(() => {
+                        window.location.href = `/collections/${collectionId}?store_type=${currentStoreType}`;
+                    }, 1200);
+                } else {
+                    btn.disabled = false;
+                    btnText.innerText = 'Lưu thay đổi';
+                    showRelatedAlert('error', data.message || 'Lỗi khi lưu Related Collections');
+                }
+            } catch (err) {
+                btn.disabled = false;
+                btnText.innerText = 'Lưu thay đổi';
+                showRelatedAlert('error', 'Lỗi kết nối: ' + err.message);
+            }
+        }
 
         // Buying Guide Modal Logic
         function openBuyingGuideModal() {

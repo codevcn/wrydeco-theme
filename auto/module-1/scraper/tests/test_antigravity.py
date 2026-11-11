@@ -39,7 +39,8 @@ def wait_for(predicate, timeout=5):
     raise AssertionError("condition was not reached")
 
 
-def test_one_stream_process_keeps_conversation_across_turns(tmp_path):
+@pytest.mark.parametrize("queued_before_start", [False, True])
+def test_content_demand_starts_one_control_process(tmp_path, monkeypatch, queued_before_start):
     root = make_root(tmp_path)
     fake = tmp_path / "fake_agy.py"
     fake.write_text(
@@ -63,24 +64,62 @@ for line in sys.stdin:
         commands.append(command)
         return subprocess.Popen([sys.executable, "-u", str(fake)], **kwargs)
 
+    def enqueue(store):
+        payload = {"products": [{
+            "amazon_url": "https://www.amazon.com/dp/B000000000", "shopify_product_id": "123",
+        }]}
+        manifest = parse_manifest_payload(payload, root / "manifest.json")
+        run = store.create_run(manifest, payload, {})
+        product_id = run["products"]["B000000000"]["id"]
+        workspace = store.workspace(store.product(product_id))
+        (workspace / "source.json").write_text('{"title": "Table"}', encoding="utf-8")
+        for status in ("crawling", "crawled", "price_verified"):
+            store.set_product_status(product_id, status)
+        store.enqueue_content(product_id)
+        return product_id
+
     store = OrchestratorStore(root)
+    if queued_before_start:
+        product_id = enqueue(store)
+        store = OrchestratorStore(root)
+    watcher_waiting = threading.Event()
+    wait_for_change = store.wait_for_change
+
+    def observe_wait(timeout):
+        watcher_waiting.set()
+        wait_for_change(timeout)
+
+    monkeypatch.setattr(store, "wait_for_change", observe_wait)
     gate = threading.Event()
     supervisor = AntigravitySupervisor(root, store, gate, popen_factory=popen_factory)
-    supervisor.start()
-    wait_for(supervisor.is_ready)
-    first = supervisor.state()
-    assert first["process_ready"] is True
-    assert first["model"] == DEFAULT_ANTIGRAVITY_MODEL == "Gemini 3.8 Flash (High)"
-    result = supervisor._run_turn("second", purpose="test", timeout=5)
-    assert result["conversation_id"] == first["conversation_id"] == "conversation-one"
-    assert supervisor.state()["pid"] == first["pid"]
-    assert supervisor.state()["num_turns"] == 2
-    assert len(commands) == 1
-    assert "-p" not in commands[0]
-    assert "--model" in commands[0]
-    model_idx = commands[0].index("--model")
-    assert commands[0][model_idx + 1] == "Gemini 3.8 Flash (High)"
-    supervisor.stop()
+    dispatched = []
+
+    def finish_task(task):
+        store.fail_content_automation(task["task_id"], "Finished test dispatch.", terminal=True)
+        dispatched.append(task["task_id"])
+
+    monkeypatch.setattr(supervisor, "_process_isolated_task", finish_task)
+    try:
+        supervisor.start()
+        if not queued_before_start:
+            assert watcher_waiting.wait(5)
+            assert supervisor.state()["status"] == "waiting"
+            assert commands == []
+            product_id = enqueue(store)
+        wait_for(lambda: dispatched == [product_id])
+        first = supervisor.state()
+        assert first["process_ready"] is True
+        assert first["model"] == DEFAULT_ANTIGRAVITY_MODEL == "Gemini 3.8 Flash (High)"
+        result = supervisor._run_turn("second", purpose="test", timeout=5)
+        assert result["conversation_id"] == first["conversation_id"] == "conversation-one"
+        assert supervisor.state()["pid"] == first["pid"]
+        assert supervisor.state()["num_turns"] == 2
+        assert len(commands) == 1
+        assert "-p" not in commands[0]
+        model_idx = commands[0].index("--model")
+        assert commands[0][model_idx + 1] == "Gemini 3.8 Flash (High)"
+    finally:
+        supervisor.stop()
 
 
 @pytest.mark.parametrize("content", [False, True])
@@ -152,7 +191,7 @@ def test_antigravity_config_file_read_save_and_custom_model_propagation(tmp_path
     assert supervisor.state()["model"] == "Claude Sonnet 5.5 (High)"
 
 
-def test_health_check_uses_same_conversation_and_accepts_recent_agent_time(tmp_path):
+def test_health_check_starts_idle_runtime_and_uses_bootstrapped_conversation(tmp_path):
     root = make_root(tmp_path)
     fake = tmp_path / "fake_agy_health.py"
     fake.write_text(
@@ -181,14 +220,17 @@ for line in sys.stdin:
     gate = threading.Event()
     supervisor = AntigravitySupervisor(root, store, gate, popen_factory=popen_factory)
     supervisor.start()
-    wait_for(supervisor.is_ready)
-    result = supervisor.health_check()
-    assert result["active"] is True
-    assert result["conversation_id"] == "conversation-health"
-    assert result["drift_seconds"] <= 300
-    assert supervisor.state()["num_turns"] == 2
-    assert supervisor.state()["status"] == "ready"
-    supervisor.stop()
+    try:
+        assert supervisor.state()["status"] == "waiting"
+        assert supervisor.state()["process_alive"] is False
+        result = supervisor.health_check()
+        assert result["active"] is True
+        assert result["conversation_id"] == "conversation-health"
+        assert result["drift_seconds"] <= 300
+        assert supervisor.state()["num_turns"] == 2
+        assert supervisor.state()["status"] == "ready"
+    finally:
+        supervisor.stop()
 
 
 def test_unapproved_tool_call_fails_closed_and_sensitive_log_text_is_redacted(tmp_path):

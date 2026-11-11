@@ -13,6 +13,13 @@ from .io_utils import load_json
 
 
 ASIN_RE = re.compile(r"/(?:dp|gp/product)/([A-Z0-9]{10})(?:[/?]|$)", re.IGNORECASE)
+PRODUCT_CLASSIFICATIONS = {
+    "interior_style": ("Rustic", "Japandi", "Mid-Century", "Organic Modern"),
+    "room_type": (
+        "Living Room", "Bedroom", "Kitchen & Dining", "Home Office & Library",
+        "Nursery & Kids' Room", "Entryway & Hallway", "Bathroom",
+    ),
+}
 
 
 @dataclass(frozen=True)
@@ -44,7 +51,7 @@ def extract_asin(url: str) -> str:
     return match.group(1).upper()
 
 
-def parse_manifest_payload(payload: Any, path: Path) -> Manifest:
+def parse_manifest_payload(payload: Any, path: Path, *, require_classification: bool = False) -> Manifest:
     path = path.resolve()
     if not isinstance(payload, dict) or not isinstance(payload.get("products"), list):
         raise ManifestError("Manifest root must contain a products array.")
@@ -77,6 +84,15 @@ def parse_manifest_payload(payload: Any, path: Path) -> Manifest:
         overrides = item.get("overrides") or {}
         if not isinstance(overrides, dict):
             raise ManifestError(f"products[{index}].overrides must be an object.")
+        for key, choices in PRODUCT_CLASSIFICATIONS.items():
+            if key not in overrides and not require_classification:
+                continue
+            values = overrides.get(key)
+            label = "Phong cách thiết kế" if key == "interior_style" else "Không gian phòng"
+            if not isinstance(values, list) or not values:
+                raise ManifestError(f"Dòng {index + 1} cần chọn ít nhất một mục trong {label}.")
+            if any(value not in choices for value in values) or len(set(values)) != len(values):
+                raise ManifestError(f"Dòng {index + 1} có lựa chọn {label} không hợp lệ hoặc trùng lặp.")
         jobs.append(ProductJob(amazon_url, product_id, asin, mode, preset, overrides))
     if not jobs:
         raise ManifestError("Manifest contains no products.")

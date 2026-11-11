@@ -4,7 +4,7 @@ import paramiko
 
 sys.stdout.reconfigure(encoding='utf-8')
 
-host = '20.222.21.81'
+host = '20.89.43.225'
 user = 'azureuser'
 ssh_alias = 'wrydeco-vps'
 
