@@ -21,6 +21,7 @@ from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 
 import bulk_product_job_store as store
+from product_media_service import find_owned_import
 from product_create_service import (
     create_wrydeco_product,
     check_shopify_product_exists_by_handle,
@@ -32,6 +33,19 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(na
 
 
 def run_bulk_job_worker(
+    job_id: str,
+    worker_id: Optional[str] = None,
+    db_path: Optional[str] = None
+) -> Dict[str, Any]:
+    # The HTTP /start route and the standalone daemon can discover the same job.
+    # Acquire before recovery, which must never reset another live worker's item.
+    with store.job_execution_lock(job_id, db_path=db_path) as acquired:
+        if not acquired:
+            return {"success": False, "status": "RUNNING", "message": "Job đang được worker khác xử lý."}
+        return _run_bulk_job_worker(job_id, worker_id=worker_id, db_path=db_path)
+
+
+def _run_bulk_job_worker(
     job_id: str, 
     worker_id: Optional[str] = None, 
     db_path: Optional[str] = None
@@ -108,6 +122,11 @@ def run_bulk_job_worker(
             break
 
         item_id = item["item_id"]
+        raw_idx = item.get("item_index")
+        if raw_idx is None and ":" in str(item_id) and str(item_id).split(":")[-1].isdigit():
+            item_index = int(str(item_id).split(":")[-1])
+        else:
+            item_index = int(raw_idx) if raw_idx is not None else 0
         idempotency_key = item.get("idempotency_key") or item_id
         handle = item["handle"]
         title = item["title"]
@@ -115,6 +134,7 @@ def run_bulk_job_worker(
 
         store.append_job_event(job_id, "item_started", {
             "item_id": item_id,
+            "item_index": item_index,
             "idempotency_key": idempotency_key,
             "worker_id": worker_id,
             "handle": handle,
@@ -123,38 +143,14 @@ def run_bulk_job_worker(
 
         # 0. Strong Idempotency & Preflight Check
         # A. Kiểm tra xem sản phẩm của chính job item này đã được tạo thành công ở lần trước chưa (Strong Idempotency)
-        existing_by_custom_id = check_shopify_product_exists_by_custom_id(idempotency_key, store_type=store_type)
+        owned_import = find_owned_import(payload, store_type, db_path=db_path)
+        existing_by_custom_id = None if owned_import else check_shopify_product_exists_by_custom_id(idempotency_key, store_type=store_type)
         if existing_by_custom_id:
             logger.info(f"STRONG IDEMPOTENCY RECONCILIATION: Item {item_id} (customId: {idempotency_key}) đã tồn tại trên Shopify: {existing_by_custom_id['id']}")
-            prod_id = existing_by_custom_id.get("id") or ""
-            gid_num = prod_id.split("/")[-1] if "/" in prod_id else prod_id
-            admin_slug = "236qm8-w7" if store_type == "custom" else "wrydeco"
-            storefront_url = f"https://236qm8-w7.myshopify.com/products/{handle}" if store_type == "custom" else f"https://wrydeco.com/products/{handle}"
-            links = {
-                "shopify_admin": f"https://admin.shopify.com/store/{admin_slug}/products/{gid_num}",
-                "storefront": storefront_url,
-                "tool": f"/product/{handle}?store_type={store_type}"
-            }
-            store.update_item_status(
-                item_id=item_id,
-                status="SUCCESS",
-                product_id=prod_id,
-                links=links,
-                errors=None,
-                db_path=db_path
-            )
-            store.append_job_event(job_id, "item_succeeded", {
-                "item_id": item_id,
-                "idempotency_key": idempotency_key,
-                "handle": handle,
-                "title": title,
-                "product_id": prod_id,
-                "links": links
-            }, db_path=db_path)
-            continue
+            owned_import = {"product_id": existing_by_custom_id["id"]}
 
         # B. Kiểm tra collision handle với sản phẩm khác trên store (Business Collision Check)
-        existing_on_shopify = check_shopify_product_exists_by_handle(handle, store_type=store_type)
+        existing_on_shopify = None if owned_import else check_shopify_product_exists_by_handle(handle, store_type=store_type)
         if existing_on_shopify:
             # Nếu attempts <= 1: merchant đã có sản phẩm dùng handle này -> Reject
             if item.get("attempts", 1) <= 1:
@@ -168,8 +164,11 @@ def run_bulk_job_worker(
                 )
                 store.append_job_event(job_id, "item_failed", {
                     "item_id": item_id,
+                    "item_index": item_index,
                     "handle": handle,
                     "title": title,
+                    "error": err_msg,
+                    "error_code": "HANDLE_EXISTS",
                     "errors": err_obj
                 }, db_path=db_path)
                 logger.warning(f"Preflight Rejection: Handle '{handle}' đã tồn tại trên Shopify.")
@@ -186,8 +185,11 @@ def run_bulk_job_worker(
                 )
                 store.append_job_event(job_id, "item_failed", {
                     "item_id": item_id,
+                    "item_index": item_index,
                     "handle": handle,
                     "title": title,
+                    "error": err_msg,
+                    "error_code": "HANDLE_CONFLICT_AFTER_AMBIGUOUS_FAILURE",
                     "errors": err_obj
                 }, db_path=db_path)
                 logger.error(f"Handle Conflict: {err_msg}")
@@ -211,6 +213,7 @@ def run_bulk_job_worker(
             logger.info(f"Throttling: Điểm khả dụng ({throttle_state['currently_available']:.1f}) thấp. Tạm dừng {delay_sec:.2f}s...")
             store.append_job_event(job_id, "item_throttled", {
                 "item_id": item_id,
+                "item_index": item_index,
                 "currently_available": round(throttle_state["currently_available"], 1),
                 "wait_seconds": round(delay_sec, 2)
             }, db_path=db_path)
@@ -225,7 +228,9 @@ def run_bulk_job_worker(
 
         for attempt in range(max_transient_retries):
             try:
-                res = create_wrydeco_product(payload=payload, store_type=store_type, idempotency_key=idempotency_key)
+                resume_args = {"resume_product_id": owned_import["product_id"]} if owned_import else {}
+                res = create_wrydeco_product(payload=payload, store_type=store_type,
+                                            idempotency_key=idempotency_key, **resume_args)
                 final_result = res
 
                 # Cập nhật lại điểm throttle từ phản hồi Shopify GraphQL nếu có
@@ -272,6 +277,7 @@ def run_bulk_job_worker(
                     logger.warning(f"Shopify báo lỗi THROTTLED cho item {item_id}. Chờ {backoff_delay}s để retry...")
                     store.append_job_event(job_id, "item_throttled", {
                         "item_id": item_id,
+                        "item_index": item_index,
                         "attempt": attempt + 1,
                         "wait_seconds": backoff_delay
                     }, db_path=db_path)
@@ -292,8 +298,11 @@ def run_bulk_job_worker(
                 recovered = check_shopify_product_exists_by_custom_id(idempotency_key, store_type=store_type)
                 if recovered:
                     logger.info(f"Ambiguous commit recovered: Sản phẩm (customId: {idempotency_key}) đã được tạo trên Shopify: {recovered['id']}")
-                    item_success = True
-                    final_result = {"success": True, "product": recovered}
+                    final_result = create_wrydeco_product(
+                        payload=payload, store_type=store_type,
+                        idempotency_key=idempotency_key, resume_product_id=recovered["id"]
+                    )
+                    item_success = bool(final_result.get("success"))
                     break
 
                 # 2. Nếu không tìm thấy bằng customId, kiểm tra xem Handle có bị sản phẩm khác chiếm dụng trong lúc đứt mạng không
@@ -351,6 +360,7 @@ def run_bulk_job_worker(
             )
             store.append_job_event(job_id, "item_succeeded", {
                 "item_id": item_id,
+                "item_index": item_index,
                 "handle": handle,
                 "title": title,
                 "product_id": prod_id,
@@ -361,24 +371,39 @@ def run_bulk_job_worker(
             errors = final_result.get("errors") if final_result else [
                 {"field": "unknown", "code": "CREATION_FAILED", "message": "Không nhận được phản hồi hợp lệ"}
             ]
+            primary_err_msg = (
+                " • ".join(
+                    f"[{e.get('field')}] {e.get('message')}" if e.get("field") and e.get("field") not in ("unknown", "worker") else str(e.get("message") or "")
+                    for e in errors if e.get("message")
+                )
+                if errors else "Tạo sản phẩm thất bại"
+            )
+            primary_err_code = errors[0].get("code") if errors and isinstance(errors[0], dict) else "CREATION_FAILED"
             store.update_item_status(
                 item_id=item_id,
                 status="FAILED",
+                product_id=(final_result.get("product") or {}).get("id") if final_result else None,
                 errors=errors,
                 db_path=db_path
             )
             store.append_job_event(job_id, "item_failed", {
                 "item_id": item_id,
+                "item_index": item_index,
                 "handle": handle,
                 "title": title,
+                "product_id": (final_result.get("product") or {}).get("id") if final_result else None,
+                "error": primary_err_msg,
+                "error_code": primary_err_code,
                 "errors": errors
             }, db_path=db_path)
-            logger.warning(f"Item {item_id} ({handle}) THẤT BẠI: {errors[0].get('message') if errors else 'Lỗi không xác định'}")
+            logger.warning(f"Item {item_id} ({handle}) THẤT BẠI: {primary_err_msg}")
 
     # 4. Cập nhật trạng thái hoàn tất của Job
     final_job = store.get_job(job_id, db_path=db_path)
     finish_iso = datetime.now(timezone.utc).isoformat()
     failed_count = final_job.get("failed_items", 0)
+    success_count = final_job.get("success_items", 0)
+    total_count = final_job.get("total_items", 0)
 
     if failed_count == 0:
         final_status = "COMPLETED"
@@ -389,9 +414,13 @@ def run_bulk_job_worker(
     store.append_job_event(job_id, "job_completed", {
         "job_id": job_id,
         "status": final_status,
-        "total": final_job.get("total_items"),
-        "success": final_job.get("success_items"),
-        "failed": failed_count
+        "total": total_count,
+        "success": success_count,
+        "failed": failed_count,
+        "total_items": total_count,
+        "completed_items": success_count,
+        "success_items": success_count,
+        "failed_items": failed_count
     }, db_path=db_path)
 
     logger.info(f"Hoàn thành Bulk Job {job_id} với trạng thái {final_status} (Success: {final_job.get('success_items')}, Failed: {failed_count})")

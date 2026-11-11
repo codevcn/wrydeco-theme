@@ -60,6 +60,9 @@ try:
     if os.path.exists("product_create_service.py"):
         upload_file("product_create_service.py", f"{app_dir}/product_create_service.py")
 
+    if os.path.exists("product_media_service.py"):
+        upload_file("product_media_service.py", f"{app_dir}/product_media_service.py")
+
     # Upload bulk product creation services & worker
     if os.path.exists("bulk_product_job_store.py"):
         upload_file("bulk_product_job_store.py", f"{app_dir}/bulk_product_job_store.py")

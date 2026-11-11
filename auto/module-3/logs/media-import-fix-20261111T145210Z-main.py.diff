@@ -1,0 +1,34 @@
+--- main.py.before
++++ main.py.after
+@@ -6049,7 +6049,8 @@
+         norm_store_type = "custom" if str(target_store_type).strip().lower() == "custom" else "default"
+ 
+         # 4. Thực thi tạo sản phẩm
+-        result = product_create_service.create_wrydeco_product(
++        result = await asyncio.to_thread(
++            product_create_service.create_wrydeco_product,
+             payload=data_payload,
+             uploaded_file_tuples=file_tuples,
+             store_type=norm_store_type
+@@ -6058,7 +6059,11 @@
+         resolved_urls = result.get("resolved_media_urls") if isinstance(result, dict) else None
+ 
+         if not result["success"]:
+-            archived_payload = _enrich_archived_payload_for_storage(data_payload, resolved_media_urls=resolved_urls)
++            partial_product = result.get("product") or {}
++            partial_id = partial_product.get("id") or ""
++            partial_handle = partial_product.get("handle") or str(data_payload.get("handle") or "").strip()
++            partial_links = _build_product_create_links(partial_id, partial_handle, norm_store_type) if partial_id else None
++            archived_payload = _enrich_archived_payload_for_storage(data_payload, resolved_media_urls=resolved_urls, created_prod=partial_product)
+             err_list = result.get("errors") or []
+             try:
+                 bulk_product_job_store.save_latest_create_archive(
+@@ -6071,6 +6076,8 @@
+                         "handle": str(archived_payload.get("handle") or "").strip(),
+                         "title": str(archived_payload.get("title") or "").strip(),
+                         "status": "FAILED_VALIDATION" if result.get("phase") == "validation" else "FAILED",
++                        "product_id": partial_id or None,
++                        "links": partial_links,
+                         "errors": err_list,
+                         "payload": archived_payload
+                     }]

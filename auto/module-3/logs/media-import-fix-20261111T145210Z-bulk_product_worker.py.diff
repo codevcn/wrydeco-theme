@@ -1,0 +1,18 @@
+--- bulk_product_worker.py.before
++++ bulk_product_worker.py.after
+@@ -388,6 +388,7 @@
+             store.update_item_status(
+                 item_id=item_id,
+                 status="FAILED",
++                product_id=(final_result.get("product") or {}).get("id") if final_result else None,
+                 errors=errors,
+                 db_path=db_path
+             )
+@@ -396,6 +397,7 @@
+                 "item_index": item_index,
+                 "handle": handle,
+                 "title": title,
++                "product_id": (final_result.get("product") or {}).get("id") if final_result else None,
+                 "error": primary_err_msg,
+                 "error_code": primary_err_code,
+                 "errors": errors

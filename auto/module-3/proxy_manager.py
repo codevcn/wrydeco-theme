@@ -880,7 +880,8 @@ def execute_shopify_graphql(
     query: str, 
     variables: dict = None, 
     max_retries: int = 2,
-    timeout: int = 35
+    timeout: int = 35,
+    retry_ambiguous: bool = True
 ) -> dict:
     is_custom = bool(client_info.get("is_custom") or client_info.get("store_type") == "custom")
     proxies = client_info.get("proxies")
@@ -938,6 +939,8 @@ def execute_shopify_graphql(
             mark_proxy_unstable(str(pe))
             raise ProxySafetyException(f"CHỐT CHẶN AN TOÀN: Proxy Gateway mất kết nối trong quá trình gửi request: {str(pe)}")
         except requests.exceptions.RequestException as re_err:
+            if not retry_ambiguous:
+                raise
             if attempt == max_retries - 1:
                 if is_custom and isinstance(re_err, (requests.exceptions.Timeout, requests.exceptions.ConnectionError)):
                     mark_proxy_unstable(str(re_err))

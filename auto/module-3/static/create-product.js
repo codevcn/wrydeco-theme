@@ -30,13 +30,27 @@ const state = {
     ],
     // Key-value store lưu dữ liệu variant theo stable combination key
     variantsByKey: {},
+    // Cờ bật/tắt hiển thị các tổ hợp biến thể đã bỏ qua (Sparse Variants)
+    showDisabledVariants: false,
+    // Bộ nhớ đệm Taxonomy ID theo đường dẫn danh mục CSV
+    taxonomyCacheByPath: {},
 
     isSubmitting: false,
 
     // Quản lý sản phẩm hàng loạt (Bulk Product Creation)
     selectedBulkProducts: [], // [{ clientId, handle, title, descriptionHtml, payload, status: 'PENDING'|'RUNNING'|'SUCCESS'|'ERROR', error: null, links: null }]
     activeBulkProductId: null,
-    selectedCsvHandles: new Set()
+    selectedCsvHandles: new Set(),
+    currentBulkJobSnapshot: null,
+    bulkInlineFilter: 'all',
+    isBulkJobRunning: false,
+    bulkFallbackPollTimer: null,
+
+    // Bản lưu trữ tạo gần nhất (JSON lưu trên server)
+    latestArchiveData: null,
+    latestArchiveFilter: 'all',
+    latestArchiveSearchQuery: '',
+    pendingAuthorName: ''
 };
 
 // ==========================================
@@ -52,6 +66,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Tự động tải danh sách tác giả inline sau khi trang nạp xong
     fetchAndRenderInlineAuthors();
+
+    // Kiểm tra nếu có Bulk Job đang chạy nền thì tiếp tục lắng nghe SSE
+    checkRunningBulkJobOnLoad();
+
+    // Tải thông tin Bản lưu trữ tạo gần nhất trên server để cập nhật badge số lượng
+    refreshLatestArchiveSummary();
+
+    // Gắn sự kiện click trực tiếp cho nút xem chi tiết thiếu ở thanh dưới cùng
+    const missingBtn = document.getElementById('btn-show-missing-fields');
+    if (missingBtn) {
+        missingBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            showMissingFieldsModal();
+        });
+    }
+    const hintText = document.getElementById('submit-hint-text');
+    if (hintText) {
+        hintText.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            showMissingFieldsModal();
+        });
+    }
 
     // Setup drag and drop for local upload
     const dropzone = document.querySelector('[onclick*="device-file-input"]');
@@ -318,101 +356,274 @@ function renderOptions() {
 }
 
 /**
- * Tái tạo ma trận biến thể theo tích Descartes.
- * Sử dụng combination key ổn định dựa trên value clientId để không làm mất giá & SKU.
+ * Tính toán toàn bộ tổ hợp biến thể (Cartesian) và phân loại:
+ * - activeCombinations: Các biến thể đang bật (enabled !== false) sẽ được tạo thực tế
+ * - disabledCombinations: Các tổ hợp không bán / đã bỏ qua (enabled === false)
  */
-function rebuildVariantMatrix() {
+function getActiveVariantCombinations() {
     const validOptions = state.options.filter(o => o.name.trim() && o.values.length > 0);
-    const tbody = document.getElementById('variant-matrix-tbody');
-    const summary = document.getElementById('variant-matrix-summary');
-
     if (validOptions.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="5" class="px-4 py-8 text-center text-gray-400 text-sm">
-                    Vui lòng nhập tên tùy chọn và ít nhất 1 giá trị để tạo ma trận biến thể.
-                </td>
-            </tr>
-        `;
-        summary.textContent = '0 tùy chọn • 0 biến thể';
-        return;
+        return {
+            validOptions: [],
+            allCombinations: [],
+            activeCombinations: [],
+            disabledCombinations: []
+        };
     }
 
-    // Tính Cartesian product
     const optionArrays = validOptions.map(o => o.values.map(v => ({
         optionName: o.name,
         valueId: v.clientId,
         valueLabel: v.label
     })));
 
-    function cartesian(arrays) {
-        return arrays.reduce((acc, curr) => {
-            const res = [];
-            acc.forEach(a => {
-                curr.forEach(c => {
-                    res.push([...a, c]);
-                });
+    const allCombinations = optionArrays.reduce((acc, curr) => {
+        const res = [];
+        acc.forEach(a => {
+            curr.forEach(c => {
+                res.push([...a, c]);
             });
-            return res;
-        }, [[]]);
-    }
+        });
+        return res;
+    }, [[]]);
 
-    const combinations = cartesian(optionArrays);
-    summary.textContent = `${validOptions.length} tùy chọn • ${combinations.length} biến thể`;
+    const activeCombinations = [];
+    const disabledCombinations = [];
 
-    // Tối ưu render ma trận biến thể bằng DocumentFragment (tránh reflow lặp lại)
-    const fragment = document.createDocumentFragment();
-    const tempTbody = document.createElement('tbody');
-
-    tempTbody.innerHTML = combinations.map((comb, rowIdx) => {
-        // Sinh stable key
+    allCombinations.forEach(comb => {
         const combKey = comb.map(c => c.valueId).join('_');
-        const title = comb.map(c => c.valueLabel).join(' / ');
-
-        // Khởi tạo state cho row nếu chưa có
         if (!state.variantsByKey[combKey]) {
             state.variantsByKey[combKey] = {
+                enabled: true,
                 price: '',
                 compareAtPrice: '',
                 sku: '',
                 barcode: ''
             };
+        } else if (state.variantsByKey[combKey].enabled === undefined) {
+            state.variantsByKey[combKey].enabled = true;
         }
-        const rowData = state.variantsByKey[combKey];
 
-        const pVal = parseFloat(rowData.price);
-        const cVal = parseFloat(rowData.compareAtPrice);
-        const isCompareInvalid = (!isNaN(pVal) && !isNaN(cVal) && cVal <= pVal);
+        if (state.variantsByKey[combKey].enabled === false) {
+            disabledCombinations.push(comb);
+        } else {
+            activeCombinations.push(comb);
+        }
+    });
 
-        return `
-            <tr class="hover:bg-gray-50/70 transition-colors ${isCompareInvalid ? 'bg-red-50/40' : ''}" data-comb-key="${combKey}">
-                <td class="px-4 py-3 font-semibold text-gray-900">
-                    <span class="inline-block px-2.5 py-1 bg-gray-100 rounded-md text-sm text-gray-800 border border-gray-200">
-                        ${title}
-                    </span>
-                </td>
-                <td class="px-3 py-3">
-                    <div class="relative">
-                        <span class="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-gray-400 font-bold">$</span>
-                        <input type="number" step="0.01" min="0" value="${rowData.price}" oninput="handleVariantFieldChange('${combKey}', 'price', this.value)" placeholder="0.00" class="w-full pl-6 pr-2 py-1.5 bg-gray-50 border border-gray-300 rounded-lg text-sm font-semibold outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white">
-                    </div>
-                </td>
-                <td class="px-3 py-3">
-                    <div class="relative">
-                        <span class="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-gray-400 font-bold">$</span>
-                        <input type="number" step="0.01" min="0" value="${rowData.compareAtPrice}" oninput="handleVariantFieldChange('${combKey}', 'compareAtPrice', this.value)" placeholder="0.00" class="w-full pl-6 pr-2 py-1.5 bg-gray-50 border ${isCompareInvalid ? 'border-red-500 ring-1 ring-red-400 bg-red-50/50' : 'border-gray-300'} rounded-lg text-sm font-semibold outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white">
-                    </div>
-                    ${isCompareInvalid ? '<p class="text-sm text-red-600 font-medium mt-1">Compare-at price phải > Price</p>' : ''}
-                </td>
-                <td class="px-3 py-3">
-                    <input type="text" value="${rowData.sku}" oninput="handleVariantFieldChange('${combKey}', 'sku', this.value)" placeholder="Mã SKU..." class="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white font-mono">
-                </td>
-                <td class="px-3 py-3">
-                    <input type="text" value="${rowData.barcode}" oninput="handleVariantFieldChange('${combKey}', 'barcode', this.value)" placeholder="Mã Barcode..." class="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white font-mono">
+    return {
+        validOptions,
+        allCombinations,
+        activeCombinations,
+        disabledCombinations
+    };
+}
+
+/**
+ * Xây dựng optionsPayload (đã lọc bỏ giá trị không dùng) và variantsPayload (chỉ lấy biến thể đang bật)
+ * từ trạng thái form hiện tại — đảm bảo Single Source of Truth cho cả Single & Bulk Creation.
+ */
+function buildPrunedOptionsAndVariantsFromState() {
+    const { validOptions, activeCombinations } = getActiveVariantCombinations();
+    const usedValueIds = new Set();
+
+    const variantsPayload = activeCombinations.map(comb => {
+        const combKey = comb.map(c => c.valueId).join('_');
+        const row = state.variantsByKey[combKey] || {};
+        comb.forEach(c => usedValueIds.add(c.valueId));
+        return {
+            optionValues: comb.map(c => ({
+                optionName: c.optionName.trim(),
+                name: c.valueLabel
+            })),
+            price: String(row.price !== undefined && row.price !== null ? row.price : '').trim(),
+            compareAtPrice: String(row.compareAtPrice !== undefined && row.compareAtPrice !== null ? row.compareAtPrice : '').trim(),
+            sku: String(row.sku || '').trim(),
+            barcode: String(row.barcode || '').trim()
+        };
+    });
+
+    const optionsPayload = validOptions.map(o => ({
+        name: o.name.trim(),
+        values: o.values
+            .filter(v => usedValueIds.has(v.clientId))
+            .map(v => ({ label: v.label }))
+    })).filter(o => o.values.length > 0);
+
+    return { optionsPayload, variantsPayload };
+}
+
+/**
+ * Cập nhật trạng thái hiển thị của nút "Bỏ qua tổ hợp trống" và "Hiện/Ẩn tổ hợp đã ẩn"
+ */
+function syncVariantToolbarControls(activeCombinations, disabledCombinations) {
+    const toggleBtn = document.getElementById('btn-toggle-disabled-variants');
+    const toggleIcon = document.getElementById('toggle-disabled-variants-icon');
+    const toggleText = document.getElementById('toggle-disabled-variants-text');
+
+    if (toggleBtn && toggleText) {
+        if (disabledCombinations.length > 0) {
+            toggleBtn.classList.remove('hidden');
+            toggleBtn.classList.add('inline-flex');
+            if (state.showDisabledVariants) {
+                toggleText.textContent = `Ẩn ${disabledCombinations.length} tổ hợp không dùng`;
+                if (toggleIcon) toggleIcon.setAttribute('icon', 'mdi:eye-off-outline');
+            } else {
+                toggleText.textContent = `Hiện ${disabledCombinations.length} tổ hợp đã ẩn`;
+                if (toggleIcon) toggleIcon.setAttribute('icon', 'mdi:eye-outline');
+            }
+        } else {
+            state.showDisabledVariants = false;
+            toggleBtn.classList.add('hidden');
+            toggleBtn.classList.remove('inline-flex');
+        }
+    }
+
+    const disableEmptyBtn = document.getElementById('btn-disable-empty-variants');
+    const disableEmptyText = document.getElementById('disable-empty-variants-text');
+    if (disableEmptyBtn && disableEmptyText) {
+        let emptyActiveCount = 0;
+        activeCombinations.forEach(comb => {
+            const combKey = comb.map(c => c.valueId).join('_');
+            const row = state.variantsByKey[combKey] || {};
+            if (row.price === '' || row.price === undefined || row.price === null) {
+                emptyActiveCount++;
+            }
+        });
+        const filledCount = activeCombinations.length - emptyActiveCount;
+        if (emptyActiveCount > 0 && filledCount >= 1) {
+            disableEmptyBtn.classList.remove('hidden');
+            disableEmptyBtn.classList.add('inline-flex');
+            disableEmptyText.textContent = `Bỏ qua ${emptyActiveCount} tổ hợp trống`;
+        } else {
+            disableEmptyBtn.classList.add('hidden');
+            disableEmptyBtn.classList.remove('inline-flex');
+        }
+    }
+}
+
+/**
+ * Tái tạo ma trận biến thể (hỗ trợ Sparse / Non-exhaustive Variants).
+ * Sử dụng combination key ổn định dựa trên value clientId để không làm mất giá & SKU.
+ */
+function rebuildVariantMatrix() {
+    const tbody = document.getElementById('variant-matrix-tbody');
+    const summary = document.getElementById('variant-matrix-summary');
+    if (!tbody) return;
+
+    const {
+        validOptions,
+        allCombinations,
+        activeCombinations,
+        disabledCombinations
+    } = getActiveVariantCombinations();
+
+    if (validOptions.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="px-4 py-8 text-center text-gray-400 text-sm">
+                    Vui lòng nhập tên tùy chọn và ít nhất 1 giá trị để tạo ma trận biến thể.
                 </td>
             </tr>
         `;
-    }).join('');
+        if (summary) summary.textContent = '0 tùy chọn • 0 biến thể';
+        syncVariantToolbarControls([], []);
+        return;
+    }
+
+    if (summary) {
+        if (disabledCombinations.length > 0) {
+            summary.textContent = `${validOptions.length} tùy chọn • ${activeCombinations.length} biến thể đang bật (bỏ qua ${disabledCombinations.length} tổ hợp)`;
+        } else {
+            summary.textContent = `${validOptions.length} tùy chọn • ${activeCombinations.length} biến thể`;
+        }
+    }
+
+    syncVariantToolbarControls(activeCombinations, disabledCombinations);
+
+    const rowsToRender = state.showDisabledVariants ? allCombinations : activeCombinations;
+    const canDisableMore = activeCombinations.length > 1;
+
+    // Tối ưu render ma trận biến thể bằng DocumentFragment (tránh reflow lặp lại)
+    const fragment = document.createDocumentFragment();
+    const tempTbody = document.createElement('tbody');
+
+    if (rowsToRender.length === 0) {
+        tempTbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="px-4 py-8 text-center text-gray-500 text-sm">
+                    Tất cả tổ hợp biến thể hiện đang bị ẩn. Hãy bấm <b>"Hiện tổ hợp đã ẩn"</b> phía trên để bật lại ít nhất 1 biến thể.
+                </td>
+            </tr>
+        `;
+    } else {
+        tempTbody.innerHTML = rowsToRender.map((comb) => {
+            const combKey = comb.map(c => c.valueId).join('_');
+            const title = comb.map(c => c.valueLabel).join(' / ');
+            const rowData = state.variantsByKey[combKey];
+            const isEnabled = rowData.enabled !== false;
+
+            if (!isEnabled) {
+                return `
+                    <tr class="bg-gray-50/80 text-gray-400 transition-colors" data-comb-key="${combKey}" data-variant-enabled="false">
+                        <td class="px-4 py-2.5 font-semibold">
+                            <span class="inline-block px-2.5 py-1 bg-gray-100 rounded-md text-sm text-gray-400 line-through border border-gray-200">
+                                ${escapeHtml(title)}
+                            </span>
+                        </td>
+                        <td colspan="4" class="px-3 py-2.5 text-sm text-gray-500 italic">
+                            Tổ hợp này không bán — sẽ không tạo biến thể trên Shopify Store.
+                        </td>
+                        <td class="px-3 py-2.5 text-center">
+                            <button type="button" onclick="toggleVariantRowEnabled('${combKey}', true)" class="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white text-sm font-semibold rounded-lg border border-indigo-200 transition-colors cursor-pointer" title="Khôi phục tổ hợp này thành biến thể đang bán">
+                                <iconify-icon icon="mdi:plus-circle-outline" class="text-base"></iconify-icon>
+                                <span>Bật bán</span>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }
+
+            const pVal = parseFloat(rowData.price);
+            const cVal = parseFloat(rowData.compareAtPrice);
+            const isCompareInvalid = (!isNaN(pVal) && !isNaN(cVal) && cVal <= pVal);
+
+            return `
+                <tr class="hover:bg-gray-50/70 transition-colors ${isCompareInvalid ? 'bg-red-50/40' : ''}" data-comb-key="${combKey}" data-variant-enabled="true">
+                    <td class="px-4 py-3 font-semibold text-gray-900">
+                        <span class="inline-block px-2.5 py-1 bg-gray-100 rounded-md text-sm text-gray-800 border border-gray-200">
+                            ${escapeHtml(title)}
+                        </span>
+                    </td>
+                    <td class="px-3 py-3">
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-gray-400 font-bold">$</span>
+                            <input type="number" step="0.01" min="0" value="${rowData.price}" oninput="handleVariantFieldChange('${combKey}', 'price', this.value)" placeholder="0.00" class="w-full pl-6 pr-2 py-1.5 bg-gray-50 border border-gray-300 rounded-lg text-sm font-semibold outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white">
+                        </div>
+                    </td>
+                    <td class="px-3 py-3">
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-gray-400 font-bold">$</span>
+                            <input type="number" step="0.01" min="0" value="${rowData.compareAtPrice}" oninput="handleVariantFieldChange('${combKey}', 'compareAtPrice', this.value)" placeholder="0.00" class="w-full pl-6 pr-2 py-1.5 bg-gray-50 border ${isCompareInvalid ? 'border-red-500 ring-1 ring-red-400 bg-red-50/50' : 'border-gray-300'} rounded-lg text-sm font-semibold outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white">
+                        </div>
+                        ${isCompareInvalid ? '<p class="text-sm text-red-600 font-medium mt-1">Compare-at price phải > Price</p>' : ''}
+                    </td>
+                    <td class="px-3 py-3">
+                        <input type="text" value="${escapeHtml(rowData.sku || '')}" oninput="handleVariantFieldChange('${combKey}', 'sku', this.value)" placeholder="Mã SKU..." class="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white font-mono">
+                    </td>
+                    <td class="px-3 py-3">
+                        <input type="text" value="${escapeHtml(rowData.barcode || '')}" oninput="handleVariantFieldChange('${combKey}', 'barcode', this.value)" placeholder="Mã Barcode..." class="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white font-mono">
+                    </td>
+                    <td class="px-3 py-3 text-center">
+                        <button type="button" onclick="toggleVariantRowEnabled('${combKey}', false)" ${canDisableMore ? '' : 'disabled'} class="inline-flex items-center gap-1 px-2.5 py-1.5 text-sm font-semibold rounded-lg border transition-colors ${canDisableMore ? 'bg-gray-50 hover:bg-red-50 text-gray-600 hover:text-red-700 border-gray-200 hover:border-red-200 cursor-pointer' : 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed'}" title="${canDisableMore ? 'Bỏ qua tổ hợp này (không tạo biến thể)' : 'Sản phẩm cần tối thiểu 1 biến thể đang bật'}">
+                            <iconify-icon icon="mdi:eye-off-outline" class="text-base"></iconify-icon>
+                            <span>Bỏ qua</span>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
 
     while (tempTbody.firstChild) {
         fragment.appendChild(tempTbody.firstChild);
@@ -425,9 +636,67 @@ function rebuildVariantMatrix() {
     }
 }
 
+function toggleVariantRowEnabled(combKey, shouldEnable) {
+    const { activeCombinations } = getActiveVariantCombinations();
+    if (!shouldEnable && activeCombinations.length <= 1) {
+        showToast('Sản phẩm bắt buộc phải có ít nhất 1 biến thể đang bật.', false);
+        return;
+    }
+    if (!state.variantsByKey[combKey]) {
+        state.variantsByKey[combKey] = {
+            enabled: !!shouldEnable,
+            price: '',
+            compareAtPrice: '',
+            sku: '',
+            barcode: ''
+        };
+    } else {
+        state.variantsByKey[combKey].enabled = !!shouldEnable;
+    }
+    rebuildVariantMatrix();
+    updateValidationState();
+}
+
+function toggleShowDisabledVariants() {
+    state.showDisabledVariants = !state.showDisabledVariants;
+    rebuildVariantMatrix();
+}
+
+function disableEmptyVariants() {
+    const { activeCombinations } = getActiveVariantCombinations();
+    const emptyKeys = [];
+    activeCombinations.forEach(comb => {
+        const combKey = comb.map(c => c.valueId).join('_');
+        const row = state.variantsByKey[combKey] || {};
+        if (row.price === '' || row.price === undefined || row.price === null) {
+            emptyKeys.push(combKey);
+        }
+    });
+
+    if (emptyKeys.length === 0) return;
+    if (emptyKeys.length >= activeCombinations.length) {
+        showToast('Vui lòng điền giá cho ít nhất 1 biến thể trước khi ẩn các dòng trống.', false);
+        return;
+    }
+
+    emptyKeys.forEach(k => {
+        if (state.variantsByKey[k]) {
+            state.variantsByKey[k].enabled = false;
+        }
+    });
+    state.showDisabledVariants = false;
+    rebuildVariantMatrix();
+    updateValidationState();
+    showToast(`Đã bỏ qua ${emptyKeys.length} tổ hợp biến thể trống.`, true);
+}
+
+window.toggleVariantRowEnabled = toggleVariantRowEnabled;
+window.toggleShowDisabledVariants = toggleShowDisabledVariants;
+window.disableEmptyVariants = disableEmptyVariants;
+
 function handleVariantFieldChange(combKey, field, val) {
     if (!state.variantsByKey[combKey]) {
-        state.variantsByKey[combKey] = {};
+        state.variantsByKey[combKey] = { enabled: true };
     }
     state.variantsByKey[combKey][field] = val;
     if (field === 'price' || field === 'compareAtPrice') {
@@ -442,14 +711,22 @@ function handleVariantFieldChange(combKey, field, val) {
                 row.classList.remove('bg-red-50/40');
             }
         }
+        const { activeCombinations, disabledCombinations } = getActiveVariantCombinations();
+        syncVariantToolbarControls(activeCombinations, disabledCombinations);
     }
     updateValidationState();
 }
 
 function promptBulkPricing() {
-    const price = prompt("Nhập Giá Bán ($) cho toàn bộ các biến thể:", "129.00");
+    const { activeCombinations } = getActiveVariantCombinations();
+    if (activeCombinations.length === 0) {
+        showToast('Không có biến thể nào đang bật để điền giá.', false);
+        return;
+    }
+
+    const price = prompt("Nhập Giá Bán ($) cho toàn bộ các biến thể đang bật:", "129.00");
     if (price === null) return;
-    const compareAt = prompt("Nhập Giá So Sánh ($) cho toàn bộ các biến thể:", "159.00");
+    const compareAt = prompt("Nhập Giá So Sánh ($) cho toàn bộ các biến thể đang bật:", "159.00");
     if (compareAt === null) return;
 
     const baseSkuPrefix = prompt("Nhập tiền tố SKU (ví dụ: WRY-SHELF):", "WRY-PROD");
@@ -457,7 +734,8 @@ function promptBulkPricing() {
     let counter = 1;
     const timestamp = Date.now().toString().slice(-6);
 
-    Object.keys(state.variantsByKey).forEach(key => {
+    activeCombinations.forEach(comb => {
+        const key = comb.map(c => c.valueId).join('_');
         state.variantsByKey[key].price = price;
         state.variantsByKey[key].compareAtPrice = compareAt;
         if (baseSkuPrefix) {
@@ -595,6 +873,28 @@ async function fetchAndRenderInlineAuthors() {
         }
 
         if (badgeEl) badgeEl.textContent = `${state.authors.length} tác giả có sẵn`;
+
+        // Nếu form đang có sẵn tác giả từ Bản lưu trữ / CSV thì kiểm tra khớp trên store hiện tại
+        let resolvedAuthor = null;
+        const candidateId = (hiddenInput && hiddenInput.value) ? hiddenInput.value : state.selectedAuthorId;
+        if (candidateId) {
+            resolvedAuthor = state.authors.find(a => a.id === candidateId) || null;
+        }
+        if (!resolvedAuthor && state.pendingAuthorName) {
+            const targetName = state.pendingAuthorName.trim().toLowerCase();
+            resolvedAuthor = state.authors.find(a =>
+                String(a.name || a.displayName || '').trim().toLowerCase() === targetName ||
+                String(a.handle || '').trim().toLowerCase() === targetName
+            ) || null;
+        }
+        if (!resolvedAuthor && state.authors.length > 0) {
+            resolvedAuthor = state.authors[0];
+        }
+        if (resolvedAuthor) {
+            state.selectedAuthorId = resolvedAuthor.id;
+            state.selectedAuthorData = resolvedAuthor;
+            if (hiddenInput) hiddenInput.value = resolvedAuthor.id;
+        }
 
         // Render các thẻ card author inline
         if (containerEl) {
@@ -792,8 +1092,8 @@ function getMissingValidationFields() {
     const checkedInterior = Array.from(document.querySelectorAll('input[name="interior_style"]:checked')).map(cb => cb.value);
     const checkedRoom = Array.from(document.querySelectorAll('input[name="room_type"]:checked')).map(cb => cb.value);
 
-    // Variants validity
-    const validOptions = state.options.filter(o => o.name.trim() && o.values.length > 0);
+    // Variants validity (chỉ kiểm tra trên các biến thể đang bật — hỗ trợ Sparse Variants)
+    const { validOptions, activeCombinations } = getActiveVariantCombinations();
     let variantsValid = false;
     let variantsReason = '';
 
@@ -801,113 +1101,279 @@ function getMissingValidationFields() {
         variantsReason = 'Chưa thiết lập tùy chọn và giá trị biến thể';
     } else if (validOptions.length > 3) {
         variantsReason = 'Số lượng tùy chọn không được vượt quá 3';
+    } else if (activeCombinations.length === 0) {
+        variantsReason = 'Cần bật ít nhất 1 biến thể để bán trên Store';
+    } else if (activeCombinations.length > 2048) {
+        variantsReason = 'Số lượng biến thể đang bật vượt quá giới hạn 2048';
     } else {
-        const optionArrays = validOptions.map(o => o.values.map(v => v.clientId));
-        const combs = optionArrays.reduce((acc, curr) => {
-            const res = [];
-            acc.forEach(a => curr.forEach(c => res.push([...a, c])));
-            return res;
-        }, [[]]);
+        let allComplete = true;
+        const seenSkus = new Set();
+        const seenBarcodes = new Set();
 
-        const variantsCount = combs.length;
-        if (variantsCount === 0) {
-            variantsReason = 'Chưa có biến thể nào được tạo';
-        } else if (variantsCount > 2048) {
-            variantsReason = 'Số lượng biến thể vượt quá giới hạn 2048';
-        } else {
-            let allComplete = true;
-            for (const c of combs) {
-                const k = c.join('_');
-                const row = state.variantsByKey[k];
-                if (!row) {
-                    allComplete = false;
-                    variantsReason = 'Một số biến thể chưa được thiết lập dữ liệu';
-                    break;
-                }
-                if (!row.price || parseFloat(row.price) < 0) {
-                    allComplete = false;
-                    variantsReason = 'Giá bán biến thể chưa hợp lệ (phải >= 0)';
-                    break;
-                }
-                if (!row.compareAtPrice || parseFloat(row.compareAtPrice) <= parseFloat(row.price)) {
-                    allComplete = false;
-                    variantsReason = 'Giá so sánh phải lớn hơn Giá bán cho từng biến thể';
-                    break;
-                }
-                if (!row.sku || !row.sku.trim()) {
-                    allComplete = false;
-                    variantsReason = 'Thiếu mã SKU cho biến thể';
-                    break;
-                }
-                if (!row.barcode || !row.barcode.trim()) {
-                    allComplete = false;
-                    variantsReason = 'Thiếu Barcode cho biến thể';
-                    break;
-                }
+        for (const comb of activeCombinations) {
+            const k = comb.map(c => c.valueId).join('_');
+            const combLabel = comb.map(c => c.valueLabel).join(' / ');
+            const row = state.variantsByKey[k];
+            if (!row) {
+                allComplete = false;
+                variantsReason = `Biến thể "${combLabel}" chưa được thiết lập dữ liệu`;
+                break;
             }
-            variantsValid = allComplete;
+            const rawPrice = String(row.price !== undefined && row.price !== null ? row.price : '').trim();
+            const priceNum = parseFloat(rawPrice);
+            if (!rawPrice || isNaN(priceNum) || priceNum < 0) {
+                allComplete = false;
+                variantsReason = `Biến thể "${combLabel}": Giá bán biến thể chưa hợp lệ (phải >= 0)`;
+                break;
+            }
+            const rawCompare = String(row.compareAtPrice !== undefined && row.compareAtPrice !== null ? row.compareAtPrice : '').trim();
+            const compareNum = parseFloat(rawCompare);
+            if (!rawCompare || isNaN(compareNum) || compareNum <= priceNum) {
+                allComplete = false;
+                variantsReason = `Biến thể "${combLabel}": Giá so sánh phải lớn hơn Giá bán`;
+                break;
+            }
+            const skuVal = String(row.sku || '').trim();
+            if (!skuVal) {
+                allComplete = false;
+                variantsReason = `Biến thể "${combLabel}": Thiếu mã SKU`;
+                break;
+            }
+            if (seenSkus.has(skuVal.toLowerCase())) {
+                allComplete = false;
+                variantsReason = `Biến thể "${combLabel}": Mã SKU "${skuVal}" bị trùng lặp`;
+                break;
+            }
+            seenSkus.add(skuVal.toLowerCase());
+
+            const barcodeVal = String(row.barcode || '').trim();
+            if (!barcodeVal) {
+                allComplete = false;
+                variantsReason = `Biến thể "${combLabel}": Thiếu Barcode`;
+                break;
+            }
+            if (seenBarcodes.has(barcodeVal.toLowerCase())) {
+                allComplete = false;
+                variantsReason = `Biến thể "${combLabel}": Barcode "${barcodeVal}" bị trùng lặp`;
+                break;
+            }
+            seenBarcodes.add(barcodeVal.toLowerCase());
         }
+        variantsValid = allComplete;
     }
 
     const missing = [];
-    if (state.media.length === 0) {
-        missing.push({ label: 'Hình ảnh sản phẩm', hint: 'Thêm ít nhất 1 ảnh từ máy tính hoặc link URL', targetId: 'image-url-input' });
-    }
-    if (!title) {
-        missing.push({ label: 'Tên sản phẩm', hint: 'Nhập tên sản phẩm', targetId: 'product-title' });
-    }
-    if (!desc) {
-        missing.push({ label: 'Mô tả ngắn', hint: 'Nhập mô tả tóm tắt cho sản phẩm', targetId: 'product-desc' });
-    }
-    if (!productType) {
-        missing.push({ label: 'Loại sản phẩm (Type)', hint: 'Nhập loại sản phẩm (ví dụ: Wall Shelf, Decor...)', targetId: 'product-type' });
-    }
-    if (!categoryId) {
-        missing.push({ label: 'Danh mục (Category)', hint: 'Bấm nút "Chọn" để chọn danh mục chuẩn Shopify', targetId: 'product-category-name' });
-    }
-    if (!status) {
-        missing.push({ label: 'Trạng thái (Status)', hint: 'Chọn trạng thái Draft hoặc Active', targetId: 'product-status' });
-    }
-    if (!vendor) {
-        missing.push({ label: 'Nhà cung cấp (Vendor)', hint: 'Chọn hoặc nhập nhà cung cấp', targetId: 'product-vendor' });
-    }
-    if (state.tags.length === 0) {
-        missing.push({ label: 'Thẻ sản phẩm (Tags)', hint: 'Nhập ít nhất 1 tag và nhấn Enter', targetId: 'tagInput' });
-    }
-    if (!seoTitle) {
-        missing.push({ label: 'SEO Title', hint: 'Nhập tiêu đề trang hiển thị trên Google', targetId: 'seo-title' });
-    }
-    if (!seoDesc) {
-        missing.push({ label: 'SEO Description', hint: 'Nhập mô tả meta hiển thị trên Google', targetId: 'seo-desc' });
-    }
-    if (!authorId) {
-        missing.push({ label: 'Nghệ nhân / Tác giả', hint: 'Chọn 1 nghệ nhân chế tác từ danh sách', targetId: 'author-search-inline' });
-    }
-    if (!richDesc) {
-        missing.push({ label: 'Mô tả mở rộng (Rich Description)', hint: 'Nhập nội dung mô tả chi tiết sản phẩm', targetId: 'rich-description' });
-    }
-    if (!aeoHtml) {
-        missing.push({ label: 'Nội dung tối ưu tìm kiếm AEO', hint: 'Nhập câu hỏi/đáp và tóm tắt cho AI tìm kiếm', targetId: 'aeo-html' });
-    }
-    if (checkedInterior.length === 0) {
-        missing.push({ label: 'Phong cách nội thất (Interior Style)', hint: 'Chọn ít nhất 1 phong cách phù hợp', targetId: 'interior-style-container' });
-    }
-    if (checkedRoom.length === 0) {
-        missing.push({ label: 'Không gian phòng (Room Type)', hint: 'Chọn ít nhất 1 không gian phòng', targetId: 'room-type-container' });
-    }
-    if (!variantsValid) {
-        missing.push({ label: 'Biến thể sản phẩm', hint: variantsReason || 'Điền đầy đủ Giá bán, Giá so sánh (> Giá bán), SKU và Barcode', targetId: 'variant-matrix-tbody' });
-    }
+    const completed = [];
 
-    const completedCount = 16 - missing.length;
+    const fieldChecks = [
+        { key: 'media', valid: state.media && state.media.length > 0, label: '1. Phương tiện (Media)', hint: 'Thêm ít nhất 1 ảnh từ máy tính hoặc URL', targetId: 'image-url-input' },
+        { key: 'title', valid: !!title, label: '2. Tên sản phẩm (Title)', hint: 'Nhập tên sản phẩm', targetId: 'product-title' },
+        { key: 'desc', valid: !!desc, label: '3. Mô tả ngắn (Description)', hint: 'Nhập mô tả tóm tắt cho sản phẩm', targetId: 'product-desc' },
+        { key: 'productType', valid: !!productType, label: '4. Loại sản phẩm (Type)', hint: 'Nhập loại sản phẩm (ví dụ: wood-floor-lamp-base...)', targetId: 'product-type' },
+        { key: 'category', valid: !!categoryId, label: '5. Danh mục (Category)', hint: 'Bấm nút "Chọn" để chọn danh mục chuẩn Shopify', targetId: 'selected-category-name' },
+        { key: 'status', valid: !!status, label: '6. Trạng thái (Status)', hint: 'Chọn trạng thái Draft hoặc Active', targetId: 'product-status' },
+        { key: 'vendor', valid: !!vendor, label: '7. Nhà cung cấp (Vendor)', hint: 'Chọn hoặc nhập nhà cung cấp (mặc định: Wrydeco)', targetId: 'product-vendor' },
+        { key: 'tags', valid: state.tags && state.tags.length > 0, label: '8. Thẻ sản phẩm (Tags)', hint: 'Nhập ít nhất 1 tag và nhấn Enter', targetId: 'tag-input' },
+        { key: 'seoTitle', valid: !!seoTitle, label: '9. Tiêu đề SEO (SEO Title)', hint: 'Nhập tiêu đề trang hiển thị trên Google', targetId: 'seo-title' },
+        { key: 'seoDesc', valid: !!seoDesc, label: '10. Mô tả SEO (SEO Description)', hint: 'Nhập mô tả meta hiển thị trên Google', targetId: 'seo-desc' },
+        { key: 'author', valid: !!authorId, label: '11. Tác giả thiết kế (Author)', hint: 'Chọn 1 nghệ nhân chế tác từ danh sách', targetId: 'inline-authors-container' },
+        { key: 'richDesc', valid: !!richDesc, label: '12. Mô tả mở rộng (Rich Description)', hint: 'Nhập nội dung mô tả chi tiết sản phẩm', targetId: 'rich-description' },
+        { key: 'aeoHtml', valid: !!aeoHtml, label: '13. Nội dung tìm kiếm AI (AEO)', hint: 'Nhập câu hỏi/đáp và tóm tắt cho AI tìm kiếm', targetId: 'aeo-html' },
+        { key: 'interiorStyle', valid: checkedInterior.length > 0, label: '14. Phong cách nội thất (Interior Style)', hint: 'Chọn ít nhất 1 phong cách phù hợp', targetId: 'interior-style-container' },
+        { key: 'roomType', valid: checkedRoom.length > 0, label: '15. Không gian phòng (Room Type)', hint: 'Chọn ít nhất 1 không gian phòng', targetId: 'room-type-container' },
+        { key: 'variants', valid: variantsValid, label: '16. Biến thể sản phẩm (Variants)', hint: variantsReason || 'Điền đầy đủ Giá bán, Giá so sánh (> Giá bán), SKU và Barcode', targetId: 'variant-matrix-tbody' }
+    ];
+
+    fieldChecks.forEach(f => {
+        if (f.valid) {
+            completed.push(f);
+        } else {
+            missing.push(f);
+        }
+    });
+
+    const completedCount = completed.length;
     const isAllValid = (missing.length === 0);
 
     return {
         isAllValid,
         completedCount,
-        missing
+        missing,
+        completed
     };
 }
+
+/**
+ * Render nội dung cho Popup tự viết #missingFieldsModal (không sử dụng SweetAlert2)
+ */
+function renderMissingFieldsModalContent(valInfo) {
+    const countCompleted = valInfo.completedCount;
+    const countMissing = valInfo.missing.length;
+    const pct = Math.min(100, Math.round((countCompleted / 16) * 100));
+
+    const iconBox = document.getElementById('missing-fields-header-icon-box');
+    const iconEl = document.getElementById('missing-fields-header-icon');
+    const subtitleEl = document.getElementById('missing-fields-header-subtitle');
+    const progressBadge = document.getElementById('missing-fields-progress-badge');
+    const progressBar = document.getElementById('missing-fields-progress-bar');
+    const bodyEl = document.getElementById('missing-fields-modal-body');
+    const jumpFirstBtn = document.getElementById('btn-missing-jump-first');
+
+    if (iconBox && iconEl) {
+        if (valInfo.isAllValid) {
+            iconBox.className = 'w-11 h-11 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center shrink-0';
+            iconEl.setAttribute('icon', 'mdi:check-decagram');
+        } else {
+            iconBox.className = 'w-11 h-11 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center shrink-0';
+            iconEl.setAttribute('icon', 'mdi:clipboard-alert-outline');
+        }
+    }
+
+    if (subtitleEl) {
+        subtitleEl.textContent = valInfo.isAllValid
+            ? 'Tất cả 16 trường bắt buộc đã hợp lệ. Biểu mẫu sẵn sàng tạo sản phẩm!'
+            : `Còn ${countMissing} trường bắt buộc chưa hoàn thiện. Bấm "Điền ngay" để chuyển tới đúng trường.`;
+    }
+
+    if (progressBadge) {
+        progressBadge.textContent = `${countCompleted}/16 trường hợp lệ`;
+        progressBadge.className = valInfo.isAllValid
+            ? 'px-3 py-1 rounded-full text-sm font-bold bg-emerald-100 text-emerald-900 border border-emerald-200'
+            : 'px-3 py-1 rounded-full text-sm font-bold bg-amber-100 text-amber-900 border border-amber-200';
+    }
+
+    if (progressBar) {
+        progressBar.style.width = `${pct}%`;
+        progressBar.className = `h-2.5 rounded-full transition-all duration-300 ${valInfo.isAllValid ? 'bg-emerald-500' : 'bg-amber-500'}`;
+    }
+
+    if (jumpFirstBtn) {
+        if (countMissing > 0) {
+            jumpFirstBtn.classList.remove('hidden');
+        } else {
+            jumpFirstBtn.classList.add('hidden');
+        }
+    }
+
+    if (!bodyEl) return;
+
+    let sectionsHtml = '';
+    if (countMissing > 0) {
+        sectionsHtml += `
+            <div>
+                <h4 class="font-bold text-red-700 text-sm mb-2.5 flex items-center gap-1.5">
+                    <iconify-icon icon="mdi:alert-circle" class="text-lg"></iconify-icon>
+                    <span>Các trường chưa điền hoặc chưa hợp lệ (${countMissing}):</span>
+                </h4>
+                <div class="space-y-2.5">
+                    ${valInfo.missing.map(m => `
+                        <div class="p-3.5 bg-red-50/60 border border-red-200 rounded-xl flex items-center justify-between gap-3 hover:bg-red-50 transition-colors">
+                            <div class="min-w-0">
+                                <p class="font-bold text-red-950 text-sm">${escapeHtml(m.label)}</p>
+                                <p class="text-sm text-red-800 mt-0.5 leading-snug">${escapeHtml(m.hint)}</p>
+                            </div>
+                            <button type="button" onclick="focusFieldTarget('${m.targetId}')" class="shrink-0 px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-sm rounded-xl shadow-2xs transition-all cursor-pointer inline-flex items-center gap-1.5">
+                                <span>Điền ngay</span>
+                                <iconify-icon icon="mdi:arrow-right" class="text-base"></iconify-icon>
+                            </button>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    if (valInfo.completed && valInfo.completed.length > 0) {
+        sectionsHtml += `
+            <div>
+                <h4 class="font-bold text-emerald-800 text-sm mb-2.5 flex items-center gap-1.5">
+                    <iconify-icon icon="mdi:check-circle" class="text-lg text-emerald-600"></iconify-icon>
+                    <span>Các trường đã hoàn thành (${valInfo.completed.length}/16):</span>
+                </h4>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    ${valInfo.completed.map(c => `
+                        <button type="button" onclick="focusFieldTarget('${c.targetId}')" class="text-left p-2.5 bg-emerald-50/40 hover:bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-2 text-sm text-emerald-950 transition-colors cursor-pointer" title="Chuyển tới ${escapeHtml(c.label)}">
+                            <iconify-icon icon="mdi:check-bold" class="text-emerald-600 text-base shrink-0"></iconify-icon>
+                            <span class="font-semibold truncate">${escapeHtml(c.label)}</span>
+                        </button>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    bodyEl.innerHTML = sectionsHtml;
+}
+
+/**
+ * Hiển thị Popup Modal tự viết chi tiết 16 trường dữ liệu bắt buộc (thay thế hoàn toàn SweetAlert2)
+ */
+function showMissingFieldsModal() {
+    const valInfo = getMissingValidationFields();
+    const modal = document.getElementById('missingFieldsModal');
+    if (!modal) return;
+    renderMissingFieldsModalContent(valInfo);
+    modal.classList.remove('hidden');
+}
+
+function closeMissingFieldsModal() {
+    const modal = document.getElementById('missingFieldsModal');
+    if (modal) modal.classList.add('hidden');
+}
+
+function jumpToFirstMissingField() {
+    const valInfo = getMissingValidationFields();
+    if (valInfo.missing && valInfo.missing.length > 0) {
+        focusFieldTarget(valInfo.missing[0].targetId);
+    } else {
+        closeMissingFieldsModal();
+    }
+}
+
+let _isMissingFieldsBackdropMousedown = false;
+function handleMissingFieldsBackdropMouseDown(e) {
+    _isMissingFieldsBackdropMousedown = (e.target === e.currentTarget);
+}
+function handleMissingFieldsBackdropClick(e) {
+    if (_isMissingFieldsBackdropMousedown && e.target === e.currentTarget) {
+        closeMissingFieldsModal();
+    }
+    _isMissingFieldsBackdropMousedown = false;
+}
+
+// Export tường minh ra window để đảm bảo inline onclick luôn gọi được
+window.showMissingFieldsModal = showMissingFieldsModal;
+window.closeMissingFieldsModal = closeMissingFieldsModal;
+window.jumpToFirstMissingField = jumpToFirstMissingField;
+window.handleMissingFieldsBackdropMouseDown = handleMissingFieldsBackdropMouseDown;
+window.handleMissingFieldsBackdropClick = handleMissingFieldsBackdropClick;
+
+/**
+ * Cuộn màn hình và focus tới ô nhập dữ liệu của trường được chọn
+ */
+function focusFieldTarget(targetId) {
+    closeMissingFieldsModal();
+    setTimeout(() => {
+        let el = document.getElementById(targetId);
+        if (!el) {
+            el = document.querySelector(`[name="${targetId}"]`);
+        }
+        if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if (typeof el.focus === 'function') {
+                el.focus();
+            }
+            // Thêm viền phát sáng tạm thời
+            el.classList.add('ring-4', 'ring-amber-400', 'transition-all');
+            setTimeout(() => {
+                el.classList.remove('ring-4', 'ring-amber-400');
+            }, 2500);
+        }
+    }, 120);
+}
+
+// Export tường minh ra window
+window.focusFieldTarget = focusFieldTarget;
 
 function updateValidationState() {
     if (isBatchUpdating) return;
@@ -915,16 +1381,24 @@ function updateValidationState() {
     const valInfo = getMissingValidationFields();
     const isAllValid = valInfo.isAllValid;
     const completedCount = valInfo.completedCount;
+    const missingCount = valInfo.missing.length;
 
-    // Cập nhật Badge trên Header
-    const badge = document.getElementById('form-validation-badge');
-    if (badge) {
+    // Nếu popup Chi tiết 16 trường đang mở thì tự động cập nhật trực tiếp
+    const missingModal = document.getElementById('missingFieldsModal');
+    if (missingModal && !missingModal.classList.contains('hidden')) {
+        renderMissingFieldsModalContent(valInfo);
+    }
+
+    // Cập nhật Nút Xem chi tiết ở Footer
+    const missingBtn = document.getElementById('btn-show-missing-fields');
+    const missingBtnText = document.getElementById('missing-fields-btn-text');
+    if (missingBtn && missingBtnText) {
         if (isAllValid) {
-            badge.className = 'inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-sm font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200';
-            badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500"></span><span>Sẵn sàng: 16/16 trường hợp lệ</span>';
+            missingBtn.className = 'inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-sm font-bold rounded-lg border border-emerald-300 transition-all cursor-pointer shadow-2xs ml-1';
+            missingBtnText.textContent = 'Xem chi tiết (16/16)';
         } else {
-            badge.className = 'inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-sm font-semibold bg-amber-50 text-amber-800 border border-amber-200';
-            badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span><span>Đã hoàn thành ${completedCount}/16 trường bắt buộc</span>`;
+            missingBtn.className = 'inline-flex items-center gap-1.5 px-3 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 text-sm font-bold rounded-lg border border-amber-300 transition-all cursor-pointer shadow-2xs ml-1';
+            missingBtnText.textContent = `Xem chi tiết (${missingCount} trường thiếu)`;
         }
     }
 
@@ -1000,55 +1474,16 @@ function showErrorSection(phase, errors) {
 async function handleFormSubmit() {
     if (state.isSubmitting) return;
 
-    // Nếu đang có danh sách sản phẩm hàng loạt (> 1 sản phẩm)
-    if (state.selectedBulkProducts && state.selectedBulkProducts.length > 1) {
-        await startBulkCreationWorkflow();
+    // 0. Kiểm tra tính hợp lệ của 16 trường Single Source of Truth trên biểu mẫu hiện tại
+    const valInfo = getMissingValidationFields();
+    if (!valInfo.isAllValid) {
+        showMissingFieldsModal();
         return;
     }
 
-    // 0. Kiem tra tinh hop le cua 16 truong Single Source of Truth
-    const valInfo = getMissingValidationFields();
-    if (!valInfo.isAllValid) {
-        if (typeof Swal !== 'undefined') {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Chưa đủ điều kiện tạo sản phẩm',
-                html: `
-                    <div class="text-left text-sm text-gray-700">
-                        <p class="font-bold text-amber-800 mb-2">
-                            Bạn đã hoàn thành <b>${valInfo.completedCount}/16</b> trường bắt buộc. Còn thiếu <b>${valInfo.missing.length}</b> mục sau:
-                        </p>
-                        <ul class="list-disc pl-5 space-y-1.5 max-h-60 overflow-y-auto pr-1">
-                            ${valInfo.missing.map(m => `
-                                <li>
-                                    <strong class="text-gray-900">${escapeHtml(m.label)}:</strong> 
-                                    <span class="text-gray-600">${escapeHtml(m.hint)}</span>
-                                </li>
-                            `).join('')}
-                        </ul>
-                    </div>
-                `,
-                confirmButtonText: 'Bổ sung ngay',
-                confirmButtonColor: '#4f46e5',
-                showCancelButton: true,
-                cancelButtonText: 'Đóng',
-                cancelButtonColor: '#9ca3af',
-                customClass: {
-                    popup: '!rounded-2xl !p-6'
-                }
-            }).then((res) => {
-                if (res.isConfirmed && valInfo.missing.length > 0) {
-                    const first = valInfo.missing[0];
-                    const targetEl = document.getElementById(first.targetId) || document.querySelector(`[name="${first.targetId}"]`);
-                    if (targetEl) {
-                        targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        if (typeof targetEl.focus === 'function') targetEl.focus();
-                    }
-                }
-            });
-        } else {
-            alert(`Vui lòng hoàn thành đủ 16 trường có dấu *. Còn thiếu: ${valInfo.missing.map(m => m.label).join(', ')}`);
-        }
+    // Nếu đang có danh sách sản phẩm hàng loạt (> 1 sản phẩm)
+    if (state.selectedBulkProducts && state.selectedBulkProducts.length > 1) {
+        await startBulkCreationWorkflow();
         return;
     }
 
@@ -1058,51 +1493,22 @@ async function handleFormSubmit() {
     const desc = (document.getElementById('product-desc')?.value || '').trim();
     const productType = (document.getElementById('product-type')?.value || '').trim();
     const categoryId = (document.getElementById('selected-category-id')?.value || '').trim();
+    const categoryName = (document.getElementById('selected-category-name')?.value || state.selectedCategoryName || '').trim();
     const status = (document.getElementById('product-status')?.value || 'DRAFT').trim();
     const vendor = (document.getElementById('product-vendor')?.value || 'Wrydeco').trim();
     const seoTitle = (document.getElementById('seo-title')?.value || '').trim();
     const seoDesc = (document.getElementById('seo-desc')?.value || '').trim();
     const authorId = (document.getElementById('selected-author-id')?.value || '').trim();
+    const authorObj = (state.authors || []).find(a => a.id === authorId) || state.selectedAuthorData || null;
+    const authorName = authorObj ? String(authorObj.name || authorObj.displayName || '').trim() : '';
     const richDesc = (document.getElementById('rich-description')?.value || '').trim();
     const aeoHtml = (document.getElementById('aeo-html')?.value || '').trim();
 
     const checkedInterior = Array.from(document.querySelectorAll('input[name="interior_style"]:checked')).map(cb => cb.value);
     const checkedRoom = Array.from(document.querySelectorAll('input[name="room_type"]:checked')).map(cb => cb.value);
 
-    // Variants list mapping
-    const validOptions = state.options.filter(o => o.name.trim() && o.values.length > 0);
-    const optionArrays = validOptions.map(o => o.values.map(v => ({
-        optionName: o.name,
-        valueId: v.clientId,
-        valueLabel: v.label
-    })));
-
-    const combs = optionArrays.reduce((acc, curr) => {
-        const res = [];
-        acc.forEach(a => curr.forEach(c => res.push([...a, c])));
-        return res;
-    }, [[]]);
-
-    const variantsPayload = combs.map(comb => {
-        const combKey = comb.map(c => c.valueId).join('_');
-        const row = state.variantsByKey[combKey] || {};
-        return {
-            optionValues: comb.map(c => ({
-                optionName: c.optionName,
-                name: c.valueLabel
-            })),
-            price: row.price,
-            compareAtPrice: row.compareAtPrice,
-            sku: row.sku,
-            barcode: row.barcode
-        };
-    });
-
-    // Options payload
-    const optionsPayload = validOptions.map(o => ({
-        name: o.name,
-        values: o.values.map(v => ({ label: v.label }))
-    }));
+    // Variants & Options mapping (chỉ gửi các biến thể đang bật và giá trị option được sử dụng)
+    const { optionsPayload, variantsPayload } = buildPrunedOptionsAndVariantsFromState();
 
     // Media metadata & files
     const mediaMetadata = [];
@@ -1120,6 +1526,7 @@ async function handleFormSubmit() {
             mediaMetadata.push({
                 kind: 'device',
                 fileIndex: localFiles.length - 1,
+                fileName: m.file.name || `image_${idx + 1}`,
                 position: idx + 1
             });
         }
@@ -1132,6 +1539,7 @@ async function handleFormSubmit() {
         descriptionHtml: desc,
         productType,
         categoryId,
+        categoryName,
         status,
         vendor,
         tags: state.tags,
@@ -1140,6 +1548,7 @@ async function handleFormSubmit() {
             description: seoDesc
         },
         authorId,
+        authorName,
         richDescription: richDesc,
         aeoHtml,
         interiorStyle: checkedInterior,
@@ -1205,6 +1614,9 @@ async function handleFormSubmit() {
     dismissErrorSection();
 
     try {
+        await prepareProductImageCache([payloadObj], (done, total) => {
+            if (btnText) btnText.textContent = `Đang lưu nguồn ảnh: ${done}/${total}...`;
+        });
         const formData = new FormData();
         formData.append('payload', JSON.stringify(payloadObj));
         localFiles.forEach(f => {
@@ -1217,6 +1629,7 @@ async function handleFormSubmit() {
         });
 
         const result = await resp.json();
+        refreshLatestArchiveSummary();
 
         if (resp.ok && result.success) {
             if (btnText) btnText.textContent = 'Tạo thành công!';
@@ -1311,15 +1724,16 @@ function handleCsvFileSelected(event) {
  * Parser RFC 4180 chuẩn hóa xử lý trường có dấu nháy kép, dấu phẩy và xuống dòng bên trong trường.
  */
 function parseCSV(text) {
+    const cleanText = String(text || '').replace(/^\uFEFF/, '');
     const rows = [];
     let currentRow = [];
     let currentField = '';
     let inQuotes = false;
-    const len = text.length;
+    const len = cleanText.length;
 
     for (let i = 0; i < len; i++) {
-        const char = text[i];
-        const nextChar = (i + 1 < len) ? text[i + 1] : '';
+        const char = cleanText[i];
+        const nextChar = (i + 1 < len) ? cleanText[i + 1] : '';
 
         if (char === '"') {
             if (inQuotes && nextChar === '"') {
@@ -1436,6 +1850,45 @@ function openCsvProductSelectModal(products, fileName) {
     }
 }
 
+/**
+ * Trích xuất các dòng thực sự chứa dữ liệu biến thể từ CSV của 1 sản phẩm,
+ * tự động loại bỏ các dòng phụ chỉ chứa ảnh gallery (image-only rows chuẩn Shopify CSV).
+ */
+function extractVariantRowsFromCsv(allRows) {
+    if (!Array.isArray(allRows) || allRows.length === 0) return [];
+    return allRows.filter((r, idx) => {
+        if (idx === 0) return true;
+        const hasOptVal = !!(
+            (r['Option1 Value'] || '').trim() ||
+            (r['Option2 Value'] || '').trim() ||
+            (r['Option3 Value'] || '').trim()
+        );
+        const hasVariantFields = !!(
+            (r['Variant Price'] || '').trim() ||
+            (r['Variant SKU'] || '').trim() ||
+            (r['Variant Barcode'] || '').trim() ||
+            (r['Variant Barcodes'] || '').trim()
+        );
+        return hasOptVal || hasVariantFields;
+    });
+}
+
+/**
+ * Sinh mã Barcode dự phòng 12 chữ số ổn định (deterministic) dựa trên handle và chỉ số biến thể
+ * khi cột Variant Barcode trong CSV để trống, đảm bảo duy nhất và đồng nhất giữa Form & Bulk.
+ */
+function generateFallbackBarcode(handle, variantIdx) {
+    const str = String(handle || 'wrydeco-product').toLowerCase();
+    let hash = 2166136261;
+    for (let i = 0; i < str.length; i++) {
+        hash ^= str.charCodeAt(i);
+        hash = Math.imul(hash, 16777619);
+    }
+    const sixDigits = String((hash >>> 0) % 900000 + 100000);
+    const seqDigits = String((variantIdx || 0) + 1).padStart(3, '0');
+    return `893${sixDigits}${seqDigits}`;
+}
+
 function renderCsvProductsList(handles) {
     const listEl = document.getElementById('csv-products-list');
     if (!listEl) return;
@@ -1446,7 +1899,7 @@ function renderCsvProductsList(handles) {
         const vendor = p.firstRow['Vendor'] || 'Wrydeco';
         const type = p.firstRow['Type'] || 'General';
         const category = p.firstRow['Product Category'] || 'Uncategorized';
-        const rowCount = p.rows.length;
+        const variantCount = extractVariantRowsFromCsv(p.rows).length;
         const imgCount = p.rows.filter(r => r['Image Src'] && r['Image Src'].startsWith('http')).length;
         const isChecked = state.selectedCsvHandles.has(h);
 
@@ -1473,7 +1926,7 @@ function renderCsvProductsList(handles) {
                         </p>
                         <div class="flex items-center gap-2 mt-2">
                             <span class="px-2 py-0.5 text-sm font-semibold rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
-                                ${rowCount} biến thể/dòng
+                                ${variantCount} biến thể
                             </span>
                             <span class="px-2 py-0.5 text-sm font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
                                 ${imgCount} hình ảnh
@@ -1784,28 +2237,43 @@ async function populateProductFromCsv(handle) {
         catNameInput.value = categoryVal || 'Furniture > Shelving';
         state.selectedCategoryName = catNameInput.value;
         
-        // Gán fallback ID ban đầu để form sẵn sàng ngay
-        catIdInput.value = 'gid://shopify/TaxonomyCategory/hg-3-47';
+        const cachedTaxId = categoryVal ? state.taxonomyCacheByPath[categoryVal] : null;
+        catIdInput.value = firstRow['Product Category ID'] || cachedTaxId || 'gid://shopify/TaxonomyCategory/hg-3-47';
         state.selectedCategoryId = catIdInput.value;
 
         // Chạy ngầm tra cứu taxonomy ID ở background mà KHÔNG dùng await chặn luồng chính
-        try {
-            const parts = categoryVal.split('>');
-            const leafName = parts[parts.length - 1].trim() || 'Shelf';
-            fetch(`/api/taxonomy?search=${encodeURIComponent(leafName)}`)
-                .then(res => res.json())
-                .then(taxData => {
-                    if (taxData && taxData.nodes && taxData.nodes.length > 0) {
-                        catIdInput.value = taxData.nodes[0].id;
-                        state.selectedCategoryId = taxData.nodes[0].id;
-                        updateValidationState();
-                    }
-                })
-                .catch(err => {
-                    console.warn("Background taxonomy fetch warning:", err);
-                });
-        } catch (e) {
-            // silent catch
+        if (!firstRow['Product Category ID'] && !cachedTaxId) {
+            try {
+                const parts = categoryVal.split('>');
+                const leafName = parts[parts.length - 1].trim() || 'Shelf';
+                fetch(`/api/taxonomy?search=${encodeURIComponent(leafName)}`)
+                    .then(res => res.json())
+                    .then(taxData => {
+                        if (taxData && taxData.nodes && taxData.nodes.length > 0) {
+                            const resolvedId = taxData.nodes[0].id;
+                            catIdInput.value = resolvedId;
+                            state.selectedCategoryId = resolvedId;
+                            if (categoryVal) {
+                                state.taxonomyCacheByPath[categoryVal] = resolvedId;
+                                // Đồng bộ luôn Taxonomy ID cho các sản phẩm cùng danh mục trong Bulk Queue
+                                if (Array.isArray(state.selectedBulkProducts)) {
+                                    state.selectedBulkProducts.forEach(bp => {
+                                        const rawProd = parsedCsvProducts ? parsedCsvProducts[bp.handle] : null;
+                                        if (rawProd && rawProd.firstRow && rawProd.firstRow['Product Category'] === categoryVal && bp.payload) {
+                                            bp.payload.categoryId = resolvedId;
+                                        }
+                                    });
+                                }
+                            }
+                            updateValidationState();
+                        }
+                    })
+                    .catch(err => {
+                        console.warn("Background taxonomy fetch warning:", err);
+                    });
+            } catch (e) {
+                // silent catch
+            }
         }
     }
 
@@ -1835,16 +2303,19 @@ async function populateProductFromCsv(handle) {
     }));
     renderMediaGallery();
 
-    // 9. Biến thể (Options & Variant Matrix)
-    // Thu thập Option Names & Values
+    // 9. Biến thể (Options & Sparse Variant Matrix)
+    // Chỉ trích xuất từ các dòng thực sự chứa dữ liệu biến thể (bỏ qua dòng chỉ chứa ảnh phụ)
+    const variantRows = extractVariantRowsFromCsv(allRows);
+    state.showDisabledVariants = false;
+
     const detectedOptions = [];
     for (let optNum = 1; optNum <= 3; optNum++) {
         const optName = firstRow[`Option${optNum} Name`];
         if (optName && optName.trim()) {
             const uniqueVals = [];
-            allRows.forEach(r => {
+            variantRows.forEach(r => {
                 const val = (r[`Option${optNum} Value`] || '').trim();
-                if (val && !uniqueVals.includes(val)) {
+                if (val && !uniqueVals.some(u => u.toLowerCase() === val.toLowerCase())) {
                     uniqueVals.push(val);
                 }
             });
@@ -1877,10 +2348,11 @@ async function populateProductFromCsv(handle) {
         if (c <= p) c = Math.round(p * 1.25);
 
         state.variantsByKey[optValId] = {
+            enabled: true,
             price: p.toFixed(2),
             compareAtPrice: c.toFixed(2),
             sku: firstRow['Variant SKU'] || `WRY-${handle.toUpperCase().slice(0, 8)}-1`,
-            barcode: firstRow['Variant Barcodes'] || `8935${Date.now().toString().slice(-6)}01`
+            barcode: firstRow['Variant Barcode'] || firstRow['Variant Barcodes'] || generateFallbackBarcode(handle, 0)
         };
     } else {
         // Thiết lập options
@@ -1896,8 +2368,28 @@ async function populateProductFromCsv(handle) {
 
         state.variantsByKey = {};
 
-        // Duyệt từng dòng variant trong CSV để map chính xác giá và mã
-        allRows.forEach((r, rowIdx) => {
+        // Mặc định đánh dấu toàn bộ tổ hợp Cartesian là enabled = false trước,
+        // sau đó chỉ bật enabled = true cho đúng những tổ hợp thực sự tồn tại trong CSV (Sparse Variants)
+        const optIdArrays = state.options.map(o => o.values.map(v => v.clientId));
+        const allCartCombs = optIdArrays.reduce((acc, curr) => {
+            const res = [];
+            acc.forEach(a => curr.forEach(c => res.push([...a, c])));
+            return res;
+        }, [[]]);
+
+        allCartCombs.forEach(idArr => {
+            const k = idArr.join('_');
+            state.variantsByKey[k] = {
+                enabled: false,
+                price: '',
+                compareAtPrice: '',
+                sku: '',
+                barcode: ''
+            };
+        });
+
+        // Duyệt từng dòng variant thực tế trong CSV để bật enabled = true và map chính xác giá, SKU, Barcode
+        variantRows.forEach((r, rowIdx) => {
             const rowVals = [];
             for (let i = 0; i < state.options.length; i++) {
                 const optNum = i + 1;
@@ -1910,7 +2402,8 @@ async function populateProductFromCsv(handle) {
 
             if (rowVals.length === state.options.length) {
                 const combKey = rowVals.join('_');
-                const priceNum = parseFloat(r['Variant Price']) || 129.00;
+                const rawP = parseFloat(r['Variant Price']);
+                const priceNum = !isNaN(rawP) ? rawP : 129.00;
                 let compareNum = parseFloat(r['Variant Compare At Price']) || 0;
                 
                 // Quy tắc: Compare At Price phải > Price
@@ -1919,10 +2412,11 @@ async function populateProductFromCsv(handle) {
                 }
 
                 state.variantsByKey[combKey] = {
+                    enabled: true,
                     price: priceNum.toFixed(2),
                     compareAtPrice: compareNum.toFixed(2),
-                    sku: r['Variant SKU'] || `WRY-${handle.toUpperCase().slice(0, 8)}-${rowIdx + 1}`,
-                    barcode: r['Variant Barcodes'] || `8935${Date.now().toString().slice(-6)}${String(rowIdx + 1).padStart(2, '0')}`
+                    sku: (r['Variant SKU'] || '').trim() || `WRY-${handle.toUpperCase().slice(0, 8)}-${rowIdx + 1}`,
+                    barcode: (r['Variant Barcode'] || r['Variant Barcodes'] || '').trim() || generateFallbackBarcode(handle, rowIdx)
                 };
             }
         });
@@ -1979,26 +2473,34 @@ async function populateProductFromCsv(handle) {
     let authorVal = '';
     for (const k in firstRow) {
         if (k.includes('author_info')) {
-            authorVal = firstRow[k];
+            authorVal = (firstRow[k] || '').trim();
             break;
         }
     }
-    if (state.authors && state.authors.length > 0) {
-        let matchedAuthor = null;
-        if (authorVal) {
+    let matchedAuthor = null;
+    if (authorVal) {
+        if (authorVal.startsWith('gid://shopify/Metaobject/')) {
+            matchedAuthor = (state.authors || []).find(a => a.id === authorVal || (a.id && a.id.endsWith(authorVal.split('/').pop())));
+        }
+        if (!matchedAuthor && state.authors && state.authors.length > 0) {
             const cleanAuthor = authorVal.toLowerCase().replace(/[^a-z0-9]/g, '');
             matchedAuthor = state.authors.find(a => {
+                const aId = (a.id || '').toLowerCase().replace(/[^a-z0-9]/g, '');
                 const aHandle = (a.handle || '').toLowerCase().replace(/[^a-z0-9]/g, '');
                 const aName = (a.name || a.displayName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-                return aHandle.includes(cleanAuthor) || cleanAuthor.includes(aHandle) || aName.includes(cleanAuthor);
+                return aId.includes(cleanAuthor) || aHandle.includes(cleanAuthor) || cleanAuthor.includes(aHandle) || aName.includes(cleanAuthor);
             });
         }
-        if (!matchedAuthor) {
-            matchedAuthor = state.authors[0];
-        }
-        if (matchedAuthor) {
-            selectInlineAuthor(matchedAuthor.id);
-        }
+    }
+    if (!matchedAuthor && state.authors && state.authors.length > 0) {
+        matchedAuthor = state.authors[0];
+    }
+    if (matchedAuthor) {
+        selectInlineAuthor(matchedAuthor.id);
+    } else if (authorVal && authorVal.startsWith('gid://shopify/Metaobject/')) {
+        state.selectedAuthorId = authorVal;
+        const hiddenInput = document.getElementById('selected-author-id');
+        if (hiddenInput) hiddenInput.value = authorVal;
     }
 
     // 13. Mô tả mở rộng (Rich Description)
@@ -2158,6 +2660,14 @@ function handleBulkOverviewBackdropClick(e) {
 // Đóng modal khi bấm Escape
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
+        const missingModal = document.getElementById('missingFieldsModal');
+        if (missingModal && !missingModal.classList.contains('hidden')) {
+            closeMissingFieldsModal();
+        }
+        const archiveModal = document.getElementById('latestArchiveModal');
+        if (archiveModal && !archiveModal.classList.contains('hidden')) {
+            closeLatestArchiveModal();
+        }
         const csvModal = document.getElementById('csvProductSelectModal');
         if (csvModal && !csvModal.classList.contains('hidden')) {
             closeCsvProductSelectModal();
@@ -2338,7 +2848,8 @@ function buildPayloadFromCsvProduct(product, handle) {
     const h = handle || firstRow['Handle'] || '';
     const desc = firstRow['Body (HTML)'] || '';
     const productType = firstRow['Type'] || 'Furniture';
-    const categoryId = firstRow['Product Category ID'] || 'gid://shopify/TaxonomyCategory/hg-3-47';
+    const categoryVal = firstRow['Product Category'] || '';
+    const categoryId = firstRow['Product Category ID'] || (categoryVal ? state.taxonomyCacheByPath[categoryVal] : '') || 'gid://shopify/TaxonomyCategory/hg-3-47';
     const statusVal = (firstRow['Status'] || '').toLowerCase();
     const status = (statusVal === 'active') ? 'ACTIVE' : 'DRAFT';
     const vendor = firstRow['Vendor'] || 'Wrydeco';
@@ -2353,18 +2864,23 @@ function buildPayloadFromCsvProduct(product, handle) {
     let authorVal = '';
     for (const k in firstRow) {
         if (k.includes('author_info')) {
-            authorVal = firstRow[k];
+            authorVal = (firstRow[k] || '').trim();
             break;
         }
     }
-    if (authorVal && state.authors && state.authors.length > 0) {
-        const cleanAuthor = authorVal.toLowerCase().replace(/[^a-z0-9]/g, '');
-        const matched = state.authors.find(a => {
-            const aHandle = (a.handle || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-            const aName = (a.name || a.displayName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-            return aHandle.includes(cleanAuthor) || cleanAuthor.includes(aHandle) || aName.includes(cleanAuthor);
-        });
-        if (matched) authorId = matched.id;
+    if (authorVal) {
+        if (authorVal.startsWith('gid://shopify/Metaobject/')) {
+            authorId = authorVal;
+        } else if (state.authors && state.authors.length > 0) {
+            const cleanAuthor = authorVal.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const matched = state.authors.find(a => {
+                const aId = (a.id || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                const aHandle = (a.handle || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                const aName = (a.name || a.displayName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                return aId.includes(cleanAuthor) || aHandle.includes(cleanAuthor) || cleanAuthor.includes(aHandle) || aName.includes(cleanAuthor);
+            });
+            if (matched) authorId = matched.id;
+        }
     }
 
     // Rich desc & AEO
@@ -2447,15 +2963,16 @@ function buildPayloadFromCsvProduct(product, handle) {
         position: idx + 1
     }));
 
-    // Options & Variants
+    // Options & Sparse Variants (lọc bỏ các dòng chỉ chứa ảnh phụ)
+    const variantRows = extractVariantRowsFromCsv(allRows);
     const detectedOptions = [];
     for (let optNum = 1; optNum <= 3; optNum++) {
         const optName = firstRow[`Option${optNum} Name`];
         if (optName && optName.trim()) {
             const uniqueVals = [];
-            allRows.forEach(r => {
+            variantRows.forEach(r => {
                 const val = (r[`Option${optNum} Value`] || '').trim();
-                if (val && !uniqueVals.includes(val)) {
+                if (val && !uniqueVals.some(u => u.toLowerCase() === val.toLowerCase())) {
                     uniqueVals.push(val);
                 }
             });
@@ -2480,39 +2997,59 @@ function buildPayloadFromCsvProduct(product, handle) {
             optionValues: [{ optionName: 'Color', name: 'Natural Oak' }],
             price: p.toFixed(2),
             compareAtPrice: c.toFixed(2),
-            sku: firstRow['Variant SKU'] || `WRY-${h.toUpperCase().slice(0, 8)}-1`,
-            barcode: firstRow['Variant Barcodes'] || `8935${Date.now().toString().slice(-6)}01`
+            sku: (firstRow['Variant SKU'] || '').trim() || `WRY-${h.toUpperCase().slice(0, 8)}-1`,
+            barcode: (firstRow['Variant Barcode'] || firstRow['Variant Barcodes'] || '').trim() || generateFallbackBarcode(h, 0)
         }];
     } else {
-        optionsPayload = detectedOptions.map(opt => ({
-            name: opt.name,
-            values: opt.values.map(val => ({ label: val }))
-        }));
+        const seenCombKeys = new Set();
+        const usedPerOpt = detectedOptions.map(() => new Set());
 
-        variantsPayload = allRows.map((r, rowIdx) => {
+        variantRows.forEach((r, rowIdx) => {
             const optVals = [];
+            const keyParts = [];
             for (let i = 0; i < detectedOptions.length; i++) {
                 const optNum = i + 1;
-                const vLabel = (r[`Option${optNum} Value`] || '').trim();
+                const rawLabel = (r[`Option${optNum} Value`] || '').trim();
+                const canonicalVal = detectedOptions[i].values.find(u => u.toLowerCase() === rawLabel.toLowerCase()) || rawLabel;
+                if (!canonicalVal) return;
                 optVals.push({
                     optionName: detectedOptions[i].name,
-                    name: vLabel || detectedOptions[i].values[0]
+                    name: canonicalVal
                 });
+                keyParts.push(canonicalVal.toLowerCase());
             }
 
-            const pNum = parseFloat(r['Variant Price']) || 129.00;
+            if (optVals.length !== detectedOptions.length) return;
+            const combKey = keyParts.join('||');
+            if (seenCombKeys.has(combKey)) return;
+            seenCombKeys.add(combKey);
+
+            optVals.forEach((ov, idx) => usedPerOpt[idx].add(ov.name.toLowerCase()));
+
+            const rawP = parseFloat(r['Variant Price']);
+            const pNum = !isNaN(rawP) ? rawP : 129.00;
             let cNum = parseFloat(r['Variant Compare At Price']) || 0;
             if (cNum <= pNum) cNum = Math.round(pNum * 1.25);
 
-            return {
+            variantsPayload.push({
                 optionValues: optVals,
                 price: pNum.toFixed(2),
                 compareAtPrice: cNum.toFixed(2),
-                sku: r['Variant SKU'] || `WRY-${h.toUpperCase().slice(0, 8)}-${rowIdx + 1}`,
-                barcode: r['Variant Barcodes'] || `8935${Date.now().toString().slice(-6)}${String(rowIdx + 1).padStart(2, '0')}`
-            };
+                sku: (r['Variant SKU'] || '').trim() || `WRY-${h.toUpperCase().slice(0, 8)}-${rowIdx + 1}`,
+                barcode: (r['Variant Barcode'] || r['Variant Barcodes'] || '').trim() || generateFallbackBarcode(h, rowIdx)
+            });
         });
+
+        optionsPayload = detectedOptions.map((opt, idx) => ({
+            name: opt.name,
+            values: opt.values
+                .filter(val => usedPerOpt[idx].has(val.toLowerCase()))
+                .map(val => ({ label: val }))
+        })).filter(opt => opt.values.length > 0);
     }
+
+    const matchedAuthorObj = (state.authors || []).find(a => a.id === authorId) || null;
+    const authorName = matchedAuthorObj ? String(matchedAuthorObj.name || matchedAuthorObj.displayName || '').trim() : '';
 
     return {
         store_type: state.currentStoreType,
@@ -2521,6 +3058,7 @@ function buildPayloadFromCsvProduct(product, handle) {
         descriptionHtml: desc,
         productType,
         categoryId,
+        categoryName: categoryVal || 'Furniture > Shelving',
         status,
         vendor,
         tags,
@@ -2529,6 +3067,7 @@ function buildPayloadFromCsvProduct(product, handle) {
             description: seoDesc
         },
         authorId,
+        authorName,
         richDescription: richDesc,
         aeoHtml,
         interiorStyle,
@@ -2540,7 +3079,7 @@ function buildPayloadFromCsvProduct(product, handle) {
 }
 
 /**
- * Trích xuất toàn bộ dữ liệu hiện tại trên form thành payload chuẩn
+ * Trích xuất toàn bộ dữ liệu hiện tại trên form thành payload chuẩn (chỉ lấy các biến thể đang bật)
  */
 function collectCurrentFormPayload() {
     const title = (document.getElementById('product-title')?.value || '').trim();
@@ -2548,50 +3087,23 @@ function collectCurrentFormPayload() {
     const desc = (document.getElementById('product-desc')?.value || '').trim();
     const productType = (document.getElementById('product-type')?.value || '').trim();
     const categoryId = (document.getElementById('selected-category-id')?.value || state.selectedCategoryId || '').trim();
+    const categoryName = (document.getElementById('selected-category-name')?.value || state.selectedCategoryName || '').trim();
     const status = document.getElementById('product-status')?.value || 'DRAFT';
     const vendor = document.getElementById('product-vendor')?.value || 'Wrydeco';
     const seoTitle = (document.getElementById('seo-title')?.value || '').trim();
     const seoDesc = (document.getElementById('seo-desc')?.value || '').trim();
     const authorId = (document.getElementById('selected-author-id')?.value || state.selectedAuthorId || '').trim();
+    const effAuthorId = authorId || (state.authors && state.authors.length > 0 ? state.authors[0].id : 'gid://shopify/Metaobject/default-author');
+    const effAuthorObj = (state.authors || []).find(a => a.id === effAuthorId) || state.selectedAuthorData || null;
+    const authorName = effAuthorObj ? String(effAuthorObj.name || effAuthorObj.displayName || '').trim() : '';
     const richDesc = (document.getElementById('rich-description')?.value || '').trim();
     const aeoHtml = (document.getElementById('aeo-html')?.value || '').trim();
 
     const checkedInterior = Array.from(document.querySelectorAll('input[name="interior_style"]:checked')).map(cb => cb.value);
     const checkedRoom = Array.from(document.querySelectorAll('input[name="room_type"]:checked')).map(cb => cb.value);
 
-    // Variants list mapping
-    const validOptions = state.options.filter(o => o.name.trim() && o.values.length > 0);
-    const optionArrays = validOptions.map(o => o.values.map(v => ({
-        optionName: o.name,
-        valueId: v.clientId,
-        valueLabel: v.label
-    })));
-
-    const combs = optionArrays.reduce((acc, curr) => {
-        const res = [];
-        acc.forEach(a => curr.forEach(c => res.push([...a, c])));
-        return res;
-    }, [[]]);
-
-    const variantsPayload = combs.map(comb => {
-        const combKey = comb.map(c => c.valueId).join('_');
-        const row = state.variantsByKey[combKey] || {};
-        return {
-            optionValues: comb.map(c => ({
-                optionName: c.optionName,
-                name: c.valueLabel
-            })),
-            price: row.price || "129.00",
-            compareAtPrice: row.compareAtPrice || "160.00",
-            sku: row.sku || `WRY-${handle.toUpperCase().slice(0, 8)}-1`,
-            barcode: row.barcode || `8935${Date.now().toString().slice(-6)}01`
-        };
-    });
-
-    const optionsPayload = validOptions.map(o => ({
-        name: o.name,
-        values: o.values.map(v => ({ label: v.label }))
-    }));
+    // Chỉ lấy các biến thể đang bật và giá trị option được sử dụng thực tế (Sparse Variants)
+    const { optionsPayload, variantsPayload } = buildPrunedOptionsAndVariantsFromState();
 
     const mediaMetadata = [];
     state.media.forEach((m, idx) => {
@@ -2611,6 +3123,7 @@ function collectCurrentFormPayload() {
         descriptionHtml: desc,
         productType: productType || 'Furniture',
         categoryId: categoryId || 'gid://shopify/TaxonomyCategory/hg-3-47',
+        categoryName: categoryName || '',
         status,
         vendor: vendor || 'Wrydeco',
         tags: state.tags || [],
@@ -2618,7 +3131,8 @@ function collectCurrentFormPayload() {
             title: seoTitle || (title ? `${title} | Wrydeco` : ''),
             description: seoDesc || (title ? `Khám phá ${title} chất lượng cao từ Wrydeco.` : '')
         },
-        authorId: authorId || (state.authors && state.authors.length > 0 ? state.authors[0].id : 'gid://shopify/Metaobject/default-author'),
+        authorId: effAuthorId,
+        authorName,
         richDescription: richDesc,
         aeoHtml: aeoHtml,
         interiorStyle: checkedInterior.length > 0 ? checkedInterior : ['Rustic'],
@@ -2802,6 +3316,40 @@ function removeBulkProduct(clientId) {
 /**
  * Bắt đầu tiến trình tạo hàng loạt (Bulk Creation Workflow)
  */
+async function prepareProductImageCache(payloads, onProgress = () => {}) {
+    const sources = [...new Set(payloads.flatMap(p => (p.media || [])
+        .filter(m => m.kind !== 'device' && m.url).map(m => m.url)))];
+    if (!sources.length) return;
+    const check = await fetch('/api/products/media-cache/check', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sources })
+    });
+    const info = await check.json();
+    if (!check.ok || !info.success) throw new Error(info.error || 'Không thể kiểm tra nguồn ảnh.');
+    const cached = new Set(info.cached || []);
+    const pending = sources.filter(url => !cached.has(url));
+    let next = 0;
+    let completed = sources.length - pending.length;
+    onProgress(completed, sources.length);
+    const preserve = async () => {
+        while (next < pending.length) {
+            const url = pending[next++];
+            const response = await fetch(url, { cache: 'force-cache', credentials: 'omit' });
+            if (!response.ok) throw new Error(`Chưa lưu được nguồn ảnh (HTTP ${response.status}): ${url}. Chưa tạo sản phẩm nào.`);
+            const blob = await response.blob();
+            const body = new FormData();
+            body.append('source_url', url);
+            body.append('image', blob, 'import-image');
+            const upload = await fetch('/api/products/media-cache', { method: 'POST', body });
+            const result = await upload.json();
+            if (!upload.ok || !result.success) throw new Error(result.error || 'Không thể lưu dữ liệu ảnh.');
+            onProgress(++completed, sources.length);
+        }
+    };
+    await Promise.all(Array.from({ length: Math.min(3, pending.length) }, preserve));
+}
+
+
 async function startBulkCreationWorkflow() {
     if (!state.selectedBulkProducts || state.selectedBulkProducts.length === 0) {
         showToast('Không có sản phẩm nào trong danh sách để tạo.', false);
@@ -2861,7 +3409,11 @@ async function startBulkCreationWorkflow() {
 
     if (!progressModal || !tbody) return;
 
+    // Reset modal header về trạng thái đang chạy
+    setBulkProgressModalHeaderState('RUNNING', count, 0, 0);
+
     // Khóa nút đóng khi đang thực thi
+    state.isBulkJobRunning = true;
     if (closeBtn) closeBtn.disabled = true;
     if (doneBtn) doneBtn.classList.add('hidden');
 
@@ -2873,29 +3425,25 @@ async function startBulkCreationWorkflow() {
         summaryBadge.className = 'text-sm font-semibold px-3 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-full';
     }
 
-    // Render bảng tiến trình rỗng
-    tbody.innerHTML = state.selectedBulkProducts.map((item, idx) => `
-        <tr id="bulk-progress-row-${idx}" class="hover:bg-gray-50/80 transition-colors">
-            <td class="px-3.5 py-3 text-sm font-semibold text-gray-700 text-center">${idx + 1}</td>
-            <td class="px-3.5 py-3 text-sm font-mono text-gray-600 font-semibold truncate max-w-[160px]">${escapeHtml(item.handle || '—')}</td>
-            <td class="px-3.5 py-3 text-sm font-bold text-gray-900 truncate max-w-[220px]">${escapeHtml(item.title || '—')}</td>
-            <td class="px-3.5 py-3 text-sm text-center" id="bulk-progress-status-${idx}">
-                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-sm font-semibold bg-gray-100 text-gray-600">
-                    <iconify-icon icon="mdi:clock-outline" class="text-sm"></iconify-icon>
-                    <span>Chờ tạo</span>
-                </span>
-            </td>
-            <td class="px-3.5 py-3 text-sm" id="bulk-progress-result-${idx}">
-                <span class="text-sm text-gray-400">—</span>
-            </td>
-        </tr>
-    `).join('');
+    // Render bảng tiến trình ban đầu
+    renderBulkProgressModalTableRows(state.selectedBulkProducts.map((item, idx) => ({
+        item_index: idx,
+        handle: item.handle,
+        title: item.title,
+        status: 'QUEUED',
+        links: null,
+        errors: null,
+        error_message: null
+    })));
 
     progressModal.classList.remove('hidden');
 
     try {
         // Step 1: Chuẩn bị Bulk Job
         const payloadList = state.selectedBulkProducts.map(item => item.payload);
+        await prepareProductImageCache(payloadList, (done, total) => {
+            if (summaryBadge) summaryBadge.textContent = `Đang lưu nguồn ảnh: ${done}/${total}. Sản phẩm chưa được tạo.`;
+        });
         const prepResp = await fetch('/api/products/bulk-jobs', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -2906,36 +3454,431 @@ async function startBulkCreationWorkflow() {
             })
         });
 
-        const prepResult = await prepResp.json();
+        const prepText = await prepResp.text();
+        let prepResult;
+        try {
+            prepResult = JSON.parse(prepText);
+        } catch (e) {
+            throw new Error(`Máy chủ chuẩn bị phản hồi không hợp lệ (${prepResp.status}): ${prepText.slice(0, 160)}`);
+        }
+
         if (!prepResp.ok || !prepResult.success) {
             throw new Error(prepResult.error || 'Không thể chuẩn bị Bulk Job');
         }
 
         const jobId = prepResult.job_id || (prepResult.job && prepResult.job.job_id);
 
+        // Xóa cờ ẩn cũ trong localStorage để luôn hiện section inline cho Job mới
+        try {
+            localStorage.removeItem(`wrydeco_dismissed_bulk_job_${state.currentStoreType}`);
+        } catch (e) {}
+
+        // Khởi tạo snapshot ban đầu từ kết quả prepare (cập nhật ngay các dòng FAILED_VALIDATION nếu có)
+        const initialItems = (prepResult.items || []).map((it, idx) => ({
+            item_id: it.item_id || `${jobId}:${idx}`,
+            item_index: typeof it.item_index === 'number' ? it.item_index : idx,
+            handle: it.handle || (state.selectedBulkProducts[idx] && state.selectedBulkProducts[idx].handle) || '',
+            title: it.title || (state.selectedBulkProducts[idx] && state.selectedBulkProducts[idx].title) || '',
+            status: it.status || 'QUEUED',
+            error_code: it.error_code || null,
+            error_message: it.error_message || null,
+            errors: it.errors || (it.error_message ? [{ field: 'validation', code: it.error_code || 'VALIDATION_ERROR', message: it.error_message }] : []),
+            links: null,
+            product_id: null
+        }));
+
+        const preFailedCount = initialItems.filter(it => isBulkStatusFailed(it.status)).length;
+        state.currentBulkJobSnapshot = {
+            job_id: jobId,
+            store_type: state.currentStoreType,
+            status: 'RUNNING',
+            total_items: state.selectedBulkProducts.length,
+            completed_items: preFailedCount,
+            success_items: 0,
+            failed_items: preFailedCount,
+            created_at: new Date().toISOString(),
+            items: initialItems
+        };
+        state.bulkInlineFilter = 'all';
+
+        // Cập nhật ngay các dòng bị FAILED_VALIDATION trên Modal tiến trình
+        initialItems.forEach((it, idx) => {
+            updateSingleBulkProgressRowDOM(idx, it);
+            syncSelectedBulkProductItemFromSnapshot(idx, it);
+        });
+        refreshLatestArchiveSummary();
+
+        // Nếu tất cả sản phẩm đều lỗi ngay từ bước validate preflight thì kết thúc sớm
+        if (preFailedCount >= state.selectedBulkProducts.length) {
+            state.isBulkJobRunning = false;
+            state.currentBulkJobSnapshot.status = 'COMPLETED_WITH_ERRORS';
+            if (closeBtn) closeBtn.disabled = false;
+            if (doneBtn) doneBtn.classList.remove('hidden');
+            setBulkProgressModalHeaderState('COMPLETED_WITH_ERRORS', state.selectedBulkProducts.length, 0, preFailedCount);
+            if (progressBar) progressBar.style.width = '100%';
+            if (progressPercent) progressPercent.textContent = `${preFailedCount}/${state.selectedBulkProducts.length} (100%)`;
+            if (summaryBadge) {
+                summaryBadge.textContent = `Hoàn thành: 0 thành công, ${preFailedCount} lỗi dữ liệu`;
+                summaryBadge.className = 'text-sm font-semibold px-3 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-full';
+            }
+            return;
+        }
+
         // Step 2: Bắt đầu chạy Worker
-        const startResp = await fetch(`/api/products/bulk-jobs/${jobId}/start`, {
+        const startResp = await fetch(`/api/products/bulk-jobs/${encodeURIComponent(jobId)}/start`, {
             method: 'POST'
         });
-        const startResult = await startResp.json();
+        const startText = await startResp.text();
+        let startResult;
+        try {
+            startResult = JSON.parse(startText);
+        } catch (e) {
+            throw new Error(`Máy chủ kích hoạt phản hồi không hợp lệ (${startResp.status}): ${startText.slice(0, 160)}`);
+        }
+
         if (!startResp.ok || !startResult.success) {
             throw new Error(startResult.error || 'Không thể kích hoạt Bulk Job Worker');
         }
 
         // Step 3: Kết nối Server-Sent Events theo dõi tiến trình
-        connectBulkJobEventSource(jobId, state.selectedBulkProducts.length);
+        connectBulkJobEventSource(jobId, state.selectedBulkProducts.length, preFailedCount);
 
     } catch (err) {
+        state.isBulkJobRunning = false;
+        refreshLatestArchiveSummary();
         if (summaryBadge) {
             summaryBadge.textContent = 'Lỗi khởi tạo: ' + err.message;
             summaryBadge.className = 'text-sm font-semibold px-3 py-1 bg-red-50 text-red-700 border border-red-200 rounded-full';
         }
         if (closeBtn) closeBtn.disabled = false;
-        Swal.fire({
-            icon: 'error',
-            title: 'Khởi tạo thất bại',
-            text: err.message
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'error',
+                title: 'Khởi tạo thất bại',
+                text: err.message
+            });
+        }
+    }
+}
+
+/**
+ * Kiểm tra trạng thái lỗi của một item trong Bulk Job
+ */
+function isBulkStatusFailed(status) {
+    const st = String(status || '').toUpperCase();
+    return st === 'FAILED' || st === 'FAILED_VALIDATION' || st === 'ERROR';
+}
+
+/**
+ * Chuẩn hóa chuỗi thông báo lỗi đầy đủ của một item Bulk Job (không cắt cụt)
+ */
+function formatBulkItemErrors(itemOrEvent) {
+    if (!itemOrEvent) return 'Tạo sản phẩm thất bại';
+    const errs = Array.isArray(itemOrEvent.errors) ? itemOrEvent.errors : [];
+    if (errs.length > 0) {
+        const formatted = errs
+            .map(e => {
+                if (!e) return '';
+                if (typeof e === 'string') return e;
+                const msg = (e.message || '').trim();
+                const field = (e.field || '').trim();
+                if (!msg) return '';
+                if (field && field !== 'unknown' && field !== 'worker' && !msg.toLowerCase().includes(field.toLowerCase())) {
+                    return `[${field}] ${msg}`;
+                }
+                return msg;
+            })
+            .filter(Boolean);
+        if (formatted.length > 0) {
+            return formatted.join(' • ');
+        }
+    }
+    if (itemOrEvent.error_message) return String(itemOrEvent.error_message);
+    if (itemOrEvent.error) return String(itemOrEvent.error);
+    return 'Tạo sản phẩm thất bại';
+}
+
+/**
+ * Xác định chính xác chỉ số dòng (0-based index) của sự kiện SSE từ item_index, item_id ("job_xxx:idx") hoặc handle
+ */
+function resolveBulkEventItemIndex(data) {
+    if (!data) return -1;
+    if (typeof data.item_index === 'number' && !Number.isNaN(data.item_index)) {
+        return data.item_index;
+    }
+    if (typeof data.item_id === 'string' && data.item_id.includes(':')) {
+        const tail = data.item_id.split(':').pop();
+        const parsed = parseInt(tail, 10);
+        if (!Number.isNaN(parsed)) {
+            return parsed;
+        }
+    }
+    if (data.handle) {
+        const targetHandle = String(data.handle).trim().toLowerCase();
+        if (state.currentBulkJobSnapshot && Array.isArray(state.currentBulkJobSnapshot.items)) {
+            const snapIdx = state.currentBulkJobSnapshot.items.findIndex(
+                it => String(it.handle || '').trim().toLowerCase() === targetHandle
+            );
+            if (snapIdx >= 0) return snapIdx;
+        }
+        if (Array.isArray(state.selectedBulkProducts)) {
+            const selIdx = state.selectedBulkProducts.findIndex(
+                it => String(it.handle || '').trim().toLowerCase() === targetHandle
+            );
+            if (selIdx >= 0) return selIdx;
+        }
+    }
+    return -1;
+}
+
+/**
+ * Render lại danh sách dòng trong bảng của Popup Tiến trình (#bulk-progress-table-body)
+ */
+function renderBulkProgressModalTableRows(items) {
+    const tbody = document.getElementById('bulk-progress-table-body');
+    if (!tbody) return;
+    const list = Array.isArray(items) ? items : [];
+    tbody.innerHTML = list.map((item, idx) => {
+        const rowIdx = typeof item.item_index === 'number' ? item.item_index : idx;
+        return `
+            <tr id="bulk-progress-row-${rowIdx}" class="hover:bg-gray-50/80 transition-colors">
+                <td class="px-3.5 py-3 text-sm font-semibold text-gray-700 text-center">${rowIdx + 1}</td>
+                <td class="px-3.5 py-3 text-sm font-mono text-gray-600 font-semibold truncate max-w-[160px]" title="${escapeHtml(item.handle || '')}">${escapeHtml(item.handle || '—')}</td>
+                <td class="px-3.5 py-3 text-sm font-bold text-gray-900 truncate max-w-[200px]" title="${escapeHtml(item.title || '')}">${escapeHtml(item.title || '—')}</td>
+                <td class="px-3.5 py-3 text-sm text-center whitespace-nowrap" id="bulk-progress-status-${rowIdx}"></td>
+                <td class="px-3.5 py-3 text-sm" id="bulk-progress-result-${rowIdx}"></td>
+            </tr>
+        `;
+    }).join('');
+
+    list.forEach((item, idx) => {
+        const rowIdx = typeof item.item_index === 'number' ? item.item_index : idx;
+        updateSingleBulkProgressRowDOM(rowIdx, item);
+    });
+}
+
+/**
+ * Cập nhật DOM cho đúng 1 dòng trong Popup Tiến trình (#bulkProgressModal)
+ */
+function updateSingleBulkProgressRowDOM(idx, item) {
+    if (idx < 0) return;
+    const rowEl = document.getElementById(`bulk-progress-row-${idx}`);
+    const statusEl = document.getElementById(`bulk-progress-status-${idx}`);
+    const resultEl = document.getElementById(`bulk-progress-result-${idx}`);
+    if (!statusEl || !resultEl) return;
+
+    const st = String(item.status || 'QUEUED').toUpperCase();
+
+    if (st === 'SUCCESS') {
+        if (rowEl) rowEl.className = 'bg-emerald-50/20 hover:bg-emerald-50/50 transition-colors';
+        statusEl.innerHTML = `
+            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-sm font-semibold bg-emerald-100 text-emerald-800">
+                <iconify-icon icon="mdi:check-circle" class="text-sm text-emerald-600"></iconify-icon>
+                <span>Thành công</span>
+            </span>
+        `;
+        const links = item.links || {};
+        resultEl.innerHTML = `
+            <div class="flex items-center gap-2 flex-wrap">
+                ${links.shopify_admin ? `<a href="${escapeHtml(links.shopify_admin)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-2.5 py-1 text-sm font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"><iconify-icon icon="mdi:shopify"></iconify-icon>Admin</a>` : ''}
+                ${links.storefront ? `<a href="${escapeHtml(links.storefront)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-2.5 py-1 text-sm font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg transition-colors"><iconify-icon icon="mdi:web"></iconify-icon>Storefront</a>` : ''}
+                ${links.tool ? `<a href="${escapeHtml(links.tool)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-2.5 py-1 text-sm font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg transition-colors"><iconify-icon icon="mdi:open-in-new"></iconify-icon>Tool</a>` : ''}
+            </div>
+        `;
+    } else if (isBulkStatusFailed(st)) {
+        if (rowEl) rowEl.className = 'bg-red-50/40 hover:bg-red-50/70 transition-colors';
+        const errText = formatBulkItemErrors(item);
+        const badgeLabel = st === 'FAILED_VALIDATION' ? 'Lỗi dữ liệu' : 'Lỗi';
+        statusEl.innerHTML = `
+            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-sm font-semibold bg-red-100 text-red-800" title="${escapeHtml(errText)}">
+                <iconify-icon icon="mdi:alert-circle" class="text-sm text-red-600"></iconify-icon>
+                <span>${badgeLabel}</span>
+            </span>
+        `;
+        resultEl.innerHTML = `
+            <div class="text-sm text-red-700 font-medium leading-snug break-words max-w-[340px]">${escapeHtml(errText)}</div>
+        `;
+    } else if (st === 'CREATING' || st === 'RUNNING') {
+        if (rowEl) rowEl.className = 'bg-blue-50/30 transition-colors';
+        statusEl.innerHTML = `
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-sm font-semibold bg-blue-100 text-blue-800 animate-pulse">
+                <svg class="animate-spin h-3.5 w-3.5 text-blue-600" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Đang tạo...</span>
+            </span>
+        `;
+        resultEl.innerHTML = `<span class="text-sm text-blue-600 font-medium">Đang gửi dữ liệu lên Shopify...</span>`;
+    } else if (st === 'THROTTLED') {
+        statusEl.innerHTML = `
+            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-sm font-semibold bg-amber-100 text-amber-800">
+                <iconify-icon icon="mdi:speedometer-slow" class="text-sm"></iconify-icon>
+                <span>Điều tiết (${escapeHtml(String(item.wait_seconds || 1))}s)...</span>
+            </span>
+        `;
+    } else {
+        if (rowEl) rowEl.className = 'hover:bg-gray-50/80 transition-colors';
+        statusEl.innerHTML = `
+            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-sm font-semibold bg-gray-100 text-gray-600">
+                <iconify-icon icon="mdi:clock-outline" class="text-sm"></iconify-icon>
+                <span>Chờ tạo</span>
+            </span>
+        `;
+        resultEl.innerHTML = `<span class="text-sm text-gray-400">—</span>`;
+    }
+}
+
+/**
+ * Đồng bộ trạng thái của item về danh sách selectedBulkProducts (phục vụ modal tổng quan)
+ */
+function syncSelectedBulkProductItemFromSnapshot(idx, item) {
+    if (!Array.isArray(state.selectedBulkProducts) || !state.selectedBulkProducts[idx]) return;
+    const st = String(item.status || '').toUpperCase();
+    if (st === 'SUCCESS') {
+        state.selectedBulkProducts[idx].status = 'SUCCESS';
+        state.selectedBulkProducts[idx].links = item.links || null;
+        state.selectedBulkProducts[idx].error = null;
+    } else if (isBulkStatusFailed(st)) {
+        state.selectedBulkProducts[idx].status = 'ERROR';
+        state.selectedBulkProducts[idx].error = formatBulkItemErrors(item);
+    } else if (st === 'CREATING' || st === 'RUNNING') {
+        state.selectedBulkProducts[idx].status = 'RUNNING';
+    } else {
+        state.selectedBulkProducts[idx].status = 'PENDING';
+    }
+}
+
+/**
+ * Cập nhật tiêu đề, icon và ghi chú chân trang của Popup Tiến trình theo trạng thái Job
+ */
+function setBulkProgressModalHeaderState(jobStatus, total, successCount, failedCount) {
+    const iconBox = document.getElementById('bulk-progress-icon-box');
+    const titleEl = document.getElementById('bulk-progress-title');
+    const subtitleEl = document.getElementById('bulk-progress-subtitle');
+    const footerNote = document.getElementById('bulk-progress-footer-note');
+
+    const st = String(jobStatus || 'RUNNING').toUpperCase();
+    if (st === 'COMPLETED') {
+        if (iconBox) {
+            iconBox.className = 'w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 shrink-0';
+            iconBox.innerHTML = '<iconify-icon icon="mdi:check-decagram" class="text-2xl"></iconify-icon>';
+        }
+        if (titleEl) titleEl.textContent = `Đã tạo thành công ${successCount}/${total} sản phẩm!`;
+        if (subtitleEl) subtitleEl.textContent = 'Toàn bộ kết quả và liên kết cũng đã được lưu tại bảng Kết quả ngay đầu trang.';
+        if (footerNote) footerNote.textContent = 'Bạn có thể đóng popup này bất cứ lúc nào — kết quả vẫn hiển thị trực tiếp trên trang.';
+    } else if (st === 'COMPLETED_WITH_ERRORS') {
+        if (iconBox) {
+            iconBox.className = 'w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shrink-0';
+            iconBox.innerHTML = '<iconify-icon icon="mdi:alert-decagram-outline" class="text-2xl"></iconify-icon>';
+        }
+        if (titleEl) titleEl.textContent = `Hoàn tất: ${successCount} thành công, ${failedCount} sản phẩm gặp lỗi`;
+        if (subtitleEl) subtitleEl.textContent = 'Chi tiết nguyên nhân lỗi của từng sản phẩm đã được hiển thị bên dưới và lưu cố định ở đầu trang.';
+        if (footerNote) footerNote.textContent = 'Đóng popup để xem bảng chi tiết lỗi rộng rãi ngay trên trang và nạp sửa sản phẩm lỗi.';
+    } else if (st === 'PAUSED_PROXY') {
+        if (iconBox) {
+            iconBox.className = 'w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shrink-0';
+            iconBox.innerHTML = '<iconify-icon icon="mdi:pause-octagon-outline" class="text-2xl"></iconify-icon>';
+        }
+        if (titleEl) titleEl.textContent = 'Tiến trình tạm dừng an toàn do kết nối US Proxy';
+        if (subtitleEl) subtitleEl.textContent = 'Các sản phẩm chưa xử lý vẫn được giữ an toàn trong hàng đợi.';
+        if (footerNote) footerNote.textContent = 'Vui lòng kiểm tra kết nối US Proxy trước khi tiếp tục.';
+    } else {
+        if (iconBox) {
+            iconBox.className = 'w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 shrink-0';
+            iconBox.innerHTML = '<iconify-icon icon="mdi:sync" class="text-2xl animate-spin"></iconify-icon>';
+        }
+        if (titleEl) titleEl.textContent = 'Đang tiến hành tạo sản phẩm hàng loạt...';
+        if (subtitleEl) subtitleEl.textContent = 'Hệ thống đang gọi Shopify GraphQL API có kiểm soát tốc độ an toàn.';
+        if (footerNote) footerNote.textContent = 'Đang lắng nghe sự kiện từ máy chủ theo thời gian thực...';
+    }
+}
+
+/**
+ * Tải snapshot chuẩn xác từ Server (/api/products/bulk-jobs/{jobId}) để đồng bộ 100% trạng thái mọi dòng
+ */
+async function syncBulkJobSnapshotFromServer(jobId, includePayload = false) {
+    if (!jobId) return null;
+    try {
+        const resp = await fetch(`/api/products/bulk-jobs/${encodeURIComponent(jobId)}?include_payload=${includePayload ? 'true' : 'false'}`);
+        if (!resp.ok) return null;
+        const data = await resp.json();
+        if (!data || !data.success || !data.job) return null;
+
+        const serverJob = data.job;
+        // Giữ lại payload cục bộ nếu bản tải nhẹ không đính kèm payload
+        if (!includePayload && state.currentBulkJobSnapshot && Array.isArray(state.currentBulkJobSnapshot.items)) {
+            const oldByIdx = new Map(state.currentBulkJobSnapshot.items.map(it => [it.item_index, it]));
+            (serverJob.items || []).forEach(it => {
+                const prev = oldByIdx.get(it.item_index);
+                if (!it.payload && prev && prev.payload) {
+                    it.payload = prev.payload;
+                }
+            });
+        }
+
+        state.currentBulkJobSnapshot = serverJob;
+
+        const items = serverJob.items || [];
+        const total = serverJob.total_items || items.length || 0;
+        const successCount = typeof serverJob.success_items === 'number'
+            ? serverJob.success_items
+            : items.filter(it => String(it.status).toUpperCase() === 'SUCCESS').length;
+        const failedCount = typeof serverJob.failed_items === 'number'
+            ? serverJob.failed_items
+            : items.filter(it => isBulkStatusFailed(it.status)).length;
+        const finished = successCount + failedCount;
+        const pct = total > 0 ? Math.min(100, Math.round((finished / total) * 100)) : 0;
+
+        // Đồng bộ lại từng dòng trong Popup Tiến trình (nếu bảng đã có hoặc render mới)
+        const modalTbody = document.getElementById('bulk-progress-table-body');
+        if (modalTbody) {
+            if (modalTbody.children.length !== items.length) {
+                renderBulkProgressModalTableRows(items);
+            } else {
+                items.forEach((it, i) => {
+                    const rowIdx = typeof it.item_index === 'number' ? it.item_index : i;
+                    updateSingleBulkProgressRowDOM(rowIdx, it);
+                });
+            }
+        }
+
+        items.forEach((it, i) => {
+            const rowIdx = typeof it.item_index === 'number' ? it.item_index : i;
+            syncSelectedBulkProductItemFromSnapshot(rowIdx, it);
         });
+
+        // Đồng bộ thanh progress trên Popup
+        const progressBar = document.getElementById('bulk-progress-bar-fill') || document.getElementById('bulk-progress-bar');
+        const progressPercent = document.getElementById('bulk-progress-percent');
+        const summaryBadge = document.getElementById('bulk-progress-stats') || document.getElementById('bulk-summary-badge');
+        if (progressBar) progressBar.style.width = `${pct}%`;
+        if (progressPercent) progressPercent.textContent = `${finished}/${total} (${pct}%)`;
+
+        const jobStatus = String(serverJob.status || '').toUpperCase();
+        if (jobStatus === 'COMPLETED' || jobStatus === 'COMPLETED_WITH_ERRORS') {
+            state.isBulkJobRunning = false;
+            setBulkProgressModalHeaderState(jobStatus, total, successCount, failedCount);
+            if (summaryBadge) {
+                summaryBadge.textContent = `Hoàn thành: ${successCount} thành công, ${failedCount} lỗi`;
+                summaryBadge.className = `text-sm font-semibold px-3 py-1 rounded-full ${failedCount === 0 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`;
+            }
+            const closeBtn = document.getElementById('btn-close-progress-modal');
+            const doneBtn = document.getElementById('btn-progress-done');
+            if (closeBtn) closeBtn.disabled = false;
+            if (doneBtn) doneBtn.classList.remove('hidden');
+        } else if (jobStatus === 'PAUSED_PROXY') {
+            state.isBulkJobRunning = false;
+            setBulkProgressModalHeaderState(jobStatus, total, successCount, failedCount);
+        } else if (summaryBadge) {
+            summaryBadge.textContent = `Đang xử lý: ${successCount} thành công, ${failedCount} lỗi`;
+            summaryBadge.className = 'text-sm font-semibold px-3 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full';
+        }
+
+        return serverJob;
+    } catch (err) {
+        console.warn('syncBulkJobSnapshotFromServer error:', err);
+        return null;
     }
 }
 
@@ -2943,29 +3886,40 @@ async function startBulkCreationWorkflow() {
  * Kết nối Server-Sent Events (SSE) theo dõi tiến trình tạo sản phẩm hàng loạt
  */
 function connectBulkJobEventSource(jobId, totalItems) {
+    const initialFailedCount = arguments.length > 2 ? (arguments[2] || 0) : 0;
     const progressBar = document.getElementById('bulk-progress-bar-fill') || document.getElementById('bulk-progress-bar');
     const progressPercent = document.getElementById('bulk-progress-percent');
     const summaryBadge = document.getElementById('bulk-progress-stats') || document.getElementById('bulk-summary-badge');
     const closeBtn = document.getElementById('btn-close-progress-modal') || document.getElementById('btn-progress-done') || document.getElementById('btn-close-bulk-progress');
     const doneBtn = document.getElementById('btn-progress-done');
 
-    let completedCount = 0;
-    let failedCount = 0;
+    if (state.bulkFallbackPollTimer) {
+        clearInterval(state.bulkFallbackPollTimer);
+        state.bulkFallbackPollTimer = null;
+    }
 
-    const evtSource = new EventSource(`/api/products/bulk-jobs/${jobId}/events`);
+    let completedCount = 0;
+    let failedCount = initialFailedCount || 0;
+    let hasHandledCompletion = false;
+
+    const evtSource = new EventSource(`/api/products/bulk-jobs/${encodeURIComponent(jobId)}/events`);
 
     const updateProgress = () => {
-        const finished = completedCount + failedCount;
-        const pct = Math.min(100, Math.round((finished / totalItems) * 100));
+        const finished = Math.min(totalItems, completedCount + failedCount);
+        const pct = totalItems > 0 ? Math.min(100, Math.round((finished / totalItems) * 100)) : 0;
         if (progressBar) progressBar.style.width = `${pct}%`;
         if (progressPercent) progressPercent.textContent = `${finished}/${totalItems} (${pct}%)`;
         if (summaryBadge) {
             summaryBadge.textContent = `Đang xử lý: ${completedCount} thành công, ${failedCount} lỗi`;
             summaryBadge.className = 'text-sm font-semibold px-3 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full';
         }
+        if (state.currentBulkJobSnapshot) {
+            state.currentBulkJobSnapshot.completed_items = finished;
+            state.currentBulkJobSnapshot.success_items = completedCount;
+            state.currentBulkJobSnapshot.failed_items = failedCount;
+        }
     };
 
-    // Named SSE listeners
     evtSource.addEventListener('job_started', () => {
         if (summaryBadge) {
             summaryBadge.textContent = 'Tiến trình đang chạy...';
@@ -2975,19 +3929,18 @@ function connectBulkJobEventSource(jobId, totalItems) {
     evtSource.addEventListener('item_started', (e) => {
         try {
             const data = JSON.parse(e.data);
-            const idx = data.item_index;
-            const statusEl = document.getElementById(`bulk-progress-status-${idx}`);
-            if (statusEl) {
-                statusEl.innerHTML = `
-                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-sm font-semibold bg-blue-100 text-blue-800 animate-pulse">
-                        <svg class="animate-spin h-3.5 w-3.5 text-blue-600" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        <span>Đang tạo...</span>
-                    </span>
-                `;
+            const idx = resolveBulkEventItemIndex(data);
+            const itemObj = {
+                item_index: idx,
+                handle: data.handle,
+                title: data.title,
+                status: 'CREATING'
+            };
+            if (state.currentBulkJobSnapshot && state.currentBulkJobSnapshot.items && state.currentBulkJobSnapshot.items[idx]) {
+                state.currentBulkJobSnapshot.items[idx].status = 'CREATING';
             }
+            updateSingleBulkProgressRowDOM(idx, itemObj);
+            syncSelectedBulkProductItemFromSnapshot(idx, itemObj);
         } catch (err) {
             console.warn('Error parsing item_started event', err);
         }
@@ -2996,16 +3949,12 @@ function connectBulkJobEventSource(jobId, totalItems) {
     evtSource.addEventListener('item_throttled', (e) => {
         try {
             const data = JSON.parse(e.data);
-            const idx = data.item_index;
-            const statusEl = document.getElementById(`bulk-progress-status-${idx}`);
-            if (statusEl) {
-                statusEl.innerHTML = `
-                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-sm font-semibold bg-amber-100 text-amber-800">
-                        <iconify-icon icon="mdi:speedometer-slow" class="text-sm"></iconify-icon>
-                        <span>Throttled (${data.wait_seconds}s)...</span>
-                    </span>
-                `;
-            }
+            const idx = resolveBulkEventItemIndex(data);
+            updateSingleBulkProgressRowDOM(idx, {
+                item_index: idx,
+                status: 'THROTTLED',
+                wait_seconds: data.wait_seconds
+            });
         } catch (err) {
             console.warn('Error parsing item_throttled event', err);
         }
@@ -3014,37 +3963,26 @@ function connectBulkJobEventSource(jobId, totalItems) {
     evtSource.addEventListener('item_succeeded', (e) => {
         try {
             const data = JSON.parse(e.data);
-            const idx = data.item_index;
+            const idx = resolveBulkEventItemIndex(data);
             completedCount++;
+
+            const updatedItem = {
+                item_index: idx,
+                handle: data.handle || (state.selectedBulkProducts[idx] && state.selectedBulkProducts[idx].handle) || '',
+                title: data.title || (state.selectedBulkProducts[idx] && state.selectedBulkProducts[idx].title) || '',
+                status: 'SUCCESS',
+                product_id: data.product_id || null,
+                links: data.links || {},
+                errors: null,
+                error_message: null
+            };
+
+            if (state.currentBulkJobSnapshot && state.currentBulkJobSnapshot.items && state.currentBulkJobSnapshot.items[idx]) {
+                Object.assign(state.currentBulkJobSnapshot.items[idx], updatedItem);
+            }
+            updateSingleBulkProgressRowDOM(idx, updatedItem);
+            syncSelectedBulkProductItemFromSnapshot(idx, updatedItem);
             updateProgress();
-
-            const statusEl = document.getElementById(`bulk-progress-status-${idx}`);
-            const resultEl = document.getElementById(`bulk-progress-result-${idx}`);
-
-            if (statusEl) {
-                statusEl.innerHTML = `
-                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-sm font-semibold bg-emerald-100 text-emerald-800">
-                        <iconify-icon icon="mdi:check-circle" class="text-sm text-emerald-600"></iconify-icon>
-                        <span>Thành công</span>
-                    </span>
-                `;
-            }
-
-            if (resultEl) {
-                const links = data.links || {};
-                resultEl.innerHTML = `
-                    <div class="flex items-center gap-2 flex-wrap">
-                        ${links.shopify_admin ? `<a href="${links.shopify_admin}" target="_blank" class="inline-flex items-center gap-1 px-2.5 py-1 text-sm font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"><iconify-icon icon="mdi:shopify"></iconify-icon>Admin</a>` : ''}
-                        ${links.storefront ? `<a href="${links.storefront}" target="_blank" class="inline-flex items-center gap-1 px-2.5 py-1 text-sm font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg transition-colors"><iconify-icon icon="mdi:web"></iconify-icon>Storefront</a>` : ''}
-                        ${links.tool ? `<a href="${links.tool}" target="_blank" class="inline-flex items-center gap-1 px-2.5 py-1 text-sm font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg transition-colors"><iconify-icon icon="mdi:open-in-new"></iconify-icon>Tool</a>` : ''}
-                    </div>
-                `;
-            }
-
-            if (state.selectedBulkProducts[idx]) {
-                state.selectedBulkProducts[idx].status = 'SUCCESS';
-                state.selectedBulkProducts[idx].links = data.links;
-            }
         } catch (err) {
             console.warn('Error parsing item_succeeded event', err);
         }
@@ -3053,84 +3991,111 @@ function connectBulkJobEventSource(jobId, totalItems) {
     evtSource.addEventListener('item_failed', (e) => {
         try {
             const data = JSON.parse(e.data);
-            const idx = data.item_index;
+            const idx = resolveBulkEventItemIndex(data);
             failedCount++;
+
+            const errMsg = formatBulkItemErrors(data);
+            const updatedItem = {
+                item_index: idx,
+                handle: data.handle || (state.selectedBulkProducts[idx] && state.selectedBulkProducts[idx].handle) || '',
+                title: data.title || (state.selectedBulkProducts[idx] && state.selectedBulkProducts[idx].title) || '',
+                status: 'FAILED',
+                error_code: data.error_code || (Array.isArray(data.errors) && data.errors[0] && data.errors[0].code) || 'CREATION_FAILED',
+                error_message: errMsg,
+                errors: Array.isArray(data.errors) ? data.errors : [{ field: 'error', message: errMsg }],
+                links: null
+            };
+
+            if (state.currentBulkJobSnapshot && state.currentBulkJobSnapshot.items && state.currentBulkJobSnapshot.items[idx]) {
+                Object.assign(state.currentBulkJobSnapshot.items[idx], updatedItem);
+            }
+            updateSingleBulkProgressRowDOM(idx, updatedItem);
+            syncSelectedBulkProductItemFromSnapshot(idx, updatedItem);
             updateProgress();
-
-            const statusEl = document.getElementById(`bulk-progress-status-${idx}`);
-            const resultEl = document.getElementById(`bulk-progress-result-${idx}`);
-
-            if (statusEl) {
-                statusEl.innerHTML = `
-                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-sm font-semibold bg-red-100 text-red-800" title="${escapeHtml(data.error || '')}">
-                        <iconify-icon icon="mdi:alert-circle" class="text-sm text-red-600"></iconify-icon>
-                        <span>Lỗi</span>
-                    </span>
-                `;
-            }
-
-            if (resultEl) {
-                resultEl.innerHTML = `<span class="text-sm text-red-600 font-medium truncate block max-w-[240px]" title="${escapeHtml(data.error || '')}">${escapeHtml(data.error || 'Tạo thất bại')}</span>`;
-            }
-
-            if (state.selectedBulkProducts[idx]) {
-                state.selectedBulkProducts[idx].status = 'ERROR';
-                state.selectedBulkProducts[idx].error = data.error;
-            }
         } catch (err) {
             console.warn('Error parsing item_failed event', err);
         }
     });
 
-    evtSource.addEventListener('job_paused', (e) => {
+    evtSource.addEventListener('job_paused', async (e) => {
         try {
             const data = JSON.parse(e.data);
+            state.isBulkJobRunning = false;
+            evtSource.close();
+            await syncBulkJobSnapshotFromServer(jobId, false);
+            refreshLatestArchiveSummary();
             if (summaryBadge) {
                 summaryBadge.textContent = 'Tạm dừng: Gặp sự cố kết nối US Proxy an toàn';
                 summaryBadge.className = 'text-sm font-semibold px-3 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-full';
             }
             if (closeBtn) closeBtn.disabled = false;
-            evtSource.close();
-            Swal.fire({
-                icon: 'warning',
-                title: 'Tiến trình tạm dừng',
-                text: `Tiến trình đã tự động dừng an toàn để tránh làm hỏng các sản phẩm tiếp theo do lỗi US Proxy: ${data.proxy_error || data.reason || 'Lỗi mạng proxy'}`
-            });
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Tiến trình tạm dừng',
+                    text: `Tiến trình đã tự động dừng an toàn để tránh làm hỏng các sản phẩm tiếp theo do lỗi US Proxy: ${data.proxy_error || data.message || data.reason || 'Lỗi mạng proxy'}`
+                });
+            }
         } catch (err) {
             console.warn('Error parsing job_paused event', err);
         }
     });
 
-    evtSource.addEventListener('job_completed', (e) => {
+    evtSource.addEventListener('job_completed', async (e) => {
+        if (hasHandledCompletion) return;
+        hasHandledCompletion = true;
         try {
             const data = JSON.parse(e.data);
+            state.isBulkJobRunning = false;
             evtSource.close();
+            if (state.bulkFallbackPollTimer) {
+                clearInterval(state.bulkFallbackPollTimer);
+                state.bulkFallbackPollTimer = null;
+            }
+
+            // Đồng bộ snapshot chuẩn xác 100% từ SQLite trước khi hiển thị tổng kết
+            const finalJob = await syncBulkJobSnapshotFromServer(jobId, false);
+            refreshLatestArchiveSummary();
+
+            const successTotal = finalJob
+                ? finalJob.success_items
+                : (data.success_items ?? data.success ?? data.completed_items ?? completedCount);
+            const failedTotal = finalJob
+                ? finalJob.failed_items
+                : (data.failed_items ?? data.failed ?? failedCount);
+
             if (progressBar) progressBar.style.width = '100%';
             if (progressPercent) progressPercent.textContent = `${totalItems}/${totalItems} (100%)`;
             if (closeBtn) closeBtn.disabled = false;
             if (doneBtn) doneBtn.classList.remove('hidden');
 
-            const successTotal = data.completed_items ?? completedCount;
-            const failedTotal = data.failed_items ?? failedCount;
+            setBulkProgressModalHeaderState(
+                failedTotal === 0 ? 'COMPLETED' : 'COMPLETED_WITH_ERRORS',
+                totalItems,
+                successTotal,
+                failedTotal
+            );
 
             if (summaryBadge) {
                 summaryBadge.textContent = `Hoàn thành: ${successTotal} thành công, ${failedTotal} lỗi`;
                 summaryBadge.className = `text-sm font-semibold px-3 py-1 rounded-full ${failedTotal === 0 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`;
             }
 
-            Swal.fire({
-                icon: failedTotal === 0 ? 'success' : 'warning',
-                title: 'Hoàn tất tạo sản phẩm hàng loạt',
-                html: `
-                    <div class="text-left text-sm text-gray-700 space-y-2">
-                        <p>Đã xử lý xong toàn bộ <b>${totalItems}</b> sản phẩm.</p>
-                        <p class="text-emerald-700 font-semibold">&bull; Thành công: <b>${successTotal}</b> sản phẩm</p>
-                        ${failedTotal > 0 ? `<p class="text-red-600 font-semibold">&bull; Lỗi: <b>${failedTotal}</b> sản phẩm</p>` : ''}
-                        <p class="text-gray-500 mt-2">Bạn có thể bấm vào các link Admin / Storefront / Tool trong bảng để kiểm tra sản phẩm vừa tạo.</p>
-                    </div>
-                `,
-                confirmButtonText: 'Đã hiểu'
-            });
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: failedTotal === 0 ? 'success' : 'warning',
+                    title: 'Hoàn tất tạo sản phẩm hàng loạt',
+                    html: `
+                        <div class="text-left text-sm text-gray-700 space-y-2">
+                            <p>Đã xử lý xong toàn bộ <b>${totalItems}</b> sản phẩm.</p>
+                            <p class="text-emerald-700 font-semibold">&bull; Thành công: <b>${successTotal}</b> sản phẩm</p>
+                            ${failedTotal > 0 ? `<p class="text-red-600 font-semibold">&bull; Lỗi: <b>${failedTotal}</b> sản phẩm</p>` : ''}
+                            <p class="text-gray-600 mt-2">Toàn bộ dữ liệu và kết quả chi tiết từng sản phẩm đã được lưu tự động vào <b>Bản lưu trữ tạo gần nhất</b> trên máy chủ để bạn xem lại hoặc chọn điền lên trang bất cứ lúc nào.</p>
+                        </div>
+                    `,
+                    confirmButtonText: 'Đã hiểu'
+                });
+            }
         } catch (err) {
             console.warn('Error parsing job_completed event', err);
         }
@@ -3138,14 +4103,1045 @@ function connectBulkJobEventSource(jobId, totalItems) {
 
     evtSource.onerror = (err) => {
         console.warn('SSE EventSource error/closed:', err);
-        if (closeBtn) closeBtn.disabled = false;
+        evtSource.close();
+        if (hasHandledCompletion) return;
+
+        // Fallback Polling: Nếu kết nối SSE bị ngắt giữa chừng, tự động đồng bộ qua REST API mỗi 2 giây tới khi Job hoàn tất
+        if (!state.bulkFallbackPollTimer) {
+            state.bulkFallbackPollTimer = setInterval(async () => {
+                const snap = await syncBulkJobSnapshotFromServer(jobId, false);
+                if (!snap) return;
+                const st = String(snap.status || '').toUpperCase();
+                if (st === 'COMPLETED' || st === 'COMPLETED_WITH_ERRORS' || st === 'PAUSED_PROXY' || st === 'CANCELLED') {
+                    hasHandledCompletion = true;
+                    state.isBulkJobRunning = false;
+                    clearInterval(state.bulkFallbackPollTimer);
+                    state.bulkFallbackPollTimer = null;
+                    if (closeBtn) closeBtn.disabled = false;
+                    if (doneBtn) doneBtn.classList.remove('hidden');
+                    refreshLatestArchiveSummary();
+                }
+            }, 2000);
+        }
     };
+}
+
+/**
+ * Kiểm tra xem có Bulk Job nào vẫn đang chạy nền khi vừa vào trang không để tự động kết nối SSE
+ */
+async function checkRunningBulkJobOnLoad() {
+    try {
+        const resp = await fetch(`/api/products/bulk-jobs/latest?store_type=${encodeURIComponent(state.currentStoreType)}&include_payload=false`);
+        if (!resp.ok) return;
+        const data = await resp.json();
+        if (!data || !data.success || !data.job) return;
+
+        state.currentBulkJobSnapshot = data.job;
+
+        // Nếu Job gần nhất vẫn đang chạy nền, tự động kết nối SSE để tiếp tục theo dõi
+        if (String(data.job.status || '').toUpperCase() === 'RUNNING') {
+            state.isBulkJobRunning = true;
+            const preFailed = (data.job.items || []).filter(it => isBulkStatusFailed(it.status)).length;
+            connectBulkJobEventSource(data.job.job_id, data.job.total_items || (data.job.items || []).length, preFailed);
+        }
+    } catch (err) {
+        console.warn('checkRunningBulkJobOnLoad error:', err);
+    }
+}
+
+/**
+ * Mở lại Popup Tiến trình tạo hàng loạt
+ */
+function reopenBulkProgressModal() {
+    const modal = document.getElementById('bulkProgressModal');
+    if (!modal || !state.currentBulkJobSnapshot) return;
+
+    const job = state.currentBulkJobSnapshot;
+    const items = job.items || [];
+    const total = job.total_items || items.length;
+    const successCount = items.filter(it => String(it.status).toUpperCase() === 'SUCCESS').length;
+    const failedCount = items.filter(it => isBulkStatusFailed(it.status)).length;
+    const finished = Math.min(total, successCount + failedCount);
+    const pct = total > 0 ? Math.min(100, Math.round((finished / total) * 100)) : 0;
+
+    renderBulkProgressModalTableRows(items);
+    setBulkProgressModalHeaderState(job.status, total, successCount, failedCount);
+
+    const progressBar = document.getElementById('bulk-progress-bar-fill') || document.getElementById('bulk-progress-bar');
+    const progressPercent = document.getElementById('bulk-progress-percent');
+    const summaryBadge = document.getElementById('bulk-progress-stats') || document.getElementById('bulk-summary-badge');
+    const closeBtn = document.getElementById('btn-close-progress-modal');
+    const doneBtn = document.getElementById('btn-progress-done');
+
+    if (progressBar) progressBar.style.width = `${pct}%`;
+    if (progressPercent) progressPercent.textContent = `${finished}/${total} (${pct}%)`;
+    if (summaryBadge) {
+        summaryBadge.textContent = state.isBulkJobRunning
+            ? `Đang xử lý: ${successCount} thành công, ${failedCount} lỗi`
+            : `Hoàn thành: ${successCount} thành công, ${failedCount} lỗi`;
+        summaryBadge.className = `text-sm font-semibold px-3 py-1 rounded-full ${failedCount === 0 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`;
+    }
+    if (closeBtn) closeBtn.disabled = !!state.isBulkJobRunning;
+    if (doneBtn) {
+        if (state.isBulkJobRunning) doneBtn.classList.add('hidden');
+        else doneBtn.classList.remove('hidden');
+    }
+
+    modal.classList.remove('hidden');
 }
 
 /**
  * Đóng modal tiến trình tạo hàng loạt
  */
+let _isBulkProgressMouseDownOnBackdrop = false;
+function handleBulkProgressBackdropMouseDown(e) {
+    _isBulkProgressMouseDownOnBackdrop = (e.target === e.currentTarget);
+}
+function handleBulkProgressBackdropClick(e) {
+    if (_isBulkProgressMouseDownOnBackdrop && e.target === e.currentTarget && !state.isBulkJobRunning) {
+        closeBulkProgressModal();
+    }
+    _isBulkProgressMouseDownOnBackdrop = false;
+}
+
 function closeBulkProgressModal() {
     const modal = document.getElementById('bulkProgressModal');
     if (modal) modal.classList.add('hidden');
+}
+
+/**
+ * Điền trực tiếp một object payload chuẩn (lưu trong Bản lưu trữ tạo gần nhất JSON hoặc SQLite Bulk Job) lên form chỉnh sửa
+ */
+function populateFormFromPayloadObject(payload) {
+    if (!payload || typeof payload !== 'object') return;
+
+    isBatchUpdating = true;
+    try {
+        // 1. Phương tiện (Media)
+        const rawMedia = Array.isArray(payload.media) ? payload.media : [];
+        state.media = rawMedia
+            .map(m => (typeof m === 'string' ? m.trim() : String((m && (m.url || m.previewUrl)) || '').trim()))
+            .filter(Boolean)
+            .map((url, idx) => ({
+                id: 'med_' + Math.random().toString(36).substr(2, 9),
+                kind: 'url',
+                url,
+                file: null,
+                previewUrl: url,
+                position: idx + 1
+            }));
+        renderMediaGallery();
+
+        // 2. Tên sản phẩm (Title) & Đường dẫn URL (Handle)
+        const titleVal = String(payload.title || '').trim();
+        const titleEl = document.getElementById('product-title');
+        if (titleEl) {
+            titleEl.value = titleVal;
+        }
+        const titleCharCount = document.getElementById('title-char-count');
+        if (titleCharCount) {
+            titleCharCount.textContent = `${titleVal.length} ký tự`;
+        }
+
+        const rawHandle = String(payload.handle || '').trim();
+        const handleVal = rawHandle || slugify(titleVal);
+        const handleEl = document.getElementById('product-handle');
+        const resetHandleBtn = document.getElementById('btn-reset-handle');
+        if (handleEl) {
+            handleEl.value = handleVal;
+            if (rawHandle) {
+                handleEl.setAttribute('data-touched', 'true');
+                if (resetHandleBtn) resetHandleBtn.classList.remove('hidden');
+            } else {
+                handleEl.removeAttribute('data-touched');
+                if (resetHandleBtn) resetHandleBtn.classList.add('hidden');
+            }
+        }
+        const previewHandleSpan = document.getElementById('seo-preview-handle');
+        if (previewHandleSpan) {
+            previewHandleSpan.textContent = handleVal || 'sample-product';
+        }
+
+        // 3. Mô tả ngắn (Description) & Loại sản phẩm (Type)
+        const descEl = document.getElementById('product-desc');
+        if (descEl) descEl.value = payload.descriptionHtml || '';
+
+        const typeEl = document.getElementById('product-type');
+        if (typeEl) typeEl.value = payload.productType || '';
+
+        // 4. Danh mục (Category): gán .value cho cả hidden input #selected-category-id VÀ text input #selected-category-name
+        const catId = String(payload.categoryId || '').trim();
+        let catName = String(payload.categoryName || '').trim();
+        if (!catName && catId) {
+            if (catId === 'gid://shopify/TaxonomyCategory/hg-3-47') {
+                catName = 'Home & Garden > Lighting > Lamps (hg-3-47)';
+            } else {
+                catName = catId;
+            }
+        }
+        state.selectedCategoryId = catId;
+        state.selectedCategoryName = catName;
+        const catIdInput = document.getElementById('selected-category-id');
+        const catNameInput = document.getElementById('selected-category-name');
+        if (catIdInput) catIdInput.value = catId;
+        if (catNameInput) catNameInput.value = catName;
+
+        // 5. Trạng thái (Status) & Nhà cung cấp (Vendor)
+        const statusSelect = document.getElementById('product-status');
+        if (statusSelect) {
+            const normStatus = String(payload.status || 'DRAFT').trim().toUpperCase();
+            statusSelect.value = (normStatus === 'ACTIVE' || normStatus === 'UNLISTED') ? normStatus : 'DRAFT';
+            if (!statusSelect.value) statusSelect.value = 'DRAFT';
+        }
+
+        const vendorVal = String(payload.vendor || 'Wrydeco').trim() || 'Wrydeco';
+        const vendorSelect = document.getElementById('product-vendor');
+        if (vendorSelect) {
+            let matchedVendor = false;
+            for (let i = 0; i < vendorSelect.options.length; i++) {
+                if (vendorSelect.options[i].value.toLowerCase() === vendorVal.toLowerCase()) {
+                    vendorSelect.selectedIndex = i;
+                    matchedVendor = true;
+                    break;
+                }
+            }
+            if (!matchedVendor) {
+                const opt = document.createElement('option');
+                opt.value = vendorVal;
+                opt.textContent = vendorVal;
+                opt.selected = true;
+                vendorSelect.appendChild(opt);
+            }
+        }
+
+        // 6. Thẻ sản phẩm (Tags)
+        state.tags = Array.isArray(payload.tags) ? payload.tags.map(t => String(t).trim()).filter(Boolean) : [];
+        renderTags();
+
+        // 7. SEO Title & SEO Description + Google Preview
+        const seo = (payload.seo && typeof payload.seo === 'object') ? payload.seo : {};
+        const seoTitleVal = String(seo.title || (titleVal ? `${titleVal} | Wrydeco` : '')).trim();
+        const seoDescVal = String(seo.description || '').trim();
+
+        const seoTitleEl = document.getElementById('seo-title');
+        if (seoTitleEl) {
+            seoTitleEl.value = seoTitleVal;
+            if (seoTitleVal) {
+                seoTitleEl.setAttribute('data-touched', 'true');
+            } else {
+                seoTitleEl.removeAttribute('data-touched');
+            }
+        }
+        const seoTitleCount = document.getElementById('seo-title-count');
+        if (seoTitleCount) seoTitleCount.textContent = `${seoTitleVal.length} / 70 ký tự`;
+        const seoPreviewTitle = document.getElementById('seo-preview-title');
+        if (seoPreviewTitle) seoPreviewTitle.textContent = seoTitleVal || 'Tiêu đề sản phẩm';
+
+        const seoDescEl = document.getElementById('seo-desc');
+        if (seoDescEl) seoDescEl.value = seoDescVal;
+        const seoDescCount = document.getElementById('seo-desc-count');
+        if (seoDescCount) seoDescCount.textContent = `${seoDescVal.length} / 160 ký tự`;
+        const seoPreviewDesc = document.getElementById('seo-preview-desc');
+        if (seoPreviewDesc) seoPreviewDesc.textContent = seoDescVal || 'Mô tả sản phẩm sẽ hiển thị tại đây...';
+
+        // 8. Tác giả thiết kế (Author) — khớp theo ID, hoặc theo tên, hoặc fallback tác giả đầu tiên của Store hiện tại
+        const rawAuthorId = String(payload.authorId || '').trim();
+        const rawAuthorName = String(payload.authorName || '').trim();
+        state.pendingAuthorName = rawAuthorName;
+
+        let matchedAuthor = null;
+        if (Array.isArray(state.authors) && state.authors.length > 0) {
+            if (rawAuthorId) {
+                const idTail = rawAuthorId.split('/').pop();
+                matchedAuthor = state.authors.find(a => a.id === rawAuthorId || (idTail && a.id && a.id.endsWith('/' + idTail)));
+            }
+            if (!matchedAuthor && rawAuthorName) {
+                const cleanName = rawAuthorName.toLowerCase();
+                matchedAuthor = state.authors.find(a => String(a.name || a.displayName || '').trim().toLowerCase() === cleanName);
+            }
+            if (!matchedAuthor && (rawAuthorId || rawAuthorName)) {
+                matchedAuthor = state.authors[0];
+            }
+        }
+        if (matchedAuthor && typeof selectInlineAuthor === 'function') {
+            selectInlineAuthor(matchedAuthor.id);
+        } else {
+            state.selectedAuthorId = rawAuthorId;
+            const authorHidden = document.getElementById('selected-author-id');
+            if (authorHidden) authorHidden.value = rawAuthorId;
+        }
+
+        // 9. Mô tả mở rộng (Rich Description) & Nội dung tìm kiếm AI (AEO)
+        const richDescEl = document.getElementById('rich-description');
+        if (richDescEl) richDescEl.value = payload.richDescription || '';
+
+        const aeoEl = document.getElementById('aeo-html');
+        if (aeoEl) aeoEl.value = payload.aeoHtml || '';
+
+        // 10. Phong cách nội thất (Interior Style) & Không gian phòng (Room Type)
+        const styles = new Set((payload.interiorStyle || []).map(s => String(s).trim().toLowerCase()));
+        document.querySelectorAll('input[name="interior_style"]').forEach(cb => {
+            cb.checked = styles.has(cb.value.trim().toLowerCase());
+        });
+        const rooms = new Set((payload.roomType || []).map(r => String(r).trim().toLowerCase()));
+        document.querySelectorAll('input[name="room_type"]').forEach(cb => {
+            cb.checked = rooms.has(cb.value.trim().toLowerCase());
+        });
+
+        // 11. Tùy chọn & Ma trận biến thể (hỗ trợ đầy đủ Sparse Variants)
+        const rawOpts = Array.isArray(payload.options) ? payload.options : [];
+        const rawVars = Array.isArray(payload.variants) ? payload.variants : [];
+        if (rawOpts.length > 0) {
+            state.options = rawOpts.map(opt => ({
+                clientId: 'opt_' + Math.random().toString(36).substr(2, 9),
+                name: String(opt.name || 'Option').trim() || 'Option',
+                isEditing: false,
+                values: (opt.values || []).map(v => ({
+                    clientId: 'val_' + Math.random().toString(36).substr(2, 9),
+                    label: String(typeof v === 'object' ? (v.label || v.name || v.value || '') : v).trim()
+                })).filter(vo => vo.label.length > 0)
+            })).filter(o => o.values.length > 0);
+
+            if (state.options.length > 0) {
+                state.variantsByKey = {};
+                const cartesian = state.options.reduce((acc, opt) => {
+                    const next = [];
+                    acc.forEach(prefix => {
+                        opt.values.forEach(valObj => {
+                            next.push([...prefix, { optName: opt.name, clientId: valObj.clientId, label: valObj.label }]);
+                        });
+                    });
+                    return next;
+                }, [[]]);
+
+                cartesian.forEach(comb => {
+                    const key = comb.map(c => c.clientId).join('_');
+                    state.variantsByKey[key] = {
+                        enabled: false,
+                        price: '',
+                        compareAtPrice: '',
+                        sku: '',
+                        barcode: ''
+                    };
+                });
+
+                rawVars.forEach(v => {
+                    const optVals = Array.isArray(v.optionValues) ? v.optionValues : [];
+                    const matchedIds = state.options.map((opt, idx) => {
+                        const foundOv = optVals.find(ov => String(ov.optionName || '').trim().toLowerCase() === opt.name.toLowerCase()) || optVals[idx];
+                        const targetLabel = foundOv ? String(foundOv.name ?? foundOv.value ?? '').trim().toLowerCase() : '';
+                        const matchedVal = opt.values.find(vo => vo.label.toLowerCase() === targetLabel) || opt.values[0];
+                        return matchedVal ? matchedVal.clientId : null;
+                    });
+                    if (matchedIds.every(Boolean)) {
+                        const key = matchedIds.join('_');
+                        state.variantsByKey[key] = {
+                            enabled: true,
+                            price: String(v.price ?? ''),
+                            compareAtPrice: String(v.compareAtPrice ?? ''),
+                            sku: String(v.sku ?? ''),
+                            barcode: String(v.barcode ?? '')
+                        };
+                    }
+                });
+
+                state.showDisabledVariants = false;
+                renderOptions();
+                rebuildVariantMatrix();
+            }
+        } else if (rawVars.length > 0) {
+            const firstVar = rawVars[0] || {};
+            const optClientId = 'opt_' + Math.random().toString(36).substr(2, 9);
+            const valClientId = 'val_' + Math.random().toString(36).substr(2, 9);
+            state.options = [{
+                clientId: optClientId,
+                name: 'Style',
+                isEditing: false,
+                values: [{ clientId: valClientId, label: 'Default' }]
+            }];
+            state.variantsByKey = {
+                [valClientId]: {
+                    enabled: true,
+                    price: String(firstVar.price ?? ''),
+                    compareAtPrice: String(firstVar.compareAtPrice ?? ''),
+                    sku: String(firstVar.sku ?? ''),
+                    barcode: String(firstVar.barcode ?? '')
+                }
+            };
+            state.showDisabledVariants = false;
+            renderOptions();
+            rebuildVariantMatrix();
+        }
+    } finally {
+        isBatchUpdating = false;
+        updateValidationState();
+        if (typeof updateSubmitButtonLabel === 'function') {
+            updateSubmitButtonLabel();
+        }
+    }
+}
+
+/**
+ * Nạp một sản phẩm bị lỗi trong bảng kết quả lên biểu mẫu bên dưới để chỉnh sửa trực tiếp
+ */
+async function loadFailedBulkItemToForm(itemIndex) {
+    if (!state.currentBulkJobSnapshot) return;
+    const jobId = state.currentBulkJobSnapshot.job_id;
+
+    // Nếu sản phẩm vẫn nằm trong selectedBulkProducts hiện tại và có dữ liệu CSV gốc
+    if (Array.isArray(state.selectedBulkProducts) && state.selectedBulkProducts[itemIndex]) {
+        const selItem = state.selectedBulkProducts[itemIndex];
+        state.activeBulkProductId = selItem.clientId;
+        if (selItem.payload) {
+            populateFormFromPayloadObject(selItem.payload);
+        } else if (selItem.handle) {
+            await populateProductFromCsv(selItem.handle);
+        }
+        const formCard = document.getElementById('product-handle') || document.getElementById('product-title');
+        if (formCard) formCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        showToast(`Đã nạp "${selItem.title || selItem.handle}" lên biểu mẫu để chỉnh sửa.`, true);
+        return;
+    }
+
+    // Trường hợp tải lại trang (chưa có payload trong bộ nhớ): lấy payload từ SQLite của Job
+    const fullJob = await syncBulkJobSnapshotFromServer(jobId, true);
+    if (!fullJob || !Array.isArray(fullJob.items)) return;
+    const target = fullJob.items.find(it => it.item_index === itemIndex) || fullJob.items[itemIndex];
+    if (!target || !target.payload) {
+        showToast('Không tìm thấy dữ liệu gốc của sản phẩm này.', false);
+        return;
+    }
+
+    // Chuyển sang chế độ chỉnh sửa 1 sản phẩm hoặc nạp vào danh sách chờ nếu đang trống
+    state.selectedBulkProducts = [{
+        clientId: `retry_${itemIndex}_${Date.now()}`,
+        handle: target.handle,
+        title: target.title,
+        descriptionHtml: target.payload.descriptionHtml || '',
+        payload: target.payload,
+        status: 'PENDING',
+        error: null,
+        links: null
+    }];
+    state.activeBulkProductId = state.selectedBulkProducts[0].clientId;
+    updateFloatingBulkBadge();
+    populateFormFromPayloadObject(target.payload);
+
+    const handleInput = document.getElementById('product-handle') || document.getElementById('product-title');
+    if (handleInput) {
+        handleInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        handleInput.focus();
+    }
+    showToast(`Đã nạp "${target.title || target.handle}" vào biểu mẫu — bạn có thể sửa Handle và bấm tạo lại ngay!`, true);
+}
+
+/**
+ * Lọc giữ lại duy nhất các sản phẩm bị lỗi trong lần chạy vừa rồi để người dùng chỉnh sửa & tạo lại
+ * mà không tạo trùng lại các sản phẩm đã thành công.
+ */
+async function keepOnlyFailedBulkItemsForRetry() {
+    if (!state.currentBulkJobSnapshot) return;
+    const jobId = state.currentBulkJobSnapshot.job_id;
+    const fullJob = await syncBulkJobSnapshotFromServer(jobId, true);
+    if (!fullJob || !Array.isArray(fullJob.items)) return;
+
+    const failedItems = fullJob.items.filter(it => isBulkStatusFailed(it.status) && it.payload);
+    if (failedItems.length === 0) {
+        showToast('Không có sản phẩm lỗi nào cần tạo lại.', true);
+        return;
+    }
+
+    state.selectedBulkProducts = failedItems.map((it, idx) => ({
+        clientId: `retry_bulk_${idx}_${Date.now()}`,
+        handle: it.handle,
+        title: it.title,
+        descriptionHtml: it.payload.descriptionHtml || '',
+        payload: it.payload,
+        status: 'PENDING',
+        error: null,
+        links: null
+    }));
+    state.activeBulkProductId = state.selectedBulkProducts[0].clientId;
+    updateFloatingBulkBadge();
+    populateFormFromPayloadObject(state.selectedBulkProducts[0].payload);
+
+    showToast(`Đã lọc giữ lại ${failedItems.length} sản phẩm bị lỗi vào danh sách chờ và mở sản phẩm lỗi đầu tiên trên form!`, true);
+    const handleInput = document.getElementById('product-handle') || document.getElementById('product-title');
+    if (handleInput) {
+        handleInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
+// =============================================================================
+// BẢN LƯU TRỮ TẠO GẦN NHẤT (LATEST SERVER-SIDE JSON ARCHIVE MODAL)
+// =============================================================================
+
+let _isLatestArchiveBackdropMousedown = false;
+let _latestArchiveJsonTextCache = '';
+
+function handleLatestArchiveBackdropMouseDown(e) {
+    _isLatestArchiveBackdropMousedown = (e.target === e.currentTarget);
+}
+
+function handleLatestArchiveBackdropClick(e) {
+    if (_isLatestArchiveBackdropMousedown && e.target === e.currentTarget) {
+        closeLatestArchiveModal();
+    }
+    _isLatestArchiveBackdropMousedown = false;
+}
+
+function closeLatestArchiveModal() {
+    const modal = document.getElementById('latestArchiveModal');
+    if (modal) modal.classList.add('hidden');
+}
+
+function formatArchiveTimestampVi(isoStr) {
+    if (!isoStr) return '—';
+    try {
+        const d = new Date(isoStr);
+        if (isNaN(d.getTime())) return isoStr;
+        return d.toLocaleString('vi-VN', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
+    } catch (e) {
+        return isoStr;
+    }
+}
+
+function isArchiveStatusFailed(status) {
+    const st = String(status || '').trim().toUpperCase();
+    return st === 'FAILED' || st === 'FAILED_VALIDATION' || st === 'ERROR';
+}
+
+/**
+ * Cập nhật huy hiệu số lượng sản phẩm trên nút "Bản lưu trữ tạo gần nhất" ở Header
+ */
+async function refreshLatestArchiveSummary() {
+    const pill = document.getElementById('latest-archive-count-pill');
+    try {
+        const resp = await fetch('/api/products/latest-archive?include_payload=false');
+        if (!resp.ok) return;
+        const data = await resp.json();
+        const archive = data && data.archive ? data.archive : null;
+        if (pill) {
+            if (archive && Number(archive.total_items) > 0) {
+                pill.textContent = `${archive.total_items} SP`;
+                pill.classList.remove('hidden');
+            } else {
+                pill.classList.add('hidden');
+            }
+        }
+        // Nếu popup Bản lưu trữ đang mở thì đồng bộ lại dữ liệu đầy đủ
+        const modal = document.getElementById('latestArchiveModal');
+        if (modal && !modal.classList.contains('hidden')) {
+            await loadLatestArchiveFullData();
+        }
+    } catch (e) {
+        console.warn('refreshLatestArchiveSummary warning:', e);
+    }
+}
+
+async function loadLatestArchiveFullData() {
+    const loadingEl = document.getElementById('latest-archive-loading');
+    const emptyEl = document.getElementById('latest-archive-empty');
+    const tableWrap = document.getElementById('latest-archive-table-container');
+
+    if (loadingEl) loadingEl.classList.remove('hidden');
+    if (emptyEl) emptyEl.classList.add('hidden');
+    if (tableWrap) tableWrap.classList.add('hidden');
+
+    try {
+        const resp = await fetch('/api/products/latest-archive?include_payload=true');
+        const data = await resp.json();
+        state.latestArchiveData = (data && data.archive) ? data.archive : null;
+
+        const pill = document.getElementById('latest-archive-count-pill');
+        if (pill) {
+            if (state.latestArchiveData && Number(state.latestArchiveData.total_items) > 0) {
+                pill.textContent = `${state.latestArchiveData.total_items} SP`;
+                pill.classList.remove('hidden');
+            } else {
+                pill.classList.add('hidden');
+            }
+        }
+    } catch (err) {
+        console.error('Lỗi tải Bản lưu trữ tạo gần nhất:', err);
+        state.latestArchiveData = null;
+        showToast('Không thể tải Bản lưu trữ tạo gần nhất: ' + err.message, false);
+    } finally {
+        if (loadingEl) loadingEl.classList.add('hidden');
+    }
+
+    renderLatestArchiveModalView();
+}
+
+async function openLatestArchiveModal() {
+    const modal = document.getElementById('latestArchiveModal');
+    if (!modal) return;
+
+    state.latestArchiveFilter = 'all';
+    state.latestArchiveSearchQuery = '';
+    const searchInput = document.getElementById('latest-archive-search-input');
+    if (searchInput) searchInput.value = '';
+    closeLatestArchiveJsonViewer();
+
+    modal.classList.remove('hidden');
+    await loadLatestArchiveFullData();
+}
+
+function handleLatestArchiveSearch(val) {
+    state.latestArchiveSearchQuery = String(val || '').trim();
+    renderLatestArchiveModalView();
+}
+
+function setLatestArchiveFilter(filter) {
+    state.latestArchiveFilter = filter || 'all';
+    renderLatestArchiveModalView();
+}
+
+function resolveArchiveStoreDomain(archive) {
+    if (!archive) return '';
+    const explicit = String(archive.store_domain || (archive.metadata && archive.metadata.store_domain) || '').trim();
+    if (explicit) {
+        const cleaned = explicit.replace(/^https?:\/\//i, '').split('/')[0].split(':')[0].toLowerCase();
+        if (cleaned) {
+            return cleaned.includes('.') ? cleaned : `${cleaned}.myshopify.com`;
+        }
+    }
+    const isCustom = String(archive.store_type || '').toLowerCase() === 'custom';
+    const items = Array.isArray(archive.items) ? archive.items : [];
+    for (const it of items) {
+        const sf = it && it.links && (it.links.storefront || it.links.storefront_url);
+        if (sf && sf.includes('.myshopify.com')) {
+            const m = sf.match(/https?:\/\/([^/]+\.myshopify\.com)/i);
+            if (m && m[1]) return m[1].toLowerCase();
+        }
+        const adm = it && it.links && (it.links.shopify_admin || it.links.shopify_admin_url);
+        if (adm && adm.includes('admin.shopify.com/store/')) {
+            const m = adm.match(/admin\.shopify\.com\/store\/([^/?#]+)/i);
+            if (m && m[1]) return `${m[1].toLowerCase()}.myshopify.com`;
+        }
+    }
+    if (
+        typeof CURRENT_STORE_DOMAIN === 'string' &&
+        CURRENT_STORE_DOMAIN.trim() &&
+        ((isCustom && CURRENT_STORE_TYPE === 'custom') || (!isCustom && CURRENT_STORE_TYPE !== 'custom'))
+    ) {
+        return CURRENT_STORE_DOMAIN.trim();
+    }
+    return isCustom ? '236qm8-w7.myshopify.com' : 'wrydeco.myshopify.com';
+}
+
+function formatArchiveStoreBadgeLabel(archive) {
+    const isCustom = String((archive && archive.store_type) || '').toLowerCase() === 'custom';
+    const typeLabel = isCustom ? 'Store Riêng' : 'Store Mặc định';
+    const domain = resolveArchiveStoreDomain(archive);
+    return domain ? `${typeLabel}: ${domain}` : typeLabel;
+}
+
+function renderLatestArchiveModalView() {
+    const archive = state.latestArchiveData;
+    const modeBadge = document.getElementById('latest-archive-mode-badge');
+    const storeBadge = document.getElementById('latest-archive-store-badge');
+    const statusBadge = document.getElementById('latest-archive-status-badge');
+    const subtitleEl = document.getElementById('latest-archive-meta-subtitle');
+    const toolbarEl = document.getElementById('latest-archive-toolbar');
+    const emptyEl = document.getElementById('latest-archive-empty');
+    const tableWrap = document.getElementById('latest-archive-table-container');
+    const tbody = document.getElementById('latest-archive-table-body');
+    const reuseFailedBtn = document.getElementById('btn-archive-reuse-failed');
+    const reuseFailedLabel = document.getElementById('btn-archive-reuse-failed-label');
+    const reuseAllBtn = document.getElementById('btn-archive-reuse-all');
+    const reuseAllLabel = document.getElementById('btn-archive-reuse-all-label');
+
+    if (!archive || !Array.isArray(archive.items) || archive.items.length === 0) {
+        if (modeBadge) modeBadge.textContent = 'Chưa có dữ liệu';
+        if (storeBadge) storeBadge.textContent = '—';
+        if (statusBadge) {
+            statusBadge.textContent = 'Trống';
+            statusBadge.className = 'px-2.5 py-0.5 rounded-full text-sm font-bold bg-gray-100 text-gray-600 border border-gray-200';
+        }
+        if (subtitleEl) {
+            subtitleEl.textContent = 'Lưu trữ JSON tự động trên máy chủ cho lần tạo sản phẩm gần nhất (dù thành công hay thất bại).';
+        }
+        if (toolbarEl) toolbarEl.classList.add('hidden');
+        if (emptyEl) emptyEl.classList.remove('hidden');
+        if (tableWrap) tableWrap.classList.add('hidden');
+        if (reuseFailedBtn) reuseFailedBtn.classList.add('hidden');
+        if (reuseAllBtn) reuseAllBtn.classList.add('hidden');
+        return;
+    }
+
+    if (toolbarEl) toolbarEl.classList.remove('hidden');
+    if (emptyEl) emptyEl.classList.remove('block');
+    if (emptyEl) emptyEl.classList.add('hidden');
+    if (tableWrap) tableWrap.classList.remove('hidden');
+
+    const items = archive.items || [];
+    const total = items.length;
+    const successItems = items.filter(it => String(it.status || '').toUpperCase() === 'SUCCESS');
+    const failedItems = items.filter(it => isArchiveStatusFailed(it.status));
+
+    if (modeBadge) {
+        const isBulk = String(archive.mode || '').toLowerCase() === 'bulk';
+        modeBadge.textContent = isBulk ? `Tạo hàng loạt (${total} SP)` : 'Tạo đơn lẻ (1 SP)';
+        modeBadge.className = isBulk
+            ? 'px-2.5 py-0.5 rounded-full text-sm font-bold bg-indigo-50 text-indigo-800 border border-indigo-200'
+            : 'px-2.5 py-0.5 rounded-full text-sm font-bold bg-purple-50 text-purple-800 border border-purple-200';
+    }
+
+    if (storeBadge) {
+        const isCustom = String(archive.store_type || '').toLowerCase() === 'custom';
+        storeBadge.textContent = formatArchiveStoreBadgeLabel(archive);
+        storeBadge.className = isCustom
+            ? 'px-2.5 py-0.5 rounded-full text-sm font-bold bg-teal-50 text-teal-800 border border-teal-200'
+            : 'px-2.5 py-0.5 rounded-full text-sm font-bold bg-gray-100 text-gray-700 border border-gray-200';
+    }
+
+    if (statusBadge) {
+        const overall = String(archive.overall_status || '').toUpperCase();
+        if (overall === 'RUNNING' || overall === 'READY') {
+            statusBadge.textContent = `Đang xử lý (${successItems.length + failedItems.length}/${total})`;
+            statusBadge.className = 'px-2.5 py-0.5 rounded-full text-sm font-bold bg-indigo-100 text-indigo-800 border border-indigo-200';
+        } else if (failedItems.length === 0 && successItems.length > 0) {
+            statusBadge.textContent = `Thành công (${successItems.length}/${total})`;
+            statusBadge.className = 'px-2.5 py-0.5 rounded-full text-sm font-bold bg-emerald-50 text-emerald-800 border border-emerald-200';
+        } else if (successItems.length === 0 && failedItems.length > 0) {
+            statusBadge.textContent = `Thất bại (${failedItems.length}/${total} lỗi)`;
+            statusBadge.className = 'px-2.5 py-0.5 rounded-full text-sm font-bold bg-red-50 text-red-800 border border-red-200';
+        } else {
+            statusBadge.textContent = `${successItems.length} thành công • ${failedItems.length} thất bại`;
+            statusBadge.className = 'px-2.5 py-0.5 rounded-full text-sm font-bold bg-amber-50 text-amber-900 border border-amber-200';
+        }
+    }
+
+    if (subtitleEl) {
+        const timeText = formatArchiveTimestampVi(archive.updated_at || archive.saved_at);
+        const jobPart = archive.job_id ? ` • Job: ${archive.job_id}` : '';
+        subtitleEl.textContent = `File JSON máy chủ: latest_create_archive.json • Lưu lúc: ${timeText}${jobPart}`;
+    }
+
+    // Cập nhật bộ đếm và trạng thái active trên 3 nút lọc
+    const countAllEl = document.getElementById('archive-filter-count-all');
+    const countFailedEl = document.getElementById('archive-filter-count-failed');
+    const countSuccessEl = document.getElementById('archive-filter-count-success');
+    if (countAllEl) countAllEl.textContent = String(total);
+    if (countFailedEl) countFailedEl.textContent = String(failedItems.length);
+    if (countSuccessEl) countSuccessEl.textContent = String(successItems.length);
+
+    const activeFilter = state.latestArchiveFilter || 'all';
+    const btnAll = document.getElementById('archive-filter-btn-all');
+    const btnFailed = document.getElementById('archive-filter-btn-failed');
+    const btnSuccess = document.getElementById('archive-filter-btn-success');
+
+    if (btnAll) {
+        btnAll.className = activeFilter === 'all'
+            ? 'px-3 py-1.5 rounded-xl text-sm font-bold bg-gray-900 text-white cursor-pointer transition-colors'
+            : 'px-3 py-1.5 rounded-xl text-sm font-bold bg-white text-gray-700 hover:bg-gray-100 border border-gray-300 cursor-pointer transition-colors';
+    }
+    if (btnFailed) {
+        btnFailed.className = activeFilter === 'failed'
+            ? 'px-3 py-1.5 rounded-xl text-sm font-bold bg-red-600 text-white cursor-pointer transition-colors'
+            : 'px-3 py-1.5 rounded-xl text-sm font-bold bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 cursor-pointer transition-colors';
+    }
+    if (btnSuccess) {
+        btnSuccess.className = activeFilter === 'success'
+            ? 'px-3 py-1.5 rounded-xl text-sm font-bold bg-emerald-600 text-white cursor-pointer transition-colors'
+            : 'px-3 py-1.5 rounded-xl text-sm font-bold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 cursor-pointer transition-colors';
+    }
+
+    // Nút phụ ở Footer để nạp lại hàng loạt
+    if (reuseFailedBtn && reuseFailedLabel) {
+        if (failedItems.length > 0 && total > 1) {
+            reuseFailedBtn.classList.remove('hidden');
+            reuseFailedLabel.textContent = `Nạp ${failedItems.length} SP lỗi vào hàng loạt`;
+        } else {
+            reuseFailedBtn.classList.add('hidden');
+        }
+    }
+    if (reuseAllBtn && reuseAllLabel) {
+        if (total > 1) {
+            reuseAllBtn.classList.remove('hidden');
+            reuseAllLabel.textContent = `Nạp tất cả (${total} SP) vào hàng loạt`;
+        } else {
+            reuseAllBtn.classList.add('hidden');
+        }
+    }
+
+    // Lọc danh sách theo từ khóa tìm kiếm và trạng thái
+    const q = (state.latestArchiveSearchQuery || '').toLowerCase();
+    const filtered = items
+        .map((it, idx) => ({ item: it, index: typeof it.item_index === 'number' ? it.item_index : idx, arrayIndex: idx }))
+        .filter(({ item }) => {
+            const st = String(item.status || '').toUpperCase();
+            if (activeFilter === 'failed' && !isArchiveStatusFailed(st)) return false;
+            if (activeFilter === 'success' && st !== 'SUCCESS') return false;
+            if (q) {
+                const hay = `${item.title || ''} ${item.handle || ''} ${item.error_message || ''} ${(item.summary && item.summary.product_type) || ''}`.toLowerCase();
+                if (!hay.includes(q)) return false;
+            }
+            return true;
+        });
+
+    if (!tbody) return;
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" class="py-8 px-4 text-center text-gray-500 font-medium">
+                    Không có sản phẩm nào khớp với bộ lọc hiện tại.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = filtered.map(({ item, index, arrayIndex }) => {
+        const st = String(item.status || 'PENDING').toUpperCase();
+        const summary = item.summary || {};
+        const thumbUrl = summary.thumbnail_url || '';
+        const varCount = summary.variant_count ?? ((item.payload && Array.isArray(item.payload.variants)) ? item.payload.variants.length : 0);
+        const mediaCount = summary.media_count ?? ((item.payload && Array.isArray(item.payload.media)) ? item.payload.media.length : 0);
+        const pricePreview = summary.price_preview || '';
+        const prodType = summary.product_type || (item.payload && item.payload.productType) || '';
+
+        let statusHtml = '';
+        let detailHtml = '';
+
+        if (st === 'SUCCESS') {
+            statusHtml = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-sm font-bold bg-emerald-50 text-emerald-700 border border-emerald-200"><iconify-icon icon="mdi:check-circle"></iconify-icon>Thành công</span>`;
+            const pidNum = item.product_id ? String(item.product_id).split('/').pop() : '';
+            const links = item.links || {};
+            const adminLink = links.shopify_admin || links.shopify_admin_url || '';
+            const toolLink = links.tool || links.tool_url || '';
+            detailHtml = `
+                <div class="text-sm text-emerald-800 font-medium mt-1">
+                    ${pidNum ? `Shopify ID: <span class="font-mono">${escapeHtml(pidNum)}</span>` : 'Đã tạo thành công'}
+                    ${adminLink ? ` • <a href="${escapeHtml(adminLink)}" target="_blank" rel="noopener noreferrer" class="underline hover:text-emerald-950 font-bold">Admin</a>` : ''}
+                    ${toolLink ? ` • <a href="${escapeHtml(toolLink)}" target="_blank" rel="noopener noreferrer" class="underline hover:text-emerald-950 font-bold">Tool</a>` : ''}
+                </div>
+            `;
+        } else if (isArchiveStatusFailed(st)) {
+            statusHtml = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-sm font-bold bg-red-50 text-red-700 border border-red-200"><iconify-icon icon="mdi:alert-circle"></iconify-icon>Thất bại</span>`;
+            const errMsg = item.error_message || 'Lỗi không xác định khi tạo sản phẩm.';
+            detailHtml = `<p class="text-sm text-red-700 mt-1 leading-snug line-clamp-2" title="${escapeHtml(errMsg)}">${escapeHtml(errMsg)}</p>`;
+        } else {
+            statusHtml = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-sm font-bold bg-amber-50 text-amber-800 border border-amber-200"><iconify-icon icon="mdi:clock-outline"></iconify-icon>${escapeHtml(st)}</span>`;
+            detailHtml = `<p class="text-sm text-gray-500 mt-1">Đang chờ hoặc đang xử lý trên máy chủ.</p>`;
+        }
+
+        const thumbHtml = thumbUrl
+            ? `<img src="${escapeHtml(thumbUrl)}" alt="" class="w-11 h-11 rounded-lg object-cover border border-gray-200 shrink-0 bg-gray-50">`
+            : `<div class="w-11 h-11 rounded-lg border border-gray-200 bg-gray-100 text-gray-400 flex items-center justify-center shrink-0"><iconify-icon icon="mdi:image-off-outline" class="text-lg"></iconify-icon></div>`;
+
+        return `
+            <tr class="hover:bg-indigo-50/30 transition-colors">
+                <td class="py-3.5 px-2.5 text-center font-bold text-gray-500">${index + 1}</td>
+                <td class="py-3.5 px-3.5 overflow-hidden">
+                    <div class="flex items-center gap-3 min-w-0">
+                        ${thumbHtml}
+                        <div class="min-w-0 flex-1">
+                            <p class="font-bold text-gray-900 leading-snug truncate" title="${escapeHtml(item.title || '(Chưa có tiêu đề)')}">${escapeHtml(item.title || '(Chưa có tiêu đề)')}</p>
+                            <p class="text-sm font-mono text-gray-500 truncate mt-0.5" title="${escapeHtml(item.handle || '')}">${escapeHtml(item.handle || '—')}</p>
+                        </div>
+                    </div>
+                </td>
+                <td class="py-3.5 px-3.5 overflow-hidden">
+                    <div class="flex flex-wrap items-center gap-1.5 text-sm font-semibold text-gray-700">
+                        <span class="px-2 py-0.5 bg-gray-100 rounded-md border border-gray-200 whitespace-nowrap">${mediaCount} ảnh</span>
+                        <span class="px-2 py-0.5 bg-gray-100 rounded-md border border-gray-200 whitespace-nowrap">${varCount} biến thể</span>
+                        ${pricePreview ? `<span class="px-2 py-0.5 bg-indigo-50 text-indigo-800 rounded-md border border-indigo-100 whitespace-nowrap">${escapeHtml(pricePreview)}</span>` : ''}
+                    </div>
+                    ${prodType ? `<p class="text-sm text-gray-500 mt-1 truncate">Loại: ${escapeHtml(prodType)}</p>` : ''}
+                </td>
+                <td class="py-3.5 px-3.5 overflow-hidden">
+                    ${statusHtml}
+                    ${detailHtml}
+                </td>
+                <td class="py-3.5 px-3.5 text-right">
+                    <div class="inline-flex items-center justify-end gap-1.5 whitespace-nowrap">
+                        <button type="button" onclick="inspectArchiveItemJson(${arrayIndex})" class="px-2.5 py-1.5 bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 text-sm font-bold rounded-xl transition-colors cursor-pointer inline-flex items-center gap-1 shrink-0 whitespace-nowrap" title="Xem JSON chi tiết của sản phẩm này">
+                            <iconify-icon icon="mdi:code-json" class="text-sm text-indigo-600 shrink-0"></iconify-icon>
+                            <span>JSON</span>
+                        </button>
+                        <button type="button" onclick="selectProductFromLatestArchive(${arrayIndex})" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl shadow-2xs transition-colors cursor-pointer inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap" title="Điền toàn bộ dữ liệu sản phẩm này lên trang Tạo sản phẩm mới để chỉnh sửa">
+                            <iconify-icon icon="mdi:file-document-edit-outline" class="text-sm shrink-0"></iconify-icon>
+                            <span>Chọn & Điền</span>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+/**
+ * Chọn 1 sản phẩm từ Bản lưu trữ tạo gần nhất -> Điền toàn bộ các trường lên trang để chỉnh sửa
+ */
+function selectProductFromLatestArchive(arrayIndex) {
+    const archive = state.latestArchiveData;
+    if (!archive || !Array.isArray(archive.items) || !archive.items[arrayIndex]) {
+        showToast('Không tìm thấy sản phẩm đã chọn trong bản lưu trữ.', false);
+        return;
+    }
+
+    const item = archive.items[arrayIndex];
+    if (!item.payload || typeof item.payload !== 'object') {
+        showToast('Sản phẩm này không có dữ liệu payload hợp lệ để điền.', false);
+        return;
+    }
+
+    // Chuyển biểu mẫu về chế độ chỉnh sửa trực tiếp 1 sản phẩm để người dùng sửa và bấm tạo lại ngay
+    state.selectedBulkProducts = [];
+    state.activeBulkProductId = null;
+    updateFloatingBulkBadge();
+
+    // Ẩn các khung thông báo kết quả cũ để tập trung vào biểu mẫu chỉnh sửa
+    const successSec = document.getElementById('create-success-actions-section');
+    if (successSec) successSec.classList.add('hidden');
+    const errSec = document.getElementById('create-error-section');
+    if (errSec) errSec.classList.add('hidden');
+
+    populateFormFromPayloadObject(item.payload);
+    closeLatestArchiveModal();
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    showToast(`Đã điền đầy đủ dữ liệu sản phẩm "${item.title || item.handle || '#' + (arrayIndex + 1)}" từ Bản lưu trữ tạo gần nhất lên trang!`, true);
+}
+
+/**
+ * Xem toàn bộ JSON của Bản lưu trữ tạo gần nhất hoặc JSON của 1 sản phẩm cụ thể
+ */
+function toggleLatestArchiveJsonViewer() {
+    const panel = document.getElementById('latest-archive-json-panel');
+    const pre = document.getElementById('latest-archive-json-pre');
+    const titleEl = document.getElementById('latest-archive-json-title');
+    const labelEl = document.getElementById('btn-toggle-archive-json-label');
+    if (!panel || !pre) return;
+
+    const isHidden = panel.classList.contains('hidden');
+    if (!isHidden && titleEl && titleEl.dataset.scope === 'full') {
+        closeLatestArchiveJsonViewer();
+        return;
+    }
+
+    const formatted = JSON.stringify(state.latestArchiveData || {}, null, 2);
+    _latestArchiveJsonTextCache = formatted;
+    pre.textContent = formatted;
+    if (titleEl) {
+        titleEl.textContent = 'Toàn bộ dữ liệu JSON của Bản lưu trữ tạo gần nhất (latest_create_archive.json)';
+        titleEl.dataset.scope = 'full';
+    }
+    if (labelEl) labelEl.textContent = 'Ẩn dữ liệu JSON';
+    panel.classList.remove('hidden');
+}
+
+function inspectArchiveItemJson(arrayIndex) {
+    const archive = state.latestArchiveData;
+    if (!archive || !Array.isArray(archive.items) || !archive.items[arrayIndex]) return;
+
+    const item = archive.items[arrayIndex];
+    const panel = document.getElementById('latest-archive-json-panel');
+    const pre = document.getElementById('latest-archive-json-pre');
+    const titleEl = document.getElementById('latest-archive-json-title');
+    const labelEl = document.getElementById('btn-toggle-archive-json-label');
+    if (!panel || !pre) return;
+
+    const formatted = JSON.stringify(item, null, 2);
+    _latestArchiveJsonTextCache = formatted;
+    pre.textContent = formatted;
+    if (titleEl) {
+        titleEl.textContent = `JSON sản phẩm #${arrayIndex + 1}: ${item.title || item.handle || ''}`;
+        titleEl.dataset.scope = 'item';
+    }
+    if (labelEl) labelEl.textContent = 'Xem toàn bộ JSON';
+    panel.classList.remove('hidden');
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function closeLatestArchiveJsonViewer() {
+    const panel = document.getElementById('latest-archive-json-panel');
+    const labelEl = document.getElementById('btn-toggle-archive-json-label');
+    if (panel) panel.classList.add('hidden');
+    if (labelEl) labelEl.textContent = 'Xem dữ liệu JSON';
+}
+
+async function copyLatestArchiveJson() {
+    const text = _latestArchiveJsonTextCache || JSON.stringify(state.latestArchiveData || {}, null, 2);
+    try {
+        await navigator.clipboard.writeText(text);
+        showToast('Đã sao chép dữ liệu JSON vào bộ nhớ tạm!', true);
+    } catch (e) {
+        showToast('Không thể sao chép tự động, vui lòng bôi đen trong khung JSON.', false);
+    }
+}
+
+/**
+ * Nạp lại danh sách sản phẩm (tất cả hoặc chỉ các sản phẩm lỗi) từ Bản lưu trữ vào hàng đợi tạo hàng loạt
+ */
+function reuseLatestArchiveItems(mode) {
+    const archive = state.latestArchiveData;
+    if (!archive || !Array.isArray(archive.items)) return;
+
+    const sourceItems = mode === 'failed'
+        ? archive.items.filter(it => isArchiveStatusFailed(it.status) && it.payload)
+        : archive.items.filter(it => it && it.payload);
+
+    if (sourceItems.length === 0) {
+        showToast('Không có sản phẩm phù hợp trong bản lưu trữ để nạp lại.', false);
+        return;
+    }
+
+    state.selectedBulkProducts = sourceItems.map((it, idx) => ({
+        clientId: `archive_bulk_${idx}_${Date.now()}`,
+        handle: it.handle || (it.payload && it.payload.handle) || '',
+        title: it.title || (it.payload && it.payload.title) || '',
+        descriptionHtml: (it.payload && it.payload.descriptionHtml) || '',
+        payload: JSON.parse(JSON.stringify(it.payload)),
+        status: 'PENDING',
+        error: null,
+        links: null
+    }));
+    state.activeBulkProductId = state.selectedBulkProducts[0].clientId;
+    updateFloatingBulkBadge();
+    populateFormFromPayloadObject(state.selectedBulkProducts[0].payload);
+    closeLatestArchiveModal();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    showToast(
+        mode === 'failed'
+            ? `Đã nạp ${sourceItems.length} sản phẩm bị lỗi từ Bản lưu trữ vào danh sách chờ hàng loạt!`
+            : `Đã nạp toàn bộ ${sourceItems.length} sản phẩm từ Bản lưu trữ vào danh sách chờ hàng loạt!`,
+        true
+    );
+}
+
+// Export các hàm Bulk Progress, Sparse Variants & Bản lưu trữ tạo gần nhất ra window để onclick HTML luôn gọi được an toàn
+if (typeof window !== 'undefined') {
+    Object.assign(window, {
+        reopenBulkProgressModal,
+        closeBulkProgressModal,
+        handleBulkProgressBackdropMouseDown,
+        handleBulkProgressBackdropClick,
+        loadFailedBulkItemToForm,
+        keepOnlyFailedBulkItemsForRetry,
+        openLatestArchiveModal,
+        closeLatestArchiveModal,
+        handleLatestArchiveBackdropMouseDown,
+        handleLatestArchiveBackdropClick,
+        handleLatestArchiveSearch,
+        setLatestArchiveFilter,
+        selectProductFromLatestArchive,
+        toggleLatestArchiveJsonViewer,
+        inspectArchiveItemJson,
+        closeLatestArchiveJsonViewer,
+        copyLatestArchiveJson,
+        reuseLatestArchiveItems,
+        refreshLatestArchiveSummary
+    });
 }

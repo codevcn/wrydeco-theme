@@ -1969,6 +1969,7 @@
             const formData = new FormData();
             formData.append('product_id', '{{ product.id }}');
             formData.append('password', password);
+            formData.append('store_type', CURRENT_STORE_TYPE);
             
             try {
                 const response = await fetch('/delete-product', {
@@ -1981,8 +1982,9 @@
                 
                 if (data.success) {
                     alertBox.className = 'mt-3 rounded-lg p-3 bg-green-50 text-green-700 border border-green-200 block text-left';
-                    alertBox.innerHTML = 'Xóa thành công! Đang chuyển về trang chủ...';
-                    setTimeout(() => { window.location.href = '/'; }, 1500);
+                    alertBox.innerHTML = 'Xóa thành công! Đang chuyển về danh sách sản phẩm...';
+                    const targetUrl = data.redirect_url || `/?store_type=${encodeURIComponent(CURRENT_STORE_TYPE)}`;
+                    setTimeout(() => { window.location.href = targetUrl; }, 1200);
                 } else {
                     alertBox.className = 'mt-3 rounded-lg p-3 bg-red-50 text-red-700 border border-red-200 block text-left';
                     alertBox.innerHTML = data.message || 'Lỗi không xác định.';
@@ -2203,7 +2205,8 @@
                     },
                     body: JSON.stringify({
                         product_id: "{{ product.id }}",
-                        moves: moves
+                        moves: moves,
+                        store_type: CURRENT_STORE_TYPE
                     })
                 });
                 const result = await response.json();
@@ -2508,6 +2511,7 @@
                 // Upload tất cả ảnh đã fetch lên Shopify store
                 setModalStatus(`Đã lưu ${downloadedFiles.length} ảnh vào thiết bị! Đang tải lên Shopify store...`, 'info');
                 const formData = new FormData();
+                formData.append('store_type', CURRENT_STORE_TYPE);
                 for (const f of downloadedFiles) {
                     formData.append('files', f);
                 }
@@ -2565,6 +2569,7 @@
             }
 
             const formData = new FormData();
+            formData.append('store_type', CURRENT_STORE_TYPE);
             for (let i = 0; i < files.length; i++) {
                 formData.append('files', files[i]);
             }
@@ -2625,7 +2630,8 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        media_id: mediaId
+                        media_id: mediaId,
+                        store_type: CURRENT_STORE_TYPE
                     })
                 });
 
@@ -3398,7 +3404,8 @@
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                     body: JSON.stringify({
                         product_id: '{{ product.id }}',
-                        title: '{{ product.title | replace("\'", "\\\'") | escape }}'
+                        title: '{{ product.title | replace("\'", "\\\'") | escape }}',
+                        store_type: CURRENT_STORE_TYPE
                     })
                 });
                 

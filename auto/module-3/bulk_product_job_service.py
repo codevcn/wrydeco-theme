@@ -105,7 +105,8 @@ def prepare_bulk_job(
             "initial_errors": item_errors
         })
 
-    # 4. Ghi nhận Job vào Database
+    # 4. Ghi nhận Job vào Database (Đảm bảo schema SQLite đã sẵn sàng)
+    store.init_db(db_path=db_path)
     meta = metadata or {}
     meta["prepared_valid_count"] = valid_count
     meta["prepared_invalid_count"] = invalid_count

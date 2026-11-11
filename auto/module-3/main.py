@@ -162,6 +162,7 @@ def get_products(first=50, after=None, before=None, last=None, filter_query=None
             id
             handle
             title
+            status
             descriptionHtml
             createdAt
             productType
@@ -262,6 +263,7 @@ def get_products_sorted_by_price(first=50, after=None, before=None, filter_query
             id
             handle
             title
+            status
             descriptionHtml
             createdAt
             productType
@@ -429,6 +431,7 @@ def get_products_by_metafield_amazon_link_list(keywords_str, sort_by="created_de
             id
             handle
             title
+            status
             descriptionHtml
             createdAt
             productType
@@ -544,6 +547,7 @@ def get_products_by_any_filter_value(keywords_str: str, sort_by="created_desc", 
             id
             handle
             title
+            status
             descriptionHtml
             createdAt
             productType
@@ -665,6 +669,7 @@ def get_products_by_metafield_rich_description(keyword, sort_by="created_desc"):
             id
             handle
             title
+            status
             descriptionHtml
             createdAt
             productType
@@ -775,6 +780,7 @@ def get_products_by_description(keyword, sort_by="created_desc"):
             id
             handle
             title
+            status
             descriptionHtml
             createdAt
             productType
@@ -882,6 +888,7 @@ def get_products_by_category(keyword, sort_by="created_desc"):
             id
             handle
             title
+            status
             descriptionHtml
             createdAt
             productType
@@ -989,6 +996,7 @@ def get_products_by_variant_option(keyword, sort_by="created_desc", exclude=Fals
             id
             handle
             title
+            status
             descriptionHtml
             createdAt
             productType
@@ -1127,6 +1135,7 @@ def get_products_by_variant_name(keyword: str, sort_by: str = "created_desc"):
             id
             handle
             title
+            status
             descriptionHtml
             createdAt
             productType
@@ -1365,6 +1374,7 @@ def get_products_by_special_filter(special_filter, sort_by="created_desc"):
             id
             handle
             title
+            status
             descriptionHtml
             createdAt
             productType
@@ -1486,6 +1496,7 @@ def get_products_by_review_status(has_reviews: bool, sort_by="created_desc"):
             id
             handle
             title
+            status
             descriptionHtml
             createdAt
             productType
@@ -1617,6 +1628,7 @@ def get_products_by_rich_description_status(has_rich: bool, sort_by="created_des
             id
             handle
             title
+            status
             descriptionHtml
             createdAt
             productType
@@ -1739,6 +1751,7 @@ def get_products_by_duplicate_asin(sort_by="created_desc"):
             id
             handle
             title
+            status
             descriptionHtml
             createdAt
             productType
@@ -1867,6 +1880,7 @@ def get_products_by_duplicate_title(sort_by="created_desc"):
             id
             handle
             title
+            status
             descriptionHtml
             createdAt
             productType
@@ -1987,6 +2001,7 @@ def fetch_all_products_for_duplicates():
             id
             handle
             title
+            status
             descriptionHtml
             createdAt
             productType
@@ -2584,6 +2599,7 @@ async def read_root(
                 "id": node["id"].split("/")[-1],
                 "handle": node["handle"],
                 "title": node["title"],
+                "status": node.get("status", ""),
                 "productType": node.get("productType", ""),
                 "category": category_name,
                 "price": price,
@@ -5927,6 +5943,55 @@ async def create_product_page(request: Request, store_type: str = "default"):
     })
 
 
+def _build_product_create_links(product_id: str, handle: str, store_type: str) -> Dict[str, str]:
+    gid_num = product_id.split("/")[-1] if (product_id and "/" in product_id) else (product_id or "")
+    admin_slug = "236qm8-w7" if store_type == "custom" else "wrydeco"
+    storefront_url = (
+        f"https://236qm8-w7.myshopify.com/products/{handle}"
+        if store_type == "custom"
+        else f"https://wrydeco.com/products/{handle}"
+    ) if handle else ""
+    return {
+        "shopify_admin": f"https://admin.shopify.com/store/{admin_slug}/products/{gid_num}" if gid_num else "",
+        "storefront": storefront_url,
+        "tool": f"/product/{handle}?store_type={store_type}" if handle else f"/products?store_type={store_type}"
+    }
+
+
+def _enrich_archived_payload_for_storage(
+    raw_payload: Dict[str, Any],
+    resolved_media_urls: Optional[List[str]] = None,
+    created_prod: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
+    archived = json.loads(json.dumps(raw_payload)) if isinstance(raw_payload, dict) else {}
+    if created_prod and isinstance(created_prod, dict):
+        cat_obj = created_prod.get("category")
+        if isinstance(cat_obj, dict) and cat_obj.get("name") and not archived.get("categoryName"):
+            archived["categoryName"] = cat_obj["name"]
+        if created_prod.get("handle") and not archived.get("handle"):
+            archived["handle"] = created_prod["handle"]
+
+    if resolved_media_urls and isinstance(resolved_media_urls, list):
+        raw_media = archived.get("media")
+        if isinstance(raw_media, list) and len(resolved_media_urls) == len(raw_media):
+            enriched_media = []
+            for idx, m in enumerate(raw_media):
+                m_dict = dict(m) if isinstance(m, dict) else {}
+                res_url = str(resolved_media_urls[idx] or "").strip()
+                if res_url:
+                    m_dict["kind"] = "url"
+                    m_dict["url"] = res_url
+                m_dict["position"] = idx + 1
+                enriched_media.append(m_dict)
+            archived["media"] = enriched_media
+        elif not raw_media and resolved_media_urls:
+            archived["media"] = [
+                {"kind": "url", "url": str(u).strip(), "position": idx + 1}
+                for idx, u in enumerate(resolved_media_urls) if str(u or "").strip()
+            ]
+    return archived
+
+
 @app.post("/api/products/create")
 async def api_create_product(
     request: Request,
@@ -5937,14 +6002,16 @@ async def api_create_product(
     Endpoint chính tạo sản phẩm mới trên WRYDECO Store thông qua productSet mutation.
     Hỗ trợ chuyển đổi giữa Store Riêng (qua Proxy US) và Store Mặc định (Direct VPS).
     Hỗ trợ multipart/form-data (khi có file tải lên từ thiết bị) hoặc application/json.
+    Luôn lưu dữ liệu sản phẩm vào Bản lưu trữ tạo gần nhất (JSON) dù thành công hay thất bại.
     Tuân thủ Proxy Safety Gate tuyệt đối.
     """
+    data_payload: Dict[str, Any] = {}
+    norm_store_type = "custom"
     try:
         # 1. Trích xuất payload dữ liệu
-        data_payload = {}
         content_type = request.headers.get("content-type", "")
 
-        if "multipart/form-data" in content_type:
+        if "multipart/form-data" in content_type or "application/x-www-form-urlencoded" in content_type:
             if not payload:
                 form = await request.form()
                 payload_str = form.get("payload")
@@ -5958,6 +6025,13 @@ async def api_create_product(
                     }, status_code=400)
             else:
                 data_payload = json.loads(payload)
+            if not data_payload.get("store_type"):
+                try:
+                    form_obj = await request.form()
+                    if form_obj.get("store_type"):
+                        data_payload["store_type"] = str(form_obj.get("store_type")).strip()
+                except Exception:
+                    pass
         else:
             # Direct JSON body
             data_payload = await request.json()
@@ -5975,13 +6049,42 @@ async def api_create_product(
         norm_store_type = "custom" if str(target_store_type).strip().lower() == "custom" else "default"
 
         # 4. Thực thi tạo sản phẩm
-        result = product_create_service.create_wrydeco_product(
+        result = await asyncio.to_thread(
+            product_create_service.create_wrydeco_product,
             payload=data_payload,
             uploaded_file_tuples=file_tuples,
             store_type=norm_store_type
         )
 
+        resolved_urls = result.get("resolved_media_urls") if isinstance(result, dict) else None
+
         if not result["success"]:
+            partial_product = result.get("product") or {}
+            partial_id = partial_product.get("id") or ""
+            partial_handle = partial_product.get("handle") or str(data_payload.get("handle") or "").strip()
+            partial_links = _build_product_create_links(partial_id, partial_handle, norm_store_type) if partial_id else None
+            archived_payload = _enrich_archived_payload_for_storage(data_payload, resolved_media_urls=resolved_urls, created_prod=partial_product)
+            err_list = result.get("errors") or []
+            try:
+                bulk_product_job_store.save_latest_create_archive(
+                    mode="single",
+                    store_type=norm_store_type,
+                    overall_status="FAILED",
+                    metadata={"phase": result.get("phase") or "error"},
+                    items=[{
+                        "item_index": 0,
+                        "handle": str(archived_payload.get("handle") or "").strip(),
+                        "title": str(archived_payload.get("title") or "").strip(),
+                        "status": "FAILED_VALIDATION" if result.get("phase") == "validation" else "FAILED",
+                        "product_id": partial_id or None,
+                        "links": partial_links,
+                        "errors": err_list,
+                        "payload": archived_payload
+                    }]
+                )
+            except Exception as arc_err:
+                logger.warning(f"[LATEST_ARCHIVE] Failed saving failed single create archive: {arc_err}")
+
             status_code = 400
             if result.get("phase") == "proxy_safety":
                 status_code = 503
@@ -5990,7 +6093,34 @@ async def api_create_product(
             return JSONResponse(result, status_code=status_code)
 
         created_prod = result.get("product") or {}
-        handle = created_prod.get("handle") or ""
+        handle = created_prod.get("handle") or str(data_payload.get("handle") or "").strip()
+        prod_id = created_prod.get("id") or ""
+        links = _build_product_create_links(prod_id, handle, norm_store_type)
+        archived_payload = _enrich_archived_payload_for_storage(
+            data_payload,
+            resolved_media_urls=resolved_urls,
+            created_prod=created_prod
+        )
+        try:
+            bulk_product_job_store.save_latest_create_archive(
+                mode="single",
+                store_type=norm_store_type,
+                overall_status="SUCCESS",
+                metadata={"phase": "complete"},
+                items=[{
+                    "item_index": 0,
+                    "handle": handle,
+                    "title": created_prod.get("title") or str(archived_payload.get("title") or "").strip(),
+                    "status": "SUCCESS",
+                    "product_id": prod_id,
+                    "links": links,
+                    "errors": [],
+                    "payload": archived_payload
+                }]
+            )
+        except Exception as arc_err:
+            logger.warning(f"[LATEST_ARCHIVE] Failed saving successful single create archive: {arc_err}")
+
         return JSONResponse({
             "success": True,
             "phase": "complete",
@@ -6007,11 +6137,55 @@ async def api_create_product(
             "errors": [{"field": "payload", "message": f"Dữ liệu JSON không hợp lệ: {str(jde)}", "code": "INVALID_JSON"}]
         }, status_code=400)
     except Exception as e:
+        if isinstance(data_payload, dict) and data_payload:
+            try:
+                bulk_product_job_store.save_latest_create_archive(
+                    mode="single",
+                    store_type=norm_store_type,
+                    overall_status="FAILED",
+                    metadata={"phase": "server_error"},
+                    items=[{
+                        "item_index": 0,
+                        "handle": str(data_payload.get("handle") or "").strip(),
+                        "title": str(data_payload.get("title") or "").strip(),
+                        "status": "FAILED",
+                        "errors": [{"field": "server", "message": f"Lỗi máy chủ nội bộ: {str(e)}", "code": "INTERNAL_ERROR"}],
+                        "payload": data_payload
+                    }]
+                )
+            except Exception:
+                pass
         return JSONResponse({
             "success": False,
             "phase": "server_error",
             "errors": [{"field": "server", "message": f"Lỗi máy chủ nội bộ: {str(e)}", "code": "INTERNAL_ERROR"}]
         }, status_code=500)
+
+
+@app.get("/api/products/latest-archive")
+async def api_get_latest_create_archive(include_payload: bool = True, download: bool = False):
+    """
+    Lấy nội dung JSON của Bản lưu trữ tạo gần nhất (lưu trên server cho cả tạo đơn lẻ và hàng loạt,
+    dù thành công hay thất bại) để người dùng xem lại và chọn sản phẩm điền lên biểu mẫu.
+    """
+    archive = bulk_product_job_store.get_latest_create_archive(include_payload=True if download else include_payload)
+    archive_file = os.path.basename(bulk_product_job_store.get_latest_create_archive_path())
+    if download:
+        if not archive:
+            return JSONResponse(status_code=404, content={"success": False, "error": "Chưa có bản lưu trữ tạo gần nhất nào."})
+        raw_json = json.dumps(archive, ensure_ascii=False, indent=2)
+        return Response(
+            content=raw_json.encode("utf-8"),
+            media_type="application/json; charset=utf-8",
+            headers={
+                "Content-Disposition": 'attachment; filename="latest_create_archive.json"'
+            }
+        )
+    return JSONResponse(status_code=200, content={
+        "success": True,
+        "archive": archive,
+        "archive_file": archive_file
+    })
 
 
 
@@ -6027,6 +6201,30 @@ async def api_bulk_worker_health():
     """
     health = bulk_product_job_store.get_worker_health()
     return JSONResponse(status_code=200, content=health)
+
+
+@app.post("/api/products/media-cache/check")
+async def api_check_import_image_cache(request: Request):
+    data = await request.json()
+    sources = data.get("sources") or []
+    if not isinstance(sources, list) or len(sources) > 10000 or any(
+        not isinstance(u, str) or not u.startswith(("https://", "http://")) for u in sources
+    ):
+        return JSONResponse({"success": False, "error": "Danh sách URL ảnh không hợp lệ."}, status_code=400)
+    cached = await asyncio.to_thread(product_create_service.media_import.cached_sources, sources)
+    return JSONResponse({"success": True, "cached": cached})
+
+
+@app.post("/api/products/media-cache")
+async def api_cache_import_image(source_url: str = Form(...), image: UploadFile = File(...)):
+    if not source_url.startswith(("https://", "http://")):
+        return JSONResponse({"success": False, "error": "URL nguồn không hợp lệ."}, status_code=400)
+    content = await image.read(32 * 1024 * 1024 + 1)
+    try:
+        await asyncio.to_thread(product_create_service.media_import.cache_image, source_url, content)
+    except Exception as exc:
+        return JSONResponse({"success": False, "error": f"Không thể lưu nguồn ảnh: {exc}"}, status_code=400)
+    return JSONResponse({"success": True, "source_url": source_url, "bytes": len(content)})
 
 
 @app.post("/api/products/bulk-jobs")
@@ -6052,12 +6250,41 @@ async def api_prepare_bulk_job(request: Request):
             "error": "Danh sách sản phẩm tải lên không hợp lệ hoặc đang trống."
         })
 
-    res = bulk_product_job_service.prepare_bulk_job(
-        store_type=store_type,
-        items=items,
-        metadata={"client_ip": request.client.host if request.client else "unknown"}
-    )
-    return JSONResponse(status_code=200 if res.get("success") else 400, content=res)
+    try:
+        res = bulk_product_job_service.prepare_bulk_job(
+            store_type=store_type,
+            items=items,
+            metadata={"client_ip": request.client.host if request.client else "unknown"}
+        )
+        return JSONResponse(status_code=200 if res.get("success") else 400, content=res)
+    except Exception as e:
+        logger.error(f"[BULK_JOB] Prepare job failed: {e}", exc_info=True)
+        try:
+            fallback_items = []
+            for idx, raw_it in enumerate(items):
+                p = raw_it.get("payload") if (isinstance(raw_it, dict) and isinstance(raw_it.get("payload"), dict)) else (raw_it if isinstance(raw_it, dict) else {})
+                fallback_items.append({
+                    "item_index": idx,
+                    "handle": str(p.get("handle") or "").strip(),
+                    "title": str(p.get("title") or "").strip(),
+                    "status": "FAILED",
+                    "errors": [{"field": "server", "message": f"Lỗi khởi tạo Bulk Job: {str(e)}", "code": "BULK_PREPARE_ERROR"}],
+                    "payload": p
+                })
+            if fallback_items:
+                bulk_product_job_store.save_latest_create_archive(
+                    mode="bulk",
+                    store_type=store_type,
+                    overall_status="FAILED",
+                    metadata={"phase": "bulk_prepare_exception"},
+                    items=fallback_items
+                )
+        except Exception:
+            pass
+        return JSONResponse(status_code=500, content={
+            "success": False,
+            "error": f"Lỗi khởi tạo Bulk Job: {str(e)}"
+        })
 
 
 @app.post("/api/products/bulk-jobs/{job_id}/start")
@@ -6067,47 +6294,65 @@ async def api_start_bulk_job(job_id: str):
     - Idempotent: Nếu Job đang RUNNING thì trả về trạng thái hiện tại, không spawn duplicate worker.
     - Chạy nền qua luồng độc lập, điều tiết tốc độ thích ứng qua GraphQL extensions.cost.
     """
-    job = bulk_product_job_store.get_job(job_id)
-    if not job:
-        return JSONResponse(status_code=404, content={"success": False, "error": "Job không tồn tại"})
+    try:
+        job = bulk_product_job_store.get_job(job_id)
+        if not job:
+            return JSONResponse(status_code=404, content={"success": False, "error": "Job không tồn tại"})
 
-    current_status = job.get("status")
-    if current_status == "RUNNING":
+        current_status = job.get("status")
+        if current_status == "RUNNING":
+            return JSONResponse(status_code=200, content={
+                "success": True, 
+                "status": "RUNNING", 
+                "message": "Job đang được xử lý trong nền"
+            })
+
+        if current_status in ("COMPLETED", "COMPLETED_WITH_ERRORS", "CANCELLED"):
+            return JSONResponse(status_code=400, content={
+                "success": False, 
+                "status": current_status, 
+                "error": f"Job đã kết thúc ở trạng thái {current_status}"
+            })
+
+        # Kích hoạt worker trong daemon thread
+        worker_thread = threading.Thread(
+            target=bulk_product_worker.run_bulk_job_worker,
+            args=(job_id,),
+            daemon=True,
+            name=f"worker-{job_id}"
+        )
+        worker_thread.start()
+
         return JSONResponse(status_code=200, content={
-            "success": True, 
-            "status": "RUNNING", 
-            "message": "Job đang được xử lý trong nền"
+            "success": True,
+            "job_id": job_id,
+            "status": "RUNNING"
+        })
+    except Exception as e:
+        logger.error(f"[BULK_JOB] Start job {job_id} failed: {e}", exc_info=True)
+        return JSONResponse(status_code=500, content={
+            "success": False,
+            "error": f"Lỗi kích hoạt Bulk Job: {str(e)}"
         })
 
-    if current_status in ("COMPLETED", "COMPLETED_WITH_ERRORS", "CANCELLED"):
-        return JSONResponse(status_code=400, content={
-            "success": False, 
-            "status": current_status, 
-            "error": f"Job đã kết thúc ở trạng thái {current_status}"
-        })
 
-    # Kích hoạt worker trong daemon thread
-    worker_thread = threading.Thread(
-        target=bulk_product_worker.run_bulk_job_worker,
-        args=(job_id,),
-        daemon=True,
-        name=f"worker-{job_id}"
-    )
-    worker_thread.start()
-
-    return JSONResponse(status_code=200, content={
-        "success": True,
-        "job_id": job_id,
-        "status": "RUNNING"
-    })
+@app.get("/api/products/bulk-jobs/latest")
+async def api_get_latest_bulk_job(store_type: str = "default", include_payload: bool = False):
+    """
+    Lấy Bulk Job gần nhất của cửa hàng để hiển thị kết quả inline trên trang Tạo sản phẩm mới.
+    """
+    job = bulk_product_job_store.get_latest_job(store_type=store_type, include_payload=include_payload)
+    if not job:
+        return JSONResponse(status_code=200, content={"success": True, "job": None})
+    return JSONResponse(status_code=200, content={"success": True, "job": job})
 
 
 @app.get("/api/products/bulk-jobs/{job_id}")
-async def api_get_bulk_job(job_id: str):
+async def api_get_bulk_job(job_id: str, include_payload: bool = True):
     """
     Lấy snapshot trạng thái tiến độ và danh sách sản phẩm của một Bulk Job.
     """
-    job = bulk_product_job_store.get_job(job_id)
+    job = bulk_product_job_store.get_job(job_id, include_payload=include_payload)
     if not job:
         return JSONResponse(status_code=404, content={"success": False, "error": "Job không tồn tại"})
     return JSONResponse(status_code=200, content={"success": True, "job": job})
@@ -7365,6 +7610,34 @@ async def edit_meta_info(request: Request):
             return HTMLResponse(content=json.dumps({"success": False, "message": str(e)}, ensure_ascii=False), media_type="application/json")
         return templates.TemplateResponse(request=request, name="edit_variants.html", context={"request": request, "error": str(e), "success_message": None})
 
+def _resolve_request_store_type(request: Request, explicit_store_type: Optional[str] = None) -> str:
+    """
+    Xác định store_type ('default' hoặc 'custom') từ payload/form, query string,
+    hoặc fallback từ URL Referer (bảo vệ cả các tab trình duyệt mở sẵn ?store_type=custom).
+    """
+    cand = (explicit_store_type or "").strip().lower()
+    if cand in ("custom", "default"):
+        return cand
+
+    q_cand = (request.query_params.get("store_type") or "").strip().lower()
+    if q_cand in ("custom", "default"):
+        return q_cand
+
+    referer = request.headers.get("referer") or request.headers.get("Referer") or ""
+    if referer:
+        try:
+            from urllib.parse import urlparse, parse_qs
+            parsed_ref = urlparse(referer)
+            ref_qs = parse_qs(parsed_ref.query)
+            ref_st = (ref_qs.get("store_type", [""])[0] or "").strip().lower()
+            if ref_st in ("custom", "default"):
+                return ref_st
+        except Exception:
+            pass
+
+    return "default"
+
+
 @app.post("/internal-reorder-media")
 async def internal_reorder_media(request: Request):
     try:
@@ -7372,6 +7645,7 @@ async def internal_reorder_media(request: Request):
         data = await request.json()
         product_id = data.get("product_id")
         moves = data.get("moves")
+        norm_store_type = _resolve_request_store_type(request, data.get("store_type"))
         
         if not product_id or not moves:
             return HTMLResponse(content=json.dumps({"success": False, "message": "Thiếu dữ liệu"}), media_type="application/json")
@@ -7379,6 +7653,7 @@ async def internal_reorder_media(request: Request):
         if not str(product_id).startswith("gid://"):
             product_id = f"gid://shopify/Product/{product_id}"
             
+        client_info = get_shopify_client(store_type=norm_store_type)
         mutation = '''
         mutation productReorderMedia($id: ID!, $moves: [MoveInput!]!) {
           productReorderMedia(id: $id, moves: $moves) {
@@ -7394,19 +7669,20 @@ async def internal_reorder_media(request: Request):
             "moves": moves
         }
         
-        response = requests.post(GRAPHQL_URL, json={"query": mutation, "variables": variables}, headers=HEADERS)
-        response.raise_for_status()
-        result = response.json()
+        result = execute_shopify_graphql(client_info, mutation, variables=variables)
         
-        if "errors" in result:
+        if "errors" in result and result["errors"]:
             return HTMLResponse(content=json.dumps({"success": False, "message": str(result["errors"])}), media_type="application/json")
             
-        user_errors = result.get("data", {}).get("productReorderMedia", {}).get("userErrors", [])
+        user_errors = (result.get("data") or {}).get("productReorderMedia", {}).get("userErrors", [])
         if user_errors:
             msg = ", ".join([e.get("message", "") for e in user_errors])
             return HTMLResponse(content=json.dumps({"success": False, "message": msg}), media_type="application/json")
             
         return HTMLResponse(content=json.dumps({"success": True}), media_type="application/json")
+    except ProxySafetyException as pse:
+        import json
+        return HTMLResponse(content=json.dumps({"success": False, "message": str(pse)}), status_code=503, media_type="application/json")
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -8450,6 +8726,7 @@ async def duplicate_product_endpoint(request: Request):
         product_id = None
         title = None
         new_title = None
+        raw_store_type = None
 
         content_type = request.headers.get("content-type", "")
         if "application/json" in content_type:
@@ -8457,11 +8734,15 @@ async def duplicate_product_endpoint(request: Request):
             product_id = data.get("product_id")
             title = data.get("title")
             new_title = data.get("new_title")
+            raw_store_type = data.get("store_type")
         else:
             form = await request.form()
             product_id = form.get("product_id")
             title = form.get("title")
             new_title = form.get("new_title")
+            raw_store_type = form.get("store_type")
+
+        norm_store_type = _resolve_request_store_type(request, raw_store_type)
 
         if not product_id:
             return JSONResponse({"success": False, "message": "Vui lòng cung cấp ID sản phẩm cần nhân bản."}, status_code=400)
@@ -8470,6 +8751,8 @@ async def duplicate_product_endpoint(request: Request):
             gid = f"gid://shopify/Product/{product_id}"
         else:
             gid = str(product_id)
+
+        client_info = get_shopify_client(store_type=norm_store_type)
 
         # Lấy title sản phẩm gốc nếu chưa có
         if not title:
@@ -8480,11 +8763,9 @@ async def duplicate_product_endpoint(request: Request):
               }
             }
             """
-            res_t = requests.post(GRAPHQL_URL, json={"query": q_title, "variables": {"id": gid}}, headers=HEADERS)
-            if res_t.ok:
-                title = res_t.json().get("data", {}).get("product", {}).get("title", "Product")
-            else:
-                title = "Product"
+            res_t = execute_shopify_graphql(client_info, q_title, variables={"id": gid})
+            prod_node = (res_t.get("data") or {}).get("product") if isinstance(res_t, dict) else None
+            title = prod_node.get("title", "Product") if prod_node else "Product"
 
         if not new_title:
             new_title = f"Copy of {title}"
@@ -8511,15 +8792,13 @@ async def duplicate_product_endpoint(request: Request):
             "newTitle": new_title
         }
 
-        res = requests.post(GRAPHQL_URL, json={"query": mutation, "variables": variables}, headers=HEADERS)
-        res.raise_for_status()
-        res_data = res.json()
+        res_data = execute_shopify_graphql(client_info, mutation, variables=variables)
 
-        if "errors" in res_data:
-            err_msg = res_data["errors"][0].get("message", "Lỗi GraphQL từ Shopify")
+        if "errors" in res_data and res_data["errors"]:
+            err_msg = res_data["errors"][0].get("message", "Lỗi GraphQL từ Shopify") if isinstance(res_data["errors"], list) else str(res_data["errors"])
             return JSONResponse({"success": False, "message": f"Shopify GraphQL Error: {err_msg}"})
 
-        dup_payload = res_data.get("data", {}).get("productDuplicate", {})
+        dup_payload = (res_data.get("data") or {}).get("productDuplicate", {})
         user_errors = dup_payload.get("userErrors", [])
         if user_errors:
             err_msg = "; ".join([e.get("message", "") for e in user_errors])
@@ -8533,74 +8812,72 @@ async def duplicate_product_endpoint(request: Request):
         new_handle = new_product.get("handle", "")
         new_prod_title = new_product.get("title", "")
 
-        # Thêm tag "duplicated-product" cho sản phẩm được nhân bản
+        # Thêm tag "duplicated-product" cho sản phẩm được nhân bản trên đúng store_type
         try:
-            add_tags_to_product(new_product["id"], ["duplicated-product"])
+            tags_mutation = """
+            mutation tagsAdd($id: ID!, $tags: [String!]!) {
+              tagsAdd(id: $id, tags: $tags) {
+                node { id }
+                userErrors { field message }
+              }
+            }
+            """
+            execute_shopify_graphql(client_info, tags_mutation, variables={"id": new_product["id"], "tags": ["duplicated-product"]})
         except Exception as tag_err:
             print(f"Lỗi khi thêm tag duplicated-product: {tag_err}")
 
         return JSONResponse({
             "success": True,
             "message": f"Nhân bản sản phẩm thành công! Sản phẩm mới: {new_prod_title} (ID: {new_id}) kèm tag 'duplicated-product'",
+            "store_type": norm_store_type,
             "newProduct": {
                 "id": new_id,
                 "title": new_prod_title,
                 "handle": new_handle
             }
         })
+    except ProxySafetyException as pse:
+        return JSONResponse({"success": False, "message": str(pse)}, status_code=503)
     except Exception as e:
         return JSONResponse({"success": False, "message": f"Lỗi hệ thống: {str(e)}"}, status_code=500)
 
-@app.post("/delete-product")
-async def delete_product(request: Request, product_id: str = Form(...), password: str = Form(...)):
-    import json
-    if password.strip() != get_admin_password():
-        return HTMLResponse(content=json.dumps({"success": False, "message": "Admin password không chính xác!"}), media_type="application/json")
-        
-    if not product_id.startswith("gid://"):
-        product_id = f"gid://shopify/Product/{product_id}"
-        
-    try:
-        # Fetch media IDs first to delete them
-        media_query = """
-        query getProductMedia($id: ID!) {
-          product(id: $id) {
-            media(first: 50) {
-              edges {
-                node {
-                  id
-                }
-              }
+
+def _delete_single_product_on_client(client_info: dict, raw_product_id: str) -> dict:
+    """Xóa sạch Media đi kèm rồi xóa Product trên Shopify GraphQL client đã chọn."""
+    clean_product_id = str(raw_product_id or "").strip()
+    if not clean_product_id:
+        return {"success": False, "product_id": "", "message": "Thiếu Product ID."}
+    if not clean_product_id.startswith("gid://"):
+        clean_product_id = f"gid://shopify/Product/{clean_product_id}"
+
+    # 1. Lấy danh sách Media IDs của sản phẩm để dọn sạch media đi kèm
+    media_query = """
+    query getProductMedia($id: ID!) {
+      product(id: $id) {
+        media(first: 100) {
+          edges {
+            node {
+              id
             }
           }
         }
-        """
-        res_media = requests.post(GRAPHQL_URL, json={"query": media_query, "variables": {"id": product_id}}, headers=HEADERS)
-        media_data = res_media.json()
-        media_ids = []
-        if "data" in media_data and media_data["data"]["product"] and media_data["data"]["product"]["media"]["edges"]:
-            for edge in media_data["data"]["product"]["media"]["edges"]:
-                media_ids.append(edge["node"]["id"])
-                
-        if media_ids:
-            del_media_query = """
-            mutation productDeleteMedia($mediaIds: [ID!]!, $productId: ID!) {
-              productDeleteMedia(mediaIds: $mediaIds, productId: $productId) {
-                deletedMediaIds
-                userErrors {
-                  field
-                  message
-                }
-              }
-            }
-            """
-            requests.post(GRAPHQL_URL, json={"query": del_media_query, "variables": {"mediaIds": media_ids, "productId": product_id}}, headers=HEADERS)
+      }
+    }
+    """
+    media_data = execute_shopify_graphql(client_info, media_query, variables={"id": clean_product_id})
+    media_ids = []
+    prod_node = (media_data.get("data") or {}).get("product") if isinstance(media_data, dict) else None
+    if prod_node and prod_node.get("media") and prod_node["media"].get("edges"):
+        for edge in prod_node["media"]["edges"]:
+            node = edge.get("node") or {}
+            if node.get("id"):
+                media_ids.append(node["id"])
 
-        # Delete the product
-        query = """
-        mutation productDelete($input: ProductDeleteInput!) {
-          productDelete(input: $input) {
-            deletedProductId
+    if media_ids:
+        del_media_query = """
+        mutation productDeleteMedia($mediaIds: [ID!]!, $productId: ID!) {
+          productDeleteMedia(mediaIds: $mediaIds, productId: $productId) {
+            deletedMediaIds
             userErrors {
               field
               message
@@ -8608,21 +8885,349 @@ async def delete_product(request: Request, product_id: str = Form(...), password
           }
         }
         """
-        variables = {"input": {"id": product_id}}
-        res = requests.post(GRAPHQL_URL, json={"query": query, "variables": variables}, headers=HEADERS)
-        res.raise_for_status()
-        data = res.json()
-        
-        if "errors" in data:
-            return HTMLResponse(content=json.dumps({"success": False, "message": "GraphQL Error: " + str(data["errors"])}), media_type="application/json")
-            
-        delete_res = data.get("data", {}).get("productDelete", {})
-        if delete_res and delete_res.get("userErrors"):
-            return HTMLResponse(content=json.dumps({"success": False, "message": delete_res["userErrors"][0]["message"]}), media_type="application/json")
-            
-        return HTMLResponse(content=json.dumps({"success": True, "message": "Sản phẩm đã được xóa thành công."}), media_type="application/json")
+        execute_shopify_graphql(
+            client_info,
+            del_media_query,
+            variables={"mediaIds": media_ids, "productId": clean_product_id}
+        )
+
+    # 2. Thực thi xóa sản phẩm trên đúng Store ('default' hoặc 'custom')
+    query = """
+    mutation productDelete($input: ProductDeleteInput!) {
+      productDelete(input: $input) {
+        deletedProductId
+        userErrors {
+          field
+          message
+        }
+      }
+    }
+    """
+    variables = {"input": {"id": clean_product_id}}
+    data = execute_shopify_graphql(client_info, query, variables=variables)
+
+    if isinstance(data, dict) and data.get("errors"):
+        return {
+            "success": False,
+            "product_id": str(raw_product_id).strip(),
+            "message": "GraphQL Error: " + str(data["errors"])
+        }
+
+    delete_res = (data.get("data") or {}).get("productDelete") if isinstance(data, dict) else None
+    delete_res = delete_res or {}
+    if delete_res.get("userErrors"):
+        return {
+            "success": False,
+            "product_id": str(raw_product_id).strip(),
+            "message": delete_res["userErrors"][0].get("message") or "Không thể xóa sản phẩm."
+        }
+
+    return {
+        "success": True,
+        "product_id": str(raw_product_id).strip(),
+        "deleted_product_id": delete_res.get("deletedProductId") or clean_product_id,
+        "message": "Sản phẩm đã được xóa thành công."
+    }
+
+
+@app.post("/delete-product")
+async def delete_product(
+    request: Request,
+    product_id: str = Form(...),
+    password: str = Form(...),
+    store_type: Optional[str] = Form(None)
+):
+    import json
+    if password.strip() != get_admin_password():
+        return HTMLResponse(
+            content=json.dumps({"success": False, "message": "Admin password không chính xác!"}),
+            media_type="application/json"
+        )
+
+    norm_store_type = _resolve_request_store_type(request, store_type)
+
+    try:
+        # Khởi tạo client đúng cửa hàng (bắt buộc qua US Proxy Gate nếu là Store Riêng 'custom')
+        client_info = get_shopify_client(store_type=norm_store_type)
+        result = _delete_single_product_on_client(client_info, product_id)
+        if not result.get("success"):
+            return HTMLResponse(
+                content=json.dumps({"success": False, "message": result.get("message") or "Lỗi khi xóa sản phẩm."}),
+                media_type="application/json"
+            )
+
+        return HTMLResponse(
+            content=json.dumps({
+                "success": True,
+                "message": "Sản phẩm đã được xóa thành công.",
+                "store_type": norm_store_type,
+                "redirect_url": f"/?store_type={norm_store_type}"
+            }),
+            media_type="application/json"
+        )
+    except ProxySafetyException as pse:
+        return HTMLResponse(
+            content=json.dumps({"success": False, "message": str(pse)}),
+            status_code=503,
+            media_type="application/json"
+        )
     except Exception as e:
-        return HTMLResponse(content=json.dumps({"success": False, "message": str(e)}), media_type="application/json")
+        return HTMLResponse(
+            content=json.dumps({"success": False, "message": str(e)}),
+            media_type="application/json"
+        )
+
+
+@app.post("/api/products/bulk-delete")
+async def api_bulk_delete_products(request: Request):
+    """API xóa hàng loạt sản phẩm theo danh sách ID trên đúng Store ('default' hoặc 'custom')."""
+    try:
+        payload = await request.json()
+    except Exception:
+        return JSONResponse(
+            {"success": False, "error_code": "INVALID_JSON", "message": "Dữ liệu gửi lên không hợp lệ."},
+            status_code=400
+        )
+
+    password = str((payload or {}).get("password") or "").strip()
+    if password != get_admin_password():
+        return JSONResponse(
+            {"success": False, "error_code": "INVALID_PASSWORD", "message": "Admin password không chính xác!"},
+            status_code=403
+        )
+
+    raw_ids = (payload or {}).get("product_ids")
+    if not isinstance(raw_ids, list):
+        return JSONResponse(
+            {"success": False, "error_code": "EMPTY_IDS", "message": "Danh sách sản phẩm cần xóa đang trống."},
+            status_code=400
+        )
+
+    clean_ids = [str(pid).strip() for pid in raw_ids if str(pid or "").strip()]
+    if not clean_ids:
+        return JSONResponse(
+            {"success": False, "error_code": "EMPTY_IDS", "message": "Danh sách sản phẩm cần xóa đang trống."},
+            status_code=400
+        )
+
+    norm_store_type = _resolve_request_store_type(request, (payload or {}).get("store_type"))
+
+    try:
+        client_info = get_shopify_client(store_type=norm_store_type)
+        results = []
+        deleted_count = 0
+        failed_count = 0
+
+        for pid in clean_ids:
+            try:
+                item_res = _delete_single_product_on_client(client_info, pid)
+            except ProxySafetyException:
+                raise
+            except Exception as item_err:
+                item_res = {
+                    "success": False,
+                    "product_id": pid,
+                    "message": str(item_err)
+                }
+
+            if item_res.get("success"):
+                deleted_count += 1
+            else:
+                failed_count += 1
+            results.append(item_res)
+
+        return JSONResponse({
+            "success": failed_count == 0 and deleted_count > 0,
+            "store_type": norm_store_type,
+            "total": len(results),
+            "deleted_count": deleted_count,
+            "failed_count": failed_count,
+            "results": results,
+            "message": (
+                f"Đã xóa thành công {deleted_count}/{len(results)} sản phẩm."
+                if failed_count == 0
+                else f"Hoàn tất: {deleted_count} thành công, {failed_count} lỗi."
+            )
+        })
+    except ProxySafetyException as pse:
+        return JSONResponse(
+            {"success": False, "error_code": "PROXY_ERROR", "message": str(pse)},
+            status_code=503
+        )
+    except Exception as e:
+        return JSONResponse(
+            {"success": False, "error_code": "SERVER_ERROR", "message": str(e)},
+            status_code=500
+        )
+
+
+ALLOWED_BULK_PRODUCT_STATUSES = {
+    "ACTIVE": "Active",
+    "UNLISTED": "Unlisted",
+    "DRAFT": "Draft",
+}
+
+
+def _update_single_product_status_on_client(client_info: dict, raw_product_id: str, target_status: str) -> dict:
+    """Cập nhật trạng thái sản phẩm (ACTIVE, UNLISTED, DRAFT) qua productUpdate(product: ProductUpdateInput!)."""
+    clean_product_id = str(raw_product_id or "").strip()
+    if not clean_product_id:
+        return {"success": False, "product_id": "", "message": "Thiếu Product ID."}
+    if not clean_product_id.startswith("gid://"):
+        clean_product_id = f"gid://shopify/Product/{clean_product_id}"
+
+    norm_status = str(target_status or "").strip().upper()
+    if norm_status not in ALLOWED_BULK_PRODUCT_STATUSES:
+        return {
+            "success": False,
+            "product_id": str(raw_product_id).strip(),
+            "message": f"Trạng thái không hợp lệ: {target_status}."
+        }
+
+    mutation = """
+    mutation productUpdate($product: ProductUpdateInput!) {
+      productUpdate(product: $product) {
+        product {
+          id
+          status
+        }
+        userErrors {
+          field
+          message
+        }
+      }
+    }
+    """
+    variables = {
+        "product": {
+            "id": clean_product_id,
+            "status": norm_status
+        }
+    }
+    data = execute_shopify_graphql(client_info, mutation, variables=variables)
+
+    if isinstance(data, dict) and data.get("errors"):
+        return {
+            "success": False,
+            "product_id": str(raw_product_id).strip(),
+            "message": "GraphQL Error: " + str(data["errors"])
+        }
+
+    upd_res = (data.get("data") or {}).get("productUpdate") if isinstance(data, dict) else None
+    upd_res = upd_res or {}
+    if upd_res.get("userErrors"):
+        return {
+            "success": False,
+            "product_id": str(raw_product_id).strip(),
+            "message": upd_res["userErrors"][0].get("message") or "Không thể cập nhật trạng thái sản phẩm."
+        }
+
+    updated_prod = upd_res.get("product") or {}
+    if not updated_prod.get("id"):
+        return {
+            "success": False,
+            "product_id": str(raw_product_id).strip(),
+            "message": "Không tìm thấy sản phẩm hoặc không nhận được xác nhận từ Shopify."
+        }
+
+    final_status = updated_prod.get("status") or norm_status
+    return {
+        "success": True,
+        "product_id": str(raw_product_id).strip(),
+        "status": final_status,
+        "status_label": ALLOWED_BULK_PRODUCT_STATUSES.get(final_status, final_status),
+        "message": f"Đã đổi trạng thái sang {ALLOWED_BULK_PRODUCT_STATUSES.get(final_status, final_status)}."
+    }
+
+
+@app.post("/api/products/bulk-status")
+async def api_bulk_update_product_status(request: Request):
+    """API đổi trạng thái hàng loạt (Active / Unlisted / Draft) theo danh sách Product ID."""
+    try:
+        payload = await request.json()
+    except Exception:
+        return JSONResponse(
+            {"success": False, "error_code": "INVALID_JSON", "message": "Dữ liệu gửi lên không hợp lệ."},
+            status_code=400
+        )
+
+    norm_status = str((payload or {}).get("status") or "").strip().upper()
+    if norm_status not in ALLOWED_BULK_PRODUCT_STATUSES:
+        return JSONResponse(
+            {
+                "success": False,
+                "error_code": "INVALID_STATUS",
+                "message": "Trạng thái không hợp lệ. Chỉ chấp nhận Active, Unlisted hoặc Draft."
+            },
+            status_code=400
+        )
+
+    raw_ids = (payload or {}).get("product_ids")
+    if not isinstance(raw_ids, list):
+        return JSONResponse(
+            {"success": False, "error_code": "EMPTY_IDS", "message": "Danh sách sản phẩm cần đổi trạng thái đang trống."},
+            status_code=400
+        )
+
+    clean_ids = [str(pid).strip() for pid in raw_ids if str(pid or "").strip()]
+    if not clean_ids:
+        return JSONResponse(
+            {"success": False, "error_code": "EMPTY_IDS", "message": "Danh sách sản phẩm cần đổi trạng thái đang trống."},
+            status_code=400
+        )
+
+    norm_store_type = _resolve_request_store_type(request, (payload or {}).get("store_type"))
+    status_label = ALLOWED_BULK_PRODUCT_STATUSES[norm_status]
+
+    try:
+        client_info = get_shopify_client(store_type=norm_store_type)
+        results = []
+        updated_count = 0
+        failed_count = 0
+
+        for pid in clean_ids:
+            try:
+                item_res = _update_single_product_status_on_client(client_info, pid, norm_status)
+            except ProxySafetyException:
+                raise
+            except Exception as item_err:
+                item_res = {
+                    "success": False,
+                    "product_id": pid,
+                    "message": str(item_err)
+                }
+
+            if item_res.get("success"):
+                updated_count += 1
+            else:
+                failed_count += 1
+            results.append(item_res)
+
+        return JSONResponse({
+            "success": failed_count == 0 and updated_count > 0,
+            "store_type": norm_store_type,
+            "status": norm_status,
+            "status_label": status_label,
+            "total": len(results),
+            "updated_count": updated_count,
+            "failed_count": failed_count,
+            "results": results,
+            "message": (
+                f"Đã chuyển thành công {updated_count}/{len(results)} sản phẩm sang trạng thái {status_label}."
+                if failed_count == 0
+                else f"Hoàn tất: {updated_count} thành công, {failed_count} lỗi."
+            )
+        })
+    except ProxySafetyException as pse:
+        return JSONResponse(
+            {"success": False, "error_code": "PROXY_ERROR", "message": str(pse)},
+            status_code=503
+        )
+    except Exception as e:
+        return JSONResponse(
+            {"success": False, "error_code": "SERVER_ERROR", "message": str(e)},
+            status_code=500
+        )
 
 @app.post("/api/products/publications")
 async def api_product_publications(request: Request):
@@ -11112,7 +11717,12 @@ async def fetch_external_image(request: Request):
 
 
 @app.post("/api/products/{product_id}/upload-media")
-async def upload_product_media(product_id: str, files: list[UploadFile] = File(...)):
+async def upload_product_media(
+    request: Request,
+    product_id: str,
+    files: list[UploadFile] = File(...),
+    store_type: Optional[str] = Form(None)
+):
     try:
         clean_prod_id = str(product_id).split("/")[-1].strip()
         if not clean_prod_id:
@@ -11121,14 +11731,9 @@ async def upload_product_media(product_id: str, files: list[UploadFile] = File(.
         if not files:
             return JSONResponse({"success": False, "message": "Không có tệp nào được tải lên."}, status_code=400)
 
-        shop = clean_shopify_domain(SHOPIFY_SHOP)
-        headers = {
-            "X-Shopify-Access-Token": SHOPIFY_ADMIN_TOKEN,
-            "Content-Type": "application/json"
-        }
-        proxies = get_shopify_request_proxies()
-
-        rest_url = f"https://{shop}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/products/{clean_prod_id}/images.json"
+        norm_store_type = _resolve_request_store_type(request, store_type)
+        client_info = get_shopify_client(store_type=norm_store_type)
+        rest_path = f"/products/{clean_prod_id}/images.json"
 
         uploaded_results = []
         errors = []
@@ -11148,7 +11753,7 @@ async def upload_product_media(product_id: str, files: list[UploadFile] = File(.
             }
 
             try:
-                res = requests.post(rest_url, json=upload_payload, headers=headers, proxies=proxies, timeout=45)
+                res = execute_shopify_rest(client_info, "POST", rest_path, json_data=upload_payload, timeout=45)
                 if res.ok:
                     img_data = res.json().get("image", {})
                     uploaded_results.append({
@@ -11157,6 +11762,8 @@ async def upload_product_media(product_id: str, files: list[UploadFile] = File(.
                     })
                 else:
                     errors.append(f"{filename}: {res.text}")
+            except ProxySafetyException:
+                raise
             except Exception as up_err:
                 errors.append(f"{filename}: {str(up_err)}")
 
@@ -11182,29 +11789,59 @@ async def delete_product_media_endpoint(product_id: str, request: Request):
             return JSONResponse({"success": False, "message": "ID sản phẩm không hợp lệ."}, status_code=400)
 
         media_id = None
+        raw_store_type = None
         content_type = request.headers.get("content-type", "")
         if "application/json" in content_type:
             data = await request.json()
             media_id = data.get("media_id")
+            raw_store_type = data.get("store_type")
         else:
             form = await request.form()
             media_id = form.get("media_id")
+            raw_store_type = form.get("store_type")
 
         if not media_id:
             return JSONResponse({"success": False, "message": "Vui lòng cung cấp media_id cần xóa."}, status_code=400)
 
-        shop = clean_shopify_domain(SHOPIFY_SHOP)
-        headers = {
-            "X-Shopify-Access-Token": SHOPIFY_ADMIN_TOKEN,
-            "Content-Type": "application/json"
-        }
-        graphql_url = f"https://{shop}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}/graphql.json"
+        norm_store_type = _resolve_request_store_type(request, raw_store_type)
+        client_info = get_shopify_client(store_type=norm_store_type)
 
-        success = delete_shopify_image_or_media(clean_prod_id, media_id, shop=shop, headers=headers, graphql_url=graphql_url)
-        if success:
+        prod_gid = f"gid://shopify/Product/{clean_prod_id}"
+        clean_media_id = str(media_id).split("/")[-1].strip()
+        del_media_gid = media_id if str(media_id).startswith("gid://shopify/MediaImage/") else f"gid://shopify/MediaImage/{clean_media_id}"
+
+        del_mutation = """
+        mutation productDeleteMedia($mediaIds: [ID!]!, $productId: ID!) {
+          productDeleteMedia(mediaIds: $mediaIds, productId: $productId) {
+            deletedMediaIds
+            deletedProductImageIds
+            userErrors {
+              field
+              message
+            }
+          }
+        }
+        """
+        gql_res = execute_shopify_graphql(
+            client_info,
+            del_mutation,
+            variables={"mediaIds": [del_media_gid], "productId": prod_gid}
+        )
+        pdm = (gql_res.get("data") or {}).get("productDeleteMedia") or {}
+        if not gql_res.get("errors") and not pdm.get("userErrors") and (pdm.get("deletedMediaIds") or pdm.get("deletedProductImageIds")):
             return JSONResponse({"success": True, "message": "Đã xóa ảnh khỏi sản phẩm thành công!"})
-        else:
-            return JSONResponse({"success": False, "message": "Shopify không xóa được ảnh. Vui lòng kiểm tra lại."}, status_code=500)
+
+        # Fallback REST delete qua execute_shopify_rest (vẫn đi qua US Proxy Gate nếu là custom)
+        res_rest = execute_shopify_rest(
+            client_info,
+            "DELETE",
+            f"/products/{clean_prod_id}/images/{clean_media_id}.json",
+            timeout=20
+        )
+        if res_rest.ok:
+            return JSONResponse({"success": True, "message": "Đã xóa ảnh khỏi sản phẩm thành công!"})
+
+        return JSONResponse({"success": False, "message": "Shopify không xóa được ảnh. Vui lòng kiểm tra lại."}, status_code=500)
 
     except ProxySafetyException as pse:
         return JSONResponse({"success": False, "message": str(pse)}, status_code=503)

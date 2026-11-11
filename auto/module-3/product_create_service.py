@@ -5,7 +5,8 @@ Kiến trúc cốt lõi:
 - Đảm bảo Proxy Safety Gate tuyệt đối (bắt buộc qua proxy cho Custom Store WRYDECO).
 - Sử dụng mutation nguyên tử productSet(synchronous: true, input: $input) để tạo đồng thời:
   title, description, productType, category, status, vendor, tags, seo, productOptions,
-  variants (kèm price, compareAtPrice, sku, barcode riêng từng biến thể), metafields, files.
+  variants (kèm price, compareAtPrice, sku, barcode riêng từng biến thể), metafields.
+- Gắn media riêng qua productUpdate và xác minh toàn bộ ảnh READY trước khi báo thành công.
 - Kiểm tra toàn vẹn server-side (Cartesian reconstruction, uniqueness check, whitelist validation).
 - Xử lý upload media đa nguồn (local device qua stagedUploadsCreate + external image URLs).
 """
@@ -16,15 +17,129 @@ import json
 import uuid
 import mimetypes
 import itertools
+import logging
+import time
+import hashlib
 from typing import Dict, Any, List, Tuple, Optional
 
 import requests
+import product_media_service as media_import
 from proxy_manager import (
     get_shopify_client, 
     execute_shopify_graphql, 
     ProxySafetyException,
     get_shopify_request_proxies
 )
+
+logger = logging.getLogger(__name__)
+
+PRODUCT_MEDIA_FIELDS = """
+  id
+  mediaContentType
+  status
+  mediaErrors { code message }
+  ... on MediaImage { image { url } }
+"""
+
+ADD_PRODUCT_MEDIA_MUTATION = """
+mutation AddCreatedProductMedia($product: ProductUpdateInput!, $media: [CreateMediaInput!]!) {
+  productUpdate(product: $product, media: $media) {
+    product {
+      id
+      media(first: 250) { nodes { """ + PRODUCT_MEDIA_FIELDS + """ } }
+    }
+    userErrors { field message }
+  }
+}
+"""
+
+PRODUCT_MEDIA_QUERY = """
+query CreatedProductMedia($id: ID!) {
+  product(id: $id) {
+    id
+    media(first: 250) { nodes { """ + PRODUCT_MEDIA_FIELDS + """ } }
+  }
+}
+"""
+
+
+def wait_for_product_media(
+    client_info: Dict[str, Any],
+    product_id: str,
+    expected_count: int,
+    initial_product: Optional[Dict[str, Any]] = None,
+    max_attempts: int = 45,
+    poll_interval: float = 2.0,
+) -> Dict[str, Any]:
+    """Verify every image is attached, READY, and has a public URL before success."""
+    product = initial_product or {}
+    nodes = []
+    for attempt in range(max_attempts):
+        if attempt or not initial_product:
+            try:
+                response = execute_shopify_graphql(client_info, PRODUCT_MEDIA_QUERY, {"id": product_id})
+            except Exception as exc:
+                return {"success": False, "phase": "media_processing", "errors": [
+                    {"field": "media", "code": "MEDIA_VERIFICATION_FAILED", "message": str(exc)}
+                ]}
+            if response.get("errors"):
+                return {"success": False, "phase": "media_processing", "errors": [
+                    {"field": "media", "code": "MEDIA_VERIFICATION_FAILED", "message": e.get("message", "Không thể kiểm tra ảnh trên Shopify.")}
+                    for e in response["errors"]
+                ]}
+            product = (response.get("data") or {}).get("product") or {}
+        nodes = (product.get("media") or {}).get("nodes") or []
+        errors = []
+        for index, node in enumerate(nodes):
+            if node.get("status") == "FAILED" or node.get("mediaErrors"):
+                details = node.get("mediaErrors") or [{"message": "Shopify không xử lý được ảnh."}]
+                errors.extend({
+                    "field": f"media.{index}", "code": "MEDIA_PROCESSING_FAILED",
+                    "message": f"Ảnh #{index + 1}: {e.get('message') or e.get('code') or 'Media processing failed'}"
+                } for e in details)
+        if errors:
+            return {"success": False, "phase": "media_processing", "errors": errors, "media": {"nodes": nodes}}
+        if len(nodes) == expected_count and all(
+            n.get("status") == "READY" and (n.get("image") or {}).get("url") for n in nodes
+        ):
+            return {"success": True, "media": {"nodes": nodes}, "errors": []}
+        if attempt < max_attempts - 1:
+            time.sleep(poll_interval)
+    ready_count = sum(n.get("status") == "READY" and bool((n.get("image") or {}).get("url")) for n in nodes)
+    return {"success": False, "phase": "media_processing", "media": {"nodes": nodes}, "errors": [{
+        "field": "media", "code": "MEDIA_PROCESSING_TIMEOUT",
+        "message": f"Ảnh chưa hoàn tất trên Shopify: {ready_count}/{expected_count} ảnh sẵn sàng. Vui lòng kiểm tra sản phẩm đã tạo trước khi thử lại."
+    }]}
+
+
+def attach_created_product_media(
+    client_info: Dict[str, Any], product_id: str, media_inputs: List[Dict[str, Any]]
+) -> Dict[str, Any]:
+    """Use productUpdate's media pipeline; productSet file processing can fail later."""
+    try:
+        response = execute_shopify_graphql(
+            client_info, ADD_PRODUCT_MEDIA_MUTATION,
+            {"product": {"id": product_id}, "media": media_inputs},
+        )
+    except Exception as exc:
+        return {"success": False, "phase": "media_creation", "errors": [
+            {"field": "media", "code": "MEDIA_CREATION_FAILED", "message": str(exc)}
+        ]}
+    result = (response.get("data") or {}).get("productUpdate") or {}
+    errors = response.get("errors") or result.get("userErrors") or []
+    if errors:
+        return {"success": False, "phase": "media_creation", "errors": [{
+            "field": ".".join(e.get("field") or ["media"]),
+            "code": "MEDIA_CREATION_FAILED", "message": e.get("message", "Không thể gắn ảnh vào sản phẩm.")
+        } for e in errors]}
+    if not result.get("product") or result["product"].get("id") != product_id:
+        return {"success": False, "phase": "media_creation", "errors": [{
+            "field": "media", "code": "MEDIA_CREATION_FAILED",
+            "message": "Shopify không trả về sản phẩm khi gắn ảnh."
+        }]}
+    return wait_for_product_media(
+        client_info, product_id, len(media_inputs), initial_product=result.get("product")
+    )
 
 # Danh sách phong cách nội thất chuẩn của WRYDECO
 WHITELIST_INTERIOR_STYLES = [
@@ -312,13 +427,13 @@ def validate_create_payload(payload: Dict[str, Any]) -> Tuple[bool, List[Dict[st
 
 def validate_variation_structure(options: List[Dict[str, Any]], variants: List[Dict[str, Any]]) -> Tuple[bool, List[Dict[str, str]]]:
     """
-    Xác thực cấu trúc Variation:
+    Xác thực cấu trúc Variation (hỗ trợ cả Full Cartesian Matrix lẫn Valid Non-Exhaustive / Sparse Variants):
     - 1 <= len(options) <= 3
     - Tên options không trùng lặp, không rỗng
     - Các giá trị trong mỗi option không rỗng, không trùng lặp
-    - Tái tạo ma trận Descartes (Cartesian product) và kiểm tra tính toàn vẹn 100%
-    - Tổng số biến thể <= 2048
-    - Mỗi biến thể bắt buộc có: Price (>= 0), Compare-at price (> 0), SKU (không trùng), Barcode (không trùng)
+    - 1 <= len(variants) <= 2048 (tập con hợp lệ của tích Descartes, không trùng tổ hợp)
+    - Mọi giá trị khai báo trong từng option phải được sử dụng bởi ít nhất 1 biến thể (không có orphaned option value)
+    - Mỗi biến thể bắt buộc có: Price (>= 0), Compare-at price (> Price), SKU (không trùng), Barcode (không trùng)
     """
     errors: List[Dict[str, str]] = []
 
@@ -374,33 +489,44 @@ def validate_variation_structure(options: List[Dict[str, Any]], variants: List[D
     if len(errors) > 0:
         return (False, errors)
 
-    # Tính tích Descartes lý thuyết (Expected Cartesian combinations)
-    option_value_lists = [opt["values"] for opt in cleaned_options]
-    expected_combinations = list(itertools.product(*option_value_lists))
-    expected_count = len(expected_combinations)
+    # Tính kích thước tích Descartes lý thuyết
+    cartesian_size = 1
+    for opt in cleaned_options:
+        cartesian_size *= len(opt["values"])
 
-    if expected_count > 2048:
-        add_err("variants", f"Tổng số lượng biến thể ({expected_count}) vượt quá giới hạn tối đa của Shopify (2048 biến thể).")
+    variants_list = variants if isinstance(variants, list) else []
+    actual_count = len(variants_list)
+
+    if actual_count > 2048 or (actual_count == 0 and cartesian_size > 2048):
+        exceeded = actual_count if actual_count > 2048 else cartesian_size
+        add_err("variants", f"Tổng số lượng biến thể ({exceeded}) vượt quá giới hạn tối đa của Shopify (2048 biến thể).")
         return (False, errors)
 
-    if not isinstance(variants, list) or len(variants) == 0:
+    if actual_count == 0:
         add_err("variants", "Danh sách biến thể không được rỗng.")
         return (False, errors)
 
-    if len(variants) != expected_count:
-        add_err("variants", f"Số lượng biến thể được gửi ({len(variants)}) không khớp với ma trận kết hợp thực tế ({expected_count}).")
+    if actual_count > cartesian_size:
+        add_err("variants", f"Số lượng biến thể được gửi ({actual_count}) vượt quá số tổ hợp tối đa ({cartesian_size}).")
 
-    # Bản đồ kiểm tra tính duy nhất của SKU và Barcode
+    # Từ điển tra cứu giá trị hợp lệ theo từng option (case-insensitive -> canonical label)
+    allowed_values_per_opt = [
+        {v.lower(): v for v in opt["values"]}
+        for opt in cleaned_options
+    ]
+    used_values_per_opt = [set() for _ in cleaned_options]
+
+    # Bản đồ kiểm tra tính duy nhất của SKU, Barcode và tổ hợp biến thể
     seen_skus = set()
     seen_barcodes = set()
     matched_combinations = set()
 
-    for v_idx, v in enumerate(variants):
+    for v_idx, v in enumerate(variants_list):
         row_label = f"Biến thể #{v_idx + 1}"
         
         # 1. Trích xuất option values của row
         opt_values_input = v.get("optionValues") or []
-        comb_tuple = None
+        raw_tuple_vals = []
 
         if isinstance(opt_values_input, list):
             # Format: [{"optionName": "...", "name": "..."}]
@@ -409,25 +535,40 @@ def validate_variation_structure(options: List[Dict[str, Any]], variants: List[D
                 if isinstance(item, dict):
                     name_map[item.get("optionName", "").strip().lower()] = item.get("name", "").strip()
             
-            # Xếp theo thứ tự options
-            tuple_vals = []
             for opt in cleaned_options:
-                tuple_vals.append(name_map.get(opt["name"].lower(), ""))
-            comb_tuple = tuple(tuple_vals)
+                raw_tuple_vals.append(name_map.get(opt["name"].lower(), ""))
 
         elif isinstance(opt_values_input, dict):
-            tuple_vals = [opt_values_input.get(opt["name"], "") for opt in cleaned_options]
-            comb_tuple = tuple(tuple_vals)
+            lower_dict = {str(k).strip().lower(): str(val).strip() for k, val in opt_values_input.items()}
+            for opt in cleaned_options:
+                raw_tuple_vals.append(lower_dict.get(opt["name"].lower(), ""))
 
-        if comb_tuple:
-            if comb_tuple not in expected_combinations:
-                add_err(f"variants[{v_idx}]", f"{row_label}: Tổ hợp biến thể {' / '.join(comb_tuple)} không hợp lệ (không tồn tại trong ma trận tùy chọn).")
-            if comb_tuple in matched_combinations:
-                add_err(f"variants[{v_idx}]", f"{row_label}: Tổ hợp biến thể {' / '.join(comb_tuple)} bị khai báo lặp lại.")
-            matched_combinations.add(comb_tuple)
+        if len(raw_tuple_vals) == len(cleaned_options):
+            is_comb_valid = True
+            canonical_vals = []
+            for opt_idx, raw_val in enumerate(raw_tuple_vals):
+                val_lower = raw_val.lower()
+                if not raw_val or val_lower not in allowed_values_per_opt[opt_idx]:
+                    is_comb_valid = False
+                    canonical_vals.append(raw_val or "?")
+                else:
+                    canonical_vals.append(allowed_values_per_opt[opt_idx][val_lower])
+                    used_values_per_opt[opt_idx].add(val_lower)
+
+            comb_display = " / ".join(canonical_vals)
+            comb_key = tuple(val.lower() for val in canonical_vals)
+
+            if not is_comb_valid:
+                add_err(f"variants[{v_idx}]", f"{row_label}: Tổ hợp biến thể {comb_display} không hợp lệ (không tồn tại trong ma trận tùy chọn).")
+            elif comb_key in matched_combinations:
+                add_err(f"variants[{v_idx}]", f"{row_label}: Tổ hợp biến thể {comb_display} bị khai báo lặp lại.")
+            else:
+                matched_combinations.add(comb_key)
+        else:
+            add_err(f"variants[{v_idx}]", f"{row_label}: Thiếu thông tin giá trị tùy chọn (optionValues).")
 
         # 2. Price ($) - Bắt buộc
-        raw_price = str(v.get("price") or "").strip()
+        raw_price = str(v.get("price") if v.get("price") is not None else "").strip()
         price_val = None
         if not raw_price:
             add_err(f"variants[{v_idx}].price", f"{row_label}: Giá bán (Price) là bắt buộc.")
@@ -440,7 +581,7 @@ def validate_variation_structure(options: List[Dict[str, Any]], variants: List[D
                 add_err(f"variants[{v_idx}].price", f"{row_label}: Giá bán '{raw_price}' không hợp lệ.")
 
         # 3. Compare-at price ($) - Bắt buộc và phải lớn hơn Price
-        raw_compare = str(v.get("compareAtPrice") or "").strip()
+        raw_compare = str(v.get("compareAtPrice") if v.get("compareAtPrice") is not None else "").strip()
         if not raw_compare:
             add_err(f"variants[{v_idx}].compareAtPrice", f"{row_label}: Giá so sánh (Compare-at price) là bắt buộc.")
         else:
@@ -473,10 +614,15 @@ def validate_variation_structure(options: List[Dict[str, Any]], variants: List[D
                 add_err(f"variants[{v_idx}].barcode", f"{row_label}: Mã Barcode '{barcode}' bị trùng lặp với biến thể khác.")
             seen_barcodes.add(barcode_lower)
 
-    # Kiểm tra xem có tổ hợp nào bị bỏ sót không
-    for expected_comb in expected_combinations:
-        if expected_comb not in matched_combinations:
-            add_err("variants", f"Thiếu biến thể cho tổ hợp: {' / '.join(expected_comb)}.")
+    # Kiểm tra không có giá trị tùy chọn mồ côi (Orphaned option values):
+    # Mọi giá trị khai báo trong options đều phải được sử dụng bởi ít nhất 1 biến thể thực tế
+    for opt_idx, opt in enumerate(cleaned_options):
+        unused_vals = [val for val in opt["values"] if val.lower() not in used_values_per_opt[opt_idx]]
+        if unused_vals:
+            add_err(
+                f"options[{opt_idx}].values",
+                f"Giá trị tùy chọn ({', '.join(unused_vals)}) trong '{opt['name']}' không được sử dụng bởi bất kỳ biến thể nào."
+            )
 
     return (len(errors) == 0, errors)
 
@@ -521,7 +667,8 @@ def stage_and_upload_local_file(client_info: Dict[str, Any], filename: str, cont
     }
 
     # Upload nhị phân trực tiếp lên Cloud Storage
-    upload_resp = requests.post(upload_url, data=form_data, files=files_payload, timeout=60)
+    upload_resp = requests.post(upload_url, data=form_data, files=files_payload,
+                                proxies=client_info.get("proxies"), timeout=60)
     if upload_resp.status_code not in [200, 201, 204]:
         raise Exception(f"Tải file lên Cloud Storage thất bại (HTTP {upload_resp.status_code}): {upload_resp.text[:300]}")
 
@@ -559,29 +706,42 @@ def build_product_set_input(
         "description": (seo_in.get("description") or "").strip()
     }
 
-    # Options
+    # Options (kèm map chuẩn hóa chữ hoa/thường để khớp 100% với Shopify productOptions)
     raw_options = payload.get("options") or []
     product_options = []
+    canonical_opt_map: Dict[str, Dict[str, Any]] = {}
     for opt in raw_options:
         opt_name = opt["name"].strip()
         opt_values = []
+        val_map: Dict[str, str] = {}
         for v in opt.get("values", []):
             label = v.get("label") or v.get("name") if isinstance(v, dict) else str(v)
-            opt_values.append({"name": label.strip()})
+            clean_label = label.strip()
+            opt_values.append({"name": clean_label})
+            val_map[clean_label.lower()] = clean_label
         product_options.append({
             "name": opt_name,
             "values": opt_values
         })
+        canonical_opt_map[opt_name.lower()] = {
+            "name": opt_name,
+            "values": val_map
+        }
 
-    # Variants
+    # Variants (hỗ trợ cả Full Cartesian lẫn Sparse / Non-Exhaustive Variants)
     raw_variants = payload.get("variants") or []
     variants = []
     for v in raw_variants:
         opt_vals = []
         for item in v.get("optionValues", []):
+            raw_opt_name = item["optionName"].strip()
+            raw_val_name = item["name"].strip()
+            opt_entry = canonical_opt_map.get(raw_opt_name.lower())
+            canon_opt_name = opt_entry["name"] if opt_entry else raw_opt_name
+            canon_val_name = opt_entry["values"].get(raw_val_name.lower(), raw_val_name) if opt_entry else raw_val_name
             opt_vals.append({
-                "optionName": item["optionName"].strip(),
-                "name": item["name"].strip()
+                "optionName": canon_opt_name,
+                "name": canon_val_name
             })
 
         variant_item = {
@@ -639,24 +799,6 @@ def build_product_set_input(
         }
     ]
 
-    # Strong Idempotency: Gán custom.bulk_import_id kiểu id nếu có idempotency_key
-    if idempotency_key:
-        metafields.append({
-            "namespace": "custom",
-            "key": "bulk_import_id",
-            "value": idempotency_key,
-            "type": "id"
-        })
-
-    # Files (Media)
-    files = []
-    for url in resolved_media_urls:
-        if url and url.strip():
-            files.append({
-                "originalSource": url.strip(),
-                "contentType": "IMAGE"
-            })
-
     product_set_input: Dict[str, Any] = {
         "title": title,
         "descriptionHtml": desc_html,
@@ -668,8 +810,7 @@ def build_product_set_input(
         "seo": seo,
         "productOptions": product_options,
         "variants": variants,
-        "metafields": metafields,
-        "files": files
+        "metafields": metafields
     }
 
     # Handle (URL Slug tùy chỉnh chuẩn SEO nếu người dùng chỉ định)
@@ -684,7 +825,8 @@ def create_wrydeco_product(
     payload: Dict[str, Any], 
     uploaded_file_tuples: Optional[List[Tuple[str, bytes, str]]] = None,
     store_type: str = "custom",
-    idempotency_key: Optional[str] = None
+    idempotency_key: Optional[str] = None,
+    resume_product_id: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Quy trình thực thi tạo sản phẩm hoàn chỉnh:
@@ -693,8 +835,8 @@ def create_wrydeco_product(
     3. Tải các file local lên Cloud Storage qua Staged Upload, kết hợp cùng external image URLs.
     4. Xây dựng ProductSetInput.
     5. Thực thi mutation productSet(synchronous: true, input: $input).
-    6. Xử lý phản hồi, giữ lại đầy đủ userErrors.
-    7. Trả về kết quả có cấu trúc.
+    6. Gắn ảnh qua productUpdate và chờ đủ ảnh READY cùng URL công khai.
+    7. Giữ đầy đủ userErrors và ID sản phẩm nếu bước xử lý ảnh thất bại.
     """
     # 1. Validation
     is_valid, validation_errors = validate_create_payload(payload)
@@ -732,6 +874,17 @@ def create_wrydeco_product(
             "product": None
         }
 
+    for item in payload.get("media") or []:
+        index = item.get("fileIndex")
+        if item.get("kind") == "device" and isinstance(index, int) and uploaded_file_tuples and 0 <= index < len(uploaded_file_tuples):
+            item["contentHash"] = hashlib.sha256(uploaded_file_tuples[index][1]).hexdigest()
+    owned_import = media_import.find_owned_import(payload, store_type)
+    if resume_product_id:
+        if owned_import and owned_import["product_id"] != resume_product_id:
+            return {"success": False, "phase": "validation", "product": None,
+                    "errors": [{"field": "product", "code": "IMPORT_RECEIPT_MISMATCH", "message": "ID sản phẩm không khớp bản import đã lưu."}]}
+        owned_import = owned_import or {"product_id": resume_product_id, "manifest": {}}
+
     # 3. Xử lý Media URLs (Cả file local và URL ảnh)
     resolved_media_urls: List[str] = []
     raw_media_items = payload.get("media") or []
@@ -754,6 +907,7 @@ def create_wrydeco_product(
                 if file_idx is not None and file_idx in uploaded_files_by_index:
                     fn, content, mime = uploaded_files_by_index[file_idx]
                     staged_res_url = stage_and_upload_local_file(client_info, fn, content, mime)
+                    media_import.cache_image(staged_res_url, content)
                     resolved_media_urls.append(staged_res_url)
                 elif item.get("url"):
                     resolved_media_urls.append(item.get("url").strip())
@@ -785,26 +939,44 @@ def create_wrydeco_product(
     # 4. Xây dựng ProductSetInput
     product_set_input = build_product_set_input(payload, resolved_media_urls, idempotency_key=idempotency_key)
 
-    # 5. Thực thi productSet mutation kèm identifier.customId (Strong Idempotency)
+    # 5. Thực thi productSet mutation
     mutation_vars = {
         "synchronous": True,
         "input": product_set_input
     }
-    if idempotency_key:
-        mutation_vars["identifier"] = {
-            "customId": {
-                "namespace": "custom",
-                "key": "bulk_import_id",
-                "value": str(idempotency_key).strip()
-            }
-        }
 
+    media_inputs = [{"originalSource": url, "mediaContentType": "IMAGE",
+                     "alt": str(raw_media_items[index].get("alt") or payload.get("title") or "")}
+                    for index, url in enumerate(resolved_media_urls)]
+    resumed = None
+    if owned_import:
+        try:
+            resumed = media_import._nodes(client_info, owned_import["product_id"], len(media_inputs))
+        except media_import.MissingImportedProduct:
+            # A deliberately deleted import may be recreated; a different product is protected.
+            owned_import = None
+            if check_shopify_product_exists_by_handle(str(payload.get("handle") or ""), store_type):
+                return {"success": False, "phase": "validation", "product": None,
+                        "errors": [{"field": "handle", "code": "HANDLE_EXISTS", "message": "Handle đang thuộc sản phẩm khác; đã chặn tạo trùng."}]}
+        except Exception as exc:
+            return {"success": False, "phase": "media_processing", "product": None,
+                    "errors": [{"field": "media", "code": "MEDIA_VERIFICATION_FAILED", "message": str(exc)}]}
+    if not owned_import:
+        try:
+            media_import.preflight_images(client_info, media_inputs)
+        except Exception as exc:
+            return {"success": False, "phase": "media_staging", "product": None,
+                    "errors": [{"field": "media", "code": "IMAGE_PREFLIGHT_FAILED", "message": str(exc)}]}
     try:
-        res = execute_shopify_graphql(
-            client_info, 
-            PRODUCT_SET_MUTATION, 
-            mutation_vars
-        )
+        if owned_import:
+            if resumed.get("handle") != str(payload.get("handle") or "").strip():
+                raise ValueError("Handle không khớp sản phẩm đã tạo; đã dừng để tránh sửa nhầm.")
+            resumed["title"] = payload.get("title", "")
+            res = {"data": {"productSet": {"product": resumed, "userErrors": []}}}
+        else:
+            # Validate/cache all source bytes before creating any product shell.
+            res = execute_shopify_graphql(client_info, PRODUCT_SET_MUTATION, mutation_vars,
+                                          retry_ambiguous=False)
     except Exception as ge:
         return {
             "success": False,
@@ -814,7 +986,8 @@ def create_wrydeco_product(
                 "message": f"Lỗi gửi yêu cầu tới Shopify: {str(ge)}",
                 "code": "GRAPHQL_NETWORK_ERROR"
             }],
-            "product": None
+            "product": None,
+            "resolved_media_urls": resolved_media_urls
         }
 
     # 6. Phân tích kết quả từ Shopify
@@ -831,7 +1004,8 @@ def create_wrydeco_product(
             "success": False,
             "phase": "shopify_api_error",
             "errors": err_list,
-            "product": None
+            "product": None,
+            "resolved_media_urls": resolved_media_urls
         }
 
     data = res.get("data", {})
@@ -852,7 +1026,8 @@ def create_wrydeco_product(
             "phase": "shopify_user_errors",
             "errors": err_list,
             "product": None,
-            "extensions": res.get("extensions")
+            "extensions": res.get("extensions"),
+            "resolved_media_urls": resolved_media_urls
         }
 
     created_product = product_set_result.get("product")
@@ -865,13 +1040,32 @@ def create_wrydeco_product(
                 "message": "Shopify không trả về ID sản phẩm sau khi thực thi productSet.",
                 "code": "NO_PRODUCT_RETURNED"
             }],
-            "product": None
+            "product": None,
+            "resolved_media_urls": resolved_media_urls
         }
+
+    manifest = (owned_import or {}).get("manifest") or {}
+    def save_progress(value):
+        media_import.save_receipt(payload, store_type, created_product["id"], value)
+    try:
+        save_progress(manifest)
+        created_product["media"] = media_import.ensure_product_media(
+            client_info, created_product, media_inputs, manifest, save_progress,
+            stage_and_upload_local_file,
+        )
+    except Exception as exc:
+        return {"success": False, "phase": "media_processing", "product": created_product,
+                "product_created": True, "extensions": res.get("extensions"),
+                "resolved_media_urls": resolved_media_urls, "errors": [{
+                    "field": "media", "code": "MEDIA_IMPORT_INCOMPLETE",
+                    "message": f"Sản phẩm {created_product['id'].split('/')[-1]} đã được tạo; ảnh chưa hoàn tất. {exc} Có thể chạy lại cùng dữ liệu để tiếp tục, không tạo sản phẩm trùng."
+                }]}
 
     return {
         "success": True,
         "phase": "complete",
         "errors": [],
         "product": created_product,
-        "extensions": res.get("extensions")
+        "extensions": res.get("extensions"),
+        "resolved_media_urls": resolved_media_urls
     }

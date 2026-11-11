@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Tạo sản phẩm mới - Wrydeco Admin Manager</title>
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="/static/favicon-96x96.png" sizes="96x96" />
@@ -191,11 +194,12 @@
                 </button>
                 <input type="file" id="csv-file-input" accept=".csv, text/csv" class="hidden" onchange="handleCsvFileSelected(event)">
 
-                <!-- Top Quick Status -->
-                <div id="form-validation-badge" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl text-sm font-semibold bg-amber-50 text-amber-800 border border-amber-200 shadow-2xs">
-                    <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-                    <span>Đã hoàn thành 2/16 trường bắt buộc</span>
-                </div>
+                <!-- Nút mở Bản lưu trữ tạo gần nhất (JSON trên server) -->
+                <button type="button" id="btn-open-latest-archive" onclick="openLatestArchiveModal()" class="inline-flex items-center gap-2 px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 text-sm font-bold rounded-2xl shadow-2xs hover:shadow transition-all cursor-pointer" title="Xem lại và sử dụng lại dữ liệu từ Bản lưu trữ tạo gần nhất trên máy chủ">
+                    <iconify-icon icon="mdi:archive-clock-outline" class="text-lg text-amber-700"></iconify-icon>
+                    <span id="latest-archive-btn-label">Bản lưu trữ tạo gần nhất</span>
+                    <span id="latest-archive-count-pill" class="hidden px-2 py-0.5 text-sm font-extrabold rounded-full bg-amber-200/80 text-amber-950">0 SP</span>
+                </button>
             </div>
         </div>
 
@@ -510,11 +514,19 @@
                     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
                         <div>
                             <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider">Bảng Ma trận Biến thể (Variant Matrix)</h3>
-                            <p class="text-sm text-gray-500">Mỗi dòng biến thể bắt buộc phải có đầy đủ: Price, Compare-at price, SKU và Barcode riêng.</p>
+                            <p class="text-sm text-gray-500">Chỉ các tổ hợp đang bật mới được tạo lên Store. Mỗi biến thể đang bật phải có Price, Compare-at price, SKU và Barcode riêng.</p>
                         </div>
-                        <!-- Bulk Price Helper -->
-                        <div class="flex items-center gap-2">
-                            <button type="button" onclick="promptBulkPricing()" class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-800 text-sm font-semibold rounded-lg border border-gray-200 transition-colors flex items-center gap-1.5">
+                        <!-- Variant Matrix Controls -->
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button type="button" id="btn-disable-empty-variants" onclick="disableEmptyVariants()" class="hidden px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 text-sm font-semibold rounded-lg border border-amber-200 transition-colors items-center gap-1.5 cursor-pointer" title="Tự động bỏ qua các dòng tổ hợp đang để trống giá bán">
+                                <iconify-icon icon="mdi:filter-remove-outline" class="text-base text-amber-700"></iconify-icon>
+                                <span id="disable-empty-variants-text">Bỏ qua tổ hợp trống</span>
+                            </button>
+                            <button type="button" id="btn-toggle-disabled-variants" onclick="toggleShowDisabledVariants()" class="hidden px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 text-sm font-semibold rounded-lg border border-indigo-200 transition-colors items-center gap-1.5 cursor-pointer">
+                                <iconify-icon id="toggle-disabled-variants-icon" icon="mdi:eye-outline" class="text-base text-indigo-600"></iconify-icon>
+                                <span id="toggle-disabled-variants-text">Hiện tổ hợp đã ẩn</span>
+                            </button>
+                            <button type="button" onclick="promptBulkPricing()" class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-800 text-sm font-semibold rounded-lg border border-gray-200 transition-colors flex items-center gap-1.5 cursor-pointer">
                                 <svg class="w-3.5 h-3.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
                                 <span>⚡ Điền nhanh giá & mã tự động</span>
                             </button>
@@ -526,7 +538,7 @@
                         <table class="min-w-full divide-y divide-gray-200 text-left text-sm">
                             <thead class="bg-gray-50 font-bold text-gray-700">
                                 <tr>
-                                    <th class="px-4 py-3 min-w-[180px]">TỔ HỢP BIẾN THỂ</th>
+                                    <th class="px-4 py-3 min-w-[170px]">TỔ HỢP BIẾN THỂ</th>
                                     <th class="px-3 py-3 min-w-[130px]">
                                         <span>GIÁ BÁN ($)</span>
                                         <span class="req-star">*</span>
@@ -543,6 +555,7 @@
                                         <span>BARCODE</span>
                                         <span class="req-star">*</span>
                                     </th>
+                                    <th class="px-3 py-3 min-w-[115px] text-center">THAO TÁC</th>
                                 </tr>
                             </thead>
                             <tbody id="variant-matrix-tbody" class="divide-y divide-gray-100">
@@ -753,11 +766,15 @@
     <!-- SUBMIT ACTION BAR (FULL-WIDTH GẦN FULL VIEWPORT) -->
     <!-- ===================================================================== -->
     <div class="fixed bottom-3 inset-x-0 mx-auto w-[calc(100vw-32px)] max-w-[1850px] z-30 py-2.5 px-6 bg-white/95 backdrop-blur-md border border-gray-300 rounded-2xl shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div class="flex items-center gap-2.5">
-            <span id="submit-hint-icon" class="text-amber-500 flex-shrink-0">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <div class="flex flex-wrap items-center gap-2.5">
+            <span id="submit-hint-icon" class="text-amber-500 flex-shrink-0 cursor-pointer" onclick="showMissingFieldsModal()" title="Bấm để xem danh sách chi tiết các trường còn thiếu">
+                <svg class="w-5 h-5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
             </span>
-            <span id="submit-hint-text" class="text-[16px] text-gray-700 font-medium">Vui lòng hoàn thành tất cả 16 trường có dấu * (2/16) để kích hoạt nút tạo sản phẩm.</span>
+            <span id="submit-hint-text" onclick="showMissingFieldsModal()" class="text-[16px] text-gray-700 font-medium cursor-pointer hover:underline transition-all" title="Bấm để xem danh sách chi tiết các trường còn thiếu">Vui lòng hoàn thành tất cả 16 trường có dấu * (2/16) để kích hoạt nút tạo sản phẩm.</span>
+            <button type="button" id="btn-show-missing-fields" onclick="showMissingFieldsModal()" style="pointer-events: auto; position: relative; z-index: 40;" class="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 text-sm font-bold rounded-lg border border-amber-300 transition-all cursor-pointer shadow-2xs ml-1 active:scale-95" title="Xem danh sách chi tiết các trường còn thiếu">
+                <iconify-icon icon="mdi:format-list-checks" class="text-base pointer-events-none"></iconify-icon>
+                <span id="missing-fields-btn-text" class="pointer-events-none">Xem chi tiết</span>
+            </button>
         </div>
 
         <!-- SUBMIT BUTTON -->
@@ -857,12 +874,13 @@
     <!-- JavaScript Configuration & Module -->
     <script>
         const CURRENT_STORE_TYPE = "{{ store_type or 'default' }}";
+        const CURRENT_STORE_DOMAIN = "{{ active_shop_domain or 'wrydeco.myshopify.com' }}";
         function handleStoreSwitch(isChecked) {
             const newStore = isChecked ? 'custom' : 'default';
             window.location.href = `/create?store_type=${newStore}`;
         }
     </script>
-    <script src="/static/create-product.js?v=20261110_bulk_creation_v5"></script>
+    <script src="/static/create-product.js?v=20261111_archive_store_domain_v8&t=1731349000"></script>
 
     <!-- ===================================================================== -->
     <!-- NÚT NEO GÓC TRÊN BÊN PHẢI: QUẢN LÝ SẢN PHẨM HÀNG LOẠT (BULK BADGE)     -->
@@ -948,8 +966,8 @@
     <!-- ===================================================================== -->
     <!-- MODAL: TIẾN TRÌNH & KẾT QUẢ TẠO HÀNG LOẠT (REAL-TIME PROGRESS)        -->
     <!-- ===================================================================== -->
-    <div id="bulkProgressModal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5">
-        <div class="bg-white rounded-2xl max-w-4xl w-full p-6 shadow-2xl border border-gray-200 flex flex-col max-h-[92vh]">
+    <div id="bulkProgressModal" onmousedown="handleBulkProgressBackdropMouseDown(event)" onclick="handleBulkProgressBackdropClick(event)" class="hidden fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5">
+        <div onclick="event.stopPropagation()" onmousedown="event.stopPropagation()" class="bg-white rounded-2xl max-w-4xl w-full p-6 shadow-2xl border border-gray-200 flex flex-col max-h-[92vh] cursor-default">
             <!-- Header -->
             <div class="flex items-center justify-between mb-4 border-b border-gray-100 pb-3">
                 <div class="flex items-center gap-3">
@@ -1001,6 +1019,193 @@
                 <button type="button" id="btn-progress-done" onclick="closeBulkProgressModal()" class="px-6 py-2.5 bg-gray-900 hover:bg-black text-white text-sm font-bold rounded-xl transition-colors cursor-pointer hidden">
                     Hoàn tất & Đóng
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- MODAL TỰ VIẾT: CHI TIẾT 16 TRƯỜNG BẮT BUỘC (THAY THẾ SWEETALERT2)     -->
+    <!-- ===================================================================== -->
+    <div id="missingFieldsModal" onmousedown="handleMissingFieldsBackdropMouseDown(event)" onclick="handleMissingFieldsBackdropClick(event)" class="hidden fixed inset-0 z-[60] overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 cursor-pointer" role="dialog" aria-modal="true" aria-labelledby="missing-fields-modal-title">
+        <div onclick="event.stopPropagation()" onmousedown="event.stopPropagation()" class="bg-white rounded-2xl max-w-3xl w-full shadow-2xl border border-gray-200 flex flex-col max-h-[88vh] overflow-hidden cursor-default">
+            <!-- Header -->
+            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between gap-3 bg-white shrink-0">
+                <div class="flex items-center gap-3.5 min-w-0">
+                    <div id="missing-fields-header-icon-box" class="w-11 h-11 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center shrink-0">
+                        <iconify-icon id="missing-fields-header-icon" icon="mdi:clipboard-alert-outline" class="text-2xl"></iconify-icon>
+                    </div>
+                    <div class="min-w-0">
+                        <h3 id="missing-fields-modal-title" class="text-lg font-extrabold text-gray-900">Chi tiết 16 trường bắt buộc</h3>
+                        <p id="missing-fields-header-subtitle" class="text-sm text-gray-500 mt-0.5">Kiểm tra tiến độ hoàn thiện biểu mẫu và chuyển nhanh tới trường cần điền.</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeMissingFieldsModal()" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer shrink-0" title="Đóng popup">
+                    <svg class="w-[22px] h-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <!-- Thanh tổng hợp tiến độ -->
+            <div class="px-6 pt-4 pb-3 bg-gray-50/60 border-b border-gray-100 shrink-0">
+                <div class="flex items-center justify-between gap-3 mb-2">
+                    <span class="text-sm font-bold text-gray-800">Tiến độ hoàn thiện biểu mẫu:</span>
+                    <span id="missing-fields-progress-badge" class="px-3 py-1 rounded-full text-sm font-bold bg-amber-100 text-amber-900 border border-amber-200">0/16 trường hợp lệ</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                    <div id="missing-fields-progress-bar" class="h-2.5 rounded-full bg-amber-500 transition-all duration-300" style="width: 0%;"></div>
+                </div>
+            </div>
+
+            <!-- Nội dung danh sách trường -->
+            <div id="missing-fields-modal-body" class="px-6 py-4 overflow-y-auto flex-1 space-y-5 bg-white">
+                <!-- Render động danh sách thiếu và đã hoàn thành -->
+            </div>
+
+            <!-- Footer -->
+            <div class="px-6 py-3.5 border-t border-gray-100 bg-gray-50/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
+                <span id="missing-fields-footer-note" class="text-sm text-gray-500">Bấm "Điền ngay" để tự động cuộn và đặt con trỏ vào đúng ô nhập liệu.</span>
+                <div class="flex items-center justify-end gap-2.5 shrink-0">
+                    <button type="button" id="btn-missing-jump-first" onclick="jumpToFirstMissingField()" class="hidden inline-flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-xl shadow-xs transition-colors cursor-pointer whitespace-nowrap shrink-0">
+                        <iconify-icon icon="mdi:arrow-right-circle-outline" class="text-base shrink-0"></iconify-icon>
+                        <span>Điền trường thiếu đầu tiên</span>
+                    </button>
+                    <button type="button" onclick="closeMissingFieldsModal()" class="px-5 py-2 bg-gray-900 hover:bg-black text-white text-sm font-bold rounded-xl transition-colors cursor-pointer whitespace-nowrap shrink-0">
+                        Đóng
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- MODAL TỰ VIẾT: BẢN LƯU TRỮ TẠO GẦN NHẤT (JSON LƯU TRÊN SERVER)        -->
+    <!-- ===================================================================== -->
+    <div id="latestArchiveModal" onmousedown="handleLatestArchiveBackdropMouseDown(event)" onclick="handleLatestArchiveBackdropClick(event)" class="hidden fixed inset-0 z-[60] overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 cursor-pointer" role="dialog" aria-modal="true" aria-labelledby="latest-archive-modal-title">
+        <div onclick="event.stopPropagation()" onmousedown="event.stopPropagation()" class="bg-white rounded-2xl max-w-7xl w-full shadow-2xl border border-gray-200 flex flex-col max-h-[92vh] overflow-hidden cursor-default">
+            <!-- Header -->
+            <div class="px-6 py-4 border-b border-gray-100 flex items-start justify-between gap-4 bg-white shrink-0">
+                <div class="flex items-start gap-3.5 min-w-0">
+                    <div class="w-11 h-11 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 flex items-center justify-center shrink-0">
+                        <iconify-icon icon="mdi:archive-clock-outline" class="text-2xl"></iconify-icon>
+                    </div>
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2.5 flex-wrap">
+                            <h3 id="latest-archive-modal-title" class="text-lg font-extrabold text-gray-900">Bản lưu trữ tạo gần nhất</h3>
+                            <span id="latest-archive-mode-badge" class="px-2.5 py-0.5 rounded-full text-sm font-bold bg-indigo-50 text-indigo-800 border border-indigo-200">—</span>
+                            <span id="latest-archive-store-badge" class="px-2.5 py-0.5 rounded-full text-sm font-bold bg-gray-100 text-gray-700 border border-gray-200">—</span>
+                            <span id="latest-archive-status-badge" class="px-2.5 py-0.5 rounded-full text-sm font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">—</span>
+                        </div>
+                        <p id="latest-archive-meta-subtitle" class="text-sm text-gray-500 mt-1">Lưu trữ JSON tự động trên máy chủ cho lần tạo sản phẩm gần nhất (dù thành công hay thất bại).</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeLatestArchiveModal()" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer shrink-0" title="Đóng popup">
+                    <svg class="w-[22px] h-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <!-- Thanh công cụ tìm kiếm, lọc trạng thái & Xem JSON -->
+            <div id="latest-archive-toolbar" class="px-6 py-3 bg-gray-50/80 border-b border-gray-200 flex flex-col lg:flex-row lg:items-center justify-between gap-3 shrink-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <div class="relative w-full sm:w-64">
+                        <iconify-icon icon="mdi:magnify" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-base"></iconify-icon>
+                        <input type="text" id="latest-archive-search-input" oninput="handleLatestArchiveSearch(this.value)" placeholder="Tìm theo tiêu đề, handle, lỗi..." class="w-full pl-9 pr-3 py-1.5 bg-white border border-gray-300 rounded-xl text-sm text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <button type="button" id="archive-filter-btn-all" onclick="setLatestArchiveFilter('all')" class="px-3 py-1.5 rounded-xl text-sm font-bold bg-gray-900 text-white cursor-pointer transition-colors">
+                            Tất cả (<span id="archive-filter-count-all">0</span>)
+                        </button>
+                        <button type="button" id="archive-filter-btn-failed" onclick="setLatestArchiveFilter('failed')" class="px-3 py-1.5 rounded-xl text-sm font-bold bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 cursor-pointer transition-colors">
+                            Thất bại (<span id="archive-filter-count-failed">0</span>)
+                        </button>
+                        <button type="button" id="archive-filter-btn-success" onclick="setLatestArchiveFilter('success')" class="px-3 py-1.5 rounded-xl text-sm font-bold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 cursor-pointer transition-colors">
+                            Thành công (<span id="archive-filter-count-success">0</span>)
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 flex-wrap">
+                    <button type="button" id="btn-toggle-archive-json" onclick="toggleLatestArchiveJsonViewer()" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-gray-100 text-gray-800 border border-gray-300 rounded-xl text-sm font-bold transition-colors cursor-pointer" title="Xem trực tiếp nội dung JSON đang lưu trên máy chủ">
+                        <iconify-icon icon="mdi:code-json" class="text-base text-indigo-600"></iconify-icon>
+                        <span id="btn-toggle-archive-json-label">Xem dữ liệu JSON</span>
+                    </button>
+                    <a id="btn-download-archive-json" href="/api/products/latest-archive?download=1" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 rounded-xl text-sm font-bold transition-colors cursor-pointer" title="Tải file latest_create_archive.json về máy">
+                        <iconify-icon icon="mdi:download-outline" class="text-base"></iconify-icon>
+                        <span>Tải JSON</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Khung xem JSON chi tiết (ẩn mặc định, bật khi bấm Xem dữ liệu JSON hoặc Xem JSON trên từng dòng) -->
+            <div id="latest-archive-json-panel" class="hidden px-6 py-3 bg-slate-900 text-slate-100 border-b border-slate-700 shrink-0">
+                <div class="flex items-center justify-between gap-2 mb-2">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <iconify-icon icon="mdi:code-json" class="text-amber-400 text-lg shrink-0"></iconify-icon>
+                        <span id="latest-archive-json-title" class="text-sm font-bold text-slate-100 truncate">Dữ liệu JSON của Bản lưu trữ tạo gần nhất</span>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <button type="button" onclick="copyLatestArchiveJson()" class="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 rounded-lg text-sm font-bold cursor-pointer transition-colors">
+                            <iconify-icon icon="mdi:content-copy" class="text-sm"></iconify-icon>
+                            <span>Sao chép JSON</span>
+                        </button>
+                        <button type="button" onclick="closeLatestArchiveJsonViewer()" class="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600 rounded-lg text-sm font-bold cursor-pointer transition-colors">
+                            <span>Ẩn khung JSON</span>
+                        </button>
+                    </div>
+                </div>
+                <pre id="latest-archive-json-pre" class="text-sm font-mono leading-relaxed max-h-56 overflow-auto p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-emerald-300 whitespace-pre-wrap break-words"></pre>
+            </div>
+
+            <!-- Danh sách sản phẩm trong bản lưu trữ -->
+            <div id="latest-archive-body-wrap" class="p-4 sm:p-6 overflow-y-auto flex-1 min-h-0 bg-white">
+                <!-- Loading state -->
+                <div id="latest-archive-loading" class="hidden py-12 text-center text-gray-500">
+                    <iconify-icon icon="mdi:loading" class="text-3xl text-indigo-600 animate-spin"></iconify-icon>
+                    <p class="text-sm font-semibold mt-2">Đang tải Bản lưu trữ tạo gần nhất từ máy chủ...</p>
+                </div>
+
+                <!-- Empty state -->
+                <div id="latest-archive-empty" class="hidden py-12 text-center">
+                    <div class="w-14 h-14 mx-auto rounded-2xl bg-gray-100 text-gray-400 flex items-center justify-center mb-3">
+                        <iconify-icon icon="mdi:archive-off-outline" class="text-3xl"></iconify-icon>
+                    </div>
+                    <p class="text-base font-bold text-gray-800">Chưa có bản lưu trữ tạo gần nhất nào trên máy chủ</p>
+                    <p class="text-sm text-gray-500 mt-1 max-w-md mx-auto">Ngay khi bạn thực hiện tạo sản phẩm mới (đơn lẻ hoặc hàng loạt, dù thành công hay thất bại), toàn bộ dữ liệu sẽ tự động được lưu lại tại đây.</p>
+                </div>
+
+                <!-- Bảng danh sách sản phẩm -->
+                <div id="latest-archive-table-container" class="overflow-x-auto border border-gray-200 rounded-xl">
+                    <table class="w-full lg:table-fixed text-left border-collapse">
+                        <thead class="bg-gray-100/90 text-gray-700 text-sm font-bold uppercase tracking-wider border-b border-gray-200">
+                            <tr>
+                                <th class="py-3 px-2.5 text-center w-11">#</th>
+                                <th class="py-3 px-3.5 lg:w-[30%] min-w-[210px]">Sản phẩm (Tiêu đề & Handle)</th>
+                                <th class="py-3 px-3.5 lg:w-[20%] min-w-[155px]">Thông tin dữ liệu</th>
+                                <th class="py-3 px-3.5 lg:w-[26%] min-w-[190px]">Kết quả lần tạo gần nhất</th>
+                                <th class="py-3 px-3.5 lg:w-[24%] min-w-[235px] text-right">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="latest-archive-table-body" class="divide-y divide-gray-200 bg-white text-sm">
+                            <!-- Render động danh sách SP -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="px-6 py-3.5 border-t border-gray-100 bg-gray-50/80 flex flex-col lg:flex-row lg:items-center justify-between gap-3 shrink-0">
+                <span class="text-sm text-gray-600">Chọn <b>"Chọn & Điền lên trang"</b> để nạp đầy đủ các trường của sản phẩm đó lên biểu mẫu.</span>
+                <div class="flex items-center justify-end gap-2 flex-wrap shrink-0">
+                    <button type="button" id="btn-archive-reuse-failed" onclick="reuseLatestArchiveItems('failed')" class="hidden inline-flex items-center gap-1.5 px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 text-sm font-bold rounded-xl transition-colors cursor-pointer whitespace-nowrap" title="Nạp các sản phẩm bị thất bại vào danh sách chờ tạo hàng loạt">
+                        <iconify-icon icon="mdi:autorenew" class="text-base text-amber-700 shrink-0"></iconify-icon>
+                        <span id="btn-archive-reuse-failed-label">Nạp SP lỗi vào hàng loạt</span>
+                    </button>
+                    <button type="button" id="btn-archive-reuse-all" onclick="reuseLatestArchiveItems('all')" class="hidden inline-flex items-center gap-1.5 px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 text-sm font-bold rounded-xl transition-colors cursor-pointer whitespace-nowrap" title="Nạp toàn bộ danh sách sản phẩm trong bản lưu trữ vào hàng đợi tạo hàng loạt">
+                        <iconify-icon icon="mdi:playlist-plus" class="text-base text-indigo-700 shrink-0"></iconify-icon>
+                        <span id="btn-archive-reuse-all-label">Nạp tất cả vào hàng loạt</span>
+                    </button>
+                    <button type="button" onclick="closeLatestArchiveModal()" class="px-5 py-2 bg-gray-900 hover:bg-black text-white text-sm font-bold rounded-xl transition-colors cursor-pointer whitespace-nowrap">
+                        Đóng
+                    </button>
+                </div>
             </div>
         </div>
     </div>
