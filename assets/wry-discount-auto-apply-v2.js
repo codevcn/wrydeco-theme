@@ -7,16 +7,16 @@
   var CART_CHANGE_EVENT = 'wry:cart-changed';
   var NEWSLETTER_SUCCESS_EVENT = 'wry:newsletter-signup-success';
   var WRY_DISCOUNT_TIERS = [
-    { minimumCents: 990000, code: 'WRY1000' },
-    { minimumCents: 890000, code: 'WRY900' },
-    { minimumCents: 790000, code: 'WRY800' },
-    { minimumCents: 690000, code: 'WRY700' },
-    { minimumCents: 590000, code: 'WRY600' },
-    { minimumCents: 490000, code: 'WRY500' },
-    { minimumCents: 390000, code: 'WRY400' },
-    { minimumCents: 290000, code: 'WRY300' },
-    { minimumCents: 190000, code: 'WRY200' },
-    { minimumCents: 90000, code: 'WRY100' },
+    { minimumCents: 990000, discountCents: 100000, code: 'WRY1000' },
+    { minimumCents: 890000, discountCents: 90000, code: 'WRY900' },
+    { minimumCents: 790000, discountCents: 80000, code: 'WRY800' },
+    { minimumCents: 690000, discountCents: 70000, code: 'WRY700' },
+    { minimumCents: 590000, discountCents: 60000, code: 'WRY600' },
+    { minimumCents: 490000, discountCents: 50000, code: 'WRY500' },
+    { minimumCents: 390000, discountCents: 40000, code: 'WRY400' },
+    { minimumCents: 290000, discountCents: 30000, code: 'WRY300' },
+    { minimumCents: 190000, discountCents: 20000, code: 'WRY200' },
+    { minimumCents: 90000, discountCents: 10000, code: 'WRY100' },
   ];
   var WRY_CODES = WRY_DISCOUNT_TIERS.map(function (tier) {
     return tier.code;
@@ -59,17 +59,22 @@
     }
   }
 
-  function getBestCodeForSubtotalCents(subtotalCents) {
+  function getBestOfferForSubtotalCents(subtotalCents) {
     var numericSubtotal = Number(subtotalCents);
-    if (!Number.isFinite(numericSubtotal)) return '';
+    if (!Number.isFinite(numericSubtotal)) return null;
 
     for (var index = 0; index < WRY_DISCOUNT_TIERS.length; index += 1) {
       if (numericSubtotal >= WRY_DISCOUNT_TIERS[index].minimumCents) {
-        return WRY_DISCOUNT_TIERS[index].code;
+        return Object.assign({}, WRY_DISCOUNT_TIERS[index]);
       }
     }
 
-    return '';
+    return null;
+  }
+
+  function getBestCodeForSubtotalCents(subtotalCents) {
+    var offer = getBestOfferForSubtotalCents(subtotalCents);
+    return offer ? offer.code : '';
   }
 
   function normalizeCode(code) {
@@ -284,6 +289,11 @@
     unlockAndSync: unlockAndSync,
     syncWryDiscountWithCart: syncWryDiscountWithCart,
     getBestCodeForSubtotalCents: getBestCodeForSubtotalCents,
-    tiers: WRY_DISCOUNT_TIERS.slice(),
+    getBestOfferForSubtotalCents: getBestOfferForSubtotalCents,
+    tiers: WRY_DISCOUNT_TIERS.map(function (tier) {
+      return Object.assign({}, tier);
+    }),
   };
+
+  document.dispatchEvent(new CustomEvent('wrydeco:discount-engine-ready'));
 })();

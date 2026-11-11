@@ -1,0 +1,68 @@
+{% doc %}
+  Renders an optional personalized request field associated with the product form.
+
+  @param {string} section_id - The parent product section ID.
+{% enddoc %}
+
+{% stylesheet %}
+  .product-personalized-request {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+    width: 100%;
+  }
+
+  .product-personalized-request__label {
+    margin-left: var(--sp-1);
+    color: var(--text-primary);
+    font-family: var(--font-roboto);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: var(--letter-spacing-wide);
+    text-transform: uppercase;
+  }
+
+  .product-personalized-request__input {
+    width: 100%;
+    min-height: 88px;
+    padding: var(--sp-3) var(--sp-4);
+    border: var(--border-width) solid var(--border-default);
+    border-radius: var(--radius-md);
+    background: var(--color-white-cream);
+    color: var(--text-primary);
+    font-family: var(--font-roboto);
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-relaxed);
+    resize: vertical;
+    transition: border-color var(--timing-short) var(--ease-standard),
+      box-shadow var(--timing-short) var(--ease-standard);
+  }
+
+  .product-personalized-request__input::placeholder {
+    color: var(--text-tertiary);
+  }
+
+  .product-personalized-request__input:focus {
+    border-color: var(--color-earth-brown);
+    outline: none;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-earth-brown) 18%, transparent);
+  }
+{% endstylesheet %}
+
+<div class="product-personalized-request">
+  <label
+    class="product-personalized-request__label"
+    for="PersonalizedRequest-{{ section_id }}"
+  >
+    {{- 'products.personalized_request.label' | t -}}
+  </label>
+  <textarea
+    id="PersonalizedRequest-{{ section_id }}"
+    class="product-personalized-request__input"
+    name="properties[Personalized request]"
+    form="{{ 'ProductForm-' | append: section_id }}"
+    rows="3"
+    maxlength="500"
+    placeholder="{{ 'products.personalized_request.placeholder' | t | escape }}"
+  ></textarea>
+</div>

@@ -4,7 +4,7 @@
   Colour/finish and surface options render thumbnail images from the first
   relevant metaobject entry; size options render text.
   Native radios drive the existing client-side price, inventory and gallery
-  updates. Custom finish uploads and custom-size requests retain their controls.
+  updates. Custom-size requests retain their controls.
 
   @param {product} product - The current product.
   @param {variant} current_variant - The currently selected variant.
@@ -508,6 +508,7 @@
   {% endstyle %}
 
   <div class="product-variant-picker">
+    {% assign personalized_request_rendered = false %}
     {% for option in product.options_with_values %}
       {% assign downcased_option = option.name | downcase %}
       {% assign is_color = false %}
@@ -591,82 +592,7 @@
                 options it stays hidden but present, keeping the variant matrix intact.
               {% endcomment %}
               {% if is_custom_upload %}
-                <div
-                  class="variant-tile variant-tile--color variant-tile--upload{% unless value.available %} is-disabled{% endunless %}"
-                  data-custom-color
-                >
-                  <input
-                    type="radio"
-                    class="variant-tile__input"
-                    id="Option-{{ section_id }}-{{ option.position }}-{{ forloop.index0 }}"
-                    name="options[{{ option.name | escape }}]"
-                    value="{{ value | escape }}"
-                    aria-label="Custom {{ option.name | escape }}"
-                    data-index="option{{ option.position }}"
-                    data-custom-color-radio
-                    {% if option.selected_value == value %}
-                      checked="checked"
-                    {% endif %}
-                    {% unless value.available %}
-                      disabled
-                    {% endunless %}
-                  >
-
-                  <span class="variant-tile__media">
-                    <span class="variant-tile__upload-icon" data-custom-color-icon aria-hidden="true">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 48 48">
-                        <path d="M0 0h48v48H0z" fill="none" />
-                        <path fill="currentColor" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 24L24 6l19 18H31v18H17V24z" />
-                      </svg>
-                    </span>
-                    <span
-                      class="variant-tile__upload-spinner"
-                      data-custom-color-spinner
-                      aria-hidden="true"
-                      hidden
-                    ></span>
-                    <img
-                      class="variant-tile__upload-preview"
-                      data-custom-color-preview
-                      alt="Custom color preview"
-                      width="160"
-                      height="100"
-                      draggable="false"
-                      hidden
-                    >
-                  </span>
-
-                  <span class="variant-tile__label" data-custom-color-label>Custom</span>
-
-                  <span class="variant-tile__check" aria-hidden="true">
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="3"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    >
-                      <polyline points="20 6 9 17 4 12"></polyline>
-                    </svg>
-                  </span>
-
-                  <input
-                    type="file"
-                    class="variant-tile__file"
-                    accept="image/jpeg,image/png,image/webp,image/gif"
-                    aria-label="Upload a custom finish reference image"
-                    data-custom-color-input
-                    hidden
-                  >
-                  <input
-                    type="hidden"
-                    name="properties[added_url_image]"
-                    form="{{ 'ProductForm-' | append: section_id }}"
-                    data-custom-color-property
-                    disabled
-                  >
-                </div>
+                {% continue %}
               {% elsif is_size %}
                 {% comment %}
                   Size "Custom": opens a request popup where the shopper describes
@@ -801,6 +727,13 @@
           {% endfor %}
         </div>
       </div>
+
+      {% if is_custom_upload %}
+        {% unless personalized_request_rendered %}
+          {% render 'product-personalized-request', section_id: section_id %}
+          {% assign personalized_request_rendered = true %}
+        {% endunless %}
+      {% endif %}
     {% endfor %}
   </div>
 

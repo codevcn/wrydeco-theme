@@ -1,5 +1,5 @@
 {% doc %}
-  Renders the shared listing card with product images, maker and purchase benefits.
+  Renders the shared listing card with product images, maker and price.
   Product content and its primary image are server-rendered.
 
   @param {product} product - The listed product.
@@ -18,7 +18,6 @@
     assign author = author | first
   endif
   assign maker_name = author.author_name.value
-  assign maker_image = author.author_image_url.value
   assign card_variant = product.selected_or_first_available_variant | default: product.variants.first
   assign display_price = product.price
   assign card_url = product.url
@@ -92,19 +91,12 @@
 
   <div class="plp-card__body">
     <{{ heading }} class="plp-card__title"><a href="{{ card_url }}" title="{{ title | escape }}" draggable="false">{{ title | escape }}</a></{{ heading }}>
-    <div class="plp-card__accent" aria-hidden="true"></div>
     {% if maker_name != blank %}
-      <div class="plp-card__provenance">
-        <div class="plp-card__maker">
-          {% if maker_image != blank %}<img class="plp-card__portrait" src="{{ maker_image | escape }}" alt="{{ maker_name | escape }}" width="80" height="80" loading="lazy">{% endif %}
-          <div><span class="plp-card__eyebrow">Crafted by</span><span class="plp-card__maker-name">{{ maker_name | escape }}</span></div>
-        </div>
-      </div>
+      <p class="plp-card__maker-name">{{ 'products.card.by' | t: maker: maker_name | escape }}</p>
     {% endif %}
-    <p class="plp-card__price"><span>From</span> <strong>{{ display_price | money_without_trailing_zeros }}</strong></p>
+    <p class="plp-card__price"><span>{{ 'products.card.from' | t }}</span> <strong>{{ display_price | money_without_trailing_zeros }}</strong></p>
     <div class="plp-card__benefits">
-      <div class="plp-card__benefit">{% render 'plp-card-icon', name: 'truck' %}<div><span class="plp-card__benefit-title">Free shipping</span><span class="plp-card__note">On all orders</span></div></div>
-      <div class="plp-card__benefit">{% render 'plp-card-icon', name: 'shield-check' %}<div><span class="plp-card__benefit-title">1-year warranty</span><span class="plp-card__note">Built to last</span></div></div>
+      <div class="plp-card__benefit">{% render 'plp-card-icon', name: 'shield-check' %}<div><span class="plp-card__benefit-title">{{ 'products.card.warranty' | t }}</span><span class="plp-card__note">{{ 'products.card.built_to_last' | t }}</span></div></div>
     </div>
   </div>
 </article>

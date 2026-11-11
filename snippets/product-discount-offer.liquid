@@ -1,0 +1,277 @@
+{% doc %}
+  Renders the product-page WRY tier discount preview and apply control.
+
+  @param {product} product - The current product.
+  @param {variant} current_variant - The selected variant.
+{% enddoc %}
+
+{% stylesheet %}
+  .product-discount-offer[hidden] {
+    display: none;
+  }
+
+  .product-discount-offer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-3);
+    min-height: 48px;
+    padding: var(--sp-2);
+    border-radius: var(--radius-md);
+    background: var(--color-cream);
+    color: var(--text-primary);
+    font-family: var(--font-roboto);
+  }
+
+  .product-discount-offer__content {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: var(--sp-2);
+    min-width: 0;
+  }
+
+  .product-discount-offer__badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 22px;
+    padding: 3px 7px;
+    border-radius: var(--radius-sm);
+    background: #ef4444;
+    color: #fff;
+    font-size: 10px;
+    font-weight: var(--font-weight-bold);
+    line-height: 1;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .product-discount-offer__text {
+    min-width: 0;
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.45;
+  }
+
+  .product-discount-offer__checked[hidden],
+  .product-discount-offer__unchecked[hidden] {
+    display: none;
+  }
+
+  .product-discount-offer__final-price {
+    margin-left: 2px;
+    font-weight: var(--font-weight-semibold);
+  }
+
+  .product-discount-offer__apply {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    min-width: 88px;
+    min-height: 34px;
+    padding: 0 var(--sp-4);
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--color-earth-brown);
+    font: inherit;
+    font-size: 12px;
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: background-color var(--timing-short) var(--ease-standard),
+      color var(--timing-short) var(--ease-standard);
+  }
+
+  .product-discount-offer__apply:hover {
+    background: var(--bg-secondary);
+  }
+
+  .product-discount-offer__apply:focus-visible {
+    outline: 2px solid var(--color-earth-brown);
+    outline-offset: 2px;
+  }
+
+  .product-discount-offer.is-applied .product-discount-offer__apply {
+    background: var(--color-earth-brown);
+    color: var(--color-white-cream);
+    cursor: default;
+  }
+
+  .product-discount-offer__applied-label {
+    display: none;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .product-discount-offer.is-applied .product-discount-offer__apply-label {
+    display: none;
+  }
+
+  .product-discount-offer.is-applied .product-discount-offer__applied-label {
+    display: inline-flex;
+  }
+
+  .product-discount-offer__applied-label svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  @media screen and (max-width: 480px) {
+    .product-discount-offer {
+      gap: var(--sp-2);
+    }
+
+    .product-discount-offer__content {
+      grid-template-columns: 1fr;
+      gap: 4px;
+    }
+
+    .product-discount-offer__badge {
+      width: fit-content;
+    }
+
+    .product-discount-offer__text {
+      font-size: 12px;
+    }
+
+    .product-discount-offer__apply {
+      min-width: 76px;
+      padding-inline: var(--sp-2);
+    }
+  }
+{% endstylesheet %}
+
+<div
+  class="product-discount-offer"
+  data-product-discount-offer
+  data-product-id="{{ product.id }}"
+  data-price-cents="{{ current_variant.price }}"
+  data-money-sample="{{ 123456789 | money | strip_html | escape }}"
+  data-offer-template="{{ 'products.discount.offer' | t: discount: '__DISCOUNT__', threshold: '__THRESHOLD__' | escape }}"
+  hidden
+>
+  <div class="product-discount-offer__content">
+    <span class="product-discount-offer__badge" data-discount-badge></span>
+    <span class="product-discount-offer__text" aria-live="polite">
+      <span class="product-discount-offer__unchecked" data-discount-unchecked></span>
+      <span class="product-discount-offer__checked" data-discount-checked hidden>
+        <strong>{{ 'products.discount.applied_message' | t }}</strong>
+        <span class="product-discount-offer__final-price">
+          {{- 'products.discount.final_price' | t }} <span data-discount-final-price></span>
+        </span>
+      </span>
+    </span>
+  </div>
+  <button
+    type="button"
+    class="product-discount-offer__apply"
+    data-discount-apply
+    aria-pressed="false"
+  >
+    <span class="product-discount-offer__apply-label">{{ 'products.discount.apply' | t }}</span>
+    <span class="product-discount-offer__applied-label">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="m20 6-11 11-5-5"></path>
+      </svg>
+      {{ 'products.discount.applied' | t }}
+    </span>
+  </button>
+</div>
+
+{% javascript %}
+  (function () {
+    function formatMoney(cents, sample) {
+      var match = sample.match(/[0-9](?:[0-9.,\s'’]*[0-9])?/);
+      if (!match) return String(cents / 100);
+      var number = match[0];
+      var decimal = number.match(/([.,])([0-9]{1,2})$/);
+      var precision = decimal ? decimal[2].length : 0;
+      var integer = decimal ? number.slice(0, -precision - 1) : number;
+      var separator = integer.replace(/[0-9]/g, '').charAt(0);
+      var parts = (cents / 100).toFixed(precision).split('.');
+      if (separator) parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, separator);
+      return sample.replace(number, parts[0] + (decimal ? decimal[1] + parts[1] : ''));
+    }
+
+    function initOffer(root) {
+      if (root.dataset.discountReady === 'true') return true;
+      var engine = window.WrydecoDiscountAutoApply;
+      if (!engine || typeof engine.getBestOfferForSubtotalCents !== 'function') return false;
+
+      root.dataset.discountReady = 'true';
+      var badge = root.querySelector('[data-discount-badge]');
+      var unchecked = root.querySelector('[data-discount-unchecked]');
+      var checked = root.querySelector('[data-discount-checked]');
+      var finalPrice = root.querySelector('[data-discount-final-price]');
+      var applyButton = root.querySelector('[data-discount-apply]');
+      var moneySample = root.dataset.moneySample || '';
+      var storageKey = 'wrydeco:product-discount:' + root.dataset.productId;
+      var currentPriceCents = Number(root.dataset.priceCents) || 0;
+      var isApplied = false;
+
+      try {
+        isApplied = window.localStorage.getItem(storageKey) === '1';
+      } catch (error) {
+        isApplied = false;
+      }
+
+      function setApplied(applied) {
+        isApplied = applied;
+        root.classList.toggle('is-applied', applied);
+        applyButton.setAttribute('aria-pressed', String(applied));
+        applyButton.disabled = applied;
+        unchecked.hidden = applied;
+        checked.hidden = !applied;
+      }
+
+      function update(priceCents) {
+        currentPriceCents = Number(priceCents) || 0;
+        var offer = engine.getBestOfferForSubtotalCents(currentPriceCents);
+        root.hidden = !offer;
+        if (!offer) return;
+
+        var discountText = formatMoney(offer.discountCents, moneySample);
+        var thresholdText = formatMoney(offer.minimumCents, moneySample);
+        badge.textContent = discountText + ' OFF';
+        unchecked.textContent = root.dataset.offerTemplate
+          .replace('__DISCOUNT__', discountText)
+          .replace('__THRESHOLD__', thresholdText);
+        finalPrice.textContent = formatMoney(Math.max(0, currentPriceCents - offer.discountCents), moneySample);
+        setApplied(isApplied);
+      }
+
+      applyButton.addEventListener('click', function () {
+        if (isApplied) return;
+        try {
+          window.localStorage.setItem(storageKey, '1');
+        } catch (error) {
+          isApplied = false;
+        }
+        setApplied(true);
+        if (typeof engine.unlockAndSync === 'function') engine.unlockAndSync();
+      });
+
+      document.addEventListener('wrydeco:product-price-change', function (event) {
+        if (!event.detail) return;
+        update(event.detail.priceCents);
+      });
+
+      update(currentPriceCents);
+      return true;
+    }
+
+    function initAllOffers() {
+      document.querySelectorAll('[data-product-discount-offer]').forEach(function (root) {
+        initOffer(root);
+      });
+    }
+
+    document.addEventListener('wrydeco:discount-engine-ready', initAllOffers);
+    document.addEventListener('shopify:section:load', initAllOffers);
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initAllOffers);
+    else initAllOffers();
+  })();
+{% endjavascript %}
